@@ -1,0 +1,113 @@
+import React from 'react';
+import { AuditModule, ModeData, Station, Direction } from '../types';
+import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
+import { LineIcon } from './LineIcon';
+
+interface DatGroupSelectorProps {
+  module: AuditModule;
+  station: Station | null;
+  onSelectStation: (stationId: string | null) => void;
+  onSelectDirection: (directionId: string) => void;
+  onBack: () => void;
+}
+
+const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, onSelectStation, onSelectDirection, onBack }) => {
+    const modeData = module.data as ModeData;
+    const stations = modeData.stations;
+
+    const handleBack = () => {
+        const moduleData = module.data as ModeData;
+        
+        // If we are currently showing directions (station is selected)...
+        if (station) {
+            // ...and the module contains more than one station, going back should show the station list.
+            if (moduleData.stations.length > 1) {
+                 onSelectStation(null);
+            } else {
+                // Otherwise (if only one station), going back should skip the station list and go to the module selector.
+                onBack();
+            }
+        } else {
+            // If we are on the station list screen, go back to the module selector.
+            onBack();
+        }
+    };
+    
+    if (station) {
+        return (
+            <div>
+                 <div className="flex items-center gap-4 mb-8">
+                    <button onClick={handleBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Retour">
+                        <ArrowLeft className="w-6 h-6" />
+                    </button>
+                    <div className="flex items-center gap-3">
+                        <LineIcon module={module} size="md" />
+                        <div>
+                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{station.name}</h2>
+                            <p className="text-gray-500 dark:text-slate-400">Sélectionner une direction</p>
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-4">
+                    {station.directions.map(direction => (
+                         <button
+                            key={direction.id}
+                            onClick={() => onSelectDirection(direction.id)}
+                            className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                        >
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
+                                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{direction.name}</p>
+                                </div>
+                                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div>
+            <div className="flex items-center gap-4 mb-8">
+                <button onClick={onBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Retour">
+                    <ArrowLeft className="w-6 h-6" />
+                </button>
+                <div className="flex items-center gap-3">
+                    <LineIcon module={module} size="md" />
+                    <div>
+                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{module.name} - {modeData.name}</h2>
+                        <p className="text-gray-500 dark:text-slate-400">Sélectionner une station</p>
+                    </div>
+                </div>
+            </div>
+            <div className="space-y-4">
+                {stations.map(s => (
+                     <button
+                        key={s.id}
+                        onClick={() => onSelectStation(s.id)}
+                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                        disabled={s.isFuture}
+                    >
+                         <div className={`flex items-center justify-between ${s.isFuture ? 'opacity-50' : ''}`}>
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
+                                    <MapPin className="w-6 h-6 text-gray-600 dark:text-slate-300" />
+                                </div>
+                                <div>
+                                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{s.name}</p>
+                                    {s.isFuture && <p className="text-sm text-gray-500 dark:text-slate-400">Bientôt disponible</p>}
+                                </div>
+                            </div>
+                            {!s.isFuture && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
+                        </div>
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+export default DatGroupSelector;
