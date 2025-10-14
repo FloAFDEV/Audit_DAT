@@ -52,8 +52,7 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
                 ];
             case 'CAP':
                 return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('5')] },
-                    { id: `${stationId}-dir-2`, name: 'Quais', dats: [createDat('4')] }
+                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4'), createDat('5')] }
                 ];
             case 'ESQ':
                 return [
