@@ -1,5 +1,4 @@
 
-
 import React, { useMemo } from 'react';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { Lieu } from '../types';
@@ -32,7 +31,7 @@ export const FormattedCorrespondence: React.FC<{ text: string, className?: strin
                     return (
                         <span key={index} className="inline-flex items-center gap-1.5 align-middle">
                             <CategoryIcon categoryConfig={fromConfig} size="sm" />
-                            <span className="text-gray-400 dark:text-slate-500 font-normal">&rarr;</span>
+                            <span className="text-slate-600 dark:text-slate-300 font-normal">&rarr;</span>
                             <CategoryIcon categoryConfig={toConfig} size="sm" />
                         </span>
                     );

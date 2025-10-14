@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Lieu, AuditModule, AdhesiveStatus, AuditModuleType, ModeData, Pr, EcaData, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
 import { ChevronRight, ArrowLeft, Euro, Car, Accessibility, Fence } from 'lucide-react';
@@ -108,7 +109,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                         <span className="text-sm font-medium text-gray-600 dark:text-slate-300">{Math.round(progress)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2.5">
-                        <div className="bg-teal-400 dark:bg-teal-500 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                        <div className="bg-teal-500 dark:bg-teal-600 h-2.5 rounded-full" style={{ width: `${progress}%` }}></div>
                     </div>
                 </div>
             </>

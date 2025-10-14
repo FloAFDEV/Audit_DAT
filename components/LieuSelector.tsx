@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station } from '../types';
 import { LieuBadges } from './Icons';
@@ -92,7 +93,7 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-slate-700">
-                    <div className="bg-teal-400 dark:bg-teal-500 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                    <div className="bg-teal-500 dark:bg-teal-600 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
         </button>

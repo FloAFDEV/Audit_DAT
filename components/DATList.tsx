@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
@@ -158,7 +159,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                    <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+                                    <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
                                 </div>
                             </div>
                         </div>

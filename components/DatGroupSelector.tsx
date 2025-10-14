@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
@@ -98,7 +99,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                         </span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+                                        <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
                             </button>

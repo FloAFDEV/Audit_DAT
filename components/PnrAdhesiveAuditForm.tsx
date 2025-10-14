@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Equipment, AdhesiveStatus, AuditModule, EquipmentType } from '../types';
 import { getPrAdhesives } from '../data/adhesives';
@@ -70,7 +71,7 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                   <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                  <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
               </div>
           </div>
       </div>
