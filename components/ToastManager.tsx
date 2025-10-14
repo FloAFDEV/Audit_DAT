@@ -97,6 +97,30 @@ export const showSuccessToast = (options: ToastOptions) => {
 };
 
 /**
+ * Affiche un simple toast d'information.
+ * @param options - Les options d'affichage pour le toast d'information.
+ */
+export const showInfoToast = (options: ToastOptions) => {
+    toast.custom(
+        (t) => (
+            <div
+                className={`transition-all duration-300 ${
+                    t.visible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-12'
+                }`}
+            >
+                <CustomToastContent
+                    IconComponent={options.icon}
+                    title={options.title}
+                    message={options.message}
+                />
+            </div>
+        ),
+        { duration: 5000 } // A bit longer for info
+    );
+};
+
+
+/**
  * Affiche un simple toast d'erreur.
  * @param options - Les options d'affichage pour le toast d'erreur.
  */
