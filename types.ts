@@ -30,6 +30,10 @@ export enum EquipmentType {
 
 export enum EcaEquipmentType {
     TripodeEntree = "Tripode d'entrée",
+    TripodeSortie = "Tripode de sortie",
+    VantauxEntree = "Vantaux d'entrée",
+    VantauxSortie = "Vantaux de sortie",
+    VantauxReversible = "Vantaux réversible",
     PMR = 'PMR',
     PMRVantaux = 'PMR à vantaux',
     PMRVantauxReversible = 'PMR à vantaux réversible',
