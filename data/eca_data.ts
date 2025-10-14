@@ -39,12 +39,18 @@ export const ECA_DEFINITIONS: { [stationCode: string]: EcaTemplate[] } = {
             type: EcaEquipmentType.TripodeEntree,
             number: 2,
         },
+        {
+            name: 'ECA Correspondance A->B',
+            accessPoint: 'Correspondance vers Ligne B',
+            type: EcaEquipmentType.PMRVantauxReversible,
+            number: 2,
+        },
     ],
     'JJB': [ // Jean-Jaurès Ligne B
          ...defaultEcaTemplates,
         {
-            name: 'ECA Accès Correspondance 1',
-            accessPoint: 'Accès Correspondance',
+            name: 'ECA Correspondance B->A',
+            accessPoint: 'Correspondance vers Ligne A',
             type: EcaEquipmentType.PMRVantauxReversible,
             number: 2,
         },

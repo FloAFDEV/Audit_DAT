@@ -1,6 +1,7 @@
 import React from 'react';
 import { Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, Pr, Equipment, ECA } from '../types';
-import { Home, ChevronRight } from 'lucide-react';
+import { Home, ChevronRight, ArrowRight } from 'lucide-react';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface BreadcrumbsProps {
   lieu?: Lieu | null;
@@ -103,7 +104,32 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                      <li aria-current="page">
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
-                            <span className="ms-1 text-sm font-medium text-gray-500 md:ms-2 dark:text-gray-400">{eca.name}</span>
+                            {(() => {
+                                const match = eca.name.match(/Correspondance ([A-Z])->([A-Z])/);
+                                const fromConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[1]) : undefined;
+                                const toConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[2]) : undefined;
+
+                                return (
+                                    <div className="flex items-center gap-2">
+                                        <span className="ms-1 text-sm font-medium text-gray-500 md:ms-2 dark:text-gray-400">{eca.name}</span>
+                                        {match && fromConfig && toConfig && (
+                                            <div className="flex items-center gap-1">
+                                                <span
+                                                    className="w-3 h-3 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                                                    style={{ backgroundColor: fromConfig.colors.badgeBg }}
+                                                    title={`Ligne ${match[1]}`}
+                                                ></span>
+                                                <ArrowRight className="w-3 h-3 text-gray-400 dark:text-slate-500" />
+                                                <span
+                                                    className="w-3 h-3 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                                                    style={{ backgroundColor: toConfig.colors.badgeBg }}
+                                                    title={`Ligne ${match[2]}`}
+                                                ></span>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </li>
                 )}

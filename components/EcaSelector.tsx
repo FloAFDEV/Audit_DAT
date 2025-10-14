@@ -1,8 +1,9 @@
 import React from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus } from '../types';
-import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets, ArrowRight } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -19,14 +20,58 @@ const getEcaProgress = (eca: ECA): number => {
 
 const getEcaIcon = (eca: ECA) => {
     const isPmr = isPmrEcaType(eca.type);
-    const iconProps = { className: "w-8 h-8 text-gray-500 dark:text-slate-300" };
+
+    if (isPmr) {
+        // Light blue for PMR
+        const iconProps = { className: "w-8 h-8 text-blue-600 dark:text-blue-300" };
+        return (
+            <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
+                <Accessibility {...iconProps} />
+            </div>
+        );
+    } else {
+        // Light green for main access
+        const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
+        return (
+            <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
+                <Brackets {...iconProps} />
+            </div>
+        );
+    }
+};
+
+const CorrespondenceIndicator: React.FC<{ name: string; type: string }> = ({ name, type }) => {
+    const match = name.match(/Correspondance ([A-Z])->([A-Z])/);
+    if (!match) {
+        return null; // Should not happen if logic is correct
+    }
+
+    const [, fromLine, toLine] = match;
+    const fromConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === fromLine);
+    const toConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === toLine);
+
+    if (!fromConfig || !toConfig) {
+        return null; // Config not found
+    }
 
     return (
-        <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
-            {isPmr ? <Accessibility {...iconProps} /> : <Brackets {...iconProps} />}
+        <div className="flex items-center gap-2 mt-1">
+            <span
+                className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                style={{ backgroundColor: fromConfig.colors.badgeBg }}
+                title={`Ligne ${fromLine}`}
+            ></span>
+            <ArrowRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+            <span
+                className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                style={{ backgroundColor: toConfig.colors.badgeBg }}
+                title={`Ligne ${toLine}`}
+            ></span>
+            <span className="text-sm text-gray-500 dark:text-slate-400">&bull; {type}</span>
         </div>
     );
-}
+};
+
 
 const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }) => {
     const ecaData = module.data as EcaData;
@@ -63,6 +108,8 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                     {ecaData.ecas.map((eca) => {
                         const progress = getEcaProgress(eca);
                         const isComplete = progress === 100;
+                        const isCorrespondence = eca.name.includes('Correspondance');
+
                         return (
                             <button
                                 key={eca.id}
@@ -74,7 +121,11 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                                         {getEcaIcon(eca)}
                                         <div>
                                             <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{eca.name}</p>
-                                            <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {eca.type}</p>
+                                            {isCorrespondence ? (
+                                                <CorrespondenceIndicator name={eca.name} type={eca.type} />
+                                            ) : (
+                                                <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {eca.type}</p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center flex-shrink-0">

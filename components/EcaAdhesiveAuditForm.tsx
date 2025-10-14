@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ECA, AdhesiveStatus, AuditModule } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
-import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup, ArrowRight } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface EcaAdhesiveAuditFormProps {
   module: AuditModule;
@@ -26,6 +27,10 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
     return (checked / adhesives.length) * 100;
   }, [eca, adhesives]);
 
+  const match = eca.name.match(/Correspondance ([A-Z])->([A-Z])/);
+  const fromConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[1]) : undefined;
+  const toConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[2]) : undefined;
+
 
   return (
     <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
@@ -40,7 +45,24 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Audit pour {eca.name}</h2>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Audit pour {eca.name}</h2>
+                        {match && fromConfig && toConfig && (
+                            <div className="flex items-center gap-1.5">
+                                <span
+                                    className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                                    style={{ backgroundColor: fromConfig.colors.badgeBg }}
+                                    title={`Ligne ${match[1]}`}
+                                ></span>
+                                <ArrowRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
+                                <span
+                                    className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
+                                    style={{ backgroundColor: toConfig.colors.badgeBg }}
+                                    title={`Ligne ${match[2]}`}
+                                ></span>
+                            </div>
+                        )}
+                    </div>
                     <div className="flex items-center gap-3 mt-2">
                         <LineIcon module={module} size="sm" />
                         <p className="text-gray-600 dark:text-slate-400 text-sm">
