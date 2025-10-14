@@ -20,9 +20,9 @@ interface DATListProps {
 const getStatusLabelColor = (status: ProgressStatus) => {
     switch (status) {
         case ProgressStatus.Completed:
-            return 'text-green-600 dark:text-green-400';
+            return 'text-teal-600 dark:text-teal-400';
         case ProgressStatus.InProgress:
-            return 'text-amber-600 dark:text-amber-500';
+            return 'text-amber-600 dark:text-amber-400';
         default:
             return 'text-gray-500 dark:text-slate-400';
     }

@@ -3,6 +3,8 @@ import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { getDirectionProgress } from '../utils/progressCalculators';
+import { CategoryIcon } from './CategoryIcon';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface DatGroupSelectorProps {
   module: AuditModule;
@@ -11,6 +13,27 @@ interface DatGroupSelectorProps {
   onSelectDirection: (directionId: string) => void;
   onBack: () => void;
 }
+
+const DirectionName: React.FC<{ name: string }> = ({ name }) => {
+    const match = name.match(/(Ligne [A-C])/);
+
+    if (match) {
+        const lineFragment = match[1];
+        const lineLabel = lineFragment.split(' ')[1];
+        const config = AUDIT_CATEGORIES.find(c => c.shortLabel === lineLabel);
+        const textPart = name.replace(lineFragment, '').trim();
+
+        return (
+            <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+                <span className="truncate">{textPart}</span>
+                {config && <CategoryIcon categoryConfig={config} size="sm" />}
+            </div>
+        );
+    }
+
+    return <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{name}</p>;
+};
+
 
 const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, onSelectStation, onSelectDirection, onBack }) => {
     const modeData = module.data as ModeData;
@@ -61,7 +84,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
                                         <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
-                                        <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{direction.name}</p>
+                                        <DirectionName name={direction.name} />
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
                                 </div>
