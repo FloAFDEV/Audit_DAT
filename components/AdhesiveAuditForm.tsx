@@ -4,6 +4,7 @@ import { ADHESIVES } from '../data/adhesives';
 import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
+import { DatIcon } from './DatIcon';
 
 interface AdhesiveAuditFormProps {
   module: AuditModule;
@@ -42,10 +43,11 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-3">
+                        <DatIcon dat={dat} size="md" />
                         <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">Audit pour {dat.name}</h2>
                     </div>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-3 mt-2 pl-14">
                         <LineIcon module={module} size="sm" />
                         <p className="text-gray-600 dark:text-slate-400 text-sm">
                             <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Direction :</span> {directionName}

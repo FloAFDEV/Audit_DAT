@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Direction, DAT, AdhesiveStatus, Station, AuditModule } from '../types';
+import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
+import { getDatProgress } from '../utils/progressCalculators';
+import { DatIcon } from './DatIcon';
 
 interface DATListProps {
   module: AuditModule;
@@ -14,30 +16,6 @@ interface DATListProps {
   onUpdateDatName: (datId: string, newName: string) => void;
   onBack: () => void;
 }
-
-const getDatStatus = (dat: DAT): { label: string; color: string; checked: number, total: number; percentage: number } => {
-    const statuses = Object.values(dat.adhesives);
-    const total = statuses.length;
-    const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-    const percentage = total > 0 ? (checked / total) * 100 : 0;
-
-    let label: string;
-    let color: string;
-
-    if (checked === 0) {
-        label = "Non commencé";
-        color = "bg-gray-400 dark:bg-slate-500";
-    } else if (checked < total) {
-        label = "En cours";
-        color = "bg-teal-400 dark:bg-teal-500";
-    } else {
-        label = "Terminé";
-        color = "bg-teal-400 dark:bg-teal-500";
-    }
-
-    return { label, color, checked, total, percentage };
-};
-
 
 const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectDat, onAddDat, onRemoveDat, onUpdateDatName, onBack }) => {
     const [editingDatId, setEditingDatId] = useState<string | null>(null);
@@ -127,13 +105,12 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
         ) : (
              <div className="space-y-4">
                 {direction.dats.map((dat) => {
-                    const status = getDatStatus(dat);
-                    const isComplete = status.percentage === 100;
+                    const progress = getDatProgress(dat);
                     return (
                         <div key={dat.id} onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full cursor-pointer group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600">
                             <div className="flex items-center justify-between">
-                                <div className="flex flex-1 min-w-0 items-center">
-                                    <div className={`w-3 h-3 rounded-full mr-4 flex-shrink-0 ${status.color}`}></div>
+                                <div className="flex flex-1 min-w-0 items-center gap-4">
+                                    <DatIcon dat={dat} size="lg" />
                                     {editingDatId === dat.id ? (
                                         <input
                                             type="text"
@@ -146,12 +123,12 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                             className="text-lg font-semibold text-gray-900 bg-white border border-indigo-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-slate-900 dark:text-slate-100 dark:border-indigo-400"
                                         />
                                     ) : (
-                                        <>
+                                        <div className="flex items-center flex-1 min-w-0">
                                             <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{dat.name}</p>
                                             <button onClick={(e) => handleEditClick(e, dat)} className="p-2 rounded-full hover:bg-gray-200 text-gray-600 transition-colors ml-2 flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700">
                                                 <Pencil className="w-4 h-4" />
                                             </button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                                 <div className="flex items-center flex-shrink-0">
@@ -163,13 +140,13 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                             </div>
                             <div className="mt-4">
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className={`text-xs font-medium ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                                        {isComplete ? 'Terminé' : 'Progression'}
+                                    <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                        {progress.label}
                                     </span>
-                                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(status.percentage)}%</span>
+                                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                    <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full" style={{ width: `${status.percentage}%` }}></div>
+                                    <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
                                 </div>
                             </div>
                         </div>

@@ -2,6 +2,7 @@ import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
 import { LineIcon } from './LineIcon';
+import { getDirectionProgress } from '../utils/progressCalculators';
 
 interface DatGroupSelectorProps {
   module: AuditModule;
@@ -49,21 +50,37 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                     </div>
                 </div>
                 <div className="space-y-4">
-                    {station.directions.map(direction => (
-                         <button
-                            key={direction.id}
-                            onClick={() => onSelectDirection(direction.id)}
-                            className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
-                        >
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
-                                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{direction.name}</p>
+                    {station.directions.map(direction => {
+                        const progress = getDirectionProgress(direction);
+                        return (
+                             <button
+                                key={direction.id}
+                                onClick={() => onSelectDirection(direction.id)}
+                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                            >
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                                        <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
+                                        <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{direction.name}</p>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
                                 </div>
-                                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
-                            </div>
-                        </button>
-                    ))}
+                                <div className="mt-4">
+                                    <div className="flex justify-between items-center mb-1">
+                                         <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                            {progress.isComplete ? 'Terminé' : 'Progression'}
+                                        </span>
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+                                            {progress.completedCount} / {progress.totalCount} DATs
+                                        </span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                        <div className="bg-teal-400 dark:bg-teal-500 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+                                    </div>
+                                </div>
+                            </button>
+                        );
+                    })}
                 </div>
             </div>
         )
