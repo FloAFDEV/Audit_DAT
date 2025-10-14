@@ -18,7 +18,7 @@ export const DatIcon: React.FC<DatIconProps> = ({ dat, size = 'md' }) => {
 
     const colorClasses = {
         [ProgressStatus.NotStarted]: 'bg-gray-200 text-gray-700 dark:bg-slate-700 dark:text-slate-200',
-        [ProgressStatus.InProgress]: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-200',
+        [ProgressStatus.InProgress]: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
         [ProgressStatus.Completed]: 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200',
     };
 

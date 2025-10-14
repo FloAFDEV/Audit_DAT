@@ -3,7 +3,7 @@ import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
-import { getDatProgress } from '../utils/progressCalculators';
+import { getDatProgress, ProgressStatus } from '../utils/progressCalculators';
 import { DatIcon } from './DatIcon';
 
 interface DATListProps {
@@ -16,6 +16,18 @@ interface DATListProps {
   onUpdateDatName: (datId: string, newName: string) => void;
   onBack: () => void;
 }
+
+const getStatusLabelColor = (status: ProgressStatus) => {
+    switch (status) {
+        case ProgressStatus.Completed:
+            return 'text-green-600 dark:text-green-400';
+        case ProgressStatus.InProgress:
+            return 'text-amber-600 dark:text-amber-500';
+        default:
+            return 'text-gray-500 dark:text-slate-400';
+    }
+};
+
 
 const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectDat, onAddDat, onRemoveDat, onUpdateDatName, onBack }) => {
     const [editingDatId, setEditingDatId] = useState<string | null>(null);
@@ -79,7 +91,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </div>
             <button
                 onClick={onAddDat}
-                className="inline-flex items-center gap-x-2 rounded-md bg-indigo-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"
+                className="inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
             >
                 <PlusCircle className="h-5 w-5" />
                 Ajouter un DAT
@@ -95,7 +107,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                     <button
                         type="button"
                         onClick={onAddDat}
-                        className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+                        className="inline-flex items-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                     >
                         <PlusCircle className="-ml-0.5 mr-1.5 h-5 w-5" />
                         Ajouter le premier DAT
@@ -120,7 +132,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                             onKeyDown={(e) => handleKeyDown(e, dat.id)}
                                             onClick={(e) => e.stopPropagation()}
                                             autoFocus
-                                            className="text-lg font-semibold text-gray-900 bg-white border border-indigo-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-slate-900 dark:text-slate-100 dark:border-indigo-400"
+                                            className="text-lg font-semibold text-gray-900 bg-white border border-teal-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-slate-900 dark:text-slate-100 dark:border-teal-400"
                                         />
                                     ) : (
                                         <div className="flex items-center flex-1 min-w-0">
@@ -140,7 +152,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                             </div>
                             <div className="mt-4">
                                 <div className="flex justify-between items-center mb-1">
-                                    <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                    <span className={`text-xs font-medium ${getStatusLabelColor(progress.status)}`}>
                                         {progress.label}
                                     </span>
                                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
