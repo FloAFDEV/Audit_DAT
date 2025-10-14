@@ -96,11 +96,16 @@ export const showSuccessToast = (options: ToastOptions) => {
     );
 };
 
+const INFO_TOAST_ID = 'single-info-toast';
+
 /**
- * Affiche un simple toast d'information.
+ * Affiche un simple toast d'information. Sur mobile, un seul toast d'info peut être affiché à la fois.
  * @param options - Les options d'affichage pour le toast d'information.
  */
 export const showInfoToast = (options: ToastOptions) => {
+    // This media query matches screen widths up to 768px (standard for tablets/mobile).
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
     toast.custom(
         (t) => (
             <div
@@ -115,7 +120,12 @@ export const showInfoToast = (options: ToastOptions) => {
                 />
             </div>
         ),
-        { duration: 5000 } // A bit longer for info
+        { 
+            duration: 2500,
+            // By assigning a consistent ID only on mobile devices, we ensure new info toasts
+            // replace existing ones, preventing them from stacking up on smaller screens.
+            id: isMobile ? INFO_TOAST_ID : undefined,
+        }
     );
 };
 

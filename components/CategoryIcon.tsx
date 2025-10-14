@@ -13,6 +13,7 @@ const getCategoryInfo = (categoryConfig: AuditCategoryConfig, isFuture: boolean)
     const terminusMap: Partial<Record<AuditCategory, string>> = {
         METRO_A: 'Basso Cambo <> Balma-Gramont',
         METRO_B: 'Borderouge <> Ramonville',
+        METRO_C: 'Colomiers Gare <> Labège Gare',
         TRAM: 'MEETT <> Palais de Justice',
         PR: 'Parking + Silo',
     };
