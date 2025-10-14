@@ -1,7 +1,6 @@
-
 import React, { useMemo } from 'react';
 import { AUDIT_CATEGORIES } from '../data/config';
-import { Lieu } from '../types';
+import { Lieu, AuditCategoryConfig } from '../types';
 import { getModuleLineConfig } from '../data/builder';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -58,28 +57,31 @@ export const FormattedCorrespondence: React.FC<{ text: string, className?: strin
     );
 };
 
-// FIX: Added the missing 'LieuBadges' component.
 export const LieuBadges: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const categories = useMemo(() => {
-        const categoryMap = new Map<string, ReturnType<typeof getModuleLineConfig>>();
-        
+        // This map will store the config and whether ALL modules for that category are future.
+        const categoryStatus = new Map<string, { config: AuditCategoryConfig, allFuture: boolean }>();
+
         lieu.modules.forEach(module => {
-            // We only want badges for active/existing modules, not future ones.
-            if (!module.isFuture) {
-                const config = getModuleLineConfig(module);
-                if (config) {
-                    categoryMap.set(config.key, config);
+            const config = getModuleLineConfig(module);
+            if (config) {
+                if (!categoryStatus.has(config.key)) {
+                    // First time we see this category, assume all its modules are future until proven otherwise.
+                    categoryStatus.set(config.key, { config, allFuture: true });
+                }
+                // If we find even one module that is not future, the whole category is not considered "allFuture".
+                if (!module.isFuture) {
+                    categoryStatus.get(config.key)!.allFuture = false;
                 }
             }
         });
 
-        // Convert map values to array and filter out any potential undefined values
-        const uniqueCategories = Array.from(categoryMap.values()).filter((c): c is NonNullable<typeof c> => !!c);
+        const uniqueCategories = Array.from(categoryStatus.values());
         
         // Sort the categories based on the order in AUDIT_CATEGORIES for consistency
         uniqueCategories.sort((a, b) => {
-            const indexA = AUDIT_CATEGORIES.findIndex(cat => cat.key === a.key);
-            const indexB = AUDIT_CATEGORIES.findIndex(cat => cat.key === b.key);
+            const indexA = AUDIT_CATEGORIES.findIndex(cat => cat.key === a.config.key);
+            const indexB = AUDIT_CATEGORIES.findIndex(cat => cat.key === b.config.key);
             return indexA - indexB;
         });
         
@@ -93,8 +95,8 @@ export const LieuBadges: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
 
     return (
         <div className="flex items-center gap-1.5 flex-wrap">
-            {categories.map(category => (
-                <CategoryIcon key={category.key} categoryConfig={category} size="sm" />
+            {categories.map(({ config, allFuture }) => (
+                <CategoryIcon key={config.key} categoryConfig={config} size="sm" isFuture={allFuture} />
             ))}
         </div>
     );

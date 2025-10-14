@@ -5,9 +5,10 @@ import { Globe } from 'lucide-react';
 interface CategoryIconProps {
   categoryConfig?: AuditCategoryConfig;
   size?: 'sm' | 'md';
+  isFuture?: boolean;
 }
 
-export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md' }) => {
+export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md', isFuture = false }) => {
     const sizeClasses = size === 'md' ? 'w-6 h-6' : 'w-5 h-5';
     const textSize = size === 'md' ? 'text-sm' : 'text-xs';
 
@@ -19,7 +20,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         );
     }
 
-    const { shortLabel, colors } = categoryConfig;
+    const { shortLabel, colors, label } = categoryConfig;
     const isLongLabel = shortLabel.length >= 3;
 
     const sizing = size === 'md'
@@ -28,8 +29,9 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
 
     return (
         <div
-            className={`flex-shrink-0 flex items-center justify-center rounded-sm font-bold shadow-sm ${sizing} ${colors.badgeText}`}
+            className={`flex-shrink-0 flex items-center justify-center rounded-sm font-bold shadow-sm transition-opacity ${sizing} ${colors.badgeText}`}
             style={{ backgroundColor: colors.badgeBg }}
+            title={isFuture ? `${label} (Bientôt disponible)` : label}
         >
             {shortLabel}
         </div>
