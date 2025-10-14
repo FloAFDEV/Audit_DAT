@@ -33,8 +33,7 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
                 ];
             case 'ARE': // Arènes
                 return [
-                    { id: `${stationId}-dir-1`, name: 'Salle d\'échange Métro/SNCF', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Tramway', dats: [createDat('5'), createDat('6')] }
+                    { id: `${stationId}-dir-1`, name: 'Salle d\'échange Métro/SNCF', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] }
                 ];
             case 'MAR': // Marengo-SNCF
                 return [
@@ -193,7 +192,7 @@ const createPrModule = (prData: { id: string, name: string }): AuditModule => {
     };
 };
 
-const createEcaModulesForStation = (station: Partial<Station>, line: MetroLine): AuditModule[] => {
+const createEcaModuleForStation = (station: Partial<Station>, line: MetroLine): AuditModule => {
     const ecaTemplates = ECA_DEFINITIONS[station.code!] ?? ECA_DEFINITIONS['DEFAULT'];
 
     const ecas: ECA[] = station.isFuture ? [] : ecaTemplates.map((template, index) => ({
@@ -210,14 +209,14 @@ const createEcaModulesForStation = (station: Partial<Station>, line: MetroLine):
         ecas,
     };
 
-    return [{
+    return {
         id: `module-eca-${station.id}`,
         type: AuditModuleType.ECA,
         name: `ECA (Valideurs)`,
         data: ecaData,
         isFuture: station.isFuture,
         line: line,
-    }];
+    };
 };
 
 const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine): AuditModule => {
@@ -257,9 +256,9 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
-            ...LINE_A_STATIONS.flatMap(s => createEcaModulesForStation(s, 'A')),
-            ...LINE_B_STATIONS.flatMap(s => createEcaModulesForStation(s, 'B')),
-            ...LINE_C_STATIONS.flatMap(s => createEcaModulesForStation(s, 'C')),
+            ...LINE_A_STATIONS.map(s => createEcaModuleForStation(s, 'A')),
+            ...LINE_B_STATIONS.map(s => createEcaModuleForStation(s, 'B')),
+            ...LINE_C_STATIONS.map(s => createEcaModuleForStation(s, 'C')),
 
             ...LINE_A_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'B')),

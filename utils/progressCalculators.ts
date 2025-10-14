@@ -53,9 +53,21 @@ export const getDirectionProgress = (direction: Direction): DirectionProgress =>
         return { completedCount: 0, totalCount: 0, percentage: 100, isComplete: true };
     }
 
-    const completedCount = direction.dats.filter(dat => getDatProgress(dat).isComplete).length;
-    const percentage = (completedCount / totalCount) * 100;
-    const isComplete = completedCount === totalCount;
+    let totalCheckedAdhesives = 0;
+    let totalAdhesives = 0;
+    let completedDatCount = 0;
 
-    return { completedCount, totalCount, percentage, isComplete };
+    for (const dat of direction.dats) {
+        const datProgress = getDatProgress(dat);
+        totalCheckedAdhesives += datProgress.checked;
+        totalAdhesives += datProgress.total;
+        if (datProgress.isComplete) {
+            completedDatCount++;
+        }
+    }
+
+    const percentage = totalAdhesives > 0 ? (totalCheckedAdhesives / totalAdhesives) * 100 : 0;
+    const isComplete = completedDatCount === totalCount;
+
+    return { completedCount: completedDatCount, totalCount, percentage, isComplete };
 };
