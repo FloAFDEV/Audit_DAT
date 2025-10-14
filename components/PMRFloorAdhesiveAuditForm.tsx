@@ -1,9 +1,11 @@
+
+
 import React, { useMemo, useState } from 'react';
 import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
-import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, ArrowRight } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
-import { AUDIT_CATEGORIES } from '../data/config';
+import { FormattedCorrespondence } from './Icons';
 
 interface PMRFloorAdhesiveAuditFormProps {
   module: AuditModule;
@@ -68,32 +70,17 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {pmrData.adhesives.map((adhesive) => {
           const currentStatus = adhesive.status;
-          const match = adhesive.name.match(/Correspondance ([A-Z])->([A-Z])/);
-          const fromConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[1]) : undefined;
-          const toConfig = match ? AUDIT_CATEGORIES.find(c => c.shortLabel === match[2]) : undefined;
 
           return (
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 flex-wrap">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{adhesive.name}</h3>
-                      {match && fromConfig && toConfig && (
-                          <div className="flex items-center gap-1.5">
-                              <span
-                                  className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
-                                  style={{ backgroundColor: fromConfig.colors.badgeBg }}
-                                  title={`Ligne ${match[1]}`}
-                              ></span>
-                              <ArrowRight className="w-4 h-4 text-gray-400 dark:text-slate-500" />
-                              <span
-                                  className="w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10"
-                                  style={{ backgroundColor: toConfig.colors.badgeBg }}
-                                  title={`Ligne ${match[2]}`}
-                              ></span>
-                          </div>
-                      )}
-                  </div>
+                  <FormattedCorrespondence 
+                    as="h3"
+                    text={adhesive.name}
+                    useLogos={true}
+                    className="text-lg font-semibold text-gray-900 dark:text-slate-100"
+                  />
                   <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">Vérifier la présence et l'état de l'adhésif de signalisation au sol.</p>
                 </div>
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
