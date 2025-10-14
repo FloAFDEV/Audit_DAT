@@ -1,4 +1,5 @@
 
+
 import React, { useMemo, useState } from 'react';
 import { Equipment, AdhesiveStatus, AuditModule, EquipmentType } from '../types';
 import { getPrAdhesives } from '../data/adhesives';
@@ -31,6 +32,10 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
         const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
         return (checked / total) * 100;
     }, [equipment.adhesives, adhesives.length]);
+
+  const isComplete = Math.round(progress) === 100;
+  const isInProgress = progress > 0 && !isComplete;
+  const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
 
 
   return (
@@ -71,7 +76,7 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                   <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                  <div className={`${progressBarColor} h-2 rounded-full transition-all duration-300`} style={{ width: `${progress}%` }}></div>
               </div>
           </div>
       </div>

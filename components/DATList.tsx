@@ -1,4 +1,5 @@
 
+
 import React, { useState } from 'react';
 import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
@@ -26,6 +27,17 @@ const getStatusLabelColor = (status: ProgressStatus) => {
             return 'text-amber-600 dark:text-amber-400';
         default:
             return 'text-gray-500 dark:text-slate-400';
+    }
+};
+
+const getProgressBarColor = (status: ProgressStatus) => {
+    switch (status) {
+        case ProgressStatus.InProgress:
+            return 'bg-amber-500 dark:bg-amber-500';
+        case ProgressStatus.Completed:
+            return 'bg-teal-500 dark:bg-teal-600';
+        default:
+            return 'bg-gray-400 dark:bg-slate-500';
     }
 };
 
@@ -159,7 +171,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                 </div>
                                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                    <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+                                    <div className={`${getProgressBarColor(progress.status)} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                 </div>
                             </div>
                         </div>

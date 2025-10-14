@@ -25,6 +25,10 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
     return (checked / total) * 100;
   }, [pmrData.adhesives]);
 
+  const isComplete = Math.round(progress) === 100;
+  const isInProgress = progress > 0 && !isComplete;
+  const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+
   return (
     <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
       <div className="p-6">
@@ -63,7 +67,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
                   <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
               </div>
               <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                  <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                  <div className={`${progressBarColor} h-2 rounded-full transition-all duration-300`} style={{ width: `${progress}%` }}></div>
               </div>
           </div>
       </div>

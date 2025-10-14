@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station } from '../types';
 import { LieuBadges } from './Icons';
@@ -68,6 +69,9 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index);
 
+    const isInProgress = progress > 0 && progress < 100;
+    const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+
     return (
         <button
             onClick={onSelect}
@@ -93,7 +97,7 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-slate-700">
-                    <div className="bg-teal-500 dark:bg-teal-600 h-1.5 rounded-full" style={{ width: `${progress}%` }}></div>
+                    <div className={`${progressBarColor} h-1.5 rounded-full`} style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
         </button>

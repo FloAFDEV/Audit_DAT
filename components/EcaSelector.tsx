@@ -1,5 +1,6 @@
 
 
+
 import React from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus } from '../types';
 import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets } from 'lucide-react';
@@ -77,6 +78,8 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                     {ecaData.ecas.map((eca) => {
                         const progress = getEcaProgress(eca);
                         const isComplete = progress === 100;
+                        const isInProgress = progress > 0 && !isComplete;
+                        const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
                         const isPmr = isPmrEcaType(eca.type);
 
                         return (
@@ -110,7 +113,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full" style={{ width: `${progress}%` }}></div>
+                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress}%` }}></div>
                                     </div>
                                 </div>
                             </button>

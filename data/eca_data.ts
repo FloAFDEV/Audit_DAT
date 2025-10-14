@@ -31,6 +31,15 @@ type EcaTemplate = Omit<ECA, 'id' | 'adhesives' | 'comment'>;
 // 'DEFAULT' is used for any station not explicitly listed.
 export const ECA_DEFINITIONS: { [stationCode: string]: EcaTemplate[] } = {
     'DEFAULT': defaultEcaTemplates,
+    'CAP': [ // Capitole
+        ...defaultEcaTemplates,
+        {
+            name: 'ECA PMR Accès Ascenseur',
+            accessPoint: 'Accès Ascenseur (Niveau inférieur)',
+            type: EcaEquipmentType.PMRVantaux,
+            number: 2,
+        },
+    ],
     'JJA': [ // Jean-Jaurès Ligne A
         ...defaultEcaTemplates,
         {

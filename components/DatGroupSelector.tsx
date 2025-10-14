@@ -1,4 +1,5 @@
 
+
 import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
@@ -76,6 +77,9 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                 <div className="space-y-4">
                     {station.directions.map(direction => {
                         const progress = getDirectionProgress(direction);
+                        const isInProgress = progress.percentage > 0 && !progress.isComplete;
+                        const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                        
                         return (
                              <button
                                 key={direction.id}
@@ -99,7 +103,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                         </span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className="bg-teal-500 dark:bg-teal-600 h-2 rounded-full" style={{ width: `${progress.percentage}%` }}></div>
+                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
                             </button>
