@@ -110,14 +110,16 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
     const rows: CsvRow[] = [];
 
     const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0'); // Les mois sont de 0 à 11
-    const year = now.getFullYear();
 
-    // Format JJ/MM/AAAA pour la colonne dans le CSV
-    const exportDateColumnString = `${day}/${month}/${year}`;
-    // Format AAAA-MM-JJ pour le nom de fichier (plus sûr)
-    const exportDateFilenameString = `${year}-${month}-${day}`;
+    // Format JJ/MM/AAAA pour la colonne dans le CSV, en s'assurant que l'heure n'est pas incluse.
+    const exportDateColumnString = now.toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+
+    // Format AAAA-MM-JJ pour le nom de fichier, en ignorant l'heure.
+    const exportDateFilenameString = now.toISOString().split('T')[0];
 
 
     for (const lieu of lieux) {
