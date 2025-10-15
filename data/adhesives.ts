@@ -40,9 +40,9 @@ export const PR_ADHESIVES_CA: PrAdhesive[] = [
 ];
 
 const ECA_ADHESIVES_BASE: Adhesive[] = [
-    { id: 'eca-1', name: 'Repère 1 - Adhésif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
-    { id: 'eca-2', name: 'Repère 2 - Adhésif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
-    { id: 'eca-3', name: 'Repère 3 - Adhésif rose valideur-billetique-metro-pastel', description: '164x170mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
+    { id: 'eca-1', name: 'Repère 1 - Adhesif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
+    { id: 'eca-2', name: 'Repère 2 - Adhesif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
+    { id: 'eca-3', name: 'Repère 3 - Adhesif valideur-openpayment-metro', description: '183x183mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
 ];
 
 const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [

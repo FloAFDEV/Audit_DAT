@@ -182,21 +182,37 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                 case AuditModuleType.ECA: {
                     const ecaData = module.data as EcaData;
                     for (const eca of ecaData.ecas) {
-                         for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
-                             const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
-                             rows.push({
-                                 ...baseRow,
-                                 type_audit: 'ECA',
-                                 station_nom: ecaData.stationName,
-                                 station_code: ecaData.stationCode,
-                                 direction: eca.accessPoint,
-                                 equipement_nom: eca.name,
-                                 equipement_type: eca.type,
-                                 equipement_commentaire: eca.comment,
-                                 adhesif_nom: adhesiveInfo?.name || 'N/A',
-                                 adhesif_description: adhesiveInfo?.description || 'N/A',
-                                 statut: status,
-                             });
+                         if (eca.isNotApplicable) {
+                            rows.push({
+                                ...baseRow,
+                                type_audit: 'ECA',
+                                station_nom: ecaData.stationName,
+                                station_code: ecaData.stationCode,
+                                direction: eca.accessPoint,
+                                equipement_nom: eca.name,
+                                equipement_type: eca.type,
+                                equipement_commentaire: eca.comment || 'Validé sans adhésifs',
+                                adhesif_nom: 'N/A',
+                                adhesif_description: 'Aucun adhésif applicable',
+                                statut: 'Non Applicable',
+                            });
+                         } else {
+                            for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
+                                const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
+                                rows.push({
+                                    ...baseRow,
+                                    type_audit: 'ECA',
+                                    station_nom: ecaData.stationName,
+                                    station_code: ecaData.stationCode,
+                                    direction: eca.accessPoint,
+                                    equipement_nom: eca.name,
+                                    equipement_type: eca.type,
+                                    equipement_commentaire: eca.comment,
+                                    adhesif_nom: adhesiveInfo?.name || 'N/A',
+                                    adhesif_description: adhesiveInfo?.description || 'N/A',
+                                    statut: status,
+                                });
+                            }
                          }
                     }
                     break;

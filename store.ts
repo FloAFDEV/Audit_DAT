@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { 
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData 
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType 
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -70,6 +70,9 @@ interface AppState {
     handleEcaAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetEcaAdhesive: () => Promise<void>;
     handleSetEcaNotApplicable: (isNA: boolean) => Promise<void>;
+    handleAddEca: (ecaData: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable'>) => Promise<void>;
+    handleUpdateEca: (ecaData: Partial<Omit<ECA, 'adhesives' | 'comment'>> & { id: string }) => Promise<void>;
+    handleRemoveEca: (ecaId: string) => Promise<void>;
 
     // PMR Floor Adhesive Actions
     handlePmrFloorAdhesiveStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -434,6 +437,59 @@ const useAuditStore = create<AppState>((set, get) => {
         if (isNA) {
             set({ selectedEcaId: null });
         }
+    },
+    
+    handleAddEca: async (ecaData) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
+            if (module) {
+                const newEca: ECA = {
+                    ...ecaData,
+                    id: uuidv4(),
+                    adhesives: createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type)),
+                    comment: '',
+                };
+                module.data.ecas.push(newEca);
+            }
+        });
+    },
+
+    handleUpdateEca: async (ecaData) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
+            const ecaIndex = module.data.ecas.findIndex(e => e.id === ecaData.id);
+            if (ecaIndex > -1) {
+                const originalEca = module.data.ecas[ecaIndex];
+                const updatedEca = {
+                    ...originalEca,
+                    ...ecaData
+                };
+
+                // Si le type a changé, on réinitialise les adhésifs
+                if (ecaData.type && ecaData.type !== originalEca.type) {
+                    updatedEca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type));
+                }
+
+                // Si le type n'est plus 'Tripode de sortie', le statut N/A n'a pas de sens
+                if (updatedEca.type !== EcaEquipmentType.TripodeSortie) {
+                    delete updatedEca.isNotApplicable;
+                }
+
+                module.data.ecas[ecaIndex] = updatedEca;
+            }
+        });
+    },
+
+    handleRemoveEca: async (ecaId) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
+            if (module) {
+                module.data.ecas = module.data.ecas.filter(e => e.id !== ecaId);
+            }
+        });
     },
 
     // =================================================================

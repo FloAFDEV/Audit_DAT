@@ -132,6 +132,9 @@ const App: React.FC = () => {
         handleEcaAdhesiveCommentChange,
         handleResetEcaAdhesive,
         handleSetEcaNotApplicable,
+        handleAddEca,
+        handleUpdateEca,
+        handleRemoveEca,
         // PMR Floor Adhesive actions
         handlePmrFloorAdhesiveStatusChange,
         handleResetPmrFloorAdhesive,
@@ -509,7 +512,14 @@ const App: React.FC = () => {
         
         // ECA Selector
         if (selectedModule?.type === AuditModuleType.ECA) {
-            return <EcaSelector module={selectedModule} onSelectEca={selectEca} onBack={() => selectModule(null)} />;
+            return <EcaSelector 
+                module={selectedModule} 
+                onSelectEca={selectEca} 
+                onBack={() => selectModule(null)} 
+                onAddEca={handleAddEca}
+                onUpdateEca={handleUpdateEca}
+                onRemoveEca={handleRemoveEca}
+            />;
         }
 
         // DAT List (after selecting a direction)

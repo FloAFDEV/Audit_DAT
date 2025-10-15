@@ -1,18 +1,20 @@
 
-
-
-
-import React from 'react';
-import { AuditModule, EcaData, ECA, AdhesiveStatus } from '../types';
-import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets } from 'lucide-react';
+import React, { useState } from 'react';
+import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType } from '../types';
+import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets, Edit, Trash2, PlusCircle } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
+import ConfirmationModal from './ConfirmationModal';
+import EcaEditModal from './EcaEditModal';
 
 interface EcaSelectorProps {
   module: AuditModule;
   onSelectEca: (ecaId: string) => void;
   onBack: () => void;
+  onAddEca: (ecaData: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable'>) => void;
+  onUpdateEca: (ecaData: Partial<Omit<ECA, 'adhesives' | 'comment'>> & { id: string }) => void;
+  onRemoveEca: (ecaId: string) => void;
 }
 
 const getEcaProgress = (eca: ECA) => {
@@ -37,7 +39,6 @@ const getEcaIcon = (eca: ECA) => {
     const isPmr = isPmrEcaType(eca.type);
 
     if (isPmr) {
-        // Light blue for PMR
         const iconProps = { className: "w-8 h-8 text-blue-600 dark:text-blue-300" };
         return (
             <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
@@ -45,7 +46,6 @@ const getEcaIcon = (eca: ECA) => {
             </div>
         );
     } else {
-        // Light green for main access
         const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
         return (
             <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
@@ -55,16 +55,46 @@ const getEcaIcon = (eca: ECA) => {
     }
 };
 
-const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }) => {
+const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, onAddEca, onUpdateEca, onRemoveEca }) => {
     const ecaData = module.data as EcaData;
+
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [ecaToEdit, setEcaToEdit] = useState<ECA | null>(null);
+    const [ecaToDelete, setEcaToDelete] = useState<ECA | null>(null);
+
+    const handleOpenAddModal = () => {
+        setEcaToEdit(null);
+        setIsEditModalOpen(true);
+    };
+
+    const handleOpenEditModal = (eca: ECA) => {
+        setEcaToEdit(eca);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSaveEca = (data: Omit<ECA, 'adhesives' | 'comment'>) => {
+        if (data.id) {
+            onUpdateEca(data);
+        } else {
+            onAddEca(data);
+        }
+        setIsEditModalOpen(false);
+    };
+
+    const handleConfirmDelete = () => {
+        if (ecaToDelete) {
+            onRemoveEca(ecaToDelete.id);
+            setEcaToDelete(null);
+        }
+    };
 
     return (
         <div>
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div className="flex items-center gap-4">
+                <div className="flex items-start gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-slate-700"
+                        className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-slate-700"
                         aria-label="Retour"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -77,6 +107,13 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                         </div>
                     </div>
                 </div>
+                <button
+                    onClick={handleOpenAddModal}
+                    className="inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
+                >
+                    <PlusCircle className="h-5 w-5" />
+                    Ajouter un ECA
+                </button>
             </div>
 
             {ecaData.ecas.length === 0 ? (
@@ -89,15 +126,16 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                 <div className="space-y-4">
                     {ecaData.ecas.map((eca) => {
                         const progress = getEcaProgress(eca);
+                        const isNotApplicable = eca.isNotApplicable;
                         const isInProgress = progress.percentage > 0 && !progress.isComplete;
                         
-                        const progressBarColor = eca.isNotApplicable
+                        const progressBarColor = isNotApplicable
                             ? 'bg-slate-400 dark:bg-slate-600'
                             : isInProgress
                                 ? 'bg-amber-500 dark:bg-amber-500'
                                 : 'bg-teal-500 dark:bg-teal-600';
                         
-                        const statusLabelColor = eca.isNotApplicable
+                        const statusLabelColor = isNotApplicable
                             ? 'text-slate-500 dark:text-slate-400'
                             : progress.isComplete
                                 ? 'text-teal-600 dark:text-teal-400'
@@ -108,13 +146,19 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                         return (
                             <button
                                 key={eca.id}
-                                onClick={() => onSelectEca(eca.id)}
-                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                                onClick={isNotApplicable ? undefined : () => onSelectEca(eca.id)}
+                                // We don't use the `disabled` attribute directly to allow child buttons to be interactive.
+                                // Instead, we manage the visual state and click behavior manually.
+                                className={`bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 ${
+                                    isNotApplicable 
+                                    ? 'opacity-70 cursor-default' 
+                                    : 'hover:shadow-xl dark:hover:ring-slate-600'
+                                }`}
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         {getEcaIcon(eca)}
-                                        <div>
+                                        <div className="flex-1 min-w-0">
                                             <FormattedCorrespondence 
                                                 as="p" 
                                                 text={eca.name} 
@@ -124,8 +168,24 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                                             <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {eca.type}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center flex-shrink-0">
-                                        <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2" />
+                                    <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); handleOpenEditModal(eca); }}
+                                            className="p-2 rounded-full hover:bg-indigo-100 text-indigo-600 transition-colors dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+                                            aria-label={`Modifier ${eca.name}`}
+                                        >
+                                            <Edit className="w-5 h-5" />
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setEcaToDelete(eca); }}
+                                            className="p-2 rounded-full hover:bg-red-100 text-red-600 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
+                                            aria-label={`Supprimer ${eca.name}`}
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                         {!isNotApplicable && (
+                                             <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-1" />
+                                         )}
                                     </div>
                                 </div>
                                 <div className="mt-4">
@@ -144,6 +204,25 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                     })}
                 </div>
             )}
+            
+            {isEditModalOpen && (
+                 <EcaEditModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    onSave={handleSaveEca}
+                    eca={ecaToEdit}
+                    stationName={ecaData.stationName}
+                />
+            )}
+           
+            <ConfirmationModal
+                isOpen={!!ecaToDelete}
+                onClose={() => setEcaToDelete(null)}
+                onConfirm={handleConfirmDelete}
+                title="Supprimer l'ECA"
+                message={`Êtes-vous sûr de vouloir supprimer l'équipement "${ecaToDelete?.name}" ?\n\nCette action est irréversible.`}
+                isDestructive
+            />
         </div>
     );
 };
