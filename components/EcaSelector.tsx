@@ -1,14 +1,13 @@
-
-
 import React, { useState } from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType, Adhesive } from '../types';
-import { ChevronRight, ArrowLeft, Fence, Accessibility, Edit, Trash2, PlusCircle } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
+import { TripodeIcon } from './TripodeIcon';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -29,14 +28,15 @@ const getEcaIcon = (eca: ECA) => {
                 <Accessibility {...iconProps} />
             </div>
         );
-    } else {
-        const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
-        return (
-            <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                <Fence {...iconProps} />
-            </div>
-        );
     }
+    
+    // For all non-PMR ECAs (Tripodes, Vantaux), use the new TripodeIcon.
+    const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
+    return (
+        <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
+            <TripodeIcon {...iconProps} />
+        </div>
+    );
 };
 
 const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, onAddEca, onUpdateEca, onRemoveEca }) => {
@@ -102,7 +102,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
 
             {ecaData.ecas.length === 0 ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-                    <Fence className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
+                    <TripodeIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun ECA</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun valideur n'est enregistré pour cette station.</p>
                 </div>
