@@ -5,14 +5,12 @@ import { PR_DATA } from '../data/pr_data';
 
 interface CsvRow {
     date_export: string;
-    type_audit: string;
     ligne_transport: string;
     lieu_nom: string;
     station_nom?: string;
     station_code?: string;
     direction?: string;
     equipement_nom: string;
-    equipement_type?: string;
     equipement_commentaire?: string;
     adhesif_nom: string;
     adhesif_description: string;
@@ -140,12 +138,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                     const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
                                     rows.push({
                                         ...baseRow,
-                                        type_audit: 'DAT',
                                         station_nom: station.name,
                                         station_code: station.code,
                                         direction: direction.name,
                                         equipement_nom: dat.name,
-                                        equipement_type: 'DAT',
                                         equipement_commentaire: dat.comment,
                                         adhesif_nom: adhesiveInfo?.name || 'N/A',
                                         adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -164,12 +160,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                             const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
                             rows.push({
                                 ...baseRow,
-                                type_audit: 'P+R',
                                 station_nom: prData.name, // Using station_nom for PR name for consistency
                                 station_code: '',
                                 direction: '',
                                 equipement_nom: equipment.name,
-                                equipement_type: equipment.type,
                                 equipement_commentaire: equipment.comment,
                                 adhesif_nom: adhesiveInfo?.name || 'N/A',
                                 adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -185,12 +179,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                          if (eca.isNotApplicable) {
                             rows.push({
                                 ...baseRow,
-                                type_audit: 'ECA',
                                 station_nom: ecaData.stationName,
                                 station_code: ecaData.stationCode,
                                 direction: eca.accessPoint,
                                 equipement_nom: eca.name,
-                                equipement_type: eca.type,
                                 equipement_commentaire: eca.comment || 'Validé sans adhésifs',
                                 adhesif_nom: 'N/A',
                                 adhesif_description: 'Aucun adhésif applicable',
@@ -201,12 +193,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
                                 rows.push({
                                     ...baseRow,
-                                    type_audit: 'ECA',
                                     station_nom: ecaData.stationName,
                                     station_code: ecaData.stationCode,
                                     direction: eca.accessPoint,
                                     equipement_nom: eca.name,
-                                    equipement_type: eca.type,
                                     equipement_commentaire: eca.comment,
                                     adhesif_nom: adhesiveInfo?.name || 'N/A',
                                     adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -222,12 +212,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                      for (const adhesive of pmrData.adhesives) {
                          rows.push({
                              ...baseRow,
-                             type_audit: 'PMR_SOL',
                              station_nom: pmrData.stationName,
                              station_code: pmrData.stationCode,
                              direction: '',
-                             equipement_nom: 'Sol',
-                             equipement_type: 'Signalétique au sol',
+                             equipement_nom: 'Signalétique au sol',
                              equipement_commentaire: '',
                              adhesif_nom: adhesive.name,
                              adhesif_description: 'Adhésif de signalisation au sol pour passage PMR',

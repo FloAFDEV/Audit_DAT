@@ -8,6 +8,7 @@ import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { v4 as uuidv4 } from 'uuid';
 import { validateImportedData } from './utils/csvExporter';
+import { canEcaBeNotApplicable } from './data/eca_data';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -400,20 +401,6 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
-                const allAdhesiveDefs = getEcaAdhesives(eca.type);
-                const changedAdhesive = allAdhesiveDefs.find(ad => ad.id === adhesiveId);
-
-                // If setting a status (not un-setting), and it's a group item, reset others in the same group.
-                if (status !== AdhesiveStatus.NotChecked && changedAdhesive?.groupId) {
-                    const groupAdhesives = allAdhesiveDefs.filter(ad => ad.groupId === changedAdhesive.groupId);
-                    for (const adInGroup of groupAdhesives) {
-                        // Don't reset the one we are about to set
-                        if (adInGroup.id !== adhesiveId) {
-                            eca.adhesives[adInGroup.id] = AdhesiveStatus.NotChecked;
-                        }
-                    }
-                }
-
                 eca.adhesives[adhesiveId] = status;
             }
         });
@@ -488,8 +475,8 @@ const useAuditStore = create<AppState>((set, get) => {
                     updatedEca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type));
                 }
 
-                // Si le type n'est plus 'Tripode de sortie', le statut N/A n'a pas de sens
-                if (updatedEca.type !== EcaEquipmentType.TripodeSortie) {
+                // Si le type ne permet pas le statut N/A, on supprime la propriété.
+                if (!canEcaBeNotApplicable(updatedEca.type)) {
                     delete updatedEca.isNotApplicable;
                 }
 

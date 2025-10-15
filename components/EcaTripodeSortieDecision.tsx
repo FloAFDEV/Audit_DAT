@@ -1,5 +1,5 @@
 import React from 'react';
-import { AuditModule, ECA } from '../types';
+import { AuditModule, ECA, EcaEquipmentType } from '../types';
 import { ArrowLeft, Check, Edit3 } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
@@ -21,6 +21,12 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
   onConfirmNA,
   onAudit,
 }) => {
+  const typeDescription = eca.type;
+  const mainText = eca.type === EcaEquipmentType.TripodeSortie
+    ? `La plupart des tripodes de sortie ne possèdent pas d'adhésifs.`
+    : `Certains équipements de type "${eca.type}" peuvent ne pas posséder d'adhésifs.`;
+
+
   return (
     <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden max-w-2xl mx-auto">
       <div className="p-6">
@@ -46,9 +52,9 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
         </div>
       </div>
       <div className="p-6 border-t border-gray-200 dark:border-slate-700">
-        <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-slate-100">Cet équipement est un tripode de sortie.</h3>
+        <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-slate-100">Confirmation pour {typeDescription}</h3>
         <p className="text-center text-gray-600 dark:text-slate-400 mt-2">
-          La plupart des tripodes de sortie ne possèdent pas d'adhésifs. Confirmez-vous que c'est le cas pour cet équipement, ou s'agit-il du cas spécial à auditer ?
+          {mainText} Confirmez-vous que c'est le cas pour cet équipement, ou s'agit-il d'un cas spécial à auditer ?
         </p>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
@@ -65,7 +71,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
           >
             <Edit3 className="w-10 h-10 mb-3 text-indigo-500 dark:text-indigo-400" />
             <span className="text-lg font-semibold">Auditer les adhésifs</span>
-            <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">Procéder à l'audit (cas spécial).</span>
+            <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">Procéder à l'audit.</span>
           </button>
         </div>
       </div>

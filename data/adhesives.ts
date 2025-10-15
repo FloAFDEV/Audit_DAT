@@ -88,7 +88,6 @@ export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
         case EcaEquipmentType.PMR:
             return ECA_ADHESIVES_PMR_BRAS;
         case EcaEquipmentType.PMRVantaux:
-        case EcaEquipmentType.PMRVantauxReversible:
             return ECA_ADHESIVES_PMR_VANTAUX;
         default:
             return ECA_ADHESIVES_STD;

@@ -7,6 +7,7 @@ export enum AdhesiveStatus {
     Absent = 'Absent',
     ToBeReplaced = 'A remplacer',
     NotChecked = 'Non vérifié',
+    NotApplicable = 'Non applicable',
 }
 
 export enum FloorAdhesiveStatus {
@@ -36,7 +37,6 @@ export enum EcaEquipmentType {
     VantauxReversible = "Vantaux réversible",
     PMR = 'PMR',
     PMRVantaux = 'PMR à vantaux',
-    PMRVantauxReversible = 'PMR à vantaux réversible',
 }
 
 export enum TransportMode {

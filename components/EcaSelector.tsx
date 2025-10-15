@@ -8,7 +8,7 @@ import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
-import { getEcaAdhesives } from '../data/adhesives';
+import { getEcaProgress } from '../utils/progressCalculators';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -18,49 +18,6 @@ interface EcaSelectorProps {
   onUpdateEca: (ecaData: Partial<Omit<ECA, 'adhesives' | 'comment'>> & { id: string }) => void;
   onRemoveEca: (ecaId: string) => void;
 }
-
-const getEcaProgress = (eca: ECA) => {
-    if (eca.isNotApplicable) {
-        return { percentage: 100, label: 'N/A (sans adhésifs)', isComplete: true };
-    }
-
-    const adhesiveDefinitions = getEcaAdhesives(eca.type);
-
-    // Group adhesives by `groupId` or by their own `id` if not in a group
-    const groupedAdhesives = adhesiveDefinitions.reduce((acc, ad) => {
-        const key = ad.groupId || ad.id;
-        if (!acc[key]) {
-            acc[key] = [];
-        }
-        acc[key].push(ad);
-        return acc;
-    }, {} as Record<string, Adhesive[]>);
-
-    const totalItems = Object.keys(groupedAdhesives).length;
-
-    if (totalItems === 0) {
-        return { percentage: 100, label: 'Terminé', isComplete: true };
-    }
-
-    let checkedCount = 0;
-    for (const key in groupedAdhesives) {
-        const group = groupedAdhesives[key];
-        // A group is considered "checked" if at least one of its adhesives has a status other than "NotChecked"
-        const isGroupChecked = group.some(ad => eca.adhesives[ad.id] && eca.adhesives[ad.id] !== AdhesiveStatus.NotChecked);
-        if (isGroupChecked) {
-            checkedCount++;
-        }
-    }
-
-    const percentage = (checkedCount / totalItems) * 100;
-    const isComplete = checkedCount === totalItems;
-
-    let label = 'Progression';
-    if (checkedCount === 0) label = 'Non commencé';
-    if (isComplete) label = 'Terminé';
-
-    return { percentage, label, isComplete };
-};
 
 const getEcaIcon = (eca: ECA) => {
     const isPmr = isPmrEcaType(eca.type);

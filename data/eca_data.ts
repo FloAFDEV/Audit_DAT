@@ -4,7 +4,13 @@ export const isPmrEcaType = (type: EcaEquipmentType): boolean => {
     return [
         EcaEquipmentType.PMR,
         EcaEquipmentType.PMRVantaux,
-        EcaEquipmentType.PMRVantauxReversible,
+    ].includes(type);
+};
+
+export const canEcaBeNotApplicable = (type: EcaEquipmentType): boolean => {
+    return [
+        EcaEquipmentType.TripodeSortie,
+        EcaEquipmentType.PMRVantaux,
     ].includes(type);
 };
 
@@ -294,12 +300,12 @@ export const ECA_DEFINITIONS: { [stationCode: string]: EcaTemplate[] } = {
         { name: "Vantaux d'entrée 9", accessPoint: "Accès JJB A", type: EcaEquipmentType.VantauxEntree, number: 9 },
         { name: "Vantaux d'entrée 10", accessPoint: "Accès JJB A", type: EcaEquipmentType.VantauxEntree, number: 10 },
         { name: "Vantaux d'entrée 11", accessPoint: "Accès JJB A", type: EcaEquipmentType.VantauxEntree, number: 11 },
-        { name: "PMR B->A 17", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantauxReversible, number: 17 },
+        { name: "PMR B->A 17", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantaux, number: 17 },
         { name: "Vantaux B->A 13", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 13 },
         { name: "Vantaux B->A 14", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 14 },
         { name: "Vantaux B->A 15", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 15 },
         { name: "Vantaux B->A 16", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 16 },
-        { name: "PMR A->B 8", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantauxReversible, number: 8 },
+        { name: "PMR A->B 8", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantaux, number: 8 },
         { name: "Vantaux A->B 9", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 9 },
         { name: "Vantaux A->B 10", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 10 },
         { name: "Vantaux A->B 11", accessPoint: "Correspondance", type: EcaEquipmentType.VantauxReversible, number: 11 },

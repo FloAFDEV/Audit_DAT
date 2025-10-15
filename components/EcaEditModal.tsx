@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ECA, EcaEquipmentType } from '../types';
+import { canEcaBeNotApplicable } from '../data/eca_data';
 
 interface EcaEditModalProps {
     isOpen: boolean;
@@ -14,6 +15,7 @@ const ALLOWED_ECA_TYPES = [
     EcaEquipmentType.TripodeEntree,
     EcaEquipmentType.TripodeSortie,
     EcaEquipmentType.PMR,
+    EcaEquipmentType.PMRVantaux,
 ];
 
 const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, eca, stationName }) => {
@@ -27,9 +29,16 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
         if (eca) {
             setName(eca.name);
             setAccessPoint(eca.accessPoint);
-            // If the current ECA's type is not in the allowed list, default to the first allowed type.
-            // This ensures data consistency when editing older entries.
-            setType(ALLOWED_ECA_TYPES.includes(eca.type) ? eca.type : ALLOWED_ECA_TYPES[0]);
+            
+            // Handle migration for the removed 'PMR à vantaux réversible' type
+            let currentType = eca.type;
+            if (currentType === 'PMR à vantaux réversible' as any) {
+                currentType = EcaEquipmentType.PMRVantaux;
+            }
+
+            // Ensure the type is one of the allowed values
+            setType(ALLOWED_ECA_TYPES.includes(currentType) ? currentType : ALLOWED_ECA_TYPES[0]);
+            
             setNumber(eca.number);
             setIsNotApplicable(eca.isNotApplicable ?? false);
         } else {
@@ -44,20 +53,21 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        const canBeNA = canEcaBeNotApplicable(type);
         const ecaData = {
             id: eca?.id,
             name: name.trim(),
             accessPoint: accessPoint.trim(),
             type,
             number,
-            isNotApplicable: type === EcaEquipmentType.TripodeSortie ? isNotApplicable : undefined,
+            isNotApplicable: canBeNA ? isNotApplicable : undefined,
         };
         onSave(ecaData as Omit<ECA, 'adhesives' | 'comment'>);
     };
     
     if (!isOpen) return null;
 
-    const isTripodeSortie = type === EcaEquipmentType.TripodeSortie;
+    const canBeNA = canEcaBeNotApplicable(type);
 
     return (
         <div
@@ -125,7 +135,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                     </select>
                                 </div>
                             </div>
-                             {isTripodeSortie && (
+                             {canBeNA && (
                                 <div className="relative flex items-start mt-4">
                                     <div className="flex h-6 items-center">
                                         <input

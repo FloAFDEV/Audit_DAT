@@ -1,4 +1,5 @@
-import { DAT, Direction, AdhesiveStatus } from '../types';
+import { DAT, Direction, AdhesiveStatus, ECA } from '../types';
+import { getEcaAdhesives } from '../data/adhesives';
 
 export enum ProgressStatus {
     NotStarted = 'NotStarted',
@@ -70,4 +71,52 @@ export const getDirectionProgress = (direction: Direction): DirectionProgress =>
     const isComplete = completedDatCount === totalCount;
 
     return { completedCount: completedDatCount, totalCount, percentage, isComplete };
+};
+
+export interface EcaProgress {
+    percentage: number;
+    label: string;
+    isComplete: boolean;
+}
+
+export const getEcaProgress = (eca: ECA): EcaProgress => {
+    if (eca.isNotApplicable) {
+        return { percentage: 100, label: 'N/A (sans adhésifs)', isComplete: true };
+    }
+
+    const adhesiveDefinitions = getEcaAdhesives(eca.type);
+    
+    if (adhesiveDefinitions.length === 0) {
+        return { percentage: 100, label: 'Terminé', isComplete: true };
+    }
+
+    let applicableAdhesivesCount = 0;
+    let checkedAdhesivesCount = 0;
+
+    for (const ad of adhesiveDefinitions) {
+        const status = eca.adhesives[ad.id] || AdhesiveStatus.NotChecked;
+        if (status !== AdhesiveStatus.NotApplicable) {
+            applicableAdhesivesCount++;
+            if (status !== AdhesiveStatus.NotChecked) {
+                checkedAdhesivesCount++;
+            }
+        }
+    }
+
+    if (applicableAdhesivesCount === 0) {
+        return { percentage: 100, label: 'Terminé (N/A)', isComplete: true };
+    }
+
+    const percentage = (checkedAdhesivesCount / applicableAdhesivesCount) * 100;
+    const isComplete = checkedAdhesivesCount === applicableAdhesivesCount;
+    
+    let label = 'Progression';
+    const totalAudited = Object.values(eca.adhesives).filter(s => s !== AdhesiveStatus.NotChecked).length;
+    if (totalAudited === 0) {
+        label = 'Non commencé';
+    } else if (isComplete) {
+        label = 'Terminé';
+    }
+
+    return { percentage, label, isComplete };
 };

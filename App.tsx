@@ -22,6 +22,7 @@ import { CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import { AUDIT_CATEGORIES } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
 import { showPromiseToast, showSuccessToast, showErrorToast } from './components/ToastManager';
+import { canEcaBeNotApplicable } from './data/eca_data';
 
 
 // A simple loading spinner component
@@ -456,8 +457,8 @@ const App: React.FC = () => {
 
         // ECA Audit Form or Decision Screen
         if (selectedModule && selectedEca) {
-            // If it's an exit turnstile that hasn't been decided on yet...
-            if (selectedEca.type === EcaEquipmentType.TripodeSortie && typeof selectedEca.isNotApplicable === 'undefined') {
+            // If it's an ECA type that can be not applicable and hasn't been decided on yet...
+            if (canEcaBeNotApplicable(selectedEca.type) && typeof selectedEca.isNotApplicable === 'undefined') {
                 return <EcaTripodeSortieDecision
                     module={selectedModule}
                     eca={selectedEca}
