@@ -39,17 +39,35 @@ export const PR_ADHESIVES_CA: PrAdhesive[] = [
     { id: 'adca13', name: 'Dos gris verso', description: 'Dos gris au format 78x120cm', location: 'Placé au verso de la fiche "Plan de quartier"', referentiel: '' }
 ];
 
-export const ECA_ADHESIVES_STD: Adhesive[] = [
-    { id: 'eca-std-1', name: 'Item 1', description: 'Description pour item 1', referentiel: '' },
-    { id: 'eca-std-2', name: 'Item 2', description: 'Description pour item 2', referentiel: '' },
-    { id: 'eca-std-3', name: 'Item 3', description: 'Description pour item 3', referentiel: '' },
-    { id: 'eca-std-4', name: 'Item 4', description: 'Description pour item 4', referentiel: '' },
+const ECA_ADHESIVES_BASE: Adhesive[] = [
+    { id: 'eca-1', name: 'Repère 1 - Adhésif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
+    { id: 'eca-2', name: 'Repère 2 - Adhésif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
+    { id: 'eca-3', name: 'Repère 3 - Adhésif rose valideur-billetique-metro-pastel', description: '164x170mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
 ];
+
+const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [
+    ...ECA_ADHESIVES_BASE,
+    { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique « à bras »).', referentiel: '' },
+    { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
+    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
+    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '' },
+    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '' },
+];
+
+const ECA_ADHESIVES_PMR_VANTAUX: Adhesive[] = [
+    ...ECA_ADHESIVES_BASE,
+    { id: 'eca-5', name: 'Repère 5 - Adhésif valideur-PMRVantaux', description: '195x185mm | Sur platine jaune, autour du support de validation (spécifique « à vantaux »).', referentiel: '' },
+    { id: 'eca-7', name: 'Repère 7 - Adhésif valideur-portillon-PMR-vantaux', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à vantaux).', referentiel: '' },
+];
+
+// FIX: Export a combined list of all unique PMR adhesives to resolve the import error.
 export const ECA_ADHESIVES_PMR: Adhesive[] = [
-    ...ECA_ADHESIVES_STD,
-    { id: 'eca-pmr-5', name: 'Item 5 (PMR)', description: 'Description pour item 5 spécifique PMR', referentiel: '' },
-    { id: 'eca-pmr-6', name: 'Item 6 (PMR)', description: 'Description pour item 6 spécifique PMR', referentiel: '' },
+    ...new Map(
+        [...ECA_ADHESIVES_PMR_BRAS, ...ECA_ADHESIVES_PMR_VANTAUX].map(item => [item.id, item])
+    ).values()
 ];
+
+export const ECA_ADHESIVES_STD: Adhesive[] = ECA_ADHESIVES_BASE;
 
 
 // =================================================================
@@ -68,9 +86,10 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
 export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
     switch (type) {
         case EcaEquipmentType.PMR:
+            return ECA_ADHESIVES_PMR_BRAS;
         case EcaEquipmentType.PMRVantaux:
         case EcaEquipmentType.PMRVantauxReversible:
-            return ECA_ADHESIVES_PMR;
+            return ECA_ADHESIVES_PMR_VANTAUX;
         default:
             return ECA_ADHESIVES_STD;
     }
