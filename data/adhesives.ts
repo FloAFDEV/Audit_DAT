@@ -49,9 +49,9 @@ const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [
     ...ECA_ADHESIVES_BASE,
     { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique « à bras »).', referentiel: '' },
     { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
-    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras (1 au choix)' },
-    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras (1 au choix)' },
-    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras (1 au choix)' },
+    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
+    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
+    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
 ];
 
 const ECA_ADHESIVES_PMR_VANTAUX: Adhesive[] = [

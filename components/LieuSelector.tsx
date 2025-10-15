@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station } from '../types';
 import { LieuBadges } from './Icons';
@@ -12,6 +10,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { ActionsMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
+import { sortLieuxByPhysicalOrder } from '../utils/csvExporter';
 
 interface LieuSelectorProps {
   lieux: Lieu[];
@@ -78,20 +77,18 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
             className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600`}
         >
             <div className="flex justify-between items-center">
-                 <div className="flex items-center min-w-0">
-                    {stationCodes.length > 0 && (
-                        <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold mr-3 px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
+                 <div className="flex items-center gap-x-2 flex-wrap min-w-0">
+                    <LieuBadges lieu={lieu} />
+                    <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
+                     {stationCodes.length > 0 && (
+                        <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
                             {stationCodes.join(' / ')}
                         </span>
                     )}
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
             </div>
-             <div className="my-3">
-                <LieuBadges lieu={lieu} />
-            </div>
-            <div className="mt-auto pt-2">
+            <div className="mt-auto pt-4">
                 <div className="flex justify-between items-center mb-1">
                     <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Progression</span>
                     <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
@@ -166,7 +163,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
     
     const orderedLieux = useMemo(() => {
         const lieuxSource = activeFilter === 'ALL' 
-            ? [...lieux].sort((a,b) => a.name.localeCompare(b.name))
+            ? sortLieuxByPhysicalOrder([...lieux])
             : getLieuxForCategory(lieux, activeFilter);
 
         const stationOrderList = lineStationsMap[activeFilter as AuditCategory];
@@ -424,18 +421,31 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     />
                     {isDropdownOpen && orderedLieux.length > 0 && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
-                            {orderedLieux.map((lieu) => (
+                            {orderedLieux.map((lieu) => {
+                                const stationCodes = lieu.modules
+                                    .filter(m => m.type === AuditModuleType.DAT)
+                                    .map(m => (m.data as ModeData).stations[0].code)
+                                    .filter((code): code is string => !!code)
+                                    .filter((value, index, self) => self.indexOf(value) === index);
+                                    
+                                return (
                                 <li
                                     key={lieu.id}
                                     className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
                                     onClick={() => handleSelectLieuFromDropdown(lieu)}
                                 >
-                                    <div className="flex items-center">
+                                    <div className="flex items-center gap-x-2">
                                         <LieuBadges lieu={lieu} />
-                                        <span className="ml-3 block truncate">{lieu.name}</span>
+                                        <span className="block truncate font-semibold">{lieu.name}</span>
+                                        {stationCodes.length > 0 && (
+                                            <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
+                                                {stationCodes.join(' / ')}
+                                            </span>
+                                        )}
                                     </div>
                                 </li>
-                            ))}
+                                );
+                            })}
                         </ul>
                     )}
                 </div>
