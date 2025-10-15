@@ -399,7 +399,23 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
-            if (eca) eca.adhesives[adhesiveId] = status;
+            if (eca) {
+                const allAdhesiveDefs = getEcaAdhesives(eca.type);
+                const changedAdhesive = allAdhesiveDefs.find(ad => ad.id === adhesiveId);
+
+                // If setting a status (not un-setting), and it's a group item, reset others in the same group.
+                if (status !== AdhesiveStatus.NotChecked && changedAdhesive?.groupId) {
+                    const groupAdhesives = allAdhesiveDefs.filter(ad => ad.groupId === changedAdhesive.groupId);
+                    for (const adInGroup of groupAdhesives) {
+                        // Don't reset the one we are about to set
+                        if (adInGroup.id !== adhesiveId) {
+                            eca.adhesives[adInGroup.id] = AdhesiveStatus.NotChecked;
+                        }
+                    }
+                }
+
+                eca.adhesives[adhesiveId] = status;
+            }
         });
     },
 

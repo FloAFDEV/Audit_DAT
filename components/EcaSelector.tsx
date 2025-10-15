@@ -1,12 +1,14 @@
 
+
 import React, { useState } from 'react';
-import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType } from '../types';
+import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType, Adhesive } from '../types';
 import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets, Edit, Trash2, PlusCircle } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
+import { getEcaAdhesives } from '../data/adhesives';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -21,15 +23,40 @@ const getEcaProgress = (eca: ECA) => {
     if (eca.isNotApplicable) {
         return { percentage: 100, label: 'N/A (sans adhésifs)', isComplete: true };
     }
-    const statuses = Object.values(eca.adhesives);
-    if (statuses.length === 0) return { percentage: 100, label: 'Terminé', isComplete: true };
-    
-    const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-    const percentage = (checked / statuses.length) * 100;
-    const isComplete = checked === statuses.length;
+
+    const adhesiveDefinitions = getEcaAdhesives(eca.type);
+
+    // Group adhesives by `groupId` or by their own `id` if not in a group
+    const groupedAdhesives = adhesiveDefinitions.reduce((acc, ad) => {
+        const key = ad.groupId || ad.id;
+        if (!acc[key]) {
+            acc[key] = [];
+        }
+        acc[key].push(ad);
+        return acc;
+    }, {} as Record<string, Adhesive[]>);
+
+    const totalItems = Object.keys(groupedAdhesives).length;
+
+    if (totalItems === 0) {
+        return { percentage: 100, label: 'Terminé', isComplete: true };
+    }
+
+    let checkedCount = 0;
+    for (const key in groupedAdhesives) {
+        const group = groupedAdhesives[key];
+        // A group is considered "checked" if at least one of its adhesives has a status other than "NotChecked"
+        const isGroupChecked = group.some(ad => eca.adhesives[ad.id] && eca.adhesives[ad.id] !== AdhesiveStatus.NotChecked);
+        if (isGroupChecked) {
+            checkedCount++;
+        }
+    }
+
+    const percentage = (checkedCount / totalItems) * 100;
+    const isComplete = checkedCount === totalItems;
 
     let label = 'Progression';
-    if (checked === 0) label = 'Non commencé';
+    if (checkedCount === 0) label = 'Non commencé';
     if (isComplete) label = 'Terminé';
 
     return { percentage, label, isComplete };

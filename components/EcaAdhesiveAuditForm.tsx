@@ -1,7 +1,8 @@
 
 
+
 import React, { useMemo, useState } from 'react';
-import { ECA, AdhesiveStatus, AuditModule } from '../types';
+import { ECA, AdhesiveStatus, AuditModule, Adhesive } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
 import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
@@ -34,6 +35,72 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
   const isComplete = Math.round(progress) === 100;
   const isInProgress = progress > 0 && !isComplete;
   const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+
+  const { groups, ungrouped } = useMemo(() => {
+    const grouped: Record<string, { groupName?: string; adhesives: Adhesive[] }> = {};
+    const individual: Adhesive[] = [];
+    
+    adhesives.forEach(ad => {
+        if (ad.groupId) {
+            if (!grouped[ad.groupId]) {
+                grouped[ad.groupId] = { groupName: ad.groupName, adhesives: [] };
+            }
+            grouped[ad.groupId].adhesives.push(ad);
+        } else {
+            individual.push(ad);
+        }
+    });
+    
+    return { groups: grouped, ungrouped: individual };
+  }, [adhesives]);
+
+  const renderAdhesiveItem = (adhesive: Adhesive) => {
+    const currentStatus = eca.adhesives[adhesive.id];
+    return (
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{adhesive.name}</h3>
+            <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{adhesive.description}</p>
+          </div>
+          <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
+            <button
+              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
+              className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                currentStatus === AdhesiveStatus.OK
+                  ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
+                  : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+              }`}
+            >
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              OK
+            </button>
+            <button
+              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
+              className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                currentStatus === AdhesiveStatus.Absent
+                  ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
+                  : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+              }`}
+            >
+              <XCircle className="w-5 h-5 mr-2" />
+              Absent
+            </button>
+            <button
+              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
+              className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                currentStatus === AdhesiveStatus.ToBeReplaced
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+              }`}
+            >
+              <AlertTriangle className="w-5 h-5 mr-2" />
+              A remplacer
+            </button>
+          </div>
+        </div>
+    );
+  };
+
 
   return (
     <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
@@ -80,51 +147,27 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
           </div>
       </div>
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
-        {adhesives.map((adhesive) => {
-          const currentStatus = eca.adhesives[adhesive.id];
-          return (
+        {ungrouped.map(adhesive => (
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{adhesive.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{adhesive.description}</p>
+                {renderAdhesiveItem(adhesive)}
+            </li>
+        ))}
+        {/* FIX: Replaced `Object.entries` with `Object.keys` to ensure proper type inference for `groupData`. This resolves the "property does not exist on type 'unknown'" error. */}
+        {Object.keys(groups).map((groupId) => {
+          const groupData = groups[groupId];
+          return (
+            <li key={groupId} className="p-6 bg-slate-50/50 dark:bg-slate-800/50">
+                <div className="mb-4 bg-slate-100 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">{groupData.groupName || 'Groupe'}</h3>
+                    <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Un seul de ces adhésifs doit être présent. La sélection d'un statut pour un élément désélectionnera les autres.</p>
                 </div>
-                <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
-                  <button
-                    onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
-                      currentStatus === AdhesiveStatus.OK
-                        ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
-                        : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    OK
-                  </button>
-                  <button
-                    onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
-                      currentStatus === AdhesiveStatus.Absent
-                        ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
-                        : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <XCircle className="w-5 h-5 mr-2" />
-                    Absent
-                  </button>
-                  <button
-                    onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
-                      currentStatus === AdhesiveStatus.ToBeReplaced
-                        ? 'bg-orange-500 text-white shadow-sm'
-                        : 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <AlertTriangle className="w-5 h-5 mr-2" />
-                    A remplacer
-                  </button>
+                <div className="space-y-6">
+                    {groupData.adhesives.map(adhesive => (
+                        <div key={adhesive.id}>
+                            {renderAdhesiveItem(adhesive)}
+                        </div>
+                    ))}
                 </div>
-              </div>
             </li>
           );
         })}

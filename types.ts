@@ -63,6 +63,8 @@ export interface Adhesive {
     name: string;
     description: string;
     referentiel: string;
+    groupId?: string;
+    groupName?: string;
 }
 
 export interface PrAdhesive extends Adhesive {
