@@ -1,6 +1,7 @@
 
 
 
+
 import React from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus } from '../types';
 import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets } from 'lucide-react';
@@ -14,11 +15,22 @@ interface EcaSelectorProps {
   onBack: () => void;
 }
 
-const getEcaProgress = (eca: ECA): number => {
+const getEcaProgress = (eca: ECA) => {
+    if (eca.isNotApplicable) {
+        return { percentage: 100, label: 'N/A (sans adhésifs)', isComplete: true };
+    }
     const statuses = Object.values(eca.adhesives);
-    if (statuses.length === 0) return 0;
+    if (statuses.length === 0) return { percentage: 100, label: 'Terminé', isComplete: true };
+    
     const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-    return (checked / statuses.length) * 100;
+    const percentage = (checked / statuses.length) * 100;
+    const isComplete = checked === statuses.length;
+
+    let label = 'Progression';
+    if (checked === 0) label = 'Non commencé';
+    if (isComplete) label = 'Terminé';
+
+    return { percentage, label, isComplete };
 };
 
 const getEcaIcon = (eca: ECA) => {
@@ -77,9 +89,20 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                 <div className="space-y-4">
                     {ecaData.ecas.map((eca) => {
                         const progress = getEcaProgress(eca);
-                        const isComplete = progress === 100;
-                        const isInProgress = progress > 0 && !isComplete;
-                        const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                        const isInProgress = progress.percentage > 0 && !progress.isComplete;
+                        
+                        const progressBarColor = eca.isNotApplicable
+                            ? 'bg-slate-400 dark:bg-slate-600'
+                            : isInProgress
+                                ? 'bg-amber-500 dark:bg-amber-500'
+                                : 'bg-teal-500 dark:bg-teal-600';
+                        
+                        const statusLabelColor = eca.isNotApplicable
+                            ? 'text-slate-500 dark:text-slate-400'
+                            : progress.isComplete
+                                ? 'text-teal-600 dark:text-teal-400'
+                                : 'text-gray-500 dark:text-slate-400';
+
                         const isPmr = isPmrEcaType(eca.type);
 
                         return (
@@ -107,13 +130,13 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack }
                                 </div>
                                 <div className="mt-4">
                                     <div className="flex justify-between items-center mb-1">
-                                         <span className={`text-xs font-medium ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                                            {isComplete ? 'Terminé' : 'Progression'}
+                                         <span className={`text-xs font-medium ${statusLabelColor}`}>
+                                            {progress.label}
                                         </span>
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress}%` }}></div>
+                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
                             </button>

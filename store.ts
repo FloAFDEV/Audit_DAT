@@ -69,6 +69,7 @@ interface AppState {
     handleEcaAdhesiveStatusChange: (adhesiveId: string, status: AdhesiveStatus) => Promise<void>;
     handleEcaAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetEcaAdhesive: () => Promise<void>;
+    handleSetEcaNotApplicable: (isNA: boolean) => Promise<void>;
 
     // PMR Floor Adhesive Actions
     handlePmrFloorAdhesiveStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -418,6 +419,21 @@ const useAuditStore = create<AppState>((set, get) => {
                 eca.comment = '';
             }
         });
+    },
+
+    handleSetEcaNotApplicable: async (isNA) => {
+        const { selectedModuleId, selectedEcaId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
+            const eca = module.data.ecas.find(e => e.id === selectedEcaId);
+            if (eca) {
+                eca.isNotApplicable = isNA;
+            }
+        });
+
+        if (isNA) {
+            set({ selectedEcaId: null });
+        }
     },
 
     // =================================================================

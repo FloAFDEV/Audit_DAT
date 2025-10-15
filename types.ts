@@ -120,6 +120,7 @@ export interface ECA {
     type: EcaEquipmentType;
     number: number;
     adhesives: { [key: string]: AdhesiveStatus };
+    isNotApplicable?: boolean;
     comment: string;
 }
 

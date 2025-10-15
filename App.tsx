@@ -9,9 +9,10 @@ import AdhesiveAuditForm from './components/AdhesiveAuditForm';
 import EquipmentSelector from './components/EquipmentSelector';
 import PnrAdhesiveAuditForm from './components/PnrAdhesiveAuditForm';
 import { Breadcrumbs } from './components/Breadcrumbs';
-import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData } from './types';
+import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType } from './types';
 import EcaSelector from './components/EcaSelector';
 import EcaAdhesiveAuditForm from './components/EcaAdhesiveAuditForm';
+import EcaTripodeSortieDecision from './components/EcaTripodeSortieDecision';
 import PMRFloorAdhesiveAuditForm from './components/PMRFloorAdhesiveAuditForm';
 import { getLieuxForCategory } from './data/builder';
 import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder } from './utils/csvExporter';
@@ -130,6 +131,7 @@ const App: React.FC = () => {
         handleEcaAdhesiveStatusChange,
         handleEcaAdhesiveCommentChange,
         handleResetEcaAdhesive,
+        handleSetEcaNotApplicable,
         // PMR Floor Adhesive actions
         handlePmrFloorAdhesiveStatusChange,
         handleResetPmrFloorAdhesive,
@@ -449,8 +451,20 @@ const App: React.FC = () => {
             />;
         }
 
-        // ECA Audit Form
+        // ECA Audit Form or Decision Screen
         if (selectedModule && selectedEca) {
+            // If it's an exit turnstile that hasn't been decided on yet...
+            if (selectedEca.type === EcaEquipmentType.TripodeSortie && typeof selectedEca.isNotApplicable === 'undefined') {
+                return <EcaTripodeSortieDecision
+                    module={selectedModule}
+                    eca={selectedEca}
+                    stationName={(selectedModule.data as EcaData).stationName}
+                    onBack={() => selectEca(null)}
+                    onConfirmNA={() => handleSetEcaNotApplicable(true)}
+                    onAudit={() => handleSetEcaNotApplicable(false)}
+                />;
+            }
+
             return <EcaAdhesiveAuditForm 
                 module={selectedModule}
                 eca={selectedEca}
