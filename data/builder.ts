@@ -26,66 +26,58 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     if (line === 'A' || line === 'B') {
         switch (station.code) {
             // Ligne A
-            case 'JJA': // Jean-Jaurès A
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets (côté Place Wilson)', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] },
-                    { id: `${stationId}-dir-2`, name: 'Couloir de correspondance Ligne B', dats: [createDat('5'), createDat('6')] }
-                ];
-            case 'ARE': // Arènes
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle d\'échange Métro/SNCF', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] }
-                ];
-            case 'MAR': // Marengo-SNCF
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Hall principal (accès Gare)', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4'), createDat('5'), createDat('6')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès secondaire (côté Médiathèque)', dats: [createDat('7')] }
-                ];
-            case 'BGR': // Balma-Gramont
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Gare Routière / P+R', dats: [createDat('5'), createDat('6')] }
-                ];
-            case 'MBC': // Basso Cambo
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Gare Routière / P+R', dats: [createDat('4'), createDat('5')] }
-                ];
-            case 'CAP':
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4'), createDat('5')] }
-                ];
-            case 'ESQ':
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Mezzanine', dats: [createDat('1'), createDat('2'), createDat('3')] },
-                    { id: `${stationId}-dir-2`, name: 'Surface (Entrée Ascenseur PMR)', dats: [createDat('4')] }
-                ];
-            case 'JOL':
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Partie basse', dats: [createDat('1'), createDat('2')] },
-                    { id: `${stationId}-dir-2`, name: 'Partie haute', dats: [createDat('3'), createDat('4')] }
-                ];
+            case 'MBC': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'BEL': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'REY': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'MUN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'BAG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'MER': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'FLE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'ARE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'POI': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'SCY': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'ESQ': return [
+                { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('1'), createDat('2'), createDat('3')] },
+                { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('4')] }
+            ];
+            case 'CAP': return [
+                { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('5')] },
+                { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('4')] }
+            ];
+            case 'JJA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'MAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3'), createDat('4')] }];
+            case 'JOL': return [
+                { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('1'), createDat('2')] },
+                { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('3'), createDat('4')] }
+            ];
+            case 'ROS': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'ARG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'BGR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
 
             // Ligne B
-            case 'JJB': // Jean-Jaurès B
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets (côté Allées Jean Jaurès)', dats: [createDat('1'), createDat('2'), createDat('3')] },
-                    { id: `${stationId}-dir-2`, name: 'Couloir de correspondance Ligne A', dats: [createDat('4')] }
-                ];
-            case 'BOR': // Borderouge
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Gare Routière / P+R', dats: [createDat('4'), createDat('5')] }
-                ];
-            case 'RAM': // Ramonville
-                return [
-                    { id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Gare Routière / P+R', dats: [createDat('4')] }
-                ];
-            case 'PDJ': // Palais de Justice
-                 return [
-                    { id: `${stationId}-dir-1`, name: 'Hall principal', dats: [createDat('1'), createDat('2')] },
-                    { id: `${stationId}-dir-2`, name: 'Accès Tramway', dats: [createDat('3'), createDat('4')] }
-                ];
+            case 'BOR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'TCO': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'LVA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'BPA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'MIN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'CAN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'CCA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'JAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'JJB': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'FVE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'CAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'PDJ': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'SMI': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'EMP': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'SAG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'SAO': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'RAN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2')] }];
+            case 'PHA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'UPS': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('1'), createDat('2'), createDat('3')] }];
+            case 'RAM': return [
+                { id: `${stationId}-dir-1`, name: 'Direction SQUARE (SQU)', dats: [createDat('1'), createDat('2')] },
+                { id: `${stationId}-dir-2`, name: 'Direction côté BUS', dats: [createDat('3'), createDat('4')] }
+            ];
         }
     }
 
