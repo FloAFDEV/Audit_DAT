@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType, Adhesive } from '../types';
-import { ChevronRight, ArrowLeft, Fence, Accessibility, Brackets, Edit, Trash2, PlusCircle } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Fence, Accessibility, Edit, Trash2, PlusCircle } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
@@ -33,7 +33,7 @@ const getEcaIcon = (eca: ECA) => {
         const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
         return (
             <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-                <Brackets {...iconProps} />
+                <Fence {...iconProps} />
             </div>
         );
     }
