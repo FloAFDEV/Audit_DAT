@@ -11,10 +11,12 @@ interface CsvRow {
     direction?: string;
     equipement_type?: string;
     equipement_numero?: number;
-    equipement_commentaire?: string;
+    repere?: string;
     adhesif_nom: string;
+    adhesif_dimensions?: string;
     adhesif_description: string;
     statut: string;
+    equipement_commentaire?: string;
 }
 
 const CSV_COLUMN_ORDER: (keyof CsvRow)[] = [
@@ -25,7 +27,9 @@ const CSV_COLUMN_ORDER: (keyof CsvRow)[] = [
     'direction',
     'equipement_type',
     'equipement_numero',
+    'repere',
     'adhesif_nom',
+    'adhesif_dimensions',
     'adhesif_description',
     'statut',
     'equipement_commentaire',
@@ -39,15 +43,16 @@ const CSV_HEADERS: Record<keyof CsvRow, string> = {
     direction: "Point d'accès",
     equipement_type: "Type d'équipement",
     equipement_numero: "Numéro",
-    equipement_commentaire: "Commentaire sur l'équipement",
+    repere: "Repère",
     adhesif_nom: "Nom de l'adhésif",
+    adhesif_dimensions: "Dimensions",
     adhesif_description: "Description / Localisation",
     statut: "Statut",
+    equipement_commentaire: "Commentaire sur l'équipement",
 };
 
 const ALL_ADHESIVES_MAP = new Map<string, Adhesive | PrAdhesive>();
 // Correctly populate the map from all exported adhesive arrays.
-// The previous implementation was trying to iterate over functions, which is incorrect.
 [
     ...ADHESIVES,
     ...PR_ADHESIVES_BE,
@@ -56,6 +61,46 @@ const ALL_ADHESIVES_MAP = new Map<string, Adhesive | PrAdhesive>();
     ...ECA_ADHESIVES_STD,
     ...ECA_ADHESIVES_PMR,
 ].forEach(ad => ALL_ADHESIVES_MAP.set(ad.id, ad));
+
+
+const parseAdhesiveInfo = (adhesive: Adhesive | PrAdhesive) => {
+    const name = adhesive.name || '';
+    const description = adhesive.description || '';
+
+    let repere = '';
+    let cleanedName = name;
+    const repereMatch = name.match(/^(Repère\s+\d+)\s*-\s*(.*)$/);
+    if (repereMatch) {
+        repere = repereMatch[1];
+        cleanedName = repereMatch[2].trim();
+    }
+
+    let dimensions = '';
+    let cleanedDescription = description;
+    // Pattern for `59x59mm | ...` or `... // 11x12,5cm` or `Dimensions: 95x5,8cm | ...`
+    const dimensionMatch = description.match(/(\d+([,.]\d+)?x\d+([,.]\d+)?(mm|cm))/);
+    if (dimensionMatch) {
+        dimensions = dimensionMatch[0];
+        // Clean the description by removing the dimension and any separator/prefix around it.
+        cleanedDescription = description.replace(dimensions, '')
+                                     .replace(/Dimensions:\s*/, '')
+                                     .replace(/(\|\s*|\s*\/\/\s*)/, '')
+                                     .trim();
+    }
+
+    // Special handling for PrAdhesive location
+    if ('location' in adhesive) {
+        cleanedDescription = (adhesive as PrAdhesive).location;
+    }
+
+
+    return {
+        repere,
+        name: cleanedName,
+        dimensions,
+        description: cleanedDescription,
+    };
+};
 
 
 const convertToCsvString = (rows: CsvRow[]): string => {
@@ -138,11 +183,15 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
 
     const now = new Date();
 
-    // Format JJ/MM/AAAA for the column in the CSV, ensuring no time is included.
+    // Format JJ/MM/AAAA for the column in the CSV.
     const day = String(now.getDate()).padStart(2, '0');
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = now.getFullYear();
-    const exportDateColumnString = `${day}/${month}/${year}`;
+    const dateOnlyString = `${day}/${month}/${year}`;
+    
+    // Prepending a zero-width space to force Excel and other spreadsheet software
+    // to treat the date as a literal string, preventing auto-formatting that adds a time part.
+    const exportDateColumnString = `\u200B${dateOnlyString}`;
 
     // Format AAAA-MM-JJ for the filename, ignoring time.
     const exportDateFilenameString = now.toISOString().split('T')[0];
@@ -164,6 +213,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 const datNumberMatch = dat.name.match(/\d+/);
                                 for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
                                     const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
+                                    const parsedInfo = adhesiveInfo ? parseAdhesiveInfo(adhesiveInfo) : { repere: '', name: 'N/A', dimensions: '', description: 'N/A' };
+
                                     rows.push({
                                         ...baseRow,
                                         station_nom: station.name,
@@ -171,10 +222,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                         direction: direction.name,
                                         equipement_type: 'DAT',
                                         equipement_numero: datNumberMatch ? parseInt(datNumberMatch[0], 10) : undefined,
-                                        equipement_commentaire: dat.comment,
-                                        adhesif_nom: adhesiveInfo?.name || 'N/A',
-                                        adhesif_description: adhesiveInfo?.description || 'N/A',
+                                        repere: parsedInfo.repere,
+                                        adhesif_nom: parsedInfo.name,
+                                        adhesif_dimensions: parsedInfo.dimensions,
+                                        adhesif_description: parsedInfo.description,
                                         statut: status,
+                                        equipement_commentaire: dat.comment,
                                     });
                                 }
                             }
@@ -188,6 +241,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                         const equipmentNumberMatch = equipment.name.match(/\d+/);
                         for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
                             const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
+                            const parsedInfo = adhesiveInfo ? parseAdhesiveInfo(adhesiveInfo) : { repere: '', name: 'N/A', dimensions: '', description: 'N/A' };
+
                             rows.push({
                                 ...baseRow,
                                 station_nom: prData.name, // Using station_nom for PR name for consistency
@@ -195,10 +250,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 direction: '',
                                 equipement_type: equipment.type,
                                 equipement_numero: equipmentNumberMatch ? parseInt(equipmentNumberMatch[0], 10) : undefined,
-                                equipement_commentaire: equipment.comment,
-                                adhesif_nom: adhesiveInfo?.name || 'N/A',
-                                adhesif_description: adhesiveInfo?.description || 'N/A',
+                                repere: parsedInfo.repere,
+                                adhesif_nom: parsedInfo.name,
+                                adhesif_dimensions: parsedInfo.dimensions,
+                                adhesif_description: parsedInfo.description,
                                 statut: status,
+                                equipement_commentaire: equipment.comment,
                             });
                         }
                     }
@@ -215,14 +272,18 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 direction: eca.accessPoint,
                                 equipement_type: eca.type,
                                 equipement_numero: eca.number,
-                                equipement_commentaire: eca.comment || 'Validé sans adhésifs',
+                                repere: 'N/A',
                                 adhesif_nom: 'N/A',
+                                adhesif_dimensions: '',
                                 adhesif_description: 'Aucun adhésif applicable',
                                 statut: 'Non Applicable',
+                                equipement_commentaire: eca.comment || 'Validé sans adhésifs',
                             });
                          } else {
                             for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
                                 const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
+                                const parsedInfo = adhesiveInfo ? parseAdhesiveInfo(adhesiveInfo) : { repere: '', name: 'N/A', dimensions: '', description: 'N/A' };
+                                
                                 rows.push({
                                     ...baseRow,
                                     station_nom: ecaData.stationName,
@@ -230,10 +291,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                     direction: eca.accessPoint,
                                     equipement_type: eca.type,
                                     equipement_numero: eca.number,
-                                    equipement_commentaire: eca.comment,
-                                    adhesif_nom: adhesiveInfo?.name || 'N/A',
-                                    adhesif_description: adhesiveInfo?.description || 'N/A',
+                                    repere: parsedInfo.repere,
+                                    adhesif_nom: parsedInfo.name,
+                                    adhesif_dimensions: parsedInfo.dimensions,
+                                    adhesif_description: parsedInfo.description,
                                     statut: status,
+                                    equipement_commentaire: eca.comment,
                                 });
                             }
                          }
@@ -251,10 +314,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                              direction: '',
                              equipement_type: 'Adhésif Sol PMR',
                              equipement_numero: pmrFloorNumberMatch ? parseInt(pmrFloorNumberMatch[0], 10) : undefined,
-                             equipement_commentaire: '',
+                             repere: '',
                              adhesif_nom: adhesive.name,
+                             adhesif_dimensions: '',
                              adhesif_description: 'Adhésif de signalisation au sol pour passage PMR',
                              statut: adhesive.status,
+                             equipement_commentaire: '',
                          });
                      }
                     break;

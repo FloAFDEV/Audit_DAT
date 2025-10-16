@@ -1,16 +1,14 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
 import { LieuBadges } from './Icons';
-import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload } from 'lucide-react';
+import { ChevronRight, Search, ChevronDown, LogOut, Upload } from 'lucide-react';
 import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
-import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import ConfirmationModal from './ConfirmationModal';
 import { ActionsMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
-import { sortLieuxByPhysicalOrder } from '../utils/csvExporter';
 import { getEcaAdhesives } from '../data/adhesives';
 
 interface LieuSelectorProps {
@@ -89,7 +87,10 @@ const getLieuProgress = (lieu: Lieu): number => {
     }
 
     if (totalApplicableItems === 0) {
-        return 100;
+        // If there are no applicable items across all modules, the lieu is considered 100% complete.
+        // This handles cases like a P+R with no equipment defined, or a station with only future modules.
+        const hasAnyNonFutureModule = lieu.modules.some(m => !m.isFuture);
+        return hasAnyNonFutureModule ? 100 : 0;
     }
 
     return (totalCheckedItems / totalApplicableItems) * 100;
@@ -138,18 +139,8 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
     );
 };
 
-const lineStationsMap: { [key in AuditCategory]?: Partial<Station>[] } = {
-    METRO_A: LINE_A_STATIONS,
-    METRO_B: LINE_B_STATIONS,
-    METRO_C: LINE_C_STATIONS,
-    TRAM: TRAM_STATIONS,
-    TELEO: TELEO_STATIONS,
-};
-
-
 const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, activeFilter, onFilterChange, onExportByCategory, onExportByModuleType, onExportAll, onExportJson, onImportJson, onResetCategory, onResetAll, onRequestLogout }) => {
     const [searchQuery, setSearchQuery] = useState('');
-    const [isOrderReversed, setIsOrderReversed] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -158,30 +149,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
     const [resetTargetConfig, setResetTargetConfig] = useState<AuditCategoryConfig | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importFileContent, setImportFileContent] = useState<string | null>(null);
-
-    const getSortOrderKey = (filter: AuditCategory | 'ALL') => `tisseo-audit-sort-order-${filter}`;
-
-    // Effect to LOAD the sort preference when the filter changes
-    useEffect(() => {
-        try {
-            const savedOrder = localStorage.getItem(getSortOrderKey(activeFilter));
-            setIsOrderReversed(savedOrder === 'reversed');
-        } catch (error) {
-            console.error("Failed to read sort order from localStorage", error);
-            setIsOrderReversed(false); // Default to normal order on error
-        }
-    }, [activeFilter]);
-
-    // Handler to toggle and SAVE the sort preference
-    const toggleOrderReversed = () => {
-        const newIsReversed = !isOrderReversed;
-        setIsOrderReversed(newIsReversed);
-        try {
-            localStorage.setItem(getSortOrderKey(activeFilter), newIsReversed ? 'reversed' : 'normal');
-        } catch (error) {
-            console.error("Failed to save sort order to localStorage", error);
-        }
-    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -198,39 +165,39 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         };
     }, []);
     
-    const orderedLieux = useMemo(() => {
+    // Main display list: respects filters and is sorted alphabetically
+    const orderedLieuxForDisplay = useMemo(() => {
         const lieuxSource = activeFilter === 'ALL' 
-            ? sortLieuxByPhysicalOrder([...lieux])
+            ? [...lieux]
             : getLieuxForCategory(lieux, activeFilter);
 
-        const stationOrderList = lineStationsMap[activeFilter as AuditCategory];
-        let sortedByLine = lieuxSource;
+        // Always sort alphabetically by lieu name
+        const sortedAlphabetically = lieuxSource.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
-        if (stationOrderList) {
-            const stationOrderMap = new Map<string, number>();
-            stationOrderList.forEach((station, index) => {
-                const lieuName = station.lieuName || station.name;
-                if(lieuName) stationOrderMap.set(lieuName, index);
-            });
-          
-            sortedByLine = [...lieuxSource].sort((a, b) => {
-                const orderA = stationOrderMap.get(a.name);
-                const orderB = stationOrderMap.get(b.name);
-                if (orderA !== undefined && orderB !== undefined) {
-                    return orderA - orderB;
-                }
-                return a.name.localeCompare(b.name);
-            });
+        // The main display should not be filtered by search query when the dropdown is open.
+        if (isDropdownOpen && searchQuery.trim()) {
+            return [];
+        }
+        
+        // Filter main display if search is active but dropdown is closed (e.g. after selection)
+        if (searchQuery.trim()) {
+            const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            return sortedAlphabetically.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
         }
 
-        const ordered = isOrderReversed ? [...sortedByLine].reverse() : sortedByLine;
+        return sortedAlphabetically;
+    }, [searchQuery, lieux, activeFilter, isDropdownOpen]);
+
+    // Search dropdown list: always alphabetical, searches all lieux
+    const dropdownLieux = useMemo(() => {
+        const allLieuxAlphabetical = [...lieux].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
         if (!searchQuery.trim()) {
-            return ordered;
+            return allLieuxAlphabetical;
         }
         
         const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return ordered.filter(l => {
+        return allLieuxAlphabetical.filter(l => {
             const normalizedName = l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery);
             
             const stationCodes = l.modules
@@ -242,10 +209,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
             
             return normalizedName || matchesCode;
         });
-    }, [searchQuery, lieux, activeFilter, isOrderReversed]);
+    }, [searchQuery, lieux]);
     
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
-        setSearchQuery(lieu.name);
+        setSearchQuery(lieu.name); // Set search bar to selected lieu
         setIsDropdownOpen(false);
         onSelectLieu(lieu.id);
     };
@@ -280,7 +247,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         setImportFileContent(null);
     };
 
-    const showInverter = activeFilter !== 'ALL' && activeFilter !== 'PR';
     const activeCategoryConfig = useMemo(() => AUDIT_CATEGORIES.find(c => c.key === activeFilter), [activeFilter]);
     
     const getCategoryHoverColor = (catKey: AuditCategory | 'ALL'): string => {
@@ -456,9 +422,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                         className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base"
                         autoComplete="off"
                     />
-                    {isDropdownOpen && orderedLieux.length > 0 && (
+                    {isDropdownOpen && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
-                            {orderedLieux.map((lieu) => {
+                            {dropdownLieux.map((lieu) => {
                                 const stationCodes = lieu.modules
                                     .filter(m => m.type === AuditModuleType.DAT)
                                     .map(m => (m.data as ModeData).stations[0].code)
@@ -487,16 +453,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     )}
                 </div>
                 <div className="flex-shrink-0 flex items-stretch sm:items-center gap-4">
-                    {showInverter && (
-                        <button
-                            onClick={toggleOrderReversed}
-                            className="flex flex-col items-center justify-center text-center px-4 py-2 rounded-md bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors h-full"
-                            title="Inverser le sens de la ligne"
-                        >
-                            <ArrowRightLeft className="h-5 w-5" />
-                            <span className="text-xs font-semibold mt-1">Inverser</span>
-                        </button>
-                    )}
                     <ActionsMenu
                         onExportByCategory={onExportByCategory}
                         onExportByModuleType={onExportByModuleType}
@@ -509,19 +465,19 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                 </div>
             </div>
 
-            {orderedLieux.length === 0 && searchQuery ? (
+            {orderedLieuxForDisplay.length === 0 && searchQuery && !isDropdownOpen ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun lieu trouvé</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Votre recherche ne correspond à aucun lieu.</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Votre recherche ne correspond à aucun lieu pour le filtre actif.</p>
                 </div>
-            ) : orderedLieux.length === 0 && !searchQuery ? (
+            ) : orderedLieuxForDisplay.length === 0 && !searchQuery ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun lieu</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun lieu n'est disponible pour ce filtre.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {(!isDropdownOpen || !searchQuery) && orderedLieux.map((lieu) => {
+                    {orderedLieuxForDisplay.map((lieu) => {
                         const progress = getLieuProgress(lieu);
                         return <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} progress={progress} />;
                     })}
