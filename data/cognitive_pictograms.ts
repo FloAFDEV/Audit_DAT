@@ -1,11 +1,16 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CognitivePictogram, FloorAdhesiveStatus } from '../types';
 
-export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string> = {
+// The dimensions can now be a string for simple cases, or an object for stations with multiple models.
+// The keys in the object (e.g., 'Petit Modèle') will be matched against the access point name.
+export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string | Record<string, string>> = {
   // Default dimension (most common value)
   'DEFAULT': '74.5x97cm',
   // Ligne A
-  'CAP': '74.5x67.5cm / 74.5x71cm',
+  'CAP': {
+    'Petit Modèle': '74.5x67.5cm',
+    'Grand Modèle': '74.5x71cm',
+  },
   'BGR': '74.5x74cm',
   'ROS': '74.5x74cm',
   'BAG': '74.5x97cm',
@@ -36,6 +41,33 @@ export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string> = {
   'TCO': '74.5x97cm',
   'UPS': '74.5x97cm',
   'JJB': '74.5x97cm',
+};
+
+/**
+ * Retrieves the specific dimension for a cognitive pictogram based on its station and access point name.
+ * @param stationCode The code of the station (e.g., 'CAP').
+ * @param accessPointName The name of the access point (e.g., 'Accès Capitole - Petit Modèle').
+ * @returns The dimension string for the pictogram.
+ */
+export const getCognitivePictogramDimension = (stationCode: string, accessPointName: string): string => {
+    const stationDimensions = COGNITIVE_PICTOGRAM_DIMENSIONS[stationCode];
+
+    if (typeof stationDimensions === 'object' && stationDimensions !== null) {
+        // Check for keywords in the access point name for specific models
+        for (const key in stationDimensions) {
+            if (accessPointName.includes(key)) {
+                return stationDimensions[key];
+            }
+        }
+    }
+    
+    // Fallback to a single string dimension for the station if it exists
+    if (typeof stationDimensions === 'string') {
+        return stationDimensions;
+    }
+
+    // Final fallback to the default dimension
+    return COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'] as string;
 };
 
 // Data parsed from the user's images for both lines

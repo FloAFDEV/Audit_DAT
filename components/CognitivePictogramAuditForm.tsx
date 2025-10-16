@@ -3,7 +3,7 @@ import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePict
 import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle, SearchCheck } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
-import { COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
+import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -125,10 +125,6 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
     const [pictoToDelete, setPictoToDelete] = useState<CognitivePictogram | null>(null);
     const cogData = module.data as CognitivePictogramData;
 
-    const dimensions = useMemo(() => {
-        return COGNITIVE_PICTOGRAM_DIMENSIONS[cogData.stationCode] || COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'];
-    }, [cogData.stationCode]);
-
     const progress = useMemo(() => {
         const total = cogData.pictograms.length;
         if (total === 0) return 100; // An empty list is considered complete
@@ -201,7 +197,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                          <li key={pictogram.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                             <AccessPointItem 
                                 pictogram={pictogram}
-                                dimensions={dimensions}
+                                dimensions={getCognitivePictogramDimension(cogData.stationCode, pictogram.accessPointName)}
                                 onStatusChange={onStatusChange}
                                 onRemove={setPictoToDelete}
                                 onUpdateName={onUpdateAccessPointName}

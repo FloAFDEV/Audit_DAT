@@ -5,7 +5,7 @@ import {
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, ECA_ADHESIVES_PMR, ECA_ADHESIVES_STD, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
-import { COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
+import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 
 // Helper to create a download link for a file
 const downloadFile = (content: string, fileName: string, mimeType: string) => {
@@ -254,9 +254,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                 }
                 case AuditModuleType.COGNITIVE_PICTOGRAMS: {
                      const data = module.data as CognitivePictogramData;
-                     const dimensions = COGNITIVE_PICTOGRAM_DIMENSIONS[data.stationCode] || COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'];
                      for (const pictogram of data.pictograms) {
-                         rows.push({
+                        const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
+                        rows.push({
                             Lieu: lieu.name,
                             'Type d\'Audit': module.name,
                             Ligne: module.line || '',
