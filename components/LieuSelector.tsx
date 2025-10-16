@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station, AdhesiveStatus, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
 import { LieuBadges } from './Icons';
-import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload } from 'lucide-react';
+import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
 import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
@@ -341,7 +341,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm font-medium transition-colors duration-150';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm font-semibold transition-colors duration-150';
         if (activeFilter === catKey) {
             return baseClasses;
         }
@@ -458,10 +458,15 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                 >
                                     <div className="flex items-center">
                                         <CategoryIcon size="sm" />
-                                        <span className={`font-normal ml-3 block truncate ${activeFilter === 'ALL' ? 'font-semibold' : ''}`}>
+                                        <span className="ml-3 block truncate">
                                             Tout le réseau
                                         </span>
                                     </div>
+                                    {activeFilter === 'ALL' && (
+                                        <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400">
+                                            <Check className="h-5 w-5" aria-hidden="true" />
+                                        </span>
+                                    )}
                                 </li>
 
                                 {AUDIT_CATEGORIES.map((cat) => (
@@ -475,10 +480,15 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                     >
                                         <div className="flex items-center">
                                             <CategoryIcon categoryConfig={cat} size="sm" />
-                                            <span className={`font-normal ml-3 block truncate ${activeFilter === cat.key ? 'font-semibold' : ''}`}>
+                                            <span className="ml-3 block truncate">
                                                 {cat.label}
                                             </span>
                                         </div>
+                                        {activeFilter === cat.key && (
+                                            <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400">
+                                                <Check className="h-5 w-5" aria-hidden="true" />
+                                            </span>
+                                        )}
                                     </li>
                                 ))}
                             </ul>

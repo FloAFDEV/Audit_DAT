@@ -1,9 +1,8 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePictogram } from '../types';
-import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, Save, PlusCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
-import { PictogramImage } from './PictogramImage';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -53,11 +52,8 @@ const AccessPointItem: React.FC<{
     const currentStatus = pictogram.status;
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg flex flex-col md:flex-row items-center gap-4">
-            <div className="flex-shrink-0">
-                <PictogramImage />
-            </div>
-            <div className="flex-1 w-full min-w-0">
+         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex-1 min-w-0">
                 {isEditing ? (
                     <input
                         ref={inputRef}
@@ -76,30 +72,33 @@ const AccessPointItem: React.FC<{
                         </button>
                     </div>
                 )}
+                 <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">Vérifier la présence et l'état du pictogramme de sortie.</p>
             </div>
-            <div className="flex-shrink-0 w-full md:w-auto flex items-center justify-center gap-2">
-                <button
-                    onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-4 py-2 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
-                        currentStatus === FloorAdhesiveStatus.OK
-                            ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
-                            : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                >
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    OK
-                </button>
-                <button
-                    onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-4 py-2 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
-                        currentStatus === FloorAdhesiveStatus.ToBeReplaced
-                            ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
-                            : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                    }`}
-                >
-                    <XCircle className="w-5 h-5 mr-2" />
-                    À remplacer
-                </button>
+            <div className="flex items-center gap-2">
+                 <div className="flex items-stretch gap-2 sm:flex-wrap sm:gap-3">
+                    <button
+                        onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
+                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                            currentStatus === FloorAdhesiveStatus.OK
+                                ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
+                                : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        <CheckCircle2 className="w-5 h-5 mr-2" />
+                        OK
+                    </button>
+                    <button
+                        onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
+                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                            currentStatus === FloorAdhesiveStatus.ToBeReplaced
+                                ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
+                                : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                        }`}
+                    >
+                        <XCircle className="w-5 h-5 mr-2" />
+                        À remplacer
+                    </button>
+                 </div>
                  <button 
                     onClick={() => onRemove(pictogram)}
                     className="p-2.5 rounded-md hover:bg-red-100 text-red-600 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
@@ -180,23 +179,24 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                 </div>
             </div>
             
-            <div className="p-6 space-y-4">
+            <ul className="divide-y divide-gray-200 dark:divide-slate-700">
                 {cogData.pictograms.length === 0 ? (
-                    <div className="text-center py-8">
+                    <li className="text-center p-8">
                         <p className="text-gray-500 dark:text-slate-400">Aucun accès défini pour cette station.</p>
-                    </div>
+                    </li>
                 ) : (
                     cogData.pictograms.map((pictogram) => (
-                        <AccessPointItem 
-                            key={pictogram.id}
-                            pictogram={pictogram}
-                            onStatusChange={onStatusChange}
-                            onRemove={setPictoToDelete}
-                            onUpdateName={onUpdateAccessPointName}
-                        />
+                         <li key={pictogram.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <AccessPointItem 
+                                pictogram={pictogram}
+                                onStatusChange={onStatusChange}
+                                onRemove={setPictoToDelete}
+                                onUpdateName={onUpdateAccessPointName}
+                            />
+                        </li>
                     ))
                 )}
-            </div>
+            </ul>
 
             <div className="p-6 border-t border-gray-200 dark:border-slate-700">
                 <button
