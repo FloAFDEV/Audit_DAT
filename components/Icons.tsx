@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { AUDIT_CATEGORIES } from '../data/config';
-import { Lieu, AuditCategoryConfig } from '../types';
+import { Lieu, AuditCategory, AuditCategoryConfig } from '../types';
 import { getModuleLineConfig } from '../data/builder';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -57,7 +57,7 @@ export const FormattedCorrespondence: React.FC<{ text: string, className?: strin
     );
 };
 
-export const LieuBadges: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
+export const LieuBadges: React.FC<{ lieu: Lieu; activeFilter?: AuditCategory | 'ALL' }> = ({ lieu, activeFilter = 'ALL' }) => {
     const categories = useMemo(() => {
         // This map will store the config and whether ALL modules for that category are future.
         const categoryStatus = new Map<string, { config: AuditCategoryConfig, allFuture: boolean }>();
@@ -78,16 +78,26 @@ export const LieuBadges: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
 
         const uniqueCategories = Array.from(categoryStatus.values());
         
-        // Sort the categories based on the order in AUDIT_CATEGORIES for consistency
+        // Sort the categories
         uniqueCategories.sort((a, b) => {
-            const indexA = AUDIT_CATEGORIES.findIndex(cat => cat.key === a.config.key);
-            const indexB = AUDIT_CATEGORIES.findIndex(cat => cat.key === b.config.key);
+            const keyA = a.config.key;
+            const keyB = b.config.key;
+
+            // If an active filter is set (not 'ALL'), prioritize it.
+            if (activeFilter !== 'ALL') {
+                if (keyA === activeFilter) return -1; // A is the active filter, so it comes first.
+                if (keyB === activeFilter) return 1;  // B is the active filter, so it comes first.
+            }
+            
+            // Otherwise, sort based on the order in AUDIT_CATEGORIES for consistency.
+            const indexA = AUDIT_CATEGORIES.findIndex(cat => cat.key === keyA);
+            const indexB = AUDIT_CATEGORIES.findIndex(cat => cat.key === keyB);
             return indexA - indexB;
         });
         
         return uniqueCategories;
 
-    }, [lieu]);
+    }, [lieu, activeFilter]);
 
     if (categories.length === 0) {
         return null;

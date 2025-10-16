@@ -106,7 +106,7 @@ const getLieuProgress = (lieu: Lieu): number => {
 };
 
 
-const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }> = ({ lieu, onSelect, progress }) => {
+const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number; activeFilter: AuditCategory | 'ALL' }> = ({ lieu, onSelect, progress, activeFilter }) => {
     const cardBgClass = 'bg-white dark:bg-slate-800';
     
     const stationCodes = lieu.modules
@@ -125,7 +125,7 @@ const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }>
         >
             <div className="flex justify-between items-center">
                  <div className="flex items-center gap-x-2 flex-wrap min-w-0">
-                    <LieuBadges lieu={lieu} />
+                    <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
                      {stationCodes.length > 0 && (
                         <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
@@ -568,7 +568,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {orderedLieuxForDisplay.map((lieu) => {
                         const progress = getLieuProgress(lieu);
-                        return <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} progress={progress} />;
+                        return <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} progress={progress} activeFilter={activeFilter} />;
                     })}
                 </div>
             )}
