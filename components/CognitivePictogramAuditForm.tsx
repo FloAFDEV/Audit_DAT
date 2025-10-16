@@ -3,6 +3,7 @@ import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePict
 import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
+import { COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -16,10 +17,11 @@ interface CognitivePictogramAuditFormProps {
 
 const AccessPointItem: React.FC<{
     pictogram: CognitivePictogram;
+    dimensions: string;
     onStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => void;
     onRemove: (pictogram: CognitivePictogram) => void;
     onUpdateName: (pictogramId: string, newName: string) => void;
-}> = ({ pictogram, onStatusChange, onRemove, onUpdateName }) => {
+}> = ({ pictogram, dimensions, onStatusChange, onRemove, onUpdateName }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [name, setName] = useState(pictogram.accessPointName);
     const inputRef = useRef<HTMLInputElement>(null);
@@ -72,7 +74,10 @@ const AccessPointItem: React.FC<{
                         </button>
                     </div>
                 )}
-                 <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">Vérifier la présence et l'état du pictogramme de sortie.</p>
+                 <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+                    Vérifier l'état et la présence du pictogramme cognitif (ou totem cognitif).
+                    <span className="font-semibold text-gray-800 dark:text-slate-200 ml-2">({dimensions})</span>
+                 </p>
             </div>
             <div className="flex items-center gap-2">
                  <div className="flex items-stretch gap-2 sm:flex-wrap sm:gap-3">
@@ -116,6 +121,10 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [pictoToDelete, setPictoToDelete] = useState<CognitivePictogram | null>(null);
     const cogData = module.data as CognitivePictogramData;
+
+    const dimensions = useMemo(() => {
+        return COGNITIVE_PICTOGRAM_DIMENSIONS[cogData.stationCode] || COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'];
+    }, [cogData.stationCode]);
 
     const progress = useMemo(() => {
         const total = cogData.pictograms.length;
@@ -189,6 +198,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                          <li key={pictogram.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                             <AccessPointItem 
                                 pictogram={pictogram}
+                                dimensions={dimensions}
                                 onStatusChange={onStatusChange}
                                 onRemove={setPictoToDelete}
                                 onUpdateName={onUpdateAccessPointName}

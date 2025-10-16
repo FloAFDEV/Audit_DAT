@@ -58,15 +58,29 @@ const escapeCsv = (value: any): string => {
     return str;
 };
 
+const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
+    if (!name) return { repere: '', name: '' };
+    // This regex captures the number (or text like '10') after "Repère" and the rest of the string.
+    const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
+    if (repereMatch) {
+        return {
+            repere: repereMatch[1],
+            name: repereMatch[2].trim()
+        };
+    }
+    return { repere: '', name: name };
+};
+
 interface CsvRow {
     Lieu: string;
-    'Module Nom': string;
+    'Type d\'Audit': string;
     Ligne: string;
     'Station/P+R': string;
     'Direction/Équipement/Accès': string;
     'Élément': string;
     'Statut': string;
     'Commentaire': string;
+    'Repère': string;
     'ID Adhésif': string;
     'Description Adhésif': string;
     'Localisation Adhésif': string;
@@ -101,20 +115,17 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
     
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
-            const common = {
-                Lieu: lieu.name,
-                'Module Nom': module.name,
-                Ligne: module.line || '',
-            };
-
             if (module.isFuture) {
                  rows.push({
-                    ...common,
+                    Lieu: lieu.name,
+                    'Type d\'Audit': module.name,
+                    Ligne: module.line || '',
                     'Station/P+R': '',
                     'Direction/Équipement/Accès': '',
                     'Élément': module.name,
                     'Statut': 'N/A',
                     'Commentaire': '',
+                    'Repère': '',
                     'ID Adhésif': '',
                     'Description Adhésif': '',
                     'Localisation Adhésif': '',
@@ -130,16 +141,20 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             for (const dat of direction.dats) {
                                 for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
                                     const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
+                                    const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                                     const { description, location } = getAdhesiveDetails(adhesiveId, module.type, null);
                                     rows.push({
-                                        ...common,
+                                        Lieu: lieu.name,
+                                        'Type d\'Audit': module.name,
+                                        Ligne: module.line || '',
                                         'Station/P+R': station.name,
                                         'Direction/Équipement/Accès': direction.name,
                                         'Élément': dat.name,
                                         'Statut': status,
                                         'Commentaire': dat.comment,
+                                        'Repère': repere,
                                         'ID Adhésif': adhesiveId,
-                                        'Description Adhésif': `${adhesive?.name} | ${description}`,
+                                        'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                         'Localisation Adhésif': location,
                                     });
                                 }
@@ -154,16 +169,20 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                         const adhesives = getPrAdhesives(equipment.type);
                         for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
                              const adhesive = adhesives.find(a => a.id === adhesiveId);
+                             const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, equipment.type);
                              rows.push({
-                                ...common,
+                                Lieu: lieu.name,
+                                'Type d\'Audit': module.name,
+                                Ligne: module.line || '',
                                 'Station/P+R': data.name,
                                 'Direction/Équipement/Accès': equipment.name,
                                 'Élément': equipment.type,
                                 'Statut': status,
                                 'Commentaire': equipment.comment,
+                                'Repère': repere,
                                 'ID Adhésif': adhesiveId,
-                                'Description Adhésif': `${adhesive?.name} | ${description}`,
+                                'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                 'Localisation Adhésif': location,
                             });
                         }
@@ -175,12 +194,15 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     for (const eca of data.ecas) {
                         if (eca.isNotApplicable) {
                              rows.push({
-                                ...common,
+                                Lieu: lieu.name,
+                                'Type d\'Audit': module.name,
+                                Ligne: module.line || '',
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
                                 'Statut': 'Non applicable',
                                 'Commentaire': eca.comment,
+                                'Repère': '',
                                 'ID Adhésif': '',
                                 'Description Adhésif': '',
                                 'Localisation Adhésif': '',
@@ -190,16 +212,20 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                         const adhesives = getEcaAdhesives(eca.type);
                         for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
                              const adhesive = adhesives.find(a => a.id === adhesiveId);
+                             const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, eca.type);
                              rows.push({
-                                ...common,
+                                Lieu: lieu.name,
+                                'Type d\'Audit': module.name,
+                                Ligne: module.line || '',
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
                                 'Statut': status,
                                 'Commentaire': eca.comment,
+                                'Repère': repere,
                                 'ID Adhésif': adhesiveId,
-                                'Description Adhésif': `${adhesive?.name} | ${description}`,
+                                'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                 'Localisation Adhésif': location,
                             });
                         }
@@ -210,12 +236,15 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     const data = module.data as PMRFloorAdhesiveData;
                     for (const adhesive of data.adhesives) {
                         rows.push({
-                            ...common,
+                            Lieu: lieu.name,
+                            'Type d\'Audit': module.name,
+                            Ligne: module.line || '',
                             'Station/P+R': data.stationName,
                             'Direction/Équipement/Accès': '',
                             'Élément': adhesive.name,
                             'Statut': adhesive.status,
                             'Commentaire': '',
+                            'Repère': '',
                             'ID Adhésif': adhesive.id,
                             'Description Adhésif': 'Adhésif de signalisation PMR au sol',
                             'Localisation Adhésif': 'Au sol devant le passage PMR',
@@ -228,14 +257,17 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                      const dimensions = COGNITIVE_PICTOGRAM_DIMENSIONS[data.stationCode] || COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'];
                      for (const pictogram of data.pictograms) {
                          rows.push({
-                            ...common,
+                            Lieu: lieu.name,
+                            'Type d\'Audit': module.name,
+                            Ligne: module.line || '',
                             'Station/P+R': data.stationName,
                             'Direction/Équipement/Accès': pictogram.accessPointName,
-                            'Élément': 'Pictogramme cognitif de sortie',
+                            'Élément': 'Pictogramme cognitif (ou totem)',
                             'Statut': pictogram.status,
                             'Commentaire': '',
+                            'Repère': '',
                             'ID Adhésif': pictogram.id,
-                            'Description Adhésif': `Pictogramme de sortie pour orientation | ${dimensions}`,
+                            'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
                             'Localisation Adhésif': 'Au sol en amont des valideurs',
                         });
                      }

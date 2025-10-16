@@ -2,17 +2,40 @@ import { v4 as uuidv4 } from 'uuid';
 import { CognitivePictogram, FloorAdhesiveStatus } from '../types';
 
 export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string> = {
-  // Default dimension
-  'DEFAULT': '90x90cm',
+  // Default dimension (most common value)
+  'DEFAULT': '74.5x97cm',
   // Ligne A
-  'JJA': '150x150cm',
-  'MAR': '110x110cm',
-  'SCY': '95x95cm',
-  'ARE': '120x120cm',
+  'CAP': '74.5x67.5cm / 74.5x71cm',
+  'BGR': '74.5x74cm',
+  'ROS': '74.5x74cm',
+  'BAG': '74.5x97cm',
+  'ESQ': '74.5x97cm',
+  'JJA': '74.5x97cm',
+  'MAR': '74.5x97cm',
+  'MER': '74.5x97cm',
+  'POI': '74.5x97cm',
+  'REY': '74.5x97cm',
+  'SCY': '74.5x97cm',
+  'MUN': '80x80cm (Totem)',
   // Ligne B
-  'CCA': '130x130cm',
-  'EMP': '85x85cm',
-  'RAN': '85x85cm',
+  'BPA': '74.5x97cm',
+  'BOR': '74.5x97cm',
+  'CAN': '74.5x97cm',
+  'CAR': '74.5x97cm',
+  'CCA': '74.5x97cm',
+  'FVE': '74.5x97cm',
+  'JAR': '74.5x97cm',
+  'LVA': '74.5x97cm',
+  'MIN': '74.5x97cm',
+  'PDJ': '74.5x97cm',
+  'RAM': '74.5x97cm',
+  'RAN': '74.5x97cm',
+  'SAG': '74.5x97cm',
+  'SMI': '74.5x97cm',
+  'SAO': '74.5x97cm',
+  'TCO': '74.5x97cm',
+  'UPS': '74.5x97cm',
+  'JJB': '74.5x97cm',
 };
 
 // Data parsed from the user's images for both lines
@@ -113,12 +136,12 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'CAP': // Ligne A: CAP PRI (2) + CAP ASC (0)
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Capitole Principale 1',
+                accessPointName: 'Accès Capitole - Petit Modèle',
                 status: FloorAdhesiveStatus.NotChecked,
             });
              pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Capitole Principale 2',
+                accessPointName: 'Accès Capitole - Grand Modèle',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
