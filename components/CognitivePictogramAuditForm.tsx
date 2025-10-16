@@ -13,6 +13,7 @@ interface CognitivePictogramAuditFormProps {
     onAddAccessPoint: () => void;
     onRemoveAccessPoint: (pictogramId: string) => void;
     onUpdateAccessPointName: (pictogramId: string, newName: string) => void;
+    onCommentChange: (comment: string) => void;
 }
 
 const AccessPointItem: React.FC<{
@@ -120,7 +121,7 @@ const AccessPointItem: React.FC<{
 };
 
 
-const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = ({ module, onStatusChange, onBack, onReset, onAddAccessPoint, onRemoveAccessPoint, onUpdateAccessPointName }) => {
+const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = ({ module, onStatusChange, onBack, onReset, onAddAccessPoint, onRemoveAccessPoint, onUpdateAccessPointName, onCommentChange }) => {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
     const [pictoToDelete, setPictoToDelete] = useState<CognitivePictogram | null>(null);
     const cogData = module.data as CognitivePictogramData;
@@ -206,6 +207,17 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                     ))
                 )}
             </ul>
+             <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Commentaires</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
+                <textarea
+                    rows={4}
+                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-900 px-3 py-2 text-base text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6"
+                    placeholder="Ajouter un commentaire..."
+                    value={cogData.comment || ''}
+                    onChange={(e) => onCommentChange(e.target.value)}
+                />
+            </div>
 
             <div className="p-6 border-t border-gray-200 dark:border-slate-700">
                 <button

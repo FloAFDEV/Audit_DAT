@@ -147,6 +147,7 @@ export interface PMRFloorAdhesiveData {
     stationName: string;
     stationCode: string;
     adhesives: PMRFloorAdhesive[];
+    comment: string;
 }
 
 export interface CognitivePictogramData {
@@ -154,6 +155,7 @@ export interface CognitivePictogramData {
     stationName: string;
     stationCode: string;
     pictograms: CognitivePictogram[];
+    comment: string;
 }
 
 // =================================================================

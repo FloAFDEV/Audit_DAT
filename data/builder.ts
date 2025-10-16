@@ -244,7 +244,8 @@ const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine
         id: `pmr-floor-data-${station.id}`,
         stationName: station.name!,
         stationCode: station.code!,
-        adhesives
+        adhesives,
+        comment: '',
     };
 
     return {
@@ -266,6 +267,7 @@ const createCognitivePictogramModule = (station: Partial<Station>, line: MetroLi
         stationName: station.name!,
         stationCode: stationCode,
         pictograms,
+        comment: '',
     };
 
     return {

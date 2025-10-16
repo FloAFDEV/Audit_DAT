@@ -247,7 +247,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             'ID Adhésif': adhesive.id,
                             'Description Adhésif': 'Adhésif de signalisation PMR au sol',
                             'Localisation Adhésif': 'Au sol devant le passage PMR',
-                            'Commentaire': '',
+                            'Commentaire': data.comment,
                         });
                     }
                     break;
@@ -268,7 +268,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             'ID Adhésif': pictogram.id,
                             'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
                             'Localisation Adhésif': 'Au sol en amont des valideurs',
-                            'Commentaire': '',
+                            'Commentaire': data.comment,
                         });
                      }
                      break;

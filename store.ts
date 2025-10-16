@@ -77,10 +77,12 @@ interface AppState {
 
     // PMR Floor Adhesive Actions
     handlePmrFloorAdhesiveStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => Promise<void>;
+    handlePmrFloorAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetPmrFloorAdhesive: () => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
+    handleCognitivePictogramCommentChange: (comment: string) => Promise<void>;
     handleResetCognitivePictogram: () => Promise<void>;
     handleAddCognitivePictogramAccessPoint: () => Promise<void>;
     handleRemoveCognitivePictogramAccessPoint: (pictogramId: string) => Promise<void>;
@@ -514,6 +516,16 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
+    handlePmrFloorAdhesiveCommentChange: async (comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
+            if (module) {
+                module.data.comment = comment;
+            }
+        });
+    },
+
     handleResetPmrFloorAdhesive: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
@@ -521,6 +533,7 @@ const useAuditStore = create<AppState>((set, get) => {
             module.data.adhesives.forEach(adhesive => {
                 adhesive.status = FloorAdhesiveStatus.NotChecked;
             });
+            module.data.comment = '';
         });
     },
 
@@ -536,6 +549,16 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
+    handleCognitivePictogramCommentChange: async (comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            if (module) {
+                module.data.comment = comment;
+            }
+        });
+    },
+
     handleResetCognitivePictogram: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
@@ -543,6 +566,7 @@ const useAuditStore = create<AppState>((set, get) => {
             module.data.pictograms.forEach(pictogram => {
                 pictogram.status = FloorAdhesiveStatus.NotChecked;
             });
+            module.data.comment = '';
         });
     },
     

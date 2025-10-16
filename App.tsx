@@ -139,9 +139,11 @@ const App: React.FC = () => {
         handleRemoveEca,
         // PMR Floor Adhesive actions
         handlePmrFloorAdhesiveStatusChange,
+        handlePmrFloorAdhesiveCommentChange,
         handleResetPmrFloorAdhesive,
         // Cognitive Pictogram actions
         handleCognitivePictogramStatusChange,
+        handleCognitivePictogramCommentChange,
         handleResetCognitivePictogram,
         handleAddCognitivePictogramAccessPoint,
         handleRemoveCognitivePictogramAccessPoint,
@@ -531,6 +533,7 @@ const App: React.FC = () => {
             return <PMRFloorAdhesiveAuditForm 
                 module={selectedModule}
                 onStatusChange={handlePmrFloorAdhesiveStatusChange}
+                onCommentChange={handlePmrFloorAdhesiveCommentChange}
                 onReset={handleResetPmrFloorAdhesiveRequest}
                 onBack={() => selectModule(null)}
             />
@@ -541,6 +544,7 @@ const App: React.FC = () => {
             return <CognitivePictogramAuditForm 
                 module={selectedModule}
                 onStatusChange={handleCognitivePictogramStatusChange}
+                onCommentChange={handleCognitivePictogramCommentChange}
                 onReset={handleResetCognitivePictogramRequest}
                 onAddAccessPoint={handleAddCognitivePictogramAccessPoint}
                 onRemoveAccessPoint={handleRemoveCognitivePictogramAccessPoint}
