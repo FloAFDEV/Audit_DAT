@@ -201,33 +201,42 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         };
     }, []);
     
-    // Main display list: respects filters and physical/line order
+    // Main display list: respects filters and physical/line order or alphabetical order
     const orderedLieuxForDisplay = useMemo(() => {
-        const lieuxSource = activeFilter === 'ALL' 
-            ? sortLieuxByPhysicalOrder([...lieux])
-            : getLieuxForCategory(lieux, activeFilter);
+        let sortedLieux: Lieu[];
 
-        const stationOrderList = lineStationsMap[activeFilter as AuditCategory];
-        let sortedByLine = lieuxSource;
+        if (activeFilter === 'ALL') {
+            // Sort alphabetically for "Tout le réseau"
+            sortedLieux = [...lieux].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+        } else {
+            // Sort by physical order for specific lines
+            const lieuxSource = getLieuxForCategory(lieux, activeFilter);
+            const stationOrderList = lineStationsMap[activeFilter as AuditCategory];
+            let sortedByLine = lieuxSource;
 
-        if (stationOrderList) {
-            const stationOrderMap = new Map<string, number>();
-            stationOrderList.forEach((station, index) => {
-                const lieuName = station.lieuName || station.name;
-                if(lieuName) stationOrderMap.set(lieuName, index);
-            });
-          
-            sortedByLine = [...lieuxSource].sort((a, b) => {
-                const orderA = stationOrderMap.get(a.name);
-                const orderB = stationOrderMap.get(b.name);
-                if (orderA !== undefined && orderB !== undefined) {
-                    return orderA - orderB;
-                }
-                return a.name.localeCompare(b.name);
-            });
+            if (stationOrderList) {
+                const stationOrderMap = new Map<string, number>();
+                stationOrderList.forEach((station, index) => {
+                    const lieuName = station.lieuName || station.name;
+                    if(lieuName) stationOrderMap.set(lieuName, index);
+                });
+            
+                sortedByLine = [...lieuxSource].sort((a, b) => {
+                    const orderA = stationOrderMap.get(a.name);
+                    const orderB = stationOrderMap.get(b.name);
+                    if (orderA !== undefined && orderB !== undefined) {
+                        return orderA - orderB;
+                    }
+                    // Fallback to alphabetical if not in the physical order list
+                    return a.name.localeCompare(b.name);
+                });
+            } else {
+                 // Fallback for categories without a physical order (like P+R) -> sort alphabetically
+                 sortedByLine = [...lieuxSource].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+            }
+            
+            sortedLieux = isOrderReversed ? [...sortedByLine].reverse() : sortedByLine;
         }
-
-        const ordered = isOrderReversed ? [...sortedByLine].reverse() : sortedByLine;
 
         // The main display should not be filtered by search query when the dropdown is open.
         if (isDropdownOpen && searchQuery.trim()) {
@@ -237,10 +246,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         // Filter main display if search is active but dropdown is closed (e.g. after selection)
         if (searchQuery.trim()) {
             const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return ordered.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
+            return sortedLieux.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
         }
 
-        return ordered;
+        return sortedLieux;
     }, [searchQuery, lieux, activeFilter, isOrderReversed, isDropdownOpen]);
 
     // Search dropdown list: always alphabetical, searches all lieux
@@ -302,7 +311,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         setImportFileContent(null);
     };
 
-    const showInverter = activeFilter !== 'ALL' && activeFilter !== 'PR';
+    const showInverter = activeFilter !== 'ALL';
     const activeCategoryConfig = useMemo(() => AUDIT_CATEGORIES.find(c => c.key === activeFilter), [activeFilter]);
     
     const getCategoryHoverColor = (catKey: AuditCategory | 'ALL'): string => {
