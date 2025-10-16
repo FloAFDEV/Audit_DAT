@@ -1,4 +1,4 @@
-import { Lieu, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Adhesive, PrAdhesive } from '../types';
+import { Lieu, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Adhesive, PrAdhesive, CognitivePictogramData, FloorAdhesiveStatus } from '../types';
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, ECA_ADHESIVES_STD, ECA_ADHESIVES_PMR } from '../data/adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
@@ -324,6 +324,29 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                      }
                     break;
                 }
+                 case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                    const cogData = module.data as CognitivePictogramData;
+                    for (const pictogram of cogData.pictograms) {
+                        // Skip export if status is "Non vérifié"
+                        if (pictogram.status === FloorAdhesiveStatus.NotChecked) continue;
+
+                        rows.push({
+                            ...baseRow,
+                            station_nom: cogData.stationName,
+                            station_code: cogData.stationCode,
+                            direction: pictogram.accessPointName,
+                            equipement_type: 'Pictogramme Cognitif',
+                            equipement_numero: undefined,
+                            repere: '',
+                            adhesif_nom: 'Pictogramme de sortie',
+                            adhesif_dimensions: '',
+                            adhesif_description: 'Signalétique directionnelle vers la sortie',
+                            statut: pictogram.status,
+                            equipement_commentaire: '',
+                        });
+                    }
+                   break;
+               }
             }
         }
     }

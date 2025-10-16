@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
+import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station, AdhesiveStatus, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
 import { LieuBadges } from './Icons';
 import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload } from 'lucide-react';
 import { getLieuxForCategory } from '../data/builder';
@@ -83,6 +83,13 @@ const getLieuProgress = (lieu: Lieu): number => {
                 const adhesives = pmrData.adhesives ?? [];
                 totalApplicableItems += adhesives.length;
                 totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
+                break;
+            }
+            case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                const cogData = module.data as CognitivePictogramData;
+                const pictos = cogData.pictograms ?? [];
+                totalApplicableItems += pictos.length;
+                totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
                 break;
             }
         }

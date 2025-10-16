@@ -1,9 +1,10 @@
 import React, { useMemo } from 'react';
-import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
+import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, AdhesiveStatus, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges } from './Icons';
 import { getDatProgress, getEcaProgress } from '../utils/progressCalculators';
+import { ModuleIcon } from './ModuleIcon';
 
 const getModuleProgress = (module: AuditModule): { percentage: number; label: string } => {
     if (module.isFuture) {
@@ -48,10 +49,30 @@ const getModuleProgress = (module: AuditModule): { percentage: number; label: st
             const percentage = (checked / adhesives.length) * 100;
             return { percentage, label: Math.round(percentage) === 100 ? 'Terminé' : 'Progression' };
         }
+        case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+            const cogData = module.data as CognitivePictogramData;
+            const pictos = cogData.pictograms;
+            if (pictos.length === 0) return { percentage: 100, label: 'Terminé' };
+            const checked = pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
+            const percentage = (checked / pictos.length) * 100;
+            return { percentage, label: Math.round(percentage) === 100 ? 'Terminé' : 'Progression' };
+        }
         default:
             return { percentage: 0, label: 'N/A' };
     }
 };
+
+const getStatusInfo = (percentage: number): { text: string; color: string } => {
+    const roundedPercentage = Math.round(percentage);
+    if (roundedPercentage === 0) {
+        return { text: 'En attente de contrôle', color: 'text-gray-500 dark:text-slate-400' };
+    }
+    if (roundedPercentage === 100) {
+        return { text: 'Audit terminé', color: 'text-teal-600 dark:text-teal-400' };
+    }
+    return { text: 'Audit en cours', color: 'text-amber-600 dark:text-amber-400' };
+};
+
 
 interface ModuleSelectorProps {
   lieu: Lieu;
@@ -66,7 +87,8 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             [AuditModuleType.DAT]: 1,
             [AuditModuleType.ECA]: 2,
             [AuditModuleType.PMR_FLOOR_ADHESIVE]: 3,
-            [AuditModuleType.PR]: 4,
+            [AuditModuleType.COGNITIVE_PICTOGRAMS]: 4,
+            [AuditModuleType.PR]: 5,
         };
         return [...lieu.modules].sort((a, b) => (order[a.type] || 99) - (order[b.type] || 99));
     }, [lieu.modules]);
@@ -95,6 +117,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             <div className="space-y-4">
                 {sortedModules.map((module) => {
                     const { percentage, label } = getModuleProgress(module);
+                    const statusInfo = getStatusInfo(percentage);
                     const isComplete = Math.round(percentage) === 100;
                     const isInProgress = percentage > 0 && !isComplete;
                     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
@@ -110,8 +133,11 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
                                     <LineIcon module={module} size="md" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{module.name}</p>
-                                        <p className="text-sm text-gray-500 dark:text-slate-400">{module.isFuture ? 'Bientôt disponible' : 'Prêt pour audit'}</p>
+                                        <div className="flex items-center gap-3">
+                                            <ModuleIcon type={module.type} />
+                                            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{module.name}</p>
+                                        </div>
+                                        <p className={`text-sm font-semibold ml-9 ${statusInfo.color}`}>{module.isFuture ? 'Bientôt disponible' : statusInfo.text}</p>
                                     </div>
                                 </div>
                                 {!module.isFuture && (

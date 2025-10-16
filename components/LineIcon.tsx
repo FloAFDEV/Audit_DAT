@@ -1,7 +1,7 @@
 import React from 'react';
 import { AuditModule, AuditModuleType } from '../types';
 import { getModuleLineConfig } from '../data/builder';
-import { ParkingCircle, SplitSquareHorizontal, Footprints } from 'lucide-react';
+import { ParkingCircle, SplitSquareHorizontal, Footprints, ScanEye } from 'lucide-react';
 
 interface LineIconProps {
   module: AuditModule;
@@ -38,6 +38,8 @@ export const LineIcon: React.FC<LineIconProps> = ({ module, size = 'md' }) => {
             return <div className={`flex-shrink-0 p-2 bg-violet-100 rounded-full flex items-center justify-center ${size === 'md' ? 'w-10 h-10' : 'w-8 h-8'}`}><SplitSquareHorizontal className={`${size === 'md' ? 'w-6 h-6' : 'w-5 h-5'} text-violet-600`} /></div>;
         case AuditModuleType.PMR_FLOOR_ADHESIVE:
              return <div className={`flex-shrink-0 p-2 bg-cyan-100 rounded-full flex items-center justify-center ${size === 'md' ? 'w-10 h-10' : 'w-8 h-8'}`}><Footprints className={`${size === 'md' ? 'w-6 h-6' : 'w-5 h-5'} text-cyan-600`} /></div>;
+        case AuditModuleType.COGNITIVE_PICTOGRAMS:
+             return <div className={`flex-shrink-0 p-2 bg-purple-100 dark:bg-purple-900/40 rounded-full flex items-center justify-center ${size === 'md' ? 'w-10 h-10' : 'w-8 h-8'}`}><ScanEye className={`${size === 'md' ? 'w-6 h-6' : 'w-5 h-5'} text-purple-600 dark:text-purple-300`} /></div>;
         default:
             return null;
     }

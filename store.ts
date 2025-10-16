@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { 
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType 
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram 
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -78,6 +78,13 @@ interface AppState {
     // PMR Floor Adhesive Actions
     handlePmrFloorAdhesiveStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => Promise<void>;
     handleResetPmrFloorAdhesive: () => Promise<void>;
+
+    // Cognitive Pictogram Actions
+    handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
+    handleResetCognitivePictogram: () => Promise<void>;
+    handleAddCognitivePictogramAccessPoint: () => Promise<void>;
+    handleRemoveCognitivePictogramAccessPoint: (pictogramId: string) => Promise<void>;
+    handleUpdateCognitivePictogramAccessPointName: (pictogramId: string, newName: string) => Promise<void>;
     
     // Reset actions
     handleResetCategory: (category: AuditCategory) => Promise<void>;
@@ -516,6 +523,65 @@ const useAuditStore = create<AppState>((set, get) => {
             });
         });
     },
+
+    // =================================================================
+    // Cognitive Pictogram Actions
+    // =================================================================
+    handleCognitivePictogramStatusChange: async (pictogramId, status) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
+            if (pictogram) pictogram.status = status;
+        });
+    },
+
+    handleResetCognitivePictogram: async () => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            module.data.pictograms.forEach(pictogram => {
+                pictogram.status = FloorAdhesiveStatus.NotChecked;
+            });
+        });
+    },
+    
+    handleAddCognitivePictogramAccessPoint: async () => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            if (module) {
+                const newAccessPoint: CognitivePictogram = {
+                    id: uuidv4(),
+                    accessPointName: `Nouvel Accès ${module.data.pictograms.length + 1}`,
+                    status: FloorAdhesiveStatus.NotChecked,
+                };
+                module.data.pictograms.push(newAccessPoint);
+            }
+        });
+    },
+
+    handleRemoveCognitivePictogramAccessPoint: async (pictogramId: string) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            if (module) {
+                module.data.pictograms = module.data.pictograms.filter(p => p.id !== pictogramId);
+            }
+        });
+    },
+    
+    handleUpdateCognitivePictogramAccessPointName: async (pictogramId: string, newName: string) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
+            if (pictogram) {
+                pictogram.accessPointName = newName;
+            }
+        });
+    },
+
 
     // =================================================================
     // Global Reset Actions

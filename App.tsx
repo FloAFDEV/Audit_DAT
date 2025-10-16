@@ -9,7 +9,7 @@ import AdhesiveAuditForm from './components/AdhesiveAuditForm';
 import EquipmentSelector from './components/EquipmentSelector';
 import PnrAdhesiveAuditForm from './components/PnrAdhesiveAuditForm';
 import { Breadcrumbs } from './components/Breadcrumbs';
-import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType } from './types';
+import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
 import EcaSelector from './components/EcaSelector';
 import EcaAdhesiveAuditForm from './components/EcaAdhesiveAuditForm';
 import EcaTripodeSortieDecision from './components/EcaTripodeSortieDecision';
@@ -23,6 +23,7 @@ import { AUDIT_CATEGORIES } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
 import { showPromiseToast, showSuccessToast, showErrorToast } from './components/ToastManager';
 import { canEcaBeNotApplicable } from './data/eca_data';
+import CognitivePictogramAuditForm from './components/CognitivePictogramAuditForm';
 
 
 // A simple loading spinner component
@@ -139,6 +140,12 @@ const App: React.FC = () => {
         // PMR Floor Adhesive actions
         handlePmrFloorAdhesiveStatusChange,
         handleResetPmrFloorAdhesive,
+        // Cognitive Pictogram actions
+        handleCognitivePictogramStatusChange,
+        handleResetCognitivePictogram,
+        handleAddCognitivePictogramAccessPoint,
+        handleRemoveCognitivePictogramAccessPoint,
+        handleUpdateCognitivePictogramAccessPointName,
         // Reset Actions
         handleResetCategory,
         handleResetAll,
@@ -439,6 +446,31 @@ const App: React.FC = () => {
         );
     };
 
+    const handleResetCognitivePictogramRequest = () => {
+        const promise = handleResetCognitivePictogram();
+        const stationName = (selectedModule?.data as CognitivePictogramData)?.stationName || 'la station';
+
+        showPromiseToast(
+            promise,
+            {
+                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
+                title: "Réinitialisation en cours...",
+                message: `Pictogrammes Cognitifs : ${stationName}`,
+            },
+            {
+                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
+                title: "Réinitialisation terminée",
+                message: `Les pictogrammes pour ${stationName} ont été réinitialisés.`,
+            },
+            {
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                title: "Erreur",
+                message: "La réinitialisation a échoué.",
+            },
+            triggerSuccessAnimation
+        );
+    };
+
     const renderContent = () => {
         // --- DEEPEST LEVEL: AUDIT FORMS ---
 
@@ -500,6 +532,19 @@ const App: React.FC = () => {
                 module={selectedModule}
                 onStatusChange={handlePmrFloorAdhesiveStatusChange}
                 onReset={handleResetPmrFloorAdhesiveRequest}
+                onBack={() => selectModule(null)}
+            />
+        }
+
+        // Cognitive Pictogram Form
+        if (selectedModule?.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
+            return <CognitivePictogramAuditForm 
+                module={selectedModule}
+                onStatusChange={handleCognitivePictogramStatusChange}
+                onReset={handleResetCognitivePictogramRequest}
+                onAddAccessPoint={handleAddCognitivePictogramAccessPoint}
+                onRemoveAccessPoint={handleRemoveCognitivePictogramAccessPoint}
+                onUpdateAccessPointName={handleUpdateCognitivePictogramAccessPointName}
                 onBack={() => selectModule(null)}
             />
         }

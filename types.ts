@@ -42,6 +42,7 @@ export enum AuditModuleType {
     PR = 'P+R',
     ECA = 'ECA',
     PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
+    COGNITIVE_PICTOGRAMS = 'COGNITIVE_PICTOGRAMS',
 }
 
 export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR';
@@ -110,6 +111,12 @@ export interface PMRFloorAdhesive {
     status: FloorAdhesiveStatus;
 }
 
+export interface CognitivePictogram {
+    id: string;
+    accessPointName: string;
+    status: FloorAdhesiveStatus;
+}
+
 // =================================================================
 // SECTION: Module Data Structures
 // =================================================================
@@ -142,6 +149,13 @@ export interface PMRFloorAdhesiveData {
     adhesives: PMRFloorAdhesive[];
 }
 
+export interface CognitivePictogramData {
+    id: string;
+    stationName: string;
+    stationCode: string;
+    pictograms: CognitivePictogram[];
+}
+
 // =================================================================
 // SECTION: Top-Level Audit Structures
 // =================================================================
@@ -150,7 +164,7 @@ export interface AuditModule {
     id: string;
     type: AuditModuleType;
     name: string;
-    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData;
+    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
     isFuture?: boolean;
     line?: MetroLine | 'TRAM' | 'TELEO';
 }

@@ -1,6 +1,6 @@
 import {
     Lieu, AuditModule, ModeData, AuditModuleType, TransportMode, MetroLine, Station, Direction, DAT, AdhesiveStatus, Pr,
-    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig
+    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './adhesives';
@@ -9,6 +9,7 @@ import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
 import { ECA_DEFINITIONS, isPmrEcaType } from './eca_data';
 import { PMR_PICTOGRAM_CONFIG } from './pmr_pictogram_config';
+import { generateInitialCognitivePictogramsForStation } from './cognitive_pictograms';
 
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
@@ -256,6 +257,27 @@ const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine
     };
 };
 
+const createCognitivePictogramModule = (station: Partial<Station>, line: MetroLine): AuditModule => {
+    const stationCode = station.code!;
+    const pictograms = generateInitialCognitivePictogramsForStation(stationCode);
+
+    const data: CognitivePictogramData = {
+        id: `cog-picto-data-${station.id}`,
+        stationName: station.name!,
+        stationCode: stationCode,
+        pictograms,
+    };
+
+    return {
+        id: `module-cog-picto-${station.id}`,
+        type: AuditModuleType.COGNITIVE_PICTOGRAMS,
+        name: 'Pictogrammes Cognitifs',
+        data: data,
+        isFuture: station.isFuture,
+        line: line,
+    };
+};
+
 export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
     return new Promise(resolve => {
         const modules: AuditModule[] = [
@@ -273,6 +295,9 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_A_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'B')),
             ...LINE_C_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'C')),
+            
+            ...LINE_A_STATIONS.map(s => createCognitivePictogramModule(s, 'A')),
+            ...LINE_B_STATIONS.map(s => createCognitivePictogramModule(s, 'B')),
         ];
 
         const lieuxMap = new Map<string, Lieu>();
@@ -293,6 +318,11 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
                 const stationName = (module.data as PMRFloorAdhesiveData).stationName;
                 const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS].find(s => s.name === stationName);
+                return station?.lieuName || stationName;
+            }
+            if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
+                const stationName = (module.data as CognitivePictogramData).stationName;
+                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS].find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             return module.name;
