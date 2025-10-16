@@ -17,6 +17,34 @@ interface CsvRow {
     statut: string;
 }
 
+const CSV_COLUMN_ORDER: (keyof CsvRow)[] = [
+    'date_export',
+    'ligne_transport',
+    'station_nom',
+    'station_code',
+    'direction',
+    'equipement_type',
+    'equipement_numero',
+    'adhesif_nom',
+    'adhesif_description',
+    'statut',
+    'equipement_commentaire',
+];
+
+const CSV_HEADERS: Record<keyof CsvRow, string> = {
+    date_export: "Date de l'export",
+    ligne_transport: "Ligne",
+    station_nom: "Station",
+    station_code: "Code Station",
+    direction: "Point d'accès",
+    equipement_type: "Type d'équipement",
+    equipement_numero: "Numéro",
+    equipement_commentaire: "Commentaire sur l'équipement",
+    adhesif_nom: "Nom de l'adhésif",
+    adhesif_description: "Description / Localisation",
+    statut: "Statut",
+};
+
 const ALL_ADHESIVES_MAP = new Map<string, Adhesive | PrAdhesive>();
 // Correctly populate the map from all exported adhesive arrays.
 // The previous implementation was trying to iterate over functions, which is incorrect.
@@ -35,11 +63,10 @@ const convertToCsvString = (rows: CsvRow[]): string => {
         return '\uFEFF'; // Return only BOM for empty file
     }
 
-    const headers = Object.keys(rows[0]);
-    // S'assurer que les en-têtes sont aussi entre guillemets pour la cohérence
-    const headerRow = headers.map(h => `"${h}"`).join(';');
-    
-    const dataRows = rows.map(row => 
+    const headers = CSV_COLUMN_ORDER;
+    const userFriendlyHeaders = headers.map(h => `"${CSV_HEADERS[h]}"`).join(';');
+
+    const dataRows = rows.map(row =>
         headers.map(header => {
             const value = (row as any)[header];
             const stringValue = value === null || value === undefined ? '' : String(value);
@@ -49,8 +76,8 @@ const convertToCsvString = (rows: CsvRow[]): string => {
     );
 
     // Concaténer les en-têtes et les données.
-    const csvContent = [headerRow, ...dataRows].join('\n');
-    
+    const csvContent = [userFriendlyHeaders, ...dataRows].join('\n');
+
     // Préfixer avec le BOM pour la compatibilité UTF-8 avec Excel
     return '\uFEFF' + csvContent;
 };

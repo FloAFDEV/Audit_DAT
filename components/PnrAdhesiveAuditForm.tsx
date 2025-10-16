@@ -83,15 +83,30 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {adhesives.map((adhesive) => {
           const currentStatus = equipment.adhesives[adhesive.id] || AdhesiveStatus.NotChecked;
+            const [descText, dimensions] = (() => {
+                if (!adhesive.description) return [null, null];
+                const parts = adhesive.description.split('//');
+                if (parts.length > 1) {
+                    return [parts[0].trim(), parts.slice(1).join('//').trim()];
+                }
+                return [adhesive.description, null];
+            })();
           return (
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{adhesive.name}</h3>
-                  <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{adhesive.description}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {adhesive.name}
+                     {dimensions && (
+                        <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
+                            // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
+                        </span>
+                    )}
+                  </h3>
+                   {descText && <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{descText}</p>}
                   <div className="flex items-start text-sm text-gray-500 dark:text-slate-400 mt-2">
                     <MapPin className="w-4 h-4 mr-2 mt-1 text-gray-400 flex-shrink-0" />
-                    <span><span className="font-semibold text-gray-600 dark:text-slate-300">Localisation:</span> {adhesive.location}</span>
+                    <span>{adhesive.location}</span>
                   </div>
                 </div>
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">

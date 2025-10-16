@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { DAT, AdhesiveStatus, Station, Direction, AuditModule } from '../types';
 import { ADHESIVES } from '../data/adhesives';
-import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, ArrowLeft, DatabaseBackup, MapPin } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
 import { DatIcon } from './DatIcon';
@@ -84,12 +84,34 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {ADHESIVES.map((adhesive) => {
           const currentStatus = dat.adhesives[adhesive.id];
+           const [dimensions, location] = (() => {
+                if (!adhesive.description) return [null, null];
+                const parts = adhesive.description.split('|');
+                if (parts.length > 1) {
+                    const dimPart = parts[0].replace('Dimensions:', '').trim();
+                    const locPart = parts.slice(1).join('|').replace('Localisation:', '').trim();
+                    return [dimPart, locPart];
+                }
+                return [null, adhesive.description];
+            })();
           return (
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">{adhesive.name}</h3>
-                  <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{adhesive.description}</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {adhesive.name}
+                    {dimensions && (
+                        <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
+                            // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
+                        </span>
+                    )}
+                  </h3>
+                  {location && (
+                    <div className="flex items-start text-sm text-gray-500 dark:text-slate-400 mt-2">
+                        <MapPin className="w-4 h-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
+                        <span>{location}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-shrink-0 flex items-center flex-wrap justify-start sm:justify-end gap-3">
                   <button
