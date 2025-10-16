@@ -231,10 +231,17 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                 sortedByLine = [...lieuxSource].sort((a, b) => {
                     const orderA = stationOrderMap.get(a.name);
                     const orderB = stationOrderMap.get(b.name);
+
                     if (orderA !== undefined && orderB !== undefined) {
-                        return orderA - orderB;
+                        return orderA - orderB; // Both are in the list, sort by index.
                     }
-                    // Fallback to alphabetical if not in the physical order list
+                    if (orderA !== undefined) {
+                        return -1; // Only A is in the list, so it comes first.
+                    }
+                    if (orderB !== undefined) {
+                        return 1; // Only B is in the list, so it comes first.
+                    }
+                    // Neither is in the list, sort them alphabetically.
                     return a.name.localeCompare(b.name);
                 });
             } else {
