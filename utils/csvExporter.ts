@@ -71,10 +71,19 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
+const getModeFromLine = (line: string | undefined): string => {
+    if (!line) return '';
+    if (['A', 'B', 'C'].includes(line)) return 'METRO';
+    if (line === 'TRAM') return 'TRAM';
+    if (line === 'TELEO') return 'TELEO';
+    return '';
+};
+
 interface CsvRow {
     Lieu: string;
     'Type d\'Audit': string;
     Ligne: string;
+    Mode: string;
     'Station/P+R': string;
     'Direction/Équipement/Accès': string;
     'Élément': string;
@@ -84,7 +93,9 @@ interface CsvRow {
     'Description Adhésif': string;
     'Localisation Adhésif': string;
     'Commentaire': string;
+    _lieuIndex?: number; // Temporary property for sorting
 }
+
 
 const getAdhesiveDetails = (id: string, moduleType: AuditModuleType, subType: any) => {
     let allAdhesives: any[] = [];
@@ -113,13 +124,18 @@ const getAdhesiveDetails = (id: string, moduleType: AuditModuleType, subType: an
 export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
     const rows: CsvRow[] = [];
     
-    for (const lieu of lieux) {
+    for (const [lieuIndex, lieu] of lieux.entries()) {
         for (const module of lieu.modules) {
+            const line = module.line || '';
+            const mode = getModeFromLine(line);
+
             if (module.isFuture) {
                  rows.push({
+                    _lieuIndex: lieuIndex,
                     Lieu: lieu.name,
                     'Type d\'Audit': module.name,
-                    Ligne: module.line || '',
+                    Ligne: line,
+                    Mode: mode,
                     'Station/P+R': '',
                     'Direction/Équipement/Accès': '',
                     'Élément': module.name,
@@ -144,9 +160,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                     const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                                     const { description, location } = getAdhesiveDetails(adhesiveId, module.type, null);
                                     rows.push({
+                                        _lieuIndex: lieuIndex,
                                         Lieu: lieu.name,
                                         'Type d\'Audit': module.name,
-                                        Ligne: module.line || '',
+                                        Ligne: line,
+                                        Mode: mode,
                                         'Station/P+R': station.name,
                                         'Direction/Équipement/Accès': direction.name,
                                         'Élément': dat.name,
@@ -172,9 +190,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                              const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, equipment.type);
                              rows.push({
+                                _lieuIndex: lieuIndex,
                                 Lieu: lieu.name,
                                 'Type d\'Audit': module.name,
-                                Ligne: module.line || '',
+                                Ligne: line,
+                                Mode: mode,
                                 'Station/P+R': data.name,
                                 'Direction/Équipement/Accès': equipment.name,
                                 'Élément': equipment.type,
@@ -194,9 +214,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     for (const eca of data.ecas) {
                         if (eca.isNotApplicable) {
                              rows.push({
+                                _lieuIndex: lieuIndex,
                                 Lieu: lieu.name,
                                 'Type d\'Audit': module.name,
-                                Ligne: module.line || '',
+                                Ligne: line,
+                                Mode: mode,
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
@@ -215,9 +237,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                              const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, eca.type);
                              rows.push({
+                                _lieuIndex: lieuIndex,
                                 Lieu: lieu.name,
                                 'Type d\'Audit': module.name,
-                                Ligne: module.line || '',
+                                Ligne: line,
+                                Mode: mode,
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
@@ -236,9 +260,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     const data = module.data as PMRFloorAdhesiveData;
                     for (const adhesive of data.adhesives) {
                         rows.push({
+                            _lieuIndex: lieuIndex,
                             Lieu: lieu.name,
                             'Type d\'Audit': module.name,
-                            Ligne: module.line || '',
+                            Ligne: line,
+                            Mode: mode,
                             'Station/P+R': data.stationName,
                             'Direction/Équipement/Accès': '',
                             'Élément': adhesive.name,
@@ -257,9 +283,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                      for (const pictogram of data.pictograms) {
                         const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
                         rows.push({
+                            _lieuIndex: lieuIndex,
                             Lieu: lieu.name,
                             'Type d\'Audit': module.name,
-                            Ligne: module.line || '',
+                            Ligne: line,
+                            Mode: mode,
                             'Station/P+R': data.stationName,
                             'Direction/Équipement/Accès': pictogram.accessPointName,
                             'Élément': 'Pictogramme cognitif (ou totem)',
@@ -279,10 +307,39 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
     
     if (rows.length === 0) return;
 
-    const header = Object.keys(rows[0]) as (keyof CsvRow)[];
+    // Sort rows by line, then by original physical lieu order
+    const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', '']; // PR modules will have empty line
+    const lineOrderMap = new Map(lineOrder.map((line, index) => [line, index]));
+
+    rows.sort((a, b) => {
+        const orderA = lineOrderMap.get(a.Ligne) ?? 99;
+        const orderB = lineOrderMap.get(b.Ligne) ?? 99;
+        if (orderA !== orderB) return orderA - orderB;
+
+        // If lines are the same, sort by the original lieu order.
+        return (a._lieuIndex ?? 0) - (b._lieuIndex ?? 0);
+    });
+
+    // Insert blank rows and build final array for CSV conversion
+    const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
+    let lastLigne: string | null = null;
+    
+    // Get header keys from the first row, excluding the temp index key.
+    const headerKeys = Object.keys(rows[0]).filter(k => k !== '_lieuIndex') as (keyof Omit<CsvRow, '_lieuIndex'>)[];
+    const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
+
+    for (const row of rows) {
+        if (lastLigne !== null && row.Ligne !== lastLigne) {
+            finalCsvRowsForStringify.push(blankRow);
+        }
+        const { _lieuIndex, ...restOfRow } = row;
+        finalCsvRowsForStringify.push(restOfRow);
+        lastLigne = row.Ligne;
+    }
+
     const csvContent = [
-        '\uFEFF' + header.join(','), // BOM for UTF-8
-        ...rows.map(row => header.map(fieldName => escapeCsv(row[fieldName])).join(','))
+        '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
+        ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row[fieldName])).join(','))
     ].join('\n');
 
     downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');

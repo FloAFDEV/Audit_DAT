@@ -341,9 +341,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm font-semibold transition-colors duration-150';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-150';
         if (activeFilter === catKey) {
-            return baseClasses;
+            return `${baseClasses} font-semibold`;
         }
         return `${baseClasses} border-transparent text-gray-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)]`;
     };
