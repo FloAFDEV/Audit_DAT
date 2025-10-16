@@ -47,20 +47,20 @@ const ECA_ADHESIVES_BASE: Adhesive[] = [
 
 const ECA_ADHESIVES_PMR_PICTOGRAMS: Adhesive[] = [
     { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
-    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
-    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
+    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
+    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR sur bras' },
 ];
 
 const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [
     ...ECA_ADHESIVES_BASE,
-    { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique PMR à bras).', referentiel: '' },
+    { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique « à bras »).', referentiel: '' },
     { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
     ...ECA_ADHESIVES_PMR_PICTOGRAMS,
 ];
 
 const ECA_ADHESIVES_PMR_VANTAUX: Adhesive[] = [
     ...ECA_ADHESIVES_BASE,
-    { id: 'eca-5', name: 'Repère 5 - Adhésif valideur-PMRVantaux', description: '195x185mm | Sur platine jaune, autour du support de validation (spécifique PMR à vantaux).', referentiel: '' },
+    { id: 'eca-5', name: 'Repère 5 - Adhésif valideur-PMRVantaux', description: '195x185mm | Sur platine jaune, autour du support de validation (spécifique « à vantaux »).', referentiel: '' },
     { id: 'eca-7', name: 'Repère 7 - Adhésif valideur-portillon-PMR-vantaux', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à vantaux).', referentiel: '' },
     ...ECA_ADHESIVES_PMR_PICTOGRAMS,
 ];
