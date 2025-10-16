@@ -1,6 +1,20 @@
 import { v4 as uuidv4 } from 'uuid';
 import { CognitivePictogram, FloorAdhesiveStatus } from '../types';
 
+export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string> = {
+  // Default dimension
+  'DEFAULT': '90x90cm',
+  // Ligne A
+  'JJA': '150x150cm',
+  'MAR': '110x110cm',
+  'SCY': '95x95cm',
+  'ARE': '120x120cm',
+  // Ligne B
+  'CCA': '130x130cm',
+  'EMP': '85x85cm',
+  'RAN': '85x85cm',
+};
+
 // Data parsed from the user's images for both lines
 const initialCounts: Record<string, number> = {
     // Line B
@@ -68,7 +82,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'JJA': // Ligne A - Jean Jaurès
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Ligne A',
+                accessPointName: 'Ligne A historique',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
