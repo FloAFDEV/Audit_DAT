@@ -79,11 +79,11 @@ interface CsvRow {
     'Direction/Équipement/Accès': string;
     'Élément': string;
     'Statut': string;
-    'Commentaire': string;
     'Repère': string;
     'ID Adhésif': string;
     'Description Adhésif': string;
     'Localisation Adhésif': string;
+    'Commentaire': string;
 }
 
 const getAdhesiveDetails = (id: string, moduleType: AuditModuleType, subType: any) => {
@@ -124,11 +124,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     'Direction/Équipement/Accès': '',
                     'Élément': module.name,
                     'Statut': 'N/A',
-                    'Commentaire': '',
                     'Repère': '',
                     'ID Adhésif': '',
                     'Description Adhésif': '',
                     'Localisation Adhésif': '',
+                    'Commentaire': '',
                 });
                 continue;
             }
@@ -151,11 +151,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                         'Direction/Équipement/Accès': direction.name,
                                         'Élément': dat.name,
                                         'Statut': status,
-                                        'Commentaire': dat.comment,
                                         'Repère': repere,
                                         'ID Adhésif': adhesiveId,
                                         'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                         'Localisation Adhésif': location,
+                                        'Commentaire': dat.comment,
                                     });
                                 }
                             }
@@ -179,11 +179,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                 'Direction/Équipement/Accès': equipment.name,
                                 'Élément': equipment.type,
                                 'Statut': status,
-                                'Commentaire': equipment.comment,
                                 'Repère': repere,
                                 'ID Adhésif': adhesiveId,
                                 'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                 'Localisation Adhésif': location,
+                                'Commentaire': equipment.comment,
                             });
                         }
                     }
@@ -201,11 +201,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
                                 'Statut': 'Non applicable',
-                                'Commentaire': eca.comment,
                                 'Repère': '',
                                 'ID Adhésif': '',
                                 'Description Adhésif': '',
                                 'Localisation Adhésif': '',
+                                'Commentaire': eca.comment,
                             });
                             continue;
                         }
@@ -222,11 +222,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
                                 'Statut': status,
-                                'Commentaire': eca.comment,
                                 'Repère': repere,
                                 'ID Adhésif': adhesiveId,
                                 'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                 'Localisation Adhésif': location,
+                                'Commentaire': eca.comment,
                             });
                         }
                     }
@@ -243,11 +243,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             'Direction/Équipement/Accès': '',
                             'Élément': adhesive.name,
                             'Statut': adhesive.status,
-                            'Commentaire': '',
                             'Repère': '',
                             'ID Adhésif': adhesive.id,
                             'Description Adhésif': 'Adhésif de signalisation PMR au sol',
                             'Localisation Adhésif': 'Au sol devant le passage PMR',
+                            'Commentaire': '',
                         });
                     }
                     break;
@@ -264,11 +264,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             'Direction/Équipement/Accès': pictogram.accessPointName,
                             'Élément': 'Pictogramme cognitif (ou totem)',
                             'Statut': pictogram.status,
-                            'Commentaire': '',
                             'Repère': '',
                             'ID Adhésif': pictogram.id,
                             'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
                             'Localisation Adhésif': 'Au sol en amont des valideurs',
+                            'Commentaire': '',
                         });
                      }
                      break;
