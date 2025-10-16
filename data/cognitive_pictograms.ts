@@ -42,32 +42,32 @@ export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string> = {
 const initialCounts: Record<string, number> = {
     // Line B
     'BOR': 2,
-    // 'TCO': 2 (default)
-    // 'LVA': 2 (default)
-    // 'BPA': 2 (default)
-    // 'MIN': 2 (default)
+    'TCO': 1,
+    'LVA': 1,
+    'BPA': 3,
+    'MIN': 3,
     // 'CAN': 2 (default)
     'CCA': 3,
-    'JAR': 2,
+    'JAR': 3,
     'JJB': 0, // Special case for Jean-Jaurès, user can add accesses if needed
     'FVE': 2,
     'CAR': 2,
     'PDJ': 2,
     'SMI': 2,
     'EMP': 1,
-    'SAG': 2,
+    'SAG': 1,
     'SAO': 2,
-    'RAN': 1,
+    'RAN': 2,
     'PHA': 2,
     'UPS': 2,
     // 'RAM' is a special case
     
     // Line A
-    'BGR': 2,
+    'BGR': 1,
     'ARG': 1,
     'ROS': 1,
     // 'JOL' is a special case
-    'MAR': 1,
+    'MAR': 2,
     // 'JJA' is a special case
     // 'CAP' is a special case
     // 'ESQ' is a special case
@@ -75,7 +75,7 @@ const initialCounts: Record<string, number> = {
     'POI': 2,
     'ARE': 2,
     'FLE': 1,
-    'MER': 2,
+    'MER': 1,
     'BAG': 2,
     'MUN': 2,
     'REY': 2,
@@ -105,17 +105,12 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'JJA': // Ligne A - Jean Jaurès
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Ligne A historique',
+                accessPointName: 'Accès 1',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Mixte A/B 1',
-                status: FloorAdhesiveStatus.NotChecked,
-            });
-            pictos.push({
-                id: uuidv4(),
-                accessPointName: 'Accès Mixte A/B 2',
+                accessPointName: 'Accès 2',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
