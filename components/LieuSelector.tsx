@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station } from '../types';
+import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr, EcaData, PMRFloorAdhesiveData, Station, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
 import { LieuBadges } from './Icons';
 import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload } from 'lucide-react';
 import { getLieuxForCategory } from '../data/builder';
@@ -11,6 +11,7 @@ import { ActionsMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
 import { sortLieuxByPhysicalOrder } from '../utils/csvExporter';
+import { getEcaAdhesives } from '../data/adhesives';
 
 interface LieuSelectorProps {
   lieux: Lieu[];
@@ -30,34 +31,70 @@ interface LieuSelectorProps {
 const getLieuProgress = (lieu: Lieu): number => {
     if (!lieu?.modules) return 0;
 
-    // FIX: Changed flatMap to map to avoid TypeScript inference issues with mixed enum types.
-    const allAdhesives = lieu.modules.map(module => {
+    let totalApplicableItems = 0;
+    let totalCheckedItems = 0;
+
+    for (const module of lieu.modules) {
+        if (module.isFuture) continue;
+
         switch (module.type) {
             case AuditModuleType.DAT: {
                 const modeData = module.data as ModeData;
-                return modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats?.flatMap(dat => Object.values(dat.adhesives)) ?? []) ?? []) ?? [];
+                const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
+                for (const dat of dats) {
+                    const statuses = Object.values(dat.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
+                break;
             }
             case AuditModuleType.PR: {
                 const prData = module.data as Pr;
-                return prData.equipments?.flatMap(e => Object.values(e.adhesives)) ?? [];
+                const equipments = prData.equipments ?? [];
+                for (const equipment of equipments) {
+                    const statuses = Object.values(equipment.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
+                break;
             }
             case AuditModuleType.ECA: {
                 const ecaData = module.data as EcaData;
-                return ecaData.ecas?.flatMap(e => Object.values(e.adhesives)) ?? [];
+                const ecas = ecaData.ecas ?? [];
+                for (const eca of ecas) {
+                    if (eca.isNotApplicable) {
+                        continue;
+                    }
+                    const adhesiveDefinitions = getEcaAdhesives(eca.type);
+                    for (const adDef of adhesiveDefinitions) {
+                        const status = eca.adhesives[adDef.id];
+                        if (status !== AdhesiveStatus.NotApplicable) {
+                            totalApplicableItems++;
+                            if (status && status !== AdhesiveStatus.NotChecked) {
+                                totalCheckedItems++;
+                            }
+                        }
+                    }
+                }
+                break;
             }
             case AuditModuleType.PMR_FLOOR_ADHESIVE: {
                 const pmrData = module.data as PMRFloorAdhesiveData;
-                return pmrData.adhesives?.map(a => a.status) ?? [];
+                const adhesives = pmrData.adhesives ?? [];
+                totalApplicableItems += adhesives.length;
+                totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
+                break;
             }
-            default:
-                return [];
         }
-    }).flat();
+    }
 
-    if (allAdhesives.length === 0) return 0;
-    const checkedCount = allAdhesives.filter(status => status && status !== "Non vérifié").length;
-    return (checkedCount / allAdhesives.length) * 100;
+    if (totalApplicableItems === 0) {
+        return 100;
+    }
+
+    return (totalCheckedItems / totalApplicableItems) * 100;
 };
+
 
 const LieuCard: React.FC<{ lieu: Lieu; onSelect: () => void; progress: number }> = ({ lieu, onSelect, progress }) => {
     const cardBgClass = 'bg-white dark:bg-slate-800';
