@@ -8,6 +8,7 @@ import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
 import { ECA_DEFINITIONS, isPmrEcaType } from './eca_data';
+import { PMR_PICTOGRAM_CONFIG } from './pmr_pictogram_config';
 
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
@@ -186,12 +187,30 @@ const createPrModule = (prData: { id: string, name: string }): AuditModule => {
 const createEcaModuleForStation = (station: Partial<Station>, line: MetroLine): AuditModule => {
     const ecaTemplates = ECA_DEFINITIONS[station.code!] ?? ECA_DEFINITIONS['DEFAULT'];
 
-    const ecas: ECA[] = station.isFuture ? [] : ecaTemplates.map((template, index) => ({
-        ...template,
-        id: `${station.id}-eca-${index + 1}`,
-        adhesives: createInitialAdhesiveStatus(getEcaAdhesives(template.type)),
-        comment: ''
-    }));
+    const ecas: ECA[] = station.isFuture ? [] : ecaTemplates.map((template, index) => {
+        const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
+
+        // Apply pre-configuration for PMR pictograms
+        if (isPmrEcaType(template.type) && station.code && PMR_PICTOGRAM_CONFIG[station.code]) {
+            const config = PMR_PICTOGRAM_CONFIG[station.code];
+            if (!config.bagages) {
+                initialAdhesives['eca-8'] = AdhesiveStatus.NotApplicable;
+            }
+            if (!config.poussette) {
+                initialAdhesives['eca-9'] = AdhesiveStatus.NotApplicable;
+            }
+            if (!config.ufr) {
+                initialAdhesives['eca-10'] = AdhesiveStatus.NotApplicable;
+            }
+        }
+
+        return {
+            ...template,
+            id: `${station.id}-eca-${index + 1}`,
+            adhesives: initialAdhesives,
+            comment: ''
+        };
+    });
 
     const ecaData: EcaData = {
         id: `eca-data-${station.id}`,

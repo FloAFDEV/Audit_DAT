@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType, Adhesive } from '../types';
-import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle, Fence } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
-import { TripodeIcon } from './TripodeIcon';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -30,11 +29,11 @@ const getEcaIcon = (eca: ECA) => {
         );
     }
     
-    // For all non-PMR ECAs (Tripodes, Vantaux), use the new TripodeIcon.
+    // For all non-PMR ECAs (Tripodes, Vantaux), use the Fence icon for stability and consistency.
     const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
     return (
         <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-            <TripodeIcon {...iconProps} />
+            <Fence {...iconProps} />
         </div>
     );
 };
@@ -71,6 +70,27 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
             setEcaToDelete(null);
         }
     };
+    
+    const sortedEcas = useMemo(() => {
+        const typeOrder: Record<EcaEquipmentType, number> = {
+            [EcaEquipmentType.PMRBras]: 1,
+            [EcaEquipmentType.PMRVantaux]: 1,
+            [EcaEquipmentType.TripodeEntree]: 2,
+            [EcaEquipmentType.TripodeSortie]: 3,
+        };
+
+        return [...ecaData.ecas].sort((a, b) => {
+            const orderA = typeOrder[a.type];
+            const orderB = typeOrder[b.type];
+
+            if (orderA !== orderB) {
+                return orderA - orderB;
+            }
+            
+            return a.number - b.number;
+        });
+    }, [ecaData.ecas]);
+
 
     return (
         <div>
@@ -100,15 +120,15 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                 </button>
             </div>
 
-            {ecaData.ecas.length === 0 ? (
+            {sortedEcas.length === 0 ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-                    <TripodeIcon className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
+                    <Fence className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun ECA</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun valideur n'est enregistré pour cette station.</p>
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {ecaData.ecas.map((eca) => {
+                    {sortedEcas.map((eca) => {
                         const progress = getEcaProgress(eca);
                         const isNotApplicable = eca.isNotApplicable;
                         const isInProgress = progress.percentage > 0 && !progress.isComplete;

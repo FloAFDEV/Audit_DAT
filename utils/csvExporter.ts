@@ -6,11 +6,11 @@ import { PR_DATA } from '../data/pr_data';
 interface CsvRow {
     date_export: string;
     ligne_transport: string;
-    lieu_nom: string;
     station_nom?: string;
     station_code?: string;
     direction?: string;
-    equipement_nom: string;
+    equipement_type?: string;
+    equipement_numero?: number;
     equipement_commentaire?: string;
     adhesif_nom: string;
     adhesif_description: string;
@@ -111,14 +111,13 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
 
     const now = new Date();
 
-    // Format JJ/MM/AAAA pour la colonne dans le CSV, en s'assurant que l'heure n'est pas incluse.
-    const exportDateColumnString = now.toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+    // Format JJ/MM/AAAA for the column in the CSV, ensuring no time is included.
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const exportDateColumnString = `${day}/${month}/${year}`;
 
-    // Format AAAA-MM-JJ pour le nom de fichier, en ignorant l'heure.
+    // Format AAAA-MM-JJ for the filename, ignoring time.
     const exportDateFilenameString = now.toISOString().split('T')[0];
 
 
@@ -126,7 +125,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
         for (const module of lieu.modules) {
             const baseRow = {
                 date_export: exportDateColumnString,
-                lieu_nom: lieu.name,
                 ligne_transport: module.line || (module.type === AuditModuleType.PR ? 'P+R' : ''),
             };
 
@@ -136,6 +134,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                     for (const station of modeData.stations) {
                         for (const direction of station.directions) {
                             for (const dat of direction.dats) {
+                                const datNumberMatch = dat.name.match(/\d+/);
                                 for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
                                     const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
                                     rows.push({
@@ -143,7 +142,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                         station_nom: station.name,
                                         station_code: station.code,
                                         direction: direction.name,
-                                        equipement_nom: dat.name,
+                                        equipement_type: 'DAT',
+                                        equipement_numero: datNumberMatch ? parseInt(datNumberMatch[0], 10) : undefined,
                                         equipement_commentaire: dat.comment,
                                         adhesif_nom: adhesiveInfo?.name || 'N/A',
                                         adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -158,6 +158,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                 case AuditModuleType.PR: {
                     const prData = module.data as Pr;
                     for (const equipment of prData.equipments) {
+                        const equipmentNumberMatch = equipment.name.match(/\d+/);
                         for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
                             const adhesiveInfo = ALL_ADHESIVES_MAP.get(adhesiveId);
                             rows.push({
@@ -165,7 +166,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 station_nom: prData.name, // Using station_nom for PR name for consistency
                                 station_code: '',
                                 direction: '',
-                                equipement_nom: equipment.name,
+                                equipement_type: equipment.type,
+                                equipement_numero: equipmentNumberMatch ? parseInt(equipmentNumberMatch[0], 10) : undefined,
                                 equipement_commentaire: equipment.comment,
                                 adhesif_nom: adhesiveInfo?.name || 'N/A',
                                 adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -184,7 +186,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                 station_nom: ecaData.stationName,
                                 station_code: ecaData.stationCode,
                                 direction: eca.accessPoint,
-                                equipement_nom: eca.name,
+                                equipement_type: eca.type,
+                                equipement_numero: eca.number,
                                 equipement_commentaire: eca.comment || 'Validé sans adhésifs',
                                 adhesif_nom: 'N/A',
                                 adhesif_description: 'Aucun adhésif applicable',
@@ -198,7 +201,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                                     station_nom: ecaData.stationName,
                                     station_code: ecaData.stationCode,
                                     direction: eca.accessPoint,
-                                    equipement_nom: eca.name,
+                                    equipement_type: eca.type,
+                                    equipement_numero: eca.number,
                                     equipement_commentaire: eca.comment,
                                     adhesif_nom: adhesiveInfo?.name || 'N/A',
                                     adhesif_description: adhesiveInfo?.description || 'N/A',
@@ -212,12 +216,14 @@ export const exportLieuxToCsv = (lieux: Lieu[], filename: string) => {
                 case AuditModuleType.PMR_FLOOR_ADHESIVE: {
                      const pmrData = module.data as PMRFloorAdhesiveData;
                      for (const adhesive of pmrData.adhesives) {
+                        const pmrFloorNumberMatch = adhesive.name.match(/\d+/);
                          rows.push({
                              ...baseRow,
                              station_nom: pmrData.stationName,
                              station_code: pmrData.stationCode,
                              direction: '',
-                             equipement_nom: 'Signalétique au sol',
+                             equipement_type: 'Adhésif Sol PMR',
+                             equipement_numero: pmrFloorNumberMatch ? parseInt(pmrFloorNumberMatch[0], 10) : undefined,
                              equipement_commentaire: '',
                              adhesif_nom: adhesive.name,
                              adhesif_description: 'Adhésif de signalisation au sol pour passage PMR',

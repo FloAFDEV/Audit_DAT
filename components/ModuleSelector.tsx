@@ -1,9 +1,8 @@
 import React from 'react';
 import { Lieu, AuditModule, AdhesiveStatus, AuditModuleType, ModeData, Pr, EcaData, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
-import { ChevronRight, ArrowLeft, Euro, Car, Accessibility } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Euro, Car, Accessibility, Fence } from 'lucide-react';
 import { getModuleLineConfig } from '../data/builder';
 import { LineIcon } from './LineIcon';
-import { TripodeIcon } from './TripodeIcon';
 
 interface ModuleSelectorProps {
   lieu: Lieu;
@@ -64,7 +63,7 @@ const getModuleDetailIcon = (type: AuditModuleType) => {
     switch (type) {
         case AuditModuleType.DAT: return iconWrapper(<Euro {...iconProps} />);
         case AuditModuleType.PR: return iconWrapper(<Car {...iconProps} />);
-        case AuditModuleType.ECA: return iconWrapper(<TripodeIcon {...iconProps} />);
+        case AuditModuleType.ECA: return iconWrapper(<Fence {...iconProps} />);
         case AuditModuleType.PMR_FLOOR_ADHESIVE: return iconWrapper(<Accessibility {...iconProps} />);
         default: return null;
     }

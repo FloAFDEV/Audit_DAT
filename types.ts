@@ -1,42 +1,19 @@
 // =================================================================
-// SECTION ENUMS
+// SECTION: Enums and String Literal Types
 // =================================================================
 
 export enum AdhesiveStatus {
-    OK = 'OK',
-    Absent = 'Absent',
-    ToBeReplaced = 'A remplacer',
-    NotChecked = 'Non vérifié',
-    NotApplicable = 'Non applicable',
+    OK = "OK",
+    Absent = "Absent",
+    ToBeReplaced = "À remplacer",
+    NotChecked = "Non vérifié",
+    NotApplicable = "Non applicable",
 }
 
 export enum FloorAdhesiveStatus {
-    OK = 'OK',
-    ToBeReplaced = 'À remplacer',
-    NotChecked = 'Non vérifié',
-}
-
-export enum AuditModuleType {
-    DAT = 'DAT',
-    PR = 'PR',
-    ECA = 'ECA',
-    PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
-}
-
-export enum EquipmentType {
-    BE = "Borne d'entrée",
-    BS = 'Borne de sortie',
-    CA = 'Caisse automatique',
-}
-
-export enum EcaEquipmentType {
-    TripodeEntree = "Tripode d'entrée",
-    TripodeSortie = "Tripode de sortie",
-    VantauxEntree = "Vantaux d'entrée",
-    VantauxSortie = "Vantaux de sortie",
-    VantauxReversible = "Vantaux réversible",
-    PMR = 'PMR',
-    PMRVantaux = 'PMR à vantaux',
+    OK = "OK",
+    ToBeReplaced = "À remplacer",
+    NotChecked = "Non vérifié",
 }
 
 export enum TransportMode {
@@ -45,17 +22,32 @@ export enum TransportMode {
     TELEO = 'TELEO',
 }
 
-
-// =================================================================
-// SECTION TYPE ALIASES
-// =================================================================
-
 export type MetroLine = 'A' | 'B' | 'C';
+
+export enum EquipmentType {
+    BE = 'Borne Entrée',
+    BS = 'Borne Sortie',
+    CA = 'Caisse Auto',
+}
+
+export enum EcaEquipmentType {
+    TripodeEntree = "Tripode d'entrée",
+    TripodeSortie = "Tripode de sortie",
+    PMRBras = "PMR à bras",
+    PMRVantaux = "PMR à vantaux",
+}
+
+export enum AuditModuleType {
+    DAT = 'DAT',
+    PR = 'P+R',
+    ECA = 'ECA',
+    PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
+}
+
 export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR';
 
-
 // =================================================================
-// SECTION INTERFACES
+// SECTION: Core Data Interfaces
 // =================================================================
 
 export interface Adhesive {
@@ -88,17 +80,9 @@ export interface Station {
     id: string;
     name: string;
     code?: string;
-    lieuName?: string;
-    isFuture?: boolean;
     directions: Direction[];
-}
-
-export interface ModeData {
-    id: string;
-    name: string;
-    type: TransportMode;
-    line: MetroLine | 'TRAM' | 'TELEO';
-    stations: Station[];
+    isFuture?: boolean;
+    lieuName?: string;
 }
 
 export interface Equipment {
@@ -109,12 +93,6 @@ export interface Equipment {
     comment: string;
 }
 
-export interface Pr {
-    id: string;
-    name: string;
-    equipments: Equipment[];
-}
-
 export interface ECA {
     id: string;
     name: string;
@@ -122,8 +100,32 @@ export interface ECA {
     type: EcaEquipmentType;
     number: number;
     adhesives: { [key: string]: AdhesiveStatus };
-    isNotApplicable?: boolean;
     comment: string;
+    isNotApplicable?: boolean;
+}
+
+export interface PMRFloorAdhesive {
+    id: string;
+    name: string;
+    status: FloorAdhesiveStatus;
+}
+
+// =================================================================
+// SECTION: Module Data Structures
+// =================================================================
+
+export interface ModeData {
+    id: string;
+    name: string;
+    type: TransportMode;
+    line: MetroLine | 'TRAM' | 'TELEO';
+    stations: Station[];
+}
+
+export interface Pr {
+    id: string;
+    name: string;
+    equipments: Equipment[];
 }
 
 export interface EcaData {
@@ -133,18 +135,16 @@ export interface EcaData {
     ecas: ECA[];
 }
 
-export interface PMRFloorAdhesive {
-    id: string;
-    name: string;
-    status: FloorAdhesiveStatus;
-}
-
 export interface PMRFloorAdhesiveData {
     id: string;
     stationName: string;
     stationCode: string;
     adhesives: PMRFloorAdhesive[];
 }
+
+// =================================================================
+// SECTION: Top-Level Audit Structures
+// =================================================================
 
 export interface AuditModule {
     id: string;
@@ -160,6 +160,10 @@ export interface Lieu {
     name: string;
     modules: AuditModule[];
 }
+
+// =================================================================
+// SECTION: Configuration Interfaces
+// =================================================================
 
 export interface AuditCategoryConfig {
     key: AuditCategory;

@@ -10,13 +10,22 @@ interface EcaEditModalProps {
     stationName: string;
 }
 
-// Define the allowed types for the dropdown list
-const ALLOWED_ECA_TYPES = [
+// Define labels for clarity in the dropdown, especially for PMR types as requested.
+const typeLabels: Record<string, string> = {
+    [EcaEquipmentType.TripodeEntree]: "Tripode d'entrée",
+    [EcaEquipmentType.TripodeSortie]: "Tripode de sortie",
+    [EcaEquipmentType.PMRBras]: "PMR à bras",
+    [EcaEquipmentType.PMRVantaux]: "PMR à vantaux",
+};
+
+// The simplified, final list of user-selectable ECA types.
+const EDITABLE_ECA_TYPES = [
     EcaEquipmentType.TripodeEntree,
     EcaEquipmentType.TripodeSortie,
-    EcaEquipmentType.PMR,
+    EcaEquipmentType.PMRBras,
     EcaEquipmentType.PMRVantaux,
 ];
+
 
 const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, eca, stationName }) => {
     const [name, setName] = useState('');
@@ -29,16 +38,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
         if (eca) {
             setName(eca.name);
             setAccessPoint(eca.accessPoint);
-            
-            // Handle migration for the removed 'PMR à vantaux réversible' type
-            let currentType = eca.type;
-            if (currentType === 'PMR à vantaux réversible' as any) {
-                currentType = EcaEquipmentType.PMRVantaux;
-            }
-
-            // Ensure the type is one of the allowed values
-            setType(ALLOWED_ECA_TYPES.includes(currentType) ? currentType : ALLOWED_ECA_TYPES[0]);
-            
+            setType(eca.type);
             setNumber(eca.number);
             setIsNotApplicable(eca.isNotApplicable ?? false);
         } else {
@@ -129,8 +129,8 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         onChange={(e) => setType(e.target.value as EcaEquipmentType)}
                                         className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                                     >
-                                        {ALLOWED_ECA_TYPES.map((t) => (
-                                            <option key={t} value={t}>{t}</option>
+                                        {EDITABLE_ECA_TYPES.map((t) => (
+                                            <option key={t} value={t}>{typeLabels[t] || t}</option>
                                         ))}
                                     </select>
                                 </div>

@@ -1,9 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, DatabaseBackup, Euro, Car, Footprints, Upload, Download } from 'lucide-react';
+import { ChevronDown, DatabaseBackup, Euro, Car, Footprints, Upload, Download, Fence } from 'lucide-react';
 import { AuditCategory, AuditModuleType } from '../types';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
-import { TripodeIcon } from './TripodeIcon';
 
 interface ActionsMenuProps {
     onExportByCategory: (category: AuditCategory) => void;
@@ -18,7 +17,7 @@ interface ActionsMenuProps {
 const AUDIT_MODULE_CONFIG = [
     { type: AuditModuleType.DAT, label: "Audits DAT", Icon: Euro },
     { type: AuditModuleType.PR, label: "Audits P+R", Icon: Car },
-    { type: AuditModuleType.ECA, label: "Audits ECA (Valideurs)", Icon: TripodeIcon },
+    { type: AuditModuleType.ECA, label: "Audits ECA (Valideurs)", Icon: Fence },
     { type: AuditModuleType.PMR_FLOOR_ADHESIVE, label: "Adhésifs Sol PMR", Icon: Footprints },
 ];
 

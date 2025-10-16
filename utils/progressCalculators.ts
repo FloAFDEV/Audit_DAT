@@ -28,13 +28,13 @@ export const getDatProgress = (dat: DAT): DatProgress => {
 
     if (checked === 0) {
         status = ProgressStatus.NotStarted;
-        label = "Non commencé";
+        label = "Progression";
     } else if (isComplete) {
         status = ProgressStatus.Completed;
         label = "Terminé";
     } else {
         status = ProgressStatus.InProgress;
-        label = "En cours";
+        label = "Progression";
     }
 
     return { status, label, percentage, checked, total, isComplete };
@@ -111,10 +111,7 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     const isComplete = checkedAdhesivesCount === applicableAdhesivesCount;
     
     let label = 'Progression';
-    const totalAudited = Object.values(eca.adhesives).filter(s => s !== AdhesiveStatus.NotChecked).length;
-    if (totalAudited === 0) {
-        label = 'Non commencé';
-    } else if (isComplete) {
+    if (isComplete) {
         label = 'Terminé';
     }
 
