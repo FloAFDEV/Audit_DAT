@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePictogram } from '../types';
-import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle, SearchCheck } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
 import { COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
@@ -74,10 +74,13 @@ const AccessPointItem: React.FC<{
                         </button>
                     </div>
                 )}
-                 <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
-                    Vérifier l'état et la présence du pictogramme cognitif (ou totem cognitif).
-                    <span className="font-semibold text-gray-800 dark:text-slate-200 ml-2">({dimensions})</span>
-                 </p>
+                 <div className="flex items-center text-sm text-gray-600 dark:text-slate-400 mt-1">
+                    <SearchCheck className="w-4 h-4 mr-2 text-gray-400 flex-shrink-0" />
+                    <span>
+                        Présence et etat du pictogramme cognitif
+                        <span className="font-semibold text-gray-800 dark:text-slate-200 ml-2">({dimensions})</span>
+                    </span>
+                 </div>
             </div>
             <div className="flex items-center gap-2">
                  <div className="flex items-stretch gap-2 sm:flex-wrap sm:gap-3">
