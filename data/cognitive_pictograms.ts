@@ -31,7 +31,7 @@ const initialCounts: Record<string, number> = {
     'ROS': 1,
     // 'JOL' is a special case
     'MAR': 1,
-    'JJA': 1,
+    // 'JJA' is a special case
     // 'CAP' is a special case
     // 'ESQ' is a special case
     'SCY': 3,
@@ -65,6 +65,24 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             });
             return pictos;
         
+        case 'JJA': // Ligne A - Jean Jaurès
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Ligne A',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Mixte A/B 1',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Mixte A/B 2',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
         case 'JOL': // Ligne A: JOL ASC (1) + JOL PRI (1)
              pictos.push({
                 id: uuidv4(),
