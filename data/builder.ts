@@ -114,14 +114,14 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     if (line === 'TELEO') {
         switch (station.name) {
             case 'Oncopole-Lise Enjalbert':
-                return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('01 (gauche)'), createDat('02 (droite)')] }];
+                return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02 (droite)'), createDat('01 (gauche)')] }];
             case 'Hôpital Rangueil-Louis Lareng':
                  return [
                     { id: `${stationId}-dir-1`, name: 'Niveau voirie', dats: [createDat('01')] },
                     { id: `${stationId}-dir-2`, name: 'Niveau passerelle', dats: [createDat('02')] }
                 ];
             case 'Université Paul-Sabatier':
-                 return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('01 (gauche)'), createDat('02 (droite)')] }];
+                 return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02 (droite)'), createDat('01 (gauche)')] }];
         }
     }
 

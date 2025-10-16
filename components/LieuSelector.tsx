@@ -528,7 +528,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                 >
                                     <div className="flex items-center gap-x-2">
                                         <LieuBadges lieu={lieu} />
-                                        <span className="block truncate font-semibold">{lieu.name}</span>
+                                        <span className="block truncate">{lieu.name}</span>
                                         {stationCodes.length > 0 && (
                                             <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
                                                 {stationCodes.join(' / ')}
