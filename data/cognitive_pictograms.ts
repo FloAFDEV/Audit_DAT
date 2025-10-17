@@ -70,39 +70,22 @@ export const getCognitivePictogramDimension = (stationCode: string, accessPointN
     return COGNITIVE_PICTOGRAM_DIMENSIONS['DEFAULT'] as string;
 };
 
-// Data parsed from the user's images for both lines
+// This list contains stations whose pictogram count is defined by specific logic or user input,
+// rather than being handled by a special case in the generation function.
 const initialCounts: Record<string, number> = {
     // Line B
-    'BOR': 2,
-    'TCO': 1,
-    'LVA': 1,
-    'BPA': 3,
-    'MIN': 3,
-    // 'CAN': 2 (default)
-    'CCA': 3,
-    'JAR': 3,
-    'JJB': 0, // Special case for Jean-Jaurès, user can add accesses if needed
+    'JJB': 0, // No pictos for JJB, they are attached to JJA
     'FVE': 2,
-    'CAR': 2,
-    'PDJ': 2,
-    'SMI': 2,
     'EMP': 1,
     'SAG': 1,
-    'SAO': 2,
     'RAN': 2,
     'PHA': 2,
-    'UPS': 2,
-    // 'RAM' is a special case
     
     // Line A
     'BGR': 1,
     'ARG': 1,
     'ROS': 1,
-    // 'JOL' is a special case
     'MAR': 2,
-    // 'JJA' is a special case
-    // 'CAP' is a special case
-    // 'ESQ' is a special case
     'SCY': 3,
     'POI': 2,
     'ARE': 2,
@@ -295,6 +278,19 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             });
             return pictos;
 
+        case 'LVA': // Ligne B - La Vache
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté bus',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté square',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
         case 'BPA': // Ligne B - Barrière de Paris
             pictos.push({
                 id: uuidv4(),
@@ -304,6 +300,32 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté rue pierre et marie curie',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        
+        case 'TCO': // Ligne B - Trois Cocus
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté préau',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'BOR': // Ligne B - Borderouge
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté place de la maourine',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté bus',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
