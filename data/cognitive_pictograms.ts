@@ -137,12 +137,12 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'JJA': // Ligne A - Jean Jaurès
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès 1',
+                accessPointName: 'Accès direction Place Wilson',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès 2',
+                accessPointName: 'Accès direction Médiathèque/Marengo',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;

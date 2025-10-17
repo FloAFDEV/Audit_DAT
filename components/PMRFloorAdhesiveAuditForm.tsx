@@ -82,6 +82,9 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {adhesive.name}
+                    <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
+                        // <span className="font-bold text-gray-600 dark:text-slate-400">920x3705mm</span>
+                    </span>
                   </h3>
                 </div>
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
