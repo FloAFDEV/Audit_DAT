@@ -11,7 +11,7 @@ import { ActionsMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
 import { sortLieuxByPhysicalOrder } from '../utils/csvExporter';
-import { getLieuProgress } from '../utils/progressCalculators';
+import { getLieuProgress, getCategoryProgress } from '../utils/progressCalculators';
 import { AuditFilterSelector } from './AuditFilterSelector';
 import useAuditStore from '../store';
 
@@ -78,6 +78,32 @@ const lineStationsMap: { [key in AuditCategory]?: Partial<Station>[] } = {
     METRO_C: LINE_C_STATIONS,
     TRAM: TRAM_STATIONS,
     TELEO: TELEO_STATIONS,
+};
+
+const ProgressBadge: React.FC<{ progress: number; isActive: boolean }> = ({ progress, isActive }) => {
+    if (progress < 0) return null;
+
+    const roundedProgress = Math.round(progress);
+    const isComplete = roundedProgress === 100;
+
+    const baseClasses = 'px-2 py-0.5 text-xs font-bold rounded-full transition-colors';
+
+    let colorClasses = '';
+    if (isComplete) {
+        colorClasses = isActive
+            ? 'bg-teal-600 text-white'
+            : 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300';
+    } else {
+        colorClasses = isActive
+            ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300'
+            : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+    }
+
+    return (
+        <span className={`${baseClasses} ${colorClasses}`}>
+            {roundedProgress}%
+        </span>
+    );
 };
 
 
@@ -273,7 +299,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-150';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-150 flex items-center gap-2';
         if (activeFilter === catKey) {
             return `${baseClasses} font-semibold`;
         }
@@ -344,6 +370,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                 } as unknown as React.CSSProperties}
                             >
                                 Tout le réseau
+                                <ProgressBadge
+                                    progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)}
+                                    isActive={activeFilter === 'ALL'}
+                                />
                             </button>
                             {AUDIT_CATEGORIES.map(cat => (
                                 <button
@@ -356,6 +386,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                     } as unknown as React.CSSProperties}
                                 >
                                     {cat.label}
+                                    <ProgressBadge
+                                        progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)}
+                                        isActive={activeFilter === cat.key}
+                                    />
                                 </button>
                             ))}
                         </nav>
@@ -370,9 +404,15 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                             aria-haspopup="listbox"
                             aria-expanded={isMobileMenuOpen}
                         >
-                            <span className="flex items-center">
-                                <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" />
-                                <span className="ml-3 block truncate">{activeCategoryConfig?.label ?? 'Tout le réseau'}</span>
+                             <span className="flex items-center justify-between w-full">
+                                <span className="flex items-center">
+                                    <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" />
+                                    <span className="ml-3 block truncate">{activeCategoryConfig?.label ?? 'Tout le réseau'}</span>
+                                </span>
+                                <ProgressBadge
+                                    progress={getCategoryProgress(lieux, activeFilter, activeAuditFilters)}
+                                    isActive={true}
+                                />
                             </span>
                             <span className="pointer-events-none absolute inset-y-0 right-0 ml-3 flex items-center pr-2">
                                 <ChevronDown className="h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -388,11 +428,17 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                         setIsMobileMenuOpen(false);
                                     }}
                                 >
-                                    <div className="flex items-center">
-                                        <CategoryIcon size="sm" />
-                                        <span className="ml-3 block truncate">
-                                            Tout le réseau
-                                        </span>
+                                    <div className="flex items-center justify-between w-full">
+                                        <div className="flex items-center">
+                                            <CategoryIcon size="sm" />
+                                            <span className="ml-3 block truncate">
+                                                Tout le réseau
+                                            </span>
+                                        </div>
+                                        <ProgressBadge
+                                            progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)}
+                                            isActive={activeFilter === 'ALL'}
+                                        />
                                     </div>
                                     {activeFilter === 'ALL' && (
                                         <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400">
@@ -410,11 +456,17 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                                             setIsMobileMenuOpen(false);
                                         }}
                                     >
-                                        <div className="flex items-center">
-                                            <CategoryIcon categoryConfig={cat} size="sm" />
-                                            <span className="ml-3 block truncate">
-                                                {cat.label}
-                                            </span>
+                                        <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center">
+                                                <CategoryIcon categoryConfig={cat} size="sm" />
+                                                <span className="ml-3 block truncate">
+                                                    {cat.label}
+                                                </span>
+                                            </div>
+                                            <ProgressBadge
+                                                progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)}
+                                                isActive={activeFilter === cat.key}
+                                            />
                                         </div>
                                         {activeFilter === cat.key && (
                                             <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400">

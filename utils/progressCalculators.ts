@@ -1,5 +1,6 @@
-import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
+import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 export enum ProgressStatus {
     NotStarted = 'NotStarted',
@@ -192,6 +193,100 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
 
     if (totalApplicableItems === 0) {
         const hasAnyNonFutureModule = modulesToConsider.some(m => !m.isFuture);
+        return hasAnyNonFutureModule ? 100 : 0;
+    }
+
+    return (totalCheckedItems / totalApplicableItems) * 100;
+};
+
+export const getCategoryProgress = (
+    allLieux: Lieu[],
+    category: AuditCategory | 'ALL',
+    activeFilters: AuditModuleType[]
+): number => {
+    if (activeFilters.length === 0) {
+        return -1; // Indicate no progress to show
+    }
+
+    const categoryConfig = category === 'ALL' ? null : AUDIT_CATEGORIES.find(c => c.key === category);
+    
+    const isModuleInCategory = (module: AuditModule): boolean => {
+        if (category === 'ALL' || !categoryConfig) return true;
+        return categoryConfig.predicate(module);
+    };
+
+    let totalApplicableItems = 0;
+    let totalCheckedItems = 0;
+
+    for (const lieu of allLieux) {
+        const modulesToConsider = lieu.modules.filter(m => 
+            isModuleInCategory(m) && activeFilters.includes(m.type)
+        );
+        
+        for (const module of modulesToConsider) {
+            if (module.isFuture) continue;
+
+            switch (module.type) {
+                case AuditModuleType.DAT: {
+                    const modeData = module.data as ModeData;
+                    const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
+                    for (const dat of dats) {
+                        const statuses = Object.values(dat.adhesives);
+                        totalApplicableItems += statuses.length;
+                        totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                    }
+                    break;
+                }
+                case AuditModuleType.PR: {
+                    const prData = module.data as Pr;
+                    const equipments = prData.equipments ?? [];
+                    for (const equipment of equipments) {
+                        const statuses = Object.values(equipment.adhesives);
+                        totalApplicableItems += statuses.length;
+                        totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                    }
+                    break;
+                }
+                case AuditModuleType.ECA: {
+                    const ecaData = module.data as EcaData;
+                    const ecas = ecaData.ecas ?? [];
+                    for (const eca of ecas) {
+                        if (eca.isNotApplicable) continue;
+                        const adhesiveDefinitions = getEcaAdhesives(eca.type);
+                        for (const adDef of adhesiveDefinitions) {
+                            const status = eca.adhesives[adDef.id];
+                            if (status !== AdhesiveStatus.NotApplicable) {
+                                totalApplicableItems++;
+                                if (status && status !== AdhesiveStatus.NotChecked) {
+                                    totalCheckedItems++;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                }
+                case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+                    const pmrData = module.data as PMRFloorAdhesiveData;
+                    const adhesives = pmrData.adhesives ?? [];
+                    totalApplicableItems += adhesives.length;
+                    totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
+                    break;
+                }
+                case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                    const cogData = module.data as CognitivePictogramData;
+                    const pictos = cogData.pictograms ?? [];
+                    totalApplicableItems += pictos.length;
+                    totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (totalApplicableItems === 0) {
+        const hasAnyNonFutureModule = allLieux.some(l => 
+            l.modules.some(m => isModuleInCategory(m) && activeFilters.includes(m.type) && !m.isFuture)
+        );
         return hasAnyNonFutureModule ? 100 : 0;
     }
 
