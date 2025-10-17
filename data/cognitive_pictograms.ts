@@ -121,6 +121,45 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
 
     // Special cases based on station configuration
     switch (stationCode) {
+        case 'SMI': // Ligne B - Saint-Michel Marcel Langer
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Prison',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'SAO': // Ligne B - Saouzelong
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté metro',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+            
+        case 'UPS': // Ligne B - Université Paul Sabatier
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Forum',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Lycée',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
         case 'RAM': // Ligne B
             pictos.push({
                 id: uuidv4(),
@@ -182,6 +221,89 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès Esquirol Principale',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'PDJ': // Ligne B - Palais de Justice
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Grande Rue St Michel',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'CAR': // Ligne B - Carmes
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès direction Esquirol',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès direction Palais de Justice',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+            
+        case 'CCA': // Ligne B - Compans-Caffarelli
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue Lascrosses',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès ascenseur (direction Ponts Jumeaux)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès ascenseur (côté Centre Commercial)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'JAR': // Ligne B - Jeanne d'Arc
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'MIN': // Ligne B - Minimes - Claude Nougaro
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue (Avenue des Minimes)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+
+        case 'BPA': // Ligne B - Barrière de Paris
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté avenue des minimes',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue pierre et marie curie',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
