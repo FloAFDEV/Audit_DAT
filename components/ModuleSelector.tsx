@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, AdhesiveStatus, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
-import { ArrowLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
 import { LineIcon } from './LineIcon';
-import { LieuBadges } from './Icons';
+import { LieuBadges, FormattedCorrespondence } from './Icons';
 import { getDatProgress, getEcaProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
+import { CategoryIcon } from './CategoryIcon';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 const getModuleProgress = (module: AuditModule): { percentage: number; label: string } => {
     if (module.isFuture) {
@@ -90,8 +92,35 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             [AuditModuleType.COGNITIVE_PICTOGRAMS]: 4,
             [AuditModuleType.PR]: 5,
         };
-        return [...lieu.modules].sort((a, b) => (order[a.type] || 99) - (order[b.type] || 99));
-    }, [lieu.modules]);
+
+        const modules = [...lieu.modules];
+
+        // Special sorting for Jean-Jaurès
+        if (lieu.name === 'Jean-Jaurès') {
+            const lineOrder: Record<string, number> = { 'A': 1, 'B': 2 };
+            modules.sort((a, b) => {
+                const lineA = a.line as 'A' | 'B' | undefined;
+                const lineB = b.line as 'A' | 'B' | undefined;
+                const orderA = lineA ? lineOrder[lineA] : 99;
+                const orderB = lineB ? lineOrder[lineB] : 99;
+                
+                if (orderA !== orderB) {
+                    return orderA - orderB;
+                }
+                
+                // If lines are the same, sort by module type
+                const typeOrderA = order[a.type] || 99;
+                const typeOrderB = order[b.type] || 99;
+                return typeOrderA - typeOrderB;
+            });
+        } else {
+            // Default sorting for other lieux
+            modules.sort((a, b) => (order[a.type] || 99) - (order[b.type] || 99));
+        }
+        
+        return modules;
+
+    }, [lieu.modules, lieu.name]);
 
     return (
         <div>
@@ -131,13 +160,17 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <LineIcon module={module} size="md" />
+                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                        <LineIcon module={module} size="md" />
+                                        <ModuleIcon type={module.type} />
+                                    </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-3">
-                                            <ModuleIcon type={module.type} />
-                                            <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{module.name}</p>
+                                        <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">
+                                            <FormattedCorrespondence text={module.name} />
                                         </div>
-                                        <p className={`text-sm font-semibold ml-9 ${statusInfo.color}`}>{module.isFuture ? 'Bientôt disponible' : statusInfo.text}</p>
+                                        <p className={`text-sm font-semibold ${statusInfo.color}`}>
+                                            {module.isFuture ? 'Bientôt disponible' : statusInfo.text}
+                                        </p>
                                     </div>
                                 </div>
                                 {!module.isFuture && (

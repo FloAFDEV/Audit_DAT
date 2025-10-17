@@ -4,54 +4,56 @@ import { Lieu, AuditCategory, AuditCategoryConfig } from '../types';
 import { getModuleLineConfig } from '../data/builder';
 import { CategoryIcon } from './CategoryIcon';
 
-export const FormattedCorrespondence: React.FC<{ text: string, className?: string, as?: React.ElementType, useLogos?: boolean }> = ({ text, className, as: Component = 'span', useLogos = false }) => {
-    // This regex will split the string by "A->B" like patterns, keeping the delimiter.
-    const parts = text.split(/([A-Z]->[A-Z])/g);
+// FIX: Added 'useLogos' prop to support conditional formatting and resolve a TypeScript error in EcaSelector.tsx.
+export const FormattedCorrespondence: React.FC<{ text: string, className?: string, as?: React.ElementType, useLogos?: boolean }> = ({ text, className, as: Component = 'span', useLogos = true }) => {
+    // This regex will find patterns like "Liaison A→B" within a larger string.
+    // It captures the whole "Liaison A→B" part, and the individual lines.
+    const liaisonRegex = /(Liaison\s+([A-Z])→([A-Z]))/g;
+
+    if (!useLogos) {
+        return <Component className={className}>{text}</Component>;
+    }
+    
+    const parts = text.split(liaisonRegex);
+
+    if (parts.length <= 1) {
+        // No match, render plain text
+        return <Component className={className}>{text}</Component>;
+    }
     
     return (
         <Component className={className}>
             {parts.map((part, index) => {
-                if (!part) return null; // handle empty strings from split
-                // The delimiter will match this regex exactly.
-                const match = part.match(/^([A-Z])->([A-Z])$/);
-                if (!match) {
-                    return <React.Fragment key={index}>{part}</React.Fragment>;
-                }
-
-                const [, fromLine, toLine] = match;
-                const fromConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === fromLine);
-                const toConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === toLine);
-
-                if (!fromConfig || !toConfig) {
-                    return <React.Fragment key={index}>{part}</React.Fragment>;
-                }
-
-                if (useLogos) {
-                    return (
-                        <span key={index} className="inline-flex items-center gap-1.5 align-middle">
-                            <CategoryIcon categoryConfig={fromConfig} size="sm" />
-                            <span className="text-slate-600 dark:text-slate-300 font-normal">&rarr;</span>
-                            <CategoryIcon categoryConfig={toConfig} size="sm" />
-                        </span>
-                    );
-                }
-
-                // Special style for yellow text to improve readability on light backgrounds
-                const getStyle = (config: typeof fromConfig): React.CSSProperties => {
-                    const style: React.CSSProperties = { color: config.colors.primary };
-                    if (config.key === 'METRO_B') {
-                        style.textShadow = '0px 0px 3px rgba(0, 0, 0, 0.4)';
+                if (!part) return null;
+                
+                // Parts at index 1, 5, 9, etc. are the full "Liaison A→B" matches.
+                // Parts at index 2, 6, 10 are the first letter, 3, 7, 11 are the second letter.
+                if ((index - 1) % 4 === 0 && part.startsWith('Liaison')) {
+                    const fromLine = parts[index + 1];
+                    const toLine = parts[index + 2];
+                    
+                    const fromConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === fromLine);
+                    const toConfig = AUDIT_CATEGORIES.find(c => c.shortLabel === toLine);
+                    
+                    if (fromConfig && toConfig) {
+                        return (
+                             <span key={index} className="inline-flex items-center gap-1.5 align-middle">
+                                Liaison&nbsp;
+                                <CategoryIcon categoryConfig={fromConfig} size="sm" />
+                                <span className="text-slate-600 dark:text-slate-300 font-normal">&rarr;</span>
+                                <CategoryIcon categoryConfig={toConfig} size="sm" />
+                            </span>
+                        );
                     }
-                    return style;
-                };
+                }
+                
+                // Skip the captured letters which are already handled
+                if ((index - 2) % 4 === 0 || (index - 3) % 4 === 0) {
+                    return null;
+                }
 
-                return (
-                    <React.Fragment key={index}>
-                        <span style={getStyle(fromConfig)} className="font-bold">{fromLine}</span>
-                        <span className="text-gray-400 dark:text-slate-500 font-normal mx-0.5">-&gt;</span>
-                        <span style={getStyle(toConfig)} className="font-bold">{toLine}</span>
-                    </React.Fragment>
-                );
+                // Render normal text parts
+                return <React.Fragment key={index}>{part}</React.Fragment>;
             })}
         </Component>
     );

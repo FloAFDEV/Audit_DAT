@@ -1,5 +1,3 @@
-
-
 import React, { useMemo, useState } from 'react';
 import { ECA, AdhesiveStatus, AuditModule, Adhesive } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
@@ -149,12 +147,12 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                 </button>
                 <div className="flex-1 min-w-0">
                     <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-                        Audit pour <FormattedCorrespondence text={eca.name} useLogos={isPmr && eca.name.includes('->')} />
+                        <FormattedCorrespondence text={module.name} />
                     </h2>
                     <div className="flex items-center gap-3 mt-2">
                         <LineIcon module={module} size="sm" />
                         <p className="text-gray-600 dark:text-slate-400 text-sm">
-                            <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {stationName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Accès :</span> {eca.accessPoint}
+                            <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {stationName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Équipement :</span> <FormattedCorrespondence text={eca.name} />
                         </p>
                     </div>
                 </div>

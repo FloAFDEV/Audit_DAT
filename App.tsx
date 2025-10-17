@@ -22,7 +22,7 @@ import { CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import { AUDIT_CATEGORIES } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
 import { showPromiseToast, showSuccessToast, showErrorToast } from './components/ToastManager';
-import { canEcaBeNotApplicable } from './data/eca_data';
+import { canEcaBeNotApplicable, isPmrEcaType } from './data/eca_data';
 import CognitivePictogramAuditForm from './components/CognitivePictogramAuditForm';
 
 
@@ -491,8 +491,11 @@ const App: React.FC = () => {
 
         // ECA Audit Form or Decision Screen
         if (selectedModule && selectedEca) {
-            // If it's an ECA type that can be not applicable and hasn't been decided on yet...
-            if (canEcaBeNotApplicable(selectedEca.type) && typeof selectedEca.isNotApplicable === 'undefined') {
+            // Exception for Jean-Jaurès PMR ECAs, which should always be audited.
+            const isJauresPMR = (selectedModule.data as EcaData).stationName === 'Jean-Jaurès' && isPmrEcaType(selectedEca.type);
+            
+            // If it's an ECA type that can be not applicable, hasn't been decided on yet, and is NOT a Jean-Jaurès PMR...
+            if (canEcaBeNotApplicable(selectedEca.type) && typeof selectedEca.isNotApplicable === 'undefined' && !isJauresPMR) {
                 return <EcaTripodeSortieDecision
                     module={selectedModule}
                     eca={selectedEca}

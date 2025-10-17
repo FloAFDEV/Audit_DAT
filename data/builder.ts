@@ -7,7 +7,7 @@ import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from './stations';
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
-import { ECA_DEFINITIONS, isPmrEcaType } from './eca_data';
+import { ECA_DEFINITIONS, isPmrEcaType, ECA_DEFINITIONS_JJA_A_TO_B, ECA_DEFINITIONS_JJA_B_TO_A, ECA_DEFINITIONS_JJA_A_HISTORIQUE, ECA_DEFINITIONS_JJA_A_PRINCIPAL } from './eca_data';
 import { PMR_PICTOGRAM_CONFIG } from './pmr_pictogram_config';
 import { generateInitialCognitivePictogramsForStation } from './cognitive_pictograms';
 
@@ -20,7 +20,7 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     
     const createDat = (name: string): DAT => ({
         id: uuidv4(),
-        name: `DAT ${name}`,
+        name: `DAT ${name.padStart(2, '0')}`,
         adhesives: createInitialAdhesiveStatus(ADHESIVES),
         comment: ''
     });
@@ -114,14 +114,14 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     if (line === 'TELEO') {
         switch (station.name) {
             case 'Oncopole-Lise Enjalbert':
-                return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02 (droite)'), createDat('01 (gauche)')] }];
+                return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02'), createDat('01')] }];
             case 'Hôpital Rangueil-Louis Lareng':
                  return [
                     { id: `${stationId}-dir-1`, name: 'Niveau voirie', dats: [createDat('01')] },
                     { id: `${stationId}-dir-2`, name: 'Niveau passerelle', dats: [createDat('02')] }
                 ];
             case 'Université Paul-Sabatier':
-                 return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02 (droite)'), createDat('01 (gauche)')] }];
+                 return [{ id: `${stationId}-dir-1`, name: 'Quai', dats: [createDat('02'), createDat('01')] }];
         }
     }
 
@@ -148,11 +148,16 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
         id: `mode-${station.id}`, name: station.name!, type, line,
         stations: [fullStation],
     };
+    
+    let moduleName = 'DAT';
+    if (station.code === 'JJA') {
+        moduleName = 'DAT (niveau agence coté entrée historique)';
+    }
 
     return {
         id: `module-dat-${station.id}`,
         type: AuditModuleType.DAT,
-        name: 'DAT',
+        name: moduleName,
         data: modeData,
         isFuture: station.isFuture,
         line: line,
@@ -185,60 +190,64 @@ const createPrModule = (prData: { id: string, name: string }): AuditModule => {
     };
 };
 
-const createEcaModuleForStation = (station: Partial<Station>, line: MetroLine): AuditModule => {
-    const ecaTemplates = ECA_DEFINITIONS[station.code!] ?? ECA_DEFINITIONS['DEFAULT'];
-
-    const ecas: ECA[] = station.isFuture ? [] : ecaTemplates.map((template, index) => {
+const createEcaModule = (
+    moduleName: string,
+    stationName: string,
+    stationCode: string,
+    line: MetroLine,
+    isFuture: boolean,
+    ecaTemplates: Omit<ECA, 'id' | 'adhesives' | 'comment'>[]
+): AuditModule => {
+    const ecas: ECA[] = isFuture ? [] : ecaTemplates.map((template, index) => {
         const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
 
         // Apply pre-configuration for PMR pictograms
-        if (isPmrEcaType(template.type) && station.code && PMR_PICTOGRAM_CONFIG[station.code]) {
-            const config = PMR_PICTOGRAM_CONFIG[station.code];
-            if (!config.bagages) {
-                initialAdhesives['eca-8'] = AdhesiveStatus.NotApplicable;
-            }
-            if (!config.poussette) {
-                initialAdhesives['eca-9'] = AdhesiveStatus.NotApplicable;
-            }
-            if (!config.ufr) {
-                initialAdhesives['eca-10'] = AdhesiveStatus.NotApplicable;
-            }
+        if (isPmrEcaType(template.type) && stationCode && PMR_PICTOGRAM_CONFIG[stationCode]) {
+            const config = PMR_PICTOGRAM_CONFIG[stationCode];
+            if (!config.bagages) initialAdhesives['eca-8'] = AdhesiveStatus.NotApplicable;
+            if (!config.poussette) initialAdhesives['eca-9'] = AdhesiveStatus.NotApplicable;
+            if (!config.ufr) initialAdhesives['eca-10'] = AdhesiveStatus.NotApplicable;
         }
 
         return {
             ...template,
-            id: `${station.id}-eca-${index + 1}`,
+            id: `${stationCode}-${line}-eca-${index + 1}`,
             adhesives: initialAdhesives,
             comment: ''
         };
     });
 
     const ecaData: EcaData = {
-        id: `eca-data-${station.id}`,
-        stationName: station.name!,
-        stationCode: station.code!,
+        id: `eca-data-${stationCode}-${line}`,
+        stationName,
+        stationCode,
         ecas,
     };
 
     return {
-        id: `module-eca-${station.id}`,
+        id: `module-eca-${stationCode}-${line}-${moduleName.replace(/\s/g, '-')}`,
         type: AuditModuleType.ECA,
-        name: `ECA (Valideurs)`,
+        name: moduleName,
         data: ecaData,
-        isFuture: station.isFuture,
-        line: line,
+        isFuture,
+        line,
     };
 };
 
-const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine): AuditModule => {
+const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine): AuditModule | null => {
     const ecaTemplates = ECA_DEFINITIONS[station.code!] ?? ECA_DEFINITIONS['DEFAULT'];
-    const pmrEcaTemplates = ecaTemplates.filter(template => isPmrEcaType(template.type));
+    const hasPmrEca = ecaTemplates.some(template => isPmrEcaType(template.type));
 
-    const adhesives: PMRFloorAdhesive[] = station.isFuture ? [] : pmrEcaTemplates.map((template, index) => ({
-        id: `${station.id}-pmr-floor-${index + 1}`,
-        name: `Passage PMR - ${template.name}`,
+    // Only create a module if the station has a PMR ECA and is not Jean Jaurès (handled separately)
+    if (!hasPmrEca || station.isFuture || station.code === 'JJA' || station.code === 'JJB') {
+        return null;
+    }
+
+    const adhesives: PMRFloorAdhesive[] = [{
+        id: `${station.id}-pmr-floor-1`,
+        name: `Présence et état de l'adhésif de signalisation au sol`,
         status: FloorAdhesiveStatus.NotChecked,
-    }));
+    }];
 
     const data: PMRFloorAdhesiveData = {
         id: `pmr-floor-data-${station.id}`,
@@ -253,7 +262,36 @@ const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine
         type: AuditModuleType.PMR_FLOOR_ADHESIVE,
         name: 'Adhésifs PMR au Sol',
         data: data,
-        isFuture: station.isFuture,
+        isFuture: !!station.isFuture,
+        line: line,
+    };
+};
+
+const createSpecificPmrFloorAdhesiveModule = (
+    moduleName: string,
+    station: Partial<Station>,
+    line: MetroLine
+): AuditModule => {
+    const adhesives: PMRFloorAdhesive[] = [{
+        id: uuidv4(),
+        name: `Présence et état de l'adhésif de signalisation au sol`,
+        status: FloorAdhesiveStatus.NotChecked,
+    }];
+
+    const data: PMRFloorAdhesiveData = {
+        id: uuidv4(),
+        stationName: station.name!,
+        stationCode: station.code!,
+        adhesives,
+        comment: '',
+    };
+
+    return {
+        id: uuidv4(),
+        type: AuditModuleType.PMR_FLOOR_ADHESIVE,
+        name: moduleName,
+        data: data,
+        isFuture: !!station.isFuture,
         line: line,
     };
 };
@@ -290,13 +328,23 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
-            ...LINE_A_STATIONS.map(s => createEcaModuleForStation(s, 'A')),
-            ...LINE_B_STATIONS.map(s => createEcaModuleForStation(s, 'B')),
-            ...LINE_C_STATIONS.map(s => createEcaModuleForStation(s, 'C')),
+            // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA')
+            ...LINE_A_STATIONS.filter(s => s.code !== 'JJA').map(s => createEcaModule(
+                'ECA (Valideurs)', s.name!, s.code!, 'A', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+            )),
+            ...LINE_B_STATIONS.map(s => {
+                const moduleName = s.code === 'JJB' ? 'ECA (Entrée Principale)' : 'ECA (Valideurs)';
+                return createEcaModule(
+                    moduleName, s.name!, s.code!, 'B', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+                );
+            }),
+            ...LINE_C_STATIONS.map(s => createEcaModule(
+                 'ECA (Valideurs)', s.name!, s.code!, 'C', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+            )),
 
-            ...LINE_A_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'A')),
-            ...LINE_B_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'B')),
-            ...LINE_C_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'C')),
+            ...LINE_A_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'A')).filter((m): m is AuditModule => m !== null),
+            ...LINE_B_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'B')).filter((m): m is AuditModule => m !== null),
+            ...LINE_C_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'C')).filter((m): m is AuditModule => m !== null),
             
             ...LINE_A_STATIONS.map(s => createCognitivePictogramModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createCognitivePictogramModule(s, 'B')),
@@ -341,6 +389,31 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             }
             lieuxMap.get(lieuName)!.modules.push(module);
         });
+
+        // SPECIAL: Add custom modules to Jean-Jaurès
+        const jjLieu = lieuxMap.get('Jean-Jaurès');
+        if (jjLieu) {
+            const jjaStation = LINE_A_STATIONS.find(s => s.code === 'JJA')!;
+            const jjbStation = LINE_B_STATIONS.find(s => s.code === 'JJB')!;
+
+            // ECA modules
+            const moduleAtoB = createEcaModule('ECA Liaison A→B', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_TO_B);
+            const moduleBtoA = createEcaModule('ECA Liaison B→A', 'Jean-Jaurès', 'JJB', 'B', false, ECA_DEFINITIONS_JJA_B_TO_A);
+            const moduleJjaHist = createEcaModule('ECA (Accès Historique)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_HISTORIQUE);
+            const moduleJjaPrinc = createEcaModule('ECA (Accès Principal)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_PRINCIPAL);
+
+            // PMR Floor Adhesive modules
+            const modulePmrA_Hist = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Historique)', jjaStation, 'A');
+            const modulePmrA_Princ = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Principal)', jjaStation, 'A');
+            const modulePmrB = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Ligne B)', jjbStation, 'B');
+            const modulePmrAtoB = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Liaison A→B)', jjaStation, 'A');
+            const modulePmrBtoA = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Liaison B→A)', jjbStation, 'B');
+
+            jjLieu.modules.push(
+                moduleAtoB, moduleBtoA, moduleJjaHist, moduleJjaPrinc,
+                modulePmrA_Hist, modulePmrA_Princ, modulePmrB, modulePmrAtoB, modulePmrBtoA
+            );
+        }
 
         resolve(Array.from(lieuxMap.values()));
     });

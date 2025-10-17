@@ -14,6 +14,9 @@ interface EcaEditModalProps {
 const typeLabels: Record<string, string> = {
     [EcaEquipmentType.TripodeEntree]: "Tripode d'entrée",
     [EcaEquipmentType.TripodeSortie]: "Tripode de sortie",
+    [EcaEquipmentType.VantauxEntree]: "Vantaux d'entrée",
+    [EcaEquipmentType.VantauxSortie]: "Vantaux de sortie",
+    [EcaEquipmentType.VantauxReversible]: "Vantaux réversible",
     [EcaEquipmentType.PMRBras]: "PMR à bras",
     [EcaEquipmentType.PMRVantaux]: "PMR à vantaux",
 };
@@ -22,6 +25,9 @@ const typeLabels: Record<string, string> = {
 const EDITABLE_ECA_TYPES = [
     EcaEquipmentType.TripodeEntree,
     EcaEquipmentType.TripodeSortie,
+    EcaEquipmentType.VantauxEntree,
+    EcaEquipmentType.VantauxSortie,
+    EcaEquipmentType.VantauxReversible,
     EcaEquipmentType.PMRBras,
     EcaEquipmentType.PMRVantaux,
 ];

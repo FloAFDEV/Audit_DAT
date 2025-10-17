@@ -41,7 +41,9 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex-1 min-w-0">
-                    <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{module.name}</h2>
+                    <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+                        <FormattedCorrespondence text={module.name} />
+                    </h2>
                     <div className="flex items-center gap-3 mt-2">
                         <LineIcon module={module} size="sm" />
                         <p className="text-gray-600 dark:text-slate-400 text-sm">
@@ -78,13 +80,9 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 min-w-0">
-                  <FormattedCorrespondence 
-                    as="h3"
-                    text={adhesive.name}
-                    useLogos={true}
-                    className="text-lg font-semibold text-gray-900 dark:text-slate-100"
-                  />
-                  <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">Vérifier la présence et l'état de l'adhésif de signalisation au sol.</p>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                    {adhesive.name}
+                  </h3>
                 </div>
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                   <button

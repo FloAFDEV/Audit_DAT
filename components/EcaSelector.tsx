@@ -18,9 +18,7 @@ interface EcaSelectorProps {
 }
 
 const getEcaIcon = (eca: ECA) => {
-    const isPmr = isPmrEcaType(eca.type);
-
-    if (isPmr) {
+    if (isPmrEcaType(eca.type)) {
         const iconProps = { className: "w-8 h-8 text-blue-600 dark:text-blue-300" };
         return (
             <div className="p-3 bg-blue-100 dark:bg-blue-900/40 rounded-lg">
@@ -72,21 +70,22 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
     };
     
     const sortedEcas = useMemo(() => {
-        const typeOrder: Record<EcaEquipmentType, number> = {
-            [EcaEquipmentType.PMRBras]: 1,
-            [EcaEquipmentType.PMRVantaux]: 1,
-            [EcaEquipmentType.TripodeEntree]: 2,
-            [EcaEquipmentType.TripodeSortie]: 3,
-        };
-
         return [...ecaData.ecas].sort((a, b) => {
-            const orderA = typeOrder[a.type];
-            const orderB = typeOrder[b.type];
-
-            if (orderA !== orderB) {
-                return orderA - orderB;
-            }
+            const isPmrA = isPmrEcaType(a.type);
+            const isPmrB = isPmrEcaType(b.type);
             
+            // 1. Sort by PMR status first (PMRs on top)
+            if (isPmrA !== isPmrB) {
+                return isPmrA ? -1 : 1;
+            }
+
+            // 2. Then sort by access point name (grouping by access point)
+            const accessPointCompare = a.accessPoint.localeCompare(b.accessPoint);
+            if (accessPointCompare !== 0) {
+                return accessPointCompare;
+            }
+
+            // 3. Finally, sort by equipment number
             return a.number - b.number;
         });
     }, [ecaData.ecas]);
