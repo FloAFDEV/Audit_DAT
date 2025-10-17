@@ -12,6 +12,8 @@ import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
 import { sortLieuxByPhysicalOrder } from '../utils/csvExporter';
 import { getEcaAdhesives } from '../data/adhesives';
+import { AuditFilterSelector } from './AuditFilterSelector';
+import useAuditStore from '../store';
 
 interface LieuSelectorProps {
   lieux: Lieu[];
@@ -158,6 +160,7 @@ const lineStationsMap: { [key in AuditCategory]?: Partial<Station>[] } = {
 
 
 const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, activeFilter, onFilterChange, onExportByCategory, onExportByModuleType, onExportAll, onExportJson, onImportJson, onResetCategory, onResetAll, onRequestLogout }) => {
+    const { activeAuditFilters } = useAuditStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOrderReversed, setIsOrderReversed] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -252,6 +255,13 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
             sortedLieux = isOrderReversed ? [...sortedByLine].reverse() : sortedByLine;
         }
 
+        // Apply audit type filter
+        const filteredByAuditType = activeAuditFilters.length > 0
+            ? sortedLieux.filter(lieu =>
+                lieu.modules.some(module => activeAuditFilters.includes(module.type))
+            )
+            : sortedLieux;
+
         // The main display should not be filtered by search query when the dropdown is open.
         if (isDropdownOpen && searchQuery.trim()) {
             return [];
@@ -260,11 +270,11 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         // Filter main display if search is active but dropdown is closed (e.g. after selection)
         if (searchQuery.trim()) {
             const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return sortedLieux.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
+            return filteredByAuditType.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
         }
 
-        return sortedLieux;
-    }, [searchQuery, lieux, activeFilter, isOrderReversed, isDropdownOpen]);
+        return filteredByAuditType;
+    }, [searchQuery, lieux, activeFilter, isOrderReversed, isDropdownOpen, activeAuditFilters]);
 
     // Search dropdown list: always alphabetical, searches all lieux
     const dropdownLieux = useMemo(() => {
@@ -496,7 +506,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     </div>
                 </div>
             </div>
-
+            
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <div className="relative flex-grow" ref={searchContainerRef}>
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
@@ -563,6 +573,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     />
                 </div>
             </div>
+            
+            {activeFilter !== 'ALL' && (
+                <AuditFilterSelector lieux={lieux} activeCategory={activeFilter} />
+            )}
 
             {orderedLieuxForDisplay.length === 0 && searchQuery && !isDropdownOpen ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">

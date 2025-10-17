@@ -26,6 +26,7 @@ interface AppState {
 
     // Navigation
     activeFilter: AuditCategory | 'ALL';
+    activeAuditFilters: AuditModuleType[];
     selectedLieuId: string | null;
     selectedModuleId: string | null;
     selectedStationId: string | null;
@@ -44,6 +45,7 @@ interface AppState {
 
     // Navigation Actions
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
+    setActiveAuditFilters: (filters: AuditModuleType[]) => void;
     selectLieu: (lieuId: string | null) => void;
     selectModule: (moduleId: string | null) => void;
     navigate: (level: 'home' | 'lieu' | 'module' | 'station' | 'direction') => void;
@@ -137,6 +139,7 @@ const useAuditStore = create<AppState>((set, get) => {
     isAuthenticated: false,
     theme: 'light',
     activeFilter: 'ALL',
+    activeAuditFilters: [],
     selectedLieuId: null,
     selectedModuleId: null,
     selectedStationId: null,
@@ -185,6 +188,7 @@ const useAuditStore = create<AppState>((set, get) => {
         set({
             isAuthenticated: false,
             activeFilter: 'ALL',
+            activeAuditFilters: [],
             selectedLieuId: null,
             selectedModuleId: null,
             selectedStationId: null,
@@ -206,7 +210,8 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     // Navigation State Management
     // =================================================================
-    setActiveFilter: (filter) => set({ activeFilter: filter }),
+    setActiveFilter: (filter) => set({ activeFilter: filter, activeAuditFilters: [] }),
+    setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
 
     selectLieu: (lieuId) => set({
         selectedLieuId: lieuId,

@@ -183,9 +183,9 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                 {renderAdhesiveItem(adhesive)}
             </li>
         ))}
-        {/* FIX: Replaced `Object.entries` with `Object.keys` to ensure proper type inference for `groupData`. This resolves the "property does not exist on type 'unknown'" error. */}
+        {/* FIX: Added a non-null assertion to ensure `groupData` is correctly typed, preventing a potential error with strict compiler settings. */}
         {Object.keys(groups).map((groupId) => {
-          const groupData = groups[groupId];
+          const groupData = groups[groupId]!;
           return (
             <li key={groupId} className="p-6 bg-slate-50/50 dark:bg-slate-800/50">
                 <div className="mb-4 bg-slate-100 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">

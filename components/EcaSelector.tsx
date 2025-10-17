@@ -53,9 +53,10 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
         setIsEditModalOpen(true);
     };
 
-    const handleSaveEca = (data: Omit<ECA, 'adhesives' | 'comment'>) => {
+    // FIX: Updated function signature to correctly handle data from the modal, which may have an optional `id` for new ECAs.
+    const handleSaveEca = (data: Omit<ECA, 'id' | 'adhesives' | 'comment'> & { id?: string }) => {
         if (data.id) {
-            onUpdateEca(data);
+            onUpdateEca(data as Partial<Omit<ECA, 'adhesives' | 'comment'>> & { id: string });
         } else {
             onAddEca(data);
         }

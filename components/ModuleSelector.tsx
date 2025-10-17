@@ -7,6 +7,7 @@ import { getDatProgress, getEcaProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
 import { CategoryIcon } from './CategoryIcon';
 import { AUDIT_CATEGORIES } from '../data/config';
+import useAuditStore from '../store';
 
 const getModuleProgress = (module: AuditModule): { percentage: number; label: string } => {
     if (module.isFuture) {
@@ -83,8 +84,16 @@ interface ModuleSelectorProps {
 }
 
 const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, onBack }) => {
+    const { activeAuditFilters } = useAuditStore();
     
     const sortedModules = useMemo(() => {
+        let modulesToDisplay = [...lieu.modules];
+
+        // Apply filter if any are active
+        if (activeAuditFilters.length > 0) {
+            modulesToDisplay = modulesToDisplay.filter(module => activeAuditFilters.includes(module.type));
+        }
+
         const order = {
             [AuditModuleType.DAT]: 1,
             [AuditModuleType.ECA]: 2,
@@ -93,12 +102,10 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             [AuditModuleType.PR]: 5,
         };
 
-        const modules = [...lieu.modules];
-
         // Special sorting for Jean-Jaurès
         if (lieu.name === 'Jean-Jaurès') {
             const lineOrder: Record<string, number> = { 'A': 1, 'B': 2 };
-            modules.sort((a, b) => {
+            modulesToDisplay.sort((a, b) => {
                 const lineA = a.line as 'A' | 'B' | undefined;
                 const lineB = b.line as 'A' | 'B' | undefined;
                 const orderA = lineA ? lineOrder[lineA] : 99;
@@ -115,12 +122,12 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             });
         } else {
             // Default sorting for other lieux
-            modules.sort((a, b) => (order[a.type] || 99) - (order[b.type] || 99));
+            modulesToDisplay.sort((a, b) => (order[a.type] || 99) - (order[b.type] || 99));
         }
         
-        return modules;
+        return modulesToDisplay;
 
-    }, [lieu.modules, lieu.name]);
+    }, [lieu.modules, lieu.name, activeAuditFilters]);
 
     return (
         <div>

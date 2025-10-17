@@ -5,7 +5,8 @@ import { canEcaBeNotApplicable } from '../data/eca_data';
 interface EcaEditModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSave: (ecaData: Omit<ECA, 'adhesives' | 'comment'>) => void;
+    // FIX: Updated `onSave` prop to correctly type the data object, allowing for an optional `id` when creating a new ECA.
+    onSave: (ecaData: Omit<ECA, 'id' | 'adhesives' | 'comment'> & { id?: string }) => void;
     eca: ECA | null;
     stationName: string;
 }
@@ -60,7 +61,8 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const canBeNA = canEcaBeNotApplicable(type);
-        const ecaData = {
+        // FIX: Explicitly typed `ecaData` to match the updated `onSave` prop, ensuring `id` is correctly handled as optional.
+        const ecaData: Omit<ECA, 'id' | 'adhesives' | 'comment'> & { id?: string } = {
             id: eca?.id,
             name: name.trim(),
             accessPoint: accessPoint.trim(),
@@ -68,7 +70,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
             number,
             isNotApplicable: canBeNA ? isNotApplicable : undefined,
         };
-        onSave(ecaData as Omit<ECA, 'adhesives' | 'comment'>);
+        onSave(ecaData);
     };
     
     if (!isOpen) return null;
