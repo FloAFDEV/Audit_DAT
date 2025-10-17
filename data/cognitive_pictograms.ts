@@ -216,7 +216,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté Grande Rue St Michel',
+                accessPointName: 'Accès côté Grande Rue Saint-Michel',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
@@ -237,7 +237,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'CCA': // Ligne B - Compans-Caffarelli
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté rue Lascrosses',
+                accessPointName: 'Accès côté Rue Lascrosses',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
@@ -294,12 +294,12 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'BPA': // Ligne B - Barrière de Paris
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté avenue des minimes',
+                accessPointName: 'Accès côté Avenue des Minimes',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté rue pierre et marie curie',
+                accessPointName: 'Accès côté Rue Pierre et Marie Curie',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
@@ -320,7 +320,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'BOR': // Ligne B - Borderouge
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté place de la maourine',
+                accessPointName: 'Accès côté Place de la Maourine',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
