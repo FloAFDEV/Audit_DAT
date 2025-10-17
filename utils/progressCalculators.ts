@@ -119,13 +119,17 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
 };
 
 
-export const getLieuProgress = (lieu: Lieu): number => {
+export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = []): number => {
     if (!lieu?.modules) return 0;
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
 
-    for (const module of lieu.modules) {
+    const modulesToConsider = activeFilters.length > 0
+        ? lieu.modules.filter(m => activeFilters.includes(m.type))
+        : lieu.modules;
+
+    for (const module of modulesToConsider) {
         if (module.isFuture) continue;
 
         switch (module.type) {
@@ -187,7 +191,7 @@ export const getLieuProgress = (lieu: Lieu): number => {
     }
 
     if (totalApplicableItems === 0) {
-        const hasAnyNonFutureModule = lieu.modules.some(m => !m.isFuture);
+        const hasAnyNonFutureModule = modulesToConsider.some(m => !m.isFuture);
         return hasAnyNonFutureModule ? 100 : 0;
     }
 

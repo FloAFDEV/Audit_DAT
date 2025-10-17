@@ -513,7 +513,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {orderedLieuxForDisplay.map((lieu) => {
-                        const progress = getLieuProgress(lieu);
+                        const progress = getLieuProgress(lieu, activeAuditFilters);
                         return <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} progress={progress} activeFilter={activeFilter} />;
                     })}
                 </div>
