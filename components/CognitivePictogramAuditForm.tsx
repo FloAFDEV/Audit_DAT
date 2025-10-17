@@ -1,9 +1,9 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePictogram } from '../types';
-import { CheckCircle2, XCircle, ArrowLeft, DatabaseBackup, Trash2, Edit, PlusCircle, SearchCheck } from 'lucide-react';
+import { CheckCircle2, XCircle, Trash2, Edit, PlusCircle, SearchCheck } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
-import { LineIcon } from './LineIcon';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
+import AuditFormLayout from './AuditFormLayout';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -121,8 +121,8 @@ const AccessPointItem: React.FC<{
 };
 
 
-const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = ({ module, onStatusChange, onBack, onReset, onAddAccessPoint, onRemoveAccessPoint, onUpdateAccessPointName, onCommentChange }) => {
-    const [showResetConfirm, setShowResetConfirm] = useState(false);
+const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = (props) => {
+    const { module, onStatusChange, onBack, onReset, onAddAccessPoint, onRemoveAccessPoint, onUpdateAccessPointName, onCommentChange } = props;
     const [pictoToDelete, setPictoToDelete] = useState<CognitivePictogram | null>(null);
     const cogData = module.data as CognitivePictogramData;
 
@@ -133,10 +133,6 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
         return (checked / total) * 100;
     }, [cogData.pictograms]);
 
-    const isComplete = Math.round(progress) === 100;
-    const isInProgress = progress > 0 && !isComplete;
-    const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
-    
     const handleConfirmDelete = () => {
         if (pictoToDelete) {
             onRemoveAccessPoint(pictoToDelete.id);
@@ -144,50 +140,34 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
         }
     };
 
-
     return (
-        <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
-            <div className="p-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                    <div className="flex items-start gap-4 flex-1 min-w-0">
-                        <button
-                            onClick={onBack}
-                            className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                            aria-label="Retour"
-                        >
-                            <ArrowLeft className="w-6 h-6" />
-                        </button>
-                        <div className="flex-1 min-w-0">
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{module.name}</h2>
-                            <div className="flex items-center gap-3 mt-2">
-                                <LineIcon module={module} size="sm" />
-                                <p className="text-gray-600 dark:text-slate-400 text-sm">
-                                    <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {cogData.stationName}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
+        <AuditFormLayout
+            module={module}
+            title={module.name}
+            subtitle={
+                <p className="text-gray-600 dark:text-slate-400 text-sm">
+                    <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {cogData.stationName}
+                </p>
+            }
+            progress={progress}
+            onBack={onBack}
+            onReset={onReset}
+            resetConfirmTitle="Réinitialiser l'audit des pictogrammes"
+            resetConfirmMessage={`Êtes-vous sûr de vouloir réinitialiser les vérifications pour la station ${cogData.stationName} ? Les noms des accès seront conservés.`}
+            comment={cogData.comment}
+            onCommentChange={onCommentChange}
+            footer={
+                <div className="p-6 border-t border-gray-200 dark:border-slate-700">
                     <button
-                        onClick={() => setShowResetConfirm(true)}
-                        className="self-start sm:ml-4 flex-shrink-0 flex items-center gap-x-1.5 rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
-                        title={`Réinitialiser l'audit`}
-                        aria-label={`Réinitialiser l'audit`}
+                        onClick={onAddAccessPoint}
+                        className="w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
                     >
-                        <DatabaseBackup className="h-4 w-4" />
-                        <span>Réinitialiser</span>
+                        <PlusCircle className="-ml-0.5 h-5 w-5" />
+                        Ajouter un accès
                     </button>
                 </div>
-                <div className="mt-4 pl-0 sm:pl-16">
-                    <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-500 dark:text-slate-400">Progression</span>
-                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className={`${progressBarColor} h-2 rounded-full transition-all duration-300`} style={{ width: `${progress}%` }}></div>
-                    </div>
-                </div>
-            </div>
-            
+            }
+        >
             <ul className="divide-y divide-gray-200 dark:divide-slate-700">
                 {cogData.pictograms.length === 0 ? (
                     <li className="text-center p-8">
@@ -207,38 +187,6 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                     ))
                 )}
             </ul>
-             <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Commentaires</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
-                <textarea
-                    rows={4}
-                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-900 px-3 py-2 text-base text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6"
-                    placeholder="Ajouter un commentaire..."
-                    value={cogData.comment || ''}
-                    onChange={(e) => onCommentChange(e.target.value)}
-                />
-            </div>
-
-            <div className="p-6 border-t border-gray-200 dark:border-slate-700">
-                <button
-                    onClick={onAddAccessPoint}
-                    className="w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
-                >
-                    <PlusCircle className="-ml-0.5 h-5 w-5" />
-                    Ajouter un accès
-                </button>
-            </div>
-
-            <ConfirmationModal
-                isOpen={showResetConfirm}
-                onClose={() => setShowResetConfirm(false)}
-                onConfirm={() => { onReset(); setShowResetConfirm(false); }}
-                title="Réinitialiser l'audit des pictogrammes"
-                message={`Êtes-vous sûr de vouloir réinitialiser les vérifications pour la station ${cogData.stationName} ? Les noms des accès seront conservés.`}
-                icon={<LineIcon module={module} size="sm" />}
-                isDestructive
-            />
-            
             <ConfirmationModal
                 isOpen={!!pictoToDelete}
                 onClose={() => setPictoToDelete(null)}
@@ -247,7 +195,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                 message={`Êtes-vous sûr de vouloir supprimer l'accès "${pictoToDelete?.accessPointName}" ?`}
                 isDestructive
             />
-        </div>
+        </AuditFormLayout>
     );
 };
 

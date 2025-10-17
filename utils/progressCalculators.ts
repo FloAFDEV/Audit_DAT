@@ -1,4 +1,4 @@
-import { DAT, Direction, AdhesiveStatus, ECA } from '../types';
+import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
 
 export enum ProgressStatus {
@@ -116,4 +116,80 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     }
 
     return { percentage, label, isComplete };
+};
+
+
+export const getLieuProgress = (lieu: Lieu): number => {
+    if (!lieu?.modules) return 0;
+
+    let totalApplicableItems = 0;
+    let totalCheckedItems = 0;
+
+    for (const module of lieu.modules) {
+        if (module.isFuture) continue;
+
+        switch (module.type) {
+            case AuditModuleType.DAT: {
+                const modeData = module.data as ModeData;
+                const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
+                for (const dat of dats) {
+                    const statuses = Object.values(dat.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
+                break;
+            }
+            case AuditModuleType.PR: {
+                const prData = module.data as Pr;
+                const equipments = prData.equipments ?? [];
+                for (const equipment of equipments) {
+                    const statuses = Object.values(equipment.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
+                break;
+            }
+            case AuditModuleType.ECA: {
+                const ecaData = module.data as EcaData;
+                const ecas = ecaData.ecas ?? [];
+                for (const eca of ecas) {
+                    if (eca.isNotApplicable) {
+                        continue;
+                    }
+                    const adhesiveDefinitions = getEcaAdhesives(eca.type);
+                    for (const adDef of adhesiveDefinitions) {
+                        const status = eca.adhesives[adDef.id];
+                        if (status !== AdhesiveStatus.NotApplicable) {
+                            totalApplicableItems++;
+                            if (status && status !== AdhesiveStatus.NotChecked) {
+                                totalCheckedItems++;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+                const pmrData = module.data as PMRFloorAdhesiveData;
+                const adhesives = pmrData.adhesives ?? [];
+                totalApplicableItems += adhesives.length;
+                totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
+                break;
+            }
+            case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                const cogData = module.data as CognitivePictogramData;
+                const pictos = cogData.pictograms ?? [];
+                totalApplicableItems += pictos.length;
+                totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
+                break;
+            }
+        }
+    }
+
+    if (totalApplicableItems === 0) {
+        const hasAnyNonFutureModule = lieu.modules.some(m => !m.isFuture);
+        return hasAnyNonFutureModule ? 100 : 0;
+    }
+
+    return (totalCheckedItems / totalApplicableItems) * 100;
 };

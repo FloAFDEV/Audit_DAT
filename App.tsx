@@ -1,19 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import useAuditStore from './store';
 import Login from './components/Login';
-import LieuSelector from './components/LieuSelector';
-import ModuleSelector from './components/ModuleSelector';
-import DatGroupSelector from './components/DatGroupSelector';
-import DATList from './components/DATList';
-import AdhesiveAuditForm from './components/AdhesiveAuditForm';
-import EquipmentSelector from './components/EquipmentSelector';
-import PnrAdhesiveAuditForm from './components/PnrAdhesiveAuditForm';
+import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
-import EcaSelector from './components/EcaSelector';
-import EcaAdhesiveAuditForm from './components/EcaAdhesiveAuditForm';
-import EcaTripodeSortieDecision from './components/EcaTripodeSortieDecision';
-import PMRFloorAdhesiveAuditForm from './components/PMRFloorAdhesiveAuditForm';
 import { getLieuxForCategory } from './data/builder';
 import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder } from './utils/csvExporter';
 import ConfirmationModal from './components/ConfirmationModal';
@@ -22,9 +12,6 @@ import { CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import { AUDIT_CATEGORIES } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
 import { showPromiseToast, showSuccessToast, showErrorToast } from './components/ToastManager';
-import { canEcaBeNotApplicable, isPmrEcaType } from './data/eca_data';
-import CognitivePictogramAuditForm from './components/CognitivePictogramAuditForm';
-
 
 // A simple loading spinner component
 const Loader: React.FC = () => (
@@ -92,68 +79,7 @@ const App: React.FC = () => {
     const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
     
     // State selectors from Zustand store
-    const {
-        lieux,
-        isLoading,
-        isAuthenticated,
-        init,
-        login,
-        logout,
-        // Navigation state
-        activeFilter,
-        selectedLieuId,
-        selectedModuleId,
-        selectedStationId,
-        selectedDirectionId,
-        selectedDatId,
-        selectedEquipmentId,
-        selectedEcaId,
-        // Navigation actions
-        setActiveFilter,
-        selectLieu,
-        selectModule,
-        selectStation,
-        selectDirection,
-        selectDat,
-        selectEquipment,
-        selectEca,
-        navigate,
-        // DAT actions
-        handleDatStatusChange,
-        handleDatCommentChange,
-        handleResetDat,
-        handleAddDat,
-        handleRemoveDat,
-        handleUpdateDatName,
-        // P+R actions
-        handlePrAdhesiveStatusChange,
-        handlePrAdhesiveCommentChange,
-        handleResetPrAdhesive,
-        // ECA actions
-        handleEcaAdhesiveStatusChange,
-        handleEcaAdhesiveCommentChange,
-        handleResetEcaAdhesive,
-        handleSetEcaNotApplicable,
-        handleAddEca,
-        handleUpdateEca,
-        handleRemoveEca,
-        // PMR Floor Adhesive actions
-        handlePmrFloorAdhesiveStatusChange,
-        handlePmrFloorAdhesiveCommentChange,
-        handleResetPmrFloorAdhesive,
-        // Cognitive Pictogram actions
-        handleCognitivePictogramStatusChange,
-        handleCognitivePictogramCommentChange,
-        handleResetCognitivePictogram,
-        handleAddCognitivePictogramAccessPoint,
-        handleRemoveCognitivePictogramAccessPoint,
-        handleUpdateCognitivePictogramAccessPointName,
-        // Reset Actions
-        handleResetCategory,
-        handleResetAll,
-        // Import/Export
-        handleImportJsonData,
-    } = useAuditStore();
+    const store = useAuditStore();
 
     // Initialize data on app load
     useEffect(() => {
@@ -163,32 +89,32 @@ const App: React.FC = () => {
             "color: initial; font-weight: normal; font-size: 1em;"
         );
         console.log("Contact: florent.perez@tisseo.fr ou 72 76");
-        init();
-    }, [init]);
+        store.init();
+    }, [store.init]);
     
     // --- Data selection logic using useMemo for performance ---
-    const selectedLieu = useMemo(() => lieux.find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
-    const selectedModule = useMemo(() => selectedLieu?.modules.find(m => m.id === selectedModuleId), [selectedLieu, selectedModuleId]);
+    const selectedLieu = useMemo(() => store.lieux.find(l => l.id === store.selectedLieuId), [store.lieux, store.selectedLieuId]);
+    const selectedModule = useMemo(() => selectedLieu?.modules.find(m => m.id === store.selectedModuleId), [selectedLieu, store.selectedModuleId]);
     
     // DAT flow data
     const selectedStation = useMemo(() => {
         if (selectedModule?.type !== AuditModuleType.DAT) return null;
-        return (selectedModule.data as ModeData).stations.find((s: Station) => s.id === selectedStationId);
-    }, [selectedModule, selectedStationId]);
+        return (selectedModule.data as ModeData).stations.find((s: Station) => s.id === store.selectedStationId);
+    }, [selectedModule, store.selectedStationId]);
 
-    const selectedDirection = useMemo(() => selectedStation?.directions.find((d: Direction) => d.id === selectedDirectionId), [selectedStation, selectedDirectionId]);
-    const selectedDat = useMemo(() => selectedDirection?.dats.find((d: DAT) => d.id === selectedDatId), [selectedDirection, selectedDatId]);
+    const selectedDirection = useMemo(() => selectedStation?.directions.find((d: Direction) => d.id === store.selectedDirectionId), [selectedStation, store.selectedDirectionId]);
+    const selectedDat = useMemo(() => selectedDirection?.dats.find((d: DAT) => d.id === store.selectedDatId), [selectedDirection, store.selectedDatId]);
 
     // P+R flow data
     const selectedPrData = useMemo(() => (selectedModule?.type === AuditModuleType.PR ? selectedModule.data as Pr : null), [selectedModule]);
-    const selectedEquipment = useMemo(() => selectedPrData?.equipments.find(e => e.id === selectedEquipmentId), [selectedPrData, selectedEquipmentId]);
+    const selectedEquipment = useMemo(() => selectedPrData?.equipments.find(e => e.id === store.selectedEquipmentId), [selectedPrData, store.selectedEquipmentId]);
 
     // ECA flow data
     const selectedEcaData = useMemo(() => (selectedModule?.type === AuditModuleType.ECA ? selectedModule.data as EcaData : null), [selectedModule]);
-    const selectedEca = useMemo(() => selectedEcaData?.ecas.find(e => e.id === selectedEcaId), [selectedEcaData, selectedEcaId]);
+    const selectedEca = useMemo(() => selectedEcaData?.ecas.find(e => e.id === store.selectedEcaId), [selectedEcaData, store.selectedEcaId]);
 
     const handleLogoutConfirm = () => {
-        logout();
+        store.logout();
         setIsLogoutModalOpen(false);
     };
     
@@ -221,17 +147,16 @@ const App: React.FC = () => {
     };
 
     // --- Render logic ---
-    if (isLoading) {
+    if (store.isLoading) {
         return <Loader />;
     }
 
-    if (!isAuthenticated) {
-        return <Login onLoginSuccess={login} />;
+    if (!store.isAuthenticated) {
+        return <Login onLoginSuccess={store.login} />;
     }
     
     const handleExportByCategory = (category: AuditCategory) => {
-        console.log(`Exporting category: ${category}`);
-        const filteredLieux = getLieuxForCategory(lieux, category);
+        const filteredLieux = getLieuxForCategory(store.lieux, category);
         const sortedLieux = sortLieuxByPhysicalOrder(filteredLieux);
         exportLieuxToCsv(sortedLieux, `export-categorie-${category}.csv`);
         const categoryLabel = AUDIT_CATEGORIES.find(c => c.key === category)?.label || category;
@@ -239,9 +164,7 @@ const App: React.FC = () => {
     };
     
     const handleExportByModuleType = (moduleType: AuditModuleType) => {
-        console.log(`Exporting module type: ${moduleType}`);
-        // Deep copy and filter modules within each lieu
-        const filteredLieux = JSON.parse(JSON.stringify(lieux))
+        const filteredLieux = JSON.parse(JSON.stringify(store.lieux))
             .map((lieu: Lieu) => {
                 lieu.modules = lieu.modules.filter(m => m.type === moduleType);
                 return lieu;
@@ -254,14 +177,13 @@ const App: React.FC = () => {
     };
 
     const handleExportAll = () => {
-        console.log("Exporting all data");
-        const sortedLieux = sortLieuxByPhysicalOrder(lieux);
+        const sortedLieux = sortLieuxByPhysicalOrder(store.lieux);
         exportLieuxToCsv(sortedLieux, 'export-complet.csv');
         showExportSuccessToast("Toutes les données ont été exportées.");
     };
 
     const handleExportJson = () => {
-        const { success } = exportLieuxToJson(lieux);
+        const { success } = exportLieuxToJson(store.lieux);
         if (success) {
             showSuccessToast({
                 icon: <div className="h-full w-full rounded-full bg-sky-500 flex items-center justify-center"><CheckCircle className="h-6 w-6 text-white" /></div>,
@@ -279,7 +201,7 @@ const App: React.FC = () => {
     };
 
     const handleImportJson = (fileContent: string) => {
-        const promise = handleImportJsonData(fileContent);
+        const promise = store.handleImportJsonData(fileContent);
 
         showPromiseToast(
             promise,
@@ -304,7 +226,7 @@ const App: React.FC = () => {
 
     const handleResetCategoryRequest = (category: AuditCategory) => {
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category)!;
-        const promise = handleResetCategory(category);
+        const promise = store.handleResetCategory(category);
 
         showPromiseToast(
             promise,
@@ -328,7 +250,7 @@ const App: React.FC = () => {
     };
 
     const handleResetAllRequest = () => {
-        const promise = handleResetAll();
+        const promise = store.handleResetAll();
         
         showPromiseToast(
             promise,
@@ -352,7 +274,7 @@ const App: React.FC = () => {
     };
 
     const handleResetDatRequest = () => {
-        const promise = handleResetDat();
+        const promise = store.handleResetDat();
 
         showPromiseToast(
             promise,
@@ -376,7 +298,7 @@ const App: React.FC = () => {
     };
 
     const handleResetPrAdhesiveRequest = () => {
-        const promise = handleResetPrAdhesive();
+        const promise = store.handleResetPrAdhesive();
 
         showPromiseToast(
             promise,
@@ -400,7 +322,7 @@ const App: React.FC = () => {
     };
 
     const handleResetEcaAdhesiveRequest = () => {
-        const promise = handleResetEcaAdhesive();
+        const promise = store.handleResetEcaAdhesive();
 
         showPromiseToast(
             promise,
@@ -424,7 +346,7 @@ const App: React.FC = () => {
     };
 
     const handleResetPmrFloorAdhesiveRequest = () => {
-        const promise = handleResetPmrFloorAdhesive();
+        const promise = store.handleResetPmrFloorAdhesive();
         const stationName = (selectedModule?.data as PMRFloorAdhesiveData)?.stationName || 'la station';
 
         showPromiseToast(
@@ -449,7 +371,7 @@ const App: React.FC = () => {
     };
 
     const handleResetCognitivePictogramRequest = () => {
-        const promise = handleResetCognitivePictogram();
+        const promise = store.handleResetCognitivePictogram();
         const stationName = (selectedModule?.data as CognitivePictogramData)?.stationName || 'la station';
 
         showPromiseToast(
@@ -473,162 +395,13 @@ const App: React.FC = () => {
         );
     };
 
-    const renderContent = () => {
-        // --- DEEPEST LEVEL: AUDIT FORMS ---
-
-        // P+R Audit Form
-        if (selectedModule && selectedEquipment) {
-            return <PnrAdhesiveAuditForm 
-                module={selectedModule}
-                equipment={selectedEquipment}
-                prName={(selectedModule.data as Pr).name}
-                onStatusChange={handlePrAdhesiveStatusChange}
-                onCommentChange={handlePrAdhesiveCommentChange}
-                onReset={handleResetPrAdhesiveRequest}
-                onBack={() => selectEquipment(null)}
-            />;
-        }
-
-        // ECA Audit Form or Decision Screen
-        if (selectedModule && selectedEca) {
-            // Exception for Jean-Jaurès PMR ECAs, which should always be audited.
-            const isJauresPMR = (selectedModule.data as EcaData).stationName === 'Jean-Jaurès' && isPmrEcaType(selectedEca.type);
-            
-            // If it's an ECA type that can be not applicable, hasn't been decided on yet, and is NOT a Jean-Jaurès PMR...
-            if (canEcaBeNotApplicable(selectedEca.type) && typeof selectedEca.isNotApplicable === 'undefined' && !isJauresPMR) {
-                return <EcaTripodeSortieDecision
-                    module={selectedModule}
-                    eca={selectedEca}
-                    stationName={(selectedModule.data as EcaData).stationName}
-                    onBack={() => selectEca(null)}
-                    onConfirmNA={() => handleSetEcaNotApplicable(true)}
-                    onAudit={() => handleSetEcaNotApplicable(false)}
-                />;
-            }
-
-            return <EcaAdhesiveAuditForm 
-                module={selectedModule}
-                eca={selectedEca}
-                stationName={(selectedModule.data as EcaData).stationName}
-                onStatusChange={handleEcaAdhesiveStatusChange}
-                onCommentChange={handleEcaAdhesiveCommentChange}
-                onReset={handleResetEcaAdhesiveRequest}
-                onBack={() => selectEca(null)}
-            />;
-        }
-
-        // DAT Audit Form
-        if (selectedModule && selectedStation && selectedDirection && selectedDat) {
-             return <AdhesiveAuditForm 
-                module={selectedModule}
-                dat={selectedDat}
-                station={selectedStation}
-                direction={selectedDirection}
-                onStatusChange={handleDatStatusChange}
-                onCommentChange={handleDatCommentChange}
-                onReset={handleResetDatRequest}
-                onBack={() => selectDat(null)}
-            />
-        }
-
-        // PMR Floor Adhesive Form
-        if (selectedModule?.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
-            return <PMRFloorAdhesiveAuditForm 
-                module={selectedModule}
-                onStatusChange={handlePmrFloorAdhesiveStatusChange}
-                onCommentChange={handlePmrFloorAdhesiveCommentChange}
-                onReset={handleResetPmrFloorAdhesiveRequest}
-                onBack={() => selectModule(null)}
-            />
-        }
-
-        // Cognitive Pictogram Form
-        if (selectedModule?.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
-            return <CognitivePictogramAuditForm 
-                module={selectedModule}
-                onStatusChange={handleCognitivePictogramStatusChange}
-                onCommentChange={handleCognitivePictogramCommentChange}
-                onReset={handleResetCognitivePictogramRequest}
-                onAddAccessPoint={handleAddCognitivePictogramAccessPoint}
-                onRemoveAccessPoint={handleRemoveCognitivePictogramAccessPoint}
-                onUpdateAccessPointName={handleUpdateCognitivePictogramAccessPointName}
-                onBack={() => selectModule(null)}
-            />
-        }
-
-        // --- INTERMEDIATE SELECTION SCREENS ---
-
-        // P+R Equipment Selector
-        if (selectedModule?.type === AuditModuleType.PR) {
-            return <EquipmentSelector module={selectedModule} onSelectEquipment={selectEquipment} onBack={() => selectModule(null)} />;
-        }
-        
-        // ECA Selector
-        if (selectedModule?.type === AuditModuleType.ECA) {
-            return <EcaSelector 
-                module={selectedModule} 
-                onSelectEca={selectEca} 
-                onBack={() => selectModule(null)} 
-                onAddEca={handleAddEca}
-                onUpdateEca={handleUpdateEca}
-                onRemoveEca={handleRemoveEca}
-            />;
-        }
-
-        // DAT List (after selecting a direction)
-        if (selectedModule && selectedStation && selectedDirection) {
-            return <DATList 
-                module={selectedModule}
-                station={selectedStation}
-                direction={selectedDirection}
-                onSelectDat={selectDat}
-                onAddDat={handleAddDat}
-                onRemoveDat={handleRemoveDat}
-                onUpdateDatName={handleUpdateDatName}
-                onBack={() => selectDirection(null)}
-            />;
-        }
-
-        // DAT Station/Direction Selector
-        if (selectedModule?.type === AuditModuleType.DAT) {
-             return <DatGroupSelector 
-                module={selectedModule}
-                station={selectedStation}
-                onSelectStation={selectStation}
-                onSelectDirection={selectDirection}
-                onBack={() => selectModule(null)}
-            />;
-        }
-
-        // Module Selector (after selecting a lieu)
-        if (selectedLieu) {
-            return <ModuleSelector lieu={selectedLieu} onSelectModule={selectModule} onBack={() => selectLieu(null)} />;
-        }
-
-        // --- TOP LEVEL: LIEU SELECTOR (DASHBOARD) ---
-        return <LieuSelector 
-            lieux={lieux}
-            onSelectLieu={selectLieu}
-            activeFilter={activeFilter}
-            onFilterChange={setActiveFilter}
-            onExportByCategory={handleExportByCategory}
-            onExportByModuleType={handleExportByModuleType}
-            onExportAll={handleExportAll}
-            onExportJson={handleExportJson}
-            onImportJson={handleImportJson}
-            onResetCategory={handleResetCategoryRequest}
-            onResetAll={handleResetAllRequest}
-            onRequestLogout={() => setIsLogoutModalOpen(true)}
-        />;
-    };
-
     return (
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
             <div className="container mx-auto px-4 py-8 flex-grow">
                 <div className="mb-6">
-                    <Breadcrumbs 
+                    <Breadcrumbs
                         lieu={selectedLieu}
                         module={selectedModule}
                         station={selectedStation}
@@ -636,10 +409,36 @@ const App: React.FC = () => {
                         dat={selectedDat}
                         equipment={selectedEquipment}
                         eca={selectedEca}
-                        onNavigate={navigate}
+                        onNavigate={store.navigate}
                     />
                 </div>
-                {renderContent()}
+                <AppRouter
+                    // Pass selected data
+                    lieux={store.lieux}
+                    selectedLieu={selectedLieu}
+                    selectedModule={selectedModule}
+                    selectedStation={selectedStation}
+                    selectedDirection={selectedDirection}
+                    selectedDat={selectedDat}
+                    selectedEquipment={selectedEquipment}
+                    selectedEca={selectedEca}
+                    // Pass state and handlers
+                    {...store}
+                    // Pass request handlers separately
+                    handleResetDatRequest={handleResetDatRequest}
+                    handleResetPrAdhesiveRequest={handleResetPrAdhesiveRequest}
+                    handleResetEcaAdhesiveRequest={handleResetEcaAdhesiveRequest}
+                    handleResetPmrFloorAdhesiveRequest={handleResetPmrFloorAdhesiveRequest}
+                    handleResetCognitivePictogramRequest={handleResetCognitivePictogramRequest}
+                    onExportByCategory={handleExportByCategory}
+                    onExportByModuleType={handleExportByModuleType}
+                    onExportAll={handleExportAll}
+                    onExportJson={handleExportJson}
+                    onImportJson={handleImportJson}
+                    onResetCategory={handleResetCategoryRequest}
+                    onResetAll={handleResetAllRequest}
+                    onRequestLogout={() => setIsLogoutModalOpen(true)}
+                />
             </div>
       <footer className="text-center py-6 text-gray-800 dark:text-slate-400 text-xs">
 <p>
