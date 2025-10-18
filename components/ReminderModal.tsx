@@ -74,28 +74,32 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         </div>
                     </div>
                 </div>
-                <div className="bg-gray-50 dark:bg-slate-800/50 dark:border-t dark:border-slate-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                    <button
-                        type="button"
-                        onClick={handleConfirm}
-                        className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
-                    >
-                        Générer & Exporter
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onSkip}
-                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
-                    >
-                        Exporter sans rappel
-                    </button>
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="mt-3 sm:mt-0 sm:mr-auto inline-flex w-full sm:w-auto justify-center rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    >
-                        Annuler
-                    </button>
+                <div className="bg-gray-50 dark:bg-slate-800/50 dark:border-t dark:border-slate-700 px-4 py-3 sm:flex sm:items-center sm:justify-between sm:px-6">
+                    <div>
+                        <button
+                            type="button"
+                            onClick={onClose}
+                            className="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-red-700 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50 dark:bg-slate-700 dark:text-red-400 dark:ring-red-800/50 dark:hover:bg-red-900/20 sm:w-auto"
+                        >
+                            Annuler
+                        </button>
+                    </div>
+                    <div className="mt-4 sm:mt-0 flex flex-col-reverse sm:flex-row sm:gap-x-3 gap-y-3">
+                        <button
+                            type="button"
+                            onClick={onSkip}
+                            className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:w-auto"
+                        >
+                            Exporter sans rappel
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleConfirm}
+                            className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:w-auto"
+                        >
+                            Générer & Exporter
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

@@ -232,7 +232,7 @@ const App: React.FC = () => {
             `La catégorie "${categoryLabel}" a été exportée.`,
             category,
             {
-                title: `Planification ré-audit : ${categoryLabel}`,
+                title: `Planifier le ré-audit : ${categoryLabel}`,
                 description: `Effectuer le prochain cycle de contrôle pour la catégorie '${categoryLabel}'.`,
                 months: 5
             }
@@ -255,6 +255,12 @@ const App: React.FC = () => {
             [AuditModuleType.COGNITIVE_PICTOGRAMS]: "Pictogrammes Cognitifs",
         };
         const moduleLabel = AUDIT_TYPE_LABELS[moduleType] || moduleType;
+
+        // Définir la durée du rappel en fonction du type d'audit
+        let reminderMonths = 5; // Valeur par défaut pour DAT, PMR, P+R, ECA
+        if (moduleType === AuditModuleType.COGNITIVE_PICTOGRAMS) {
+            reminderMonths = 11;
+        }
     
         handleCsvExportFlow(
             filteredLieux,
@@ -262,9 +268,9 @@ const App: React.FC = () => {
             `Les audits de type "${moduleLabel}" ont été exportés.`,
             undefined,
             {
-                title: `Planification ré-audit : ${moduleLabel}`,
+                title: `Planifier le ré-audit : ${moduleLabel}`,
                 description: `Effectuer le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
-                months: 5
+                months: reminderMonths
             }
         );
     };
@@ -276,7 +282,7 @@ const App: React.FC = () => {
             "Toutes les données ont été exportées.",
             undefined,
             {
-                title: 'Planification ré-audit global',
+                title: 'Planifier le suivi global des audits',
                 description: 'Planifier le prochain cycle de contrôle global pour tous les audits Tisséo (DAT, P+R, ECA, etc.).',
                 months: 5
             }
