@@ -184,6 +184,7 @@ interface CsvRow {
     'Description Adhésif': string;
     'Localisation Adhésif': string;
     'Photo Jointe': string;
+    'Note Photo': string;
     'Commentaire': string;
     _lieuIndex?: number; // Temporary property for sorting
 }
@@ -238,6 +239,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                 'Description Adhésif': '',
                 'Localisation Adhésif': '',
                 'Photo Jointe': '',
+                'Note Photo': '',
                 'Commentaire': '',
             };
 
@@ -348,7 +350,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                             'ID Adhésif': adhesive.id,
                             'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
                             'Localisation Adhésif': 'Au sol devant le passage PMR',
-                            'Photo Jointe': adhesive.photo_base64 ? 'Oui' : 'Non',
+                            'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
+                            'Note Photo': adhesive.photo_note || '',
                             'Commentaire': data.comment,
                         });
                     }

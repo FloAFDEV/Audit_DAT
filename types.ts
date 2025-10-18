@@ -129,6 +129,8 @@ export interface PMRFloorAdhesive {
     name: string;
     status: FloorAdhesiveStatus;
     photo_base64?: string;
+    photo_note?: string;
+    photo_rotation?: number;
 }
 
 export interface PMRFloorAdhesiveData {

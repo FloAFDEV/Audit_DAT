@@ -1,14 +1,17 @@
-import React, { useMemo, useRef } from 'react';
-import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
-import { CheckCircle2, XCircle, Clock, Camera, Trash2 } from 'lucide-react';
+import React, { useMemo, useRef, useState } from 'react';
+import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesive, PMRFloorAdhesiveData } from '../types';
+import { CheckCircle2, XCircle, Clock, Camera, Trash2, Edit2, Edit } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
-import { showPromiseToast, showErrorToast } from './ToastManager';
+import { showPromiseToast } from './ToastManager';
+import PhotoViewerModal from './PhotoViewerModal';
 
 interface PMRFloorAdhesiveAuditFormProps {
   module: AuditModule;
   onStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => void;
   onPhotoChange: (adhesiveId: string, photo_base64: string | null) => void;
+  onPhotoNoteChange: (adhesiveId: string, note: string) => void;
+  onPhotoRotationChange: (adhesiveId: string, rotation: number) => void;
   onBack: () => void;
   onReset: () => void;
   onCommentChange: (comment: string) => void;
@@ -53,10 +56,12 @@ const resizeImage = (file: File, maxSize: number): Promise<string> => {
 };
 
 
-const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ module, onStatusChange, onPhotoChange, onBack, onReset, onCommentChange }) => {
+const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (props) => {
+  const { module, onStatusChange, onPhotoChange, onPhotoNoteChange, onPhotoRotationChange, onBack, onReset, onCommentChange } = props;
   const pmrData = module.data as PMRFloorAdhesiveData;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentAdhesiveId = useRef<string | null>(null);
+  const [viewingPhoto, setViewingPhoto] = useState<PMRFloorAdhesive | null>(null);
 
   const progress = useMemo(() => {
     const total = pmrData.adhesives.length;
@@ -181,39 +186,80 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = ({ m
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex items-center gap-4">
-                    {adhesive.photo_base64 ? (
-                        <div className="relative group">
-                            <img src={adhesive.photo_base64} alt="Aperçu de l'adhésif" className="w-16 h-16 rounded-md object-cover shadow-sm" />
-                            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
-                                <button
-                                    onClick={() => onPhotoChange(adhesive.id, null)}
-                                    className="p-1.5 rounded-full bg-red-600 text-white hover:bg-red-700"
-                                    aria-label="Supprimer la photo"
-                                    title="Supprimer la photo"
-                                >
-                                    <Trash2 className="w-4 h-4" />
-                                </button>
+                <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-start gap-4">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => handlePhotoUploadClick(adhesive.id)}
+                            className={`flex items-center justify-center text-sm font-medium transition-all duration-200 active:scale-95 ${
+                                adhesive.photo_base64
+                                ? 'p-2 rounded-full bg-white text-indigo-700 ring-1 ring-inset ring-indigo-500 hover:bg-indigo-50 dark:bg-slate-700/50 dark:text-indigo-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                                : 'px-3 py-1.5 rounded-md bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 whitespace-nowrap'
+                            }`}
+                            title={adhesive.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
+                        >
+                            {adhesive.photo_base64 ? (
+                                <Edit className="w-5 h-5" />
+                            ) : (
+                                <>
+                                    <Camera className="w-5 h-5 mr-2" />
+                                    <span>Ajouter une photo</span>
+                                </>
+                            )}
+                        </button>
+                         {adhesive.photo_base64 && (
+                            <button
+                                onClick={() => onPhotoChange(adhesive.id, null)}
+                                className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
+                                aria-label="Supprimer la photo"
+                                title="Supprimer la photo"
+                            >
+                                <Trash2 className="w-5 h-5" />
+                            </button>
+                        )}
+                    </div>
+                     {adhesive.photo_base64 && (
+                        <div className="flex items-start gap-4 w-full">
+                            <button onClick={() => setViewingPhoto(adhesive)} className="flex-shrink-0 relative group">
+                                <img 
+                                    src={adhesive.photo_base64} 
+                                    alt="Aperçu de l'adhésif" 
+                                    className="w-24 h-24 rounded-md object-cover shadow-sm transition-transform duration-200"
+                                    style={{ transform: `rotate(${adhesive.photo_rotation || 0}deg)` }}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">
+                                    <Edit2 className="w-6 h-6 text-white" />
+                                </div>
+                            </button>
+                            <div className="flex-1">
+                                {adhesive.photo_note ? (
+                                    <p className="text-sm text-gray-600 dark:text-slate-300 italic p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md whitespace-pre-wrap">{adhesive.photo_note}</p>
+                                ) : (
+                                    <p className="text-sm text-gray-400 dark:text-slate-500 italic">Aucune note pour cette photo.</p>
+                                )}
                             </div>
                         </div>
-                    ) : null}
-                    <button
-                        onClick={() => handlePhotoUploadClick(adhesive.id)}
-                        className={`flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 active:scale-95 whitespace-nowrap ${
-                            adhesive.photo_base64
-                            ? 'bg-white text-indigo-700 ring-1 ring-inset ring-indigo-500 hover:bg-indigo-50 dark:bg-slate-700/50 dark:text-indigo-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                            : 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-500'
-                        }`}
-                    >
-                        <Camera className="w-5 h-5 mr-2" />
-                        {adhesive.photo_base64 ? 'Modifier la photo' : 'Ajouter une photo'}
-                    </button>
+                    )}
                 </div>
               </li>
             );
           })}
         </ul>
       </AuditFormLayout>
+       {viewingPhoto && (
+        <PhotoViewerModal
+            isOpen={!!viewingPhoto}
+            onClose={() => setViewingPhoto(null)}
+            photo={viewingPhoto}
+            onRotate={(newRotation) => {
+                onPhotoRotationChange(viewingPhoto.id, newRotation);
+                setViewingPhoto(prev => prev ? { ...prev, photo_rotation: newRotation } : null);
+            }}
+            onNoteChange={(newNote) => {
+                onPhotoNoteChange(viewingPhoto.id, newNote);
+                 setViewingPhoto(prev => prev ? { ...prev, photo_note: newNote } : null);
+            }}
+        />
+      )}
     </>
   );
 };

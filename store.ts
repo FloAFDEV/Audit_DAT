@@ -82,6 +82,8 @@ interface AppState {
     handlePmrFloorAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetPmrFloorAdhesive: () => Promise<void>;
     handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
+    handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
+    handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -539,6 +541,8 @@ const useAuditStore = create<AppState>((set, get) => {
             module.data.adhesives.forEach(adhesive => {
                 adhesive.status = FloorAdhesiveStatus.NotChecked;
                 delete adhesive.photo_base64;
+                delete adhesive.photo_note;
+                delete adhesive.photo_rotation;
             });
             module.data.comment = '';
         });
@@ -554,7 +558,31 @@ const useAuditStore = create<AppState>((set, get) => {
                     adhesive.photo_base64 = photo_base64;
                 } else {
                     delete adhesive.photo_base64;
+                    delete adhesive.photo_note;
+                    delete adhesive.photo_rotation;
                 }
+            }
+        });
+    },
+
+    handlePmrFloorAdhesivePhotoNoteChange: async (adhesiveId, note) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
+            const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
+            if (adhesive) {
+                adhesive.photo_note = note;
+            }
+        });
+    },
+
+    handlePmrFloorAdhesivePhotoRotationChange: async (adhesiveId, rotation) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
+            const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
+            if (adhesive) {
+                adhesive.photo_rotation = rotation;
             }
         });
     },
