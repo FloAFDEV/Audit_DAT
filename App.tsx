@@ -101,6 +101,14 @@ interface PendingExport {
     category?: AuditCategory;
 }
 
+const AUDIT_TYPE_LABELS: Record<AuditModuleType, string> = {
+    [AuditModuleType.DAT]: "Audits DAT",
+    [AuditModuleType.PR]: "Audits P+R",
+    [AuditModuleType.ECA]: "Audits ECA (Valideurs)",
+    [AuditModuleType.PMR_FLOOR_ADHESIVE]: "Adhésifs Sol PMR",
+    [AuditModuleType.COGNITIVE_PICTOGRAMS]: "Pictogrammes Cognitifs",
+};
+
 const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
@@ -212,10 +220,12 @@ const App: React.FC = () => {
             successMessage,
             category,
         });
+        
+        const exportDateString = new Date().toLocaleDateString('fr-FR');
 
         setReminderOptions({
             title: reminder.title,
-            description: reminder.description,
+            description: `${reminder.description}\n\nDernier export effectué le : ${exportDateString}`,
             initialDate: calculateInitialReminderDate(reminder.months),
         });
         setIsReminderModalOpen(true);
@@ -233,7 +243,7 @@ const App: React.FC = () => {
             category,
             {
                 title: `Planifier le ré-audit : ${categoryLabel}`,
-                description: `Effectuer le prochain cycle de contrôle pour la catégorie '${categoryLabel}'.`,
+                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle des audits pour la catégorie '${categoryLabel}'.`,
                 months: 5
             }
         );
@@ -247,17 +257,11 @@ const App: React.FC = () => {
             })
             .filter((lieu: Lieu) => lieu.modules.length > 0);
         
-        const AUDIT_TYPE_LABELS: Record<string, string> = {
-            [AuditModuleType.DAT]: "Audits DAT",
-            [AuditModuleType.PR]: "Audits P+R",
-            [AuditModuleType.ECA]: "Audits ECA (Valideurs)",
-            [AuditModuleType.PMR_FLOOR_ADHESIVE]: "Adhésifs Sol PMR",
-            [AuditModuleType.COGNITIVE_PICTOGRAMS]: "Pictogrammes Cognitifs",
-        };
         const moduleLabel = AUDIT_TYPE_LABELS[moduleType] || moduleType;
 
-        // Définir la durée du rappel en fonction du type d'audit
-        let reminderMonths = 5; // Valeur par défaut pour DAT, PMR, P+R, ECA
+        let reminderTitle = `Planifier le ré-audit : ${moduleLabel}`;
+        
+        let reminderMonths = 5;
         if (moduleType === AuditModuleType.COGNITIVE_PICTOGRAMS) {
             reminderMonths = 11;
         }
@@ -268,22 +272,24 @@ const App: React.FC = () => {
             `Les audits de type "${moduleLabel}" ont été exportés.`,
             undefined,
             {
-                title: `Planifier le ré-audit : ${moduleLabel}`,
-                description: `Effectuer le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
+                title: reminderTitle,
+                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
                 months: reminderMonths
             }
         );
     };
 
     const handleExportAll = () => {
+        const allModuleTypesDescription = Object.values(AUDIT_TYPE_LABELS).map(label => `- ${label}`).join('\n');
+        
         handleCsvExportFlow(
             store.lieux,
             'export-complet',
             "Toutes les données ont été exportées.",
             undefined,
             {
-                title: 'Planifier le suivi global des audits',
-                description: 'Planifier le prochain cycle de contrôle global pour tous les audits Tisséo (DAT, P+R, ECA, etc.).',
+                title: 'Planifier le suivi global des audits Tisséo',
+                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle global pour l'ensemble des audits.\n\nAudits concernés:\n${allModuleTypesDescription}`,
                 months: 5
             }
         );

@@ -694,15 +694,18 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     handleImportJsonData: async (jsonString: string) => {
         try {
-            const data = JSON.parse(jsonString);
-            if (!validateImportedData(data)) {
+            const rawData = JSON.parse(jsonString);
+            // Check for new format { exportDate, data } or old format [Lieu]
+            const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
+
+            if (!validateImportedData(dataToValidate)) {
                 throw new Error("Le fichier JSON n'est pas valide ou ne correspond pas au format attendu.");
             }
             
             await db.lieux.clear();
-            await db.lieux.bulkPut(data);
+            await db.lieux.bulkPut(dataToValidate);
             set({
-                lieux: data,
+                lieux: dataToValidate,
                 selectedLieuId: null,
                 selectedModuleId: null,
                 selectedStationId: null,

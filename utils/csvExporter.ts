@@ -27,7 +27,11 @@ const downloadFile = (content: string, fileName: string, mimeType: string) => {
 
 export const exportLieuxToJson = (lieux: Lieu[]): { success: boolean } => {
     try {
-        const jsonString = JSON.stringify(lieux, null, 2);
+        const exportData = {
+            exportDate: new Date().toISOString().slice(0, 10),
+            data: lieux,
+        };
+        const jsonString = JSON.stringify(exportData, null, 2);
         downloadFile(jsonString, `export-auditref-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
         return { success: true };
     } catch (error) {
@@ -76,6 +80,10 @@ interface IcsOptions {
     reminderDate: Date;
 }
 
+const escapeIcsText = (text: string): string => {
+    return text.replace(/,/g, '\\,').replace(/;/g, '\\;').replace(/\n/g, '\\n');
+};
+
 export const generateAndDownloadIcsFile = (options: IcsOptions) => {
     const { title, description, reminderDate } = options;
     
@@ -85,9 +93,6 @@ export const generateAndDownloadIcsFile = (options: IcsOptions) => {
 
     const dateString = reminderDate.toISOString().substring(0, 10).replace(/-/g, '');
     
-    // ICS format requires newlines to be escaped as '\\n'
-    const escapedDescription = description.replace(/\n/g, '\\n');
-
     const icsContent = [
         'BEGIN:VCALENDAR',
         'VERSION:2.0',
@@ -96,8 +101,8 @@ export const generateAndDownloadIcsFile = (options: IcsOptions) => {
         `UID:${new Date().getTime()}@auditref.app`,
         `DTSTAMP:${formatDate(new Date())}`,
         `DTSTART;VALUE=DATE:${dateString}`,
-        `SUMMARY:${title}`,
-        `DESCRIPTION:${escapedDescription}`,
+        `SUMMARY:${escapeIcsText(title)}`,
+        `DESCRIPTION:${escapeIcsText(description)}`,
         'END:VEVENT',
         'END:VCALENDAR'
     ].join('\r\n');
@@ -144,6 +149,7 @@ const getModeFromLine = (line: string | undefined): string => {
 };
 
 interface CsvRow {
+    'Date de l\'export': string;
     Lieu: string;
     'Type d\'Audit': string;
     Ligne: string;
@@ -188,6 +194,7 @@ const getAdhesiveDetails = (id: string, moduleType: AuditModuleType, subType: an
 
 export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
     const rows: CsvRow[] = [];
+    const exportDate = new Date().toLocaleDateString('fr-FR');
     
     for (const [lieuIndex, lieu] of lieux.entries()) {
         for (const module of lieu.modules) {
@@ -195,6 +202,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
             const mode = getModeFromLine(line);
 
             const baseRow = {
+                'Date de l\'export': exportDate,
                 _lieuIndex: lieuIndex,
                 Lieu: lieu.name,
                 'Type d\'Audit': module.name,
