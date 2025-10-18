@@ -232,8 +232,8 @@ const App: React.FC = () => {
             `La catégorie "${categoryLabel}" a été exportée.`,
             category,
             {
-                title: `Ré-audit ${categoryLabel}`,
-                description: `Planifier le prochain cycle de contrôle pour tous les audits de la catégorie '${categoryLabel}'.`,
+                title: `Planification ré-audit : ${categoryLabel}`,
+                description: `Effectuer le prochain cycle de contrôle pour la catégorie '${categoryLabel}'.`,
                 months: 5
             }
         );
@@ -262,8 +262,8 @@ const App: React.FC = () => {
             `Les audits de type "${moduleLabel}" ont été exportés.`,
             undefined,
             {
-                title: `Ré-audit ${moduleLabel}`,
-                description: `Planifier le prochain cycle de contrôle pour tous les audits de type '${moduleLabel}'.`,
+                title: `Planification ré-audit : ${moduleLabel}`,
+                description: `Effectuer le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
                 months: 5
             }
         );
@@ -276,8 +276,8 @@ const App: React.FC = () => {
             "Toutes les données ont été exportées.",
             undefined,
             {
-                title: 'Ré-audit global Tisséo',
-                description: 'Planifier le prochain cycle de contrôle pour tous les modules : DAT, P+R, ECA, Adhésifs Sol PMR, Pictogrammes Cognitifs.',
+                title: 'Planification ré-audit global',
+                description: 'Planifier le prochain cycle de contrôle global pour tous les audits Tisséo (DAT, P+R, ECA, etc.).',
                 months: 5
             }
         );

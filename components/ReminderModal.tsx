@@ -52,11 +52,11 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         </div>
                         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                             <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
-                                Créer un rappel de calendrier
+                                Souhaitez-vous créer un rappel ?
                             </h3>
                             <div className="mt-2">
                                 <p className="text-sm text-gray-600 dark:text-slate-300">
-                                    Vous exportez les données de "<span className="font-semibold text-gray-800 dark:text-slate-100">{title}</span>" en CSV. Un rappel peut être généré pour le suivi.
+                                    En plus de l'export CSV pour <span className="font-semibold text-gray-800 dark:text-slate-100">"{title}"</span>, un rappel de calendrier peut être généré pour le suivi.
                                 </p>
                                 <div className="mt-4">
                                      <label htmlFor="reminder-date" className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
