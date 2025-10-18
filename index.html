@@ -38,15 +38,17 @@
         color-scheme: dark;
       }
       
-      /* Additionally, for Webkit browsers, explicitly style the calendar icon for better contrast. */
-      .dark input[type="date"]::-webkit-calendar-picker-indicator {
-        /* Force the icon to be white in dark mode using a robust filter combination */
-        filter: brightness(0) invert(1);
-      }
-
-      /* Add a pointer cursor to the calendar icon for better UX */
+      /* Style the calendar picker icon for Webkit browsers */
       input[type="date"]::-webkit-calendar-picker-indicator {
         cursor: pointer;
+        /* Apply a filter to color the icon in teal for light mode */
+        /* This filter is generated to approximate teal-600 (#0d9488) from black */
+        filter: invert(48%) sepia(21%) saturate(2222%) hue-rotate(128deg) brightness(96%) contrast(92%);
+      }
+
+      /* In dark mode, override the filter to make the icon white for better contrast */
+      .dark input[type="date"]::-webkit-calendar-picker-indicator {
+        filter: brightness(0) invert(1);
       }
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
