@@ -47,8 +47,8 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
             >
                 <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                     <div className="sm:flex sm:items-start">
-                        <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/30 sm:mx-0 sm:h-10 sm:w-10">
-                            <Calendar className="h-6 w-6 text-sky-600 dark:text-sky-400" aria-hidden="true" />
+                        <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-teal-100 dark:bg-teal-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                            <Calendar className="h-6 w-6 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                         </div>
                         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                             <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
@@ -67,7 +67,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                                         id="reminder-date"
                                         value={dateString}
                                         onChange={(e) => setDateString(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6"
+                                        className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6"
                                     />
                                 </div>
                             </div>
@@ -78,7 +78,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                     <button
                         type="button"
                         onClick={handleConfirm}
-                        className="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 sm:ml-3 sm:w-auto"
+                        className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
                     >
                         Générer & Exporter
                     </button>
@@ -92,7 +92,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                     <button
                         type="button"
                         onClick={onClose}
-                        className="mt-3 sm:mt-0 sm:mr-auto inline-flex w-full sm:w-auto justify-center rounded-md px-3 py-2 text-sm font-semibold text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        className="mt-3 sm:mt-0 sm:mr-auto inline-flex w-full sm:w-auto justify-center rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     >
                         Annuler
                     </button>
