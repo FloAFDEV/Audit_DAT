@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, DatabaseBackup, Euro, Car, Footprints, Upload, Download, Fence, ScanEye } from 'lucide-react';
+import { ChevronDown, DatabaseBackup, Upload, Download } from 'lucide-react';
 import { AuditCategory, AuditModuleType } from '../types';
-import { AUDIT_CATEGORIES } from '../data/config';
+import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 
 interface ActionsMenuProps {
@@ -13,14 +13,6 @@ interface ActionsMenuProps {
     onResetRequest: (category: AuditCategory | 'ALL') => void;
     isModalOpen: boolean;
 }
-
-const AUDIT_MODULE_CONFIG = [
-    { type: AuditModuleType.DAT, label: "Audits DAT", Icon: Euro },
-    { type: AuditModuleType.PR, label: "Audits P+R", Icon: Car },
-    { type: AuditModuleType.ECA, label: "Audits ECA (Valideurs)", Icon: Fence },
-    { type: AuditModuleType.PMR_FLOOR_ADHESIVE, label: "Adhésifs Sol PMR", Icon: Footprints },
-    { type: AuditModuleType.COGNITIVE_PICTOGRAMS, label: "Pictogrammes Cognitifs", Icon: ScanEye },
-];
 
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     onExportByCategory,
@@ -149,7 +141,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                         <div className="px-4 py-2">
                             <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wider">Exporter en CSV par Type d'Audit</p>
                         </div>
-                        {AUDIT_MODULE_CONFIG.map(({ type, label, Icon }) => (
+                        {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
                             <button
                                 key={`export-module-${type}`}
                                 onClick={() => handleExportModule(type)}
@@ -159,7 +151,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                                 <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-slate-600 rounded-md">
                                     <Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" />
                                 </div>
-                                <span>Exporter {label} (CSV)</span>
+                                <span>{label}</span>
                             </button>
                         ))}
 

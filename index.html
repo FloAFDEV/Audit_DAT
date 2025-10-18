@@ -32,6 +32,22 @@
         scrollbar-width: thin;
         scrollbar-color: #e5e7eb transparent; /* thumb track */
       }
+
+      /* Ensure native UI controls like date pickers use a dark theme when in dark mode. */
+      .dark {
+        color-scheme: dark;
+      }
+      
+      /* Additionally, for Webkit browsers, explicitly style the calendar icon for better contrast. */
+      .dark input[type="date"]::-webkit-calendar-picker-indicator {
+        /* Force the icon to be white in dark mode using a robust filter combination */
+        filter: brightness(0) invert(1);
+      }
+
+      /* Add a pointer cursor to the calendar icon for better UX */
+      input[type="date"]::-webkit-calendar-picker-indicator {
+        cursor: pointer;
+      }
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>

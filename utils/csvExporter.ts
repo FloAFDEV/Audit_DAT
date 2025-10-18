@@ -9,6 +9,27 @@ import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO
 import { PR_DATA } from '../data/pr_data';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 
+/**
+ * Converts a string into a URL-friendly slug.
+ * @param text The string to convert.
+ * @returns The slugified string.
+ */
+export const slugify = (text: string): string => {
+    if (!text) return '';
+    return text
+        .toString()
+        .toLowerCase()
+        .normalize('NFD') // split an accented letter in the base letter and the accent
+        .replace(/[\u0300-\u036f]/g, '') // remove all previously split accents
+        .replace(/[()]/g, '') // remove parentheses
+        .replace(/\s+/g, '-') // replace spaces with -
+        .replace(/[^\w-]+/g, '') // remove all non-word chars
+        .replace(/--+/g, '-') // replace multiple - with single -
+        .replace(/^-+/, '') // trim - from start of text
+        .replace(/-+$/, ''); // trim - from end of text
+};
+
+
 // Helper to create a download link for a file
 const downloadFile = (content: string, fileName: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });

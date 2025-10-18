@@ -3,24 +3,16 @@ import useAuditStore from '../store';
 import { AuditModuleType, AuditCategory, Lieu } from '../types';
 import { ModuleIcon } from './ModuleIcon';
 import { getLieuxForCategory } from '../data/builder';
+import { AUDIT_MODULES_CONFIG } from '../data/config';
 
-// A defined order for the filter buttons
-const AUDIT_TYPE_ORDER: AuditModuleType[] = [
-    AuditModuleType.DAT,
-    AuditModuleType.ECA,
-    AuditModuleType.PMR_FLOOR_ADHESIVE,
-    AuditModuleType.COGNITIVE_PICTOGRAMS,
-    AuditModuleType.PR,
-];
+// A defined order for the filter buttons, derived from the central config
+const AUDIT_TYPE_ORDER = AUDIT_MODULES_CONFIG.map(config => config.type);
 
-// Simple labels for the buttons
-const AUDIT_TYPE_LABELS: Record<AuditModuleType, string> = {
-    [AuditModuleType.DAT]: 'DAT',
-    [AuditModuleType.ECA]: 'Valideurs (ECA)',
-    [AuditModuleType.PR]: 'P+R',
-    [AuditModuleType.PMR_FLOOR_ADHESIVE]: 'PMR au Sol',
-    [AuditModuleType.COGNITIVE_PICTOGRAMS]: 'Picto. Cognitifs',
-};
+// Simple labels for the buttons, derived from the central config
+const AUDIT_TYPE_LABELS: Record<string, string> = AUDIT_MODULES_CONFIG.reduce((acc, config) => {
+    acc[config.type] = config.shortLabel;
+    return acc;
+}, {} as Record<string, string>);
 
 interface AuditFilterSelectorProps {
     lieux: Lieu[];

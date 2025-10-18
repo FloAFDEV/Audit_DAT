@@ -5,12 +5,12 @@ import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
 import { getLieuxForCategory } from './data/builder';
-import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder, generateAndDownloadIcsFile, calculateInitialReminderDate } from './utils/csvExporter';
+import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder, generateAndDownloadIcsFile, calculateInitialReminderDate, slugify } from './utils/csvExporter';
 import ConfirmationModal from './components/ConfirmationModal';
 import ReminderModal from './components/ReminderModal';
 import { Toaster } from 'react-hot-toast';
 import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
-import { AUDIT_CATEGORIES } from './data/config';
+import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
 import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from './components/ToastManager';
 
@@ -100,14 +100,6 @@ interface PendingExport {
     successMessage: string;
     category?: AuditCategory;
 }
-
-const AUDIT_TYPE_LABELS: Record<AuditModuleType, string> = {
-    [AuditModuleType.DAT]: "Audits DAT",
-    [AuditModuleType.PR]: "Audits P+R",
-    [AuditModuleType.ECA]: "Audits ECA (Valideurs)",
-    [AuditModuleType.PMR_FLOOR_ADHESIVE]: "Adhésifs Sol PMR",
-    [AuditModuleType.COGNITIVE_PICTOGRAMS]: "Pictogrammes Cognitifs",
-};
 
 const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -234,11 +226,14 @@ const App: React.FC = () => {
 
     const handleExportByCategory = (category: AuditCategory) => {
         const filteredLieux = getLieuxForCategory(store.lieux, category);
-        const categoryLabel = AUDIT_CATEGORIES.find(c => c.key === category)?.label || category;
+        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
+        const categoryLabel = categoryConfig?.label || category;
+
+        const fileNameBase = `export-${slugify(categoryLabel)}`;
     
         handleCsvExportFlow(
             filteredLieux,
-            `export-categorie-${category}`,
+            fileNameBase,
             `La catégorie "${categoryLabel}" a été exportée.`,
             category,
             {
@@ -257,22 +252,22 @@ const App: React.FC = () => {
             })
             .filter((lieu: Lieu) => lieu.modules.length > 0);
         
-        const moduleLabel = AUDIT_TYPE_LABELS[moduleType] || moduleType;
-
-        let reminderTitle = `Planifier le ré-audit : ${moduleLabel}`;
-        
+        const moduleConfig = AUDIT_MODULES_CONFIG.find(m => m.type === moduleType);
+        const moduleLabel = moduleConfig?.label || moduleType;
         let reminderMonths = 5;
         if (moduleType === AuditModuleType.COGNITIVE_PICTOGRAMS) {
             reminderMonths = 11;
         }
+
+        const fileNameBase = `export-${slugify(moduleLabel)}`;
     
         handleCsvExportFlow(
             filteredLieux,
-            `export-module-${moduleType}`,
+            fileNameBase,
             `Les audits de type "${moduleLabel}" ont été exportés.`,
             undefined,
             {
-                title: reminderTitle,
+                title: `Planifier le ré-audit des ${moduleLabel}`,
                 description: `Ceci est un rappel pour planifier le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
                 months: reminderMonths
             }
@@ -280,11 +275,11 @@ const App: React.FC = () => {
     };
 
     const handleExportAll = () => {
-        const allModuleTypesDescription = Object.values(AUDIT_TYPE_LABELS).map(label => `- ${label}`).join('\n');
+        const allModuleTypesDescription = AUDIT_MODULES_CONFIG.map(config => `- ${config.label}`).join('\n');
         
         handleCsvExportFlow(
             store.lieux,
-            'export-complet',
+            'export-reseau-complet',
             "Toutes les données ont été exportées.",
             undefined,
             {
@@ -607,7 +602,7 @@ const App: React.FC = () => {
                     onClose={handleCancelExport}
                     onConfirm={handleConfirmAndGenerateReminder}
                     onSkip={handleSkipReminderAndExport}
-                    title={reminderOptions.title}
+                    fileName={pendingExport.fileName}
                     initialDate={reminderOptions.initialDate}
                 />
             )}

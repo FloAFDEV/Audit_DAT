@@ -6,11 +6,11 @@ interface ReminderModalProps {
     onClose: () => void;
     onConfirm: (selectedDate: Date) => void;
     onSkip: () => void;
-    title: string;
+    fileName: string;
     initialDate: Date;
 }
 
-const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, title, initialDate }) => {
+const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, fileName, initialDate }) => {
     // State to hold the date value from the input, in YYYY-MM-DD format
     const [dateString, setDateString] = useState('');
 
@@ -52,24 +52,27 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         </div>
                         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                             <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
-                                Souhaitez-vous créer un rappel ?
+                                Ajouter un rappel à l'export
                             </h3>
-                            <div className="mt-2">
+                            <div className="mt-2 space-y-2">
                                 <p className="text-sm text-gray-600 dark:text-slate-300">
-                                    En plus de l'export CSV pour <span className="font-semibold text-gray-800 dark:text-slate-100">"{title}"</span>, un rappel de calendrier peut être généré pour le suivi.
+                                    Vous êtes sur le point d'exporter le fichier CSV <span className="font-semibold text-gray-800 dark:text-slate-100">"{fileName}"</span>.
                                 </p>
-                                <div className="mt-4">
-                                     <label htmlFor="reminder-date" className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                                        Date du rappel suggérée
-                                    </label>
-                                    <input
-                                        type="date"
-                                        id="reminder-date"
-                                        value={dateString}
-                                        onChange={(e) => setDateString(e.target.value)}
-                                        className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6"
-                                    />
-                                </div>
+                                <p className="text-sm text-gray-600 dark:text-slate-300">
+                                    Pour faciliter le suivi, souhaitez-vous également générer un rappel de calendrier ?
+                                </p>
+                            </div>
+                            <div className="mt-4">
+                                 <label htmlFor="reminder-date" className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
+                                    N'hésitez pas à modifier la date suggérée ci-dessous
+                                </label>
+                                <input
+                                    type="date"
+                                    id="reminder-date"
+                                    value={dateString}
+                                    onChange={(e) => setDateString(e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 sm:text-sm sm:leading-6"
+                                />
                             </div>
                         </div>
                     </div>
