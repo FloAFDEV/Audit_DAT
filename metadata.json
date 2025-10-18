@@ -1,5 +1,7 @@
 {
   "name": "AuditRef",
   "description": "Un portail d'applications pour auditer les équipements du réseau Tisséo, incluant les Distributeurs Automatiques de Titres (DAT) et les Parcs Relais (P+R).",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

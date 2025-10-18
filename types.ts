@@ -32,6 +32,7 @@ export enum FloorAdhesiveStatus {
     NotChecked = 'NotChecked',
     OK = 'OK',
     ToBeReplaced = 'ToBeReplaced',
+    ToPlan = 'ToPlan',
 }
 
 export enum EquipmentType {
@@ -127,6 +128,7 @@ export interface PMRFloorAdhesive {
     id: string;
     name: string;
     status: FloorAdhesiveStatus;
+    photo_base64?: string;
 }
 
 export interface PMRFloorAdhesiveData {

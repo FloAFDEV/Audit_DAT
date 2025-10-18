@@ -60,6 +60,7 @@ interface AppRouterProps {
 
     handlePmrFloorAdhesiveStatusChange: any;
     handlePmrFloorAdhesiveCommentChange: any;
+    handlePmrFloorAdhesivePhotoChange: any;
     handleResetPmrFloorAdhesiveRequest: any;
 
     handleCognitivePictogramStatusChange: any;
@@ -144,6 +145,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             module={selectedModule}
             onStatusChange={handlers.handlePmrFloorAdhesiveStatusChange}
             onCommentChange={handlers.handlePmrFloorAdhesiveCommentChange}
+            onPhotoChange={handlers.handlePmrFloorAdhesivePhotoChange}
             onReset={handlers.handleResetPmrFloorAdhesiveRequest}
             onBack={() => handlers.selectModule(null)}
         />

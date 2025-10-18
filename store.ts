@@ -81,6 +81,7 @@ interface AppState {
     handlePmrFloorAdhesiveStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => Promise<void>;
     handlePmrFloorAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetPmrFloorAdhesive: () => Promise<void>;
+    handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -537,8 +538,24 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             module.data.adhesives.forEach(adhesive => {
                 adhesive.status = FloorAdhesiveStatus.NotChecked;
+                delete adhesive.photo_base64;
             });
             module.data.comment = '';
+        });
+    },
+
+    handlePmrFloorAdhesivePhotoChange: async (adhesiveId, photo_base64) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
+            const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
+            if (adhesive) {
+                if (photo_base64) {
+                    adhesive.photo_base64 = photo_base64;
+                } else {
+                    delete adhesive.photo_base64;
+                }
+            }
         });
     },
 

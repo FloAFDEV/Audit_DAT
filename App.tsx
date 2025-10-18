@@ -5,13 +5,14 @@ import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
 import { getLieuxForCategory } from './data/builder';
-import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder } from './utils/csvExporter';
+import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder, generateAndDownloadIcsFile, calculateInitialReminderDate } from './utils/csvExporter';
 import ConfirmationModal from './components/ConfirmationModal';
+import ReminderModal from './components/ReminderModal';
 import { Toaster } from 'react-hot-toast';
-import { CheckCircle, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
 import { AUDIT_CATEGORIES } from './data/config';
 import { CategoryIcon } from './components/CategoryIcon';
-import { showPromiseToast, showSuccessToast, showErrorToast } from './components/ToastManager';
+import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from './components/ToastManager';
 
 // A simple loading spinner component
 const Loader: React.FC = () => (
@@ -73,11 +74,40 @@ const SuccessAnimation: React.FC = () => (
     </div>
 );
 
+const hasPhotos = (lieux: Lieu[]): boolean => {
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
+                const data = module.data as PMRFloorAdhesiveData;
+                if (data.adhesives.some(a => a.photo_base64)) {
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+};
+
+interface ReminderOptions {
+    title: string;
+    description: string;
+    initialDate: Date;
+}
+
+interface PendingExport {
+    lieux: Lieu[];
+    fileName: string;
+    successMessage: string;
+    category?: AuditCategory;
+}
 
 const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-    
+    const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
+    const [reminderOptions, setReminderOptions] = useState<ReminderOptions | null>(null);
+    const [pendingExport, setPendingExport] = useState<PendingExport | null>(null);
+
     // State selectors from Zustand store
     const store = useAuditStore();
 
@@ -155,12 +185,58 @@ const App: React.FC = () => {
         return <Login onLoginSuccess={store.login} />;
     }
     
+    const executeExport = (exportConfig: PendingExport) => {
+        const { lieux, fileName, successMessage, category } = exportConfig;
+        if (hasPhotos(lieux)) {
+            showInfoToast({
+                icon: <div className="h-full w-full rounded-full bg-sky-500 flex items-center justify-center"><Download className="h-6 w-6 text-white" /></div>,
+                title: 'Rappel pour les photos',
+                message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète.",
+            });
+        }
+        const sortedLieux = sortLieuxByPhysicalOrder(lieux);
+        exportLieuxToCsv(sortedLieux, fileName);
+        showExportSuccessToast(successMessage, category);
+    };
+
+    const handleCsvExportFlow = (
+        lieuxToExport: Lieu[],
+        baseFileName: string,
+        successMessage: string,
+        category: AuditCategory | undefined,
+        reminder: { title: string; description: string; months: number }
+    ) => {
+        setPendingExport({
+            lieux: lieuxToExport,
+            fileName: `${baseFileName}.csv`,
+            successMessage,
+            category,
+        });
+
+        setReminderOptions({
+            title: reminder.title,
+            description: reminder.description,
+            initialDate: calculateInitialReminderDate(reminder.months),
+        });
+        setIsReminderModalOpen(true);
+    };
+
+
     const handleExportByCategory = (category: AuditCategory) => {
         const filteredLieux = getLieuxForCategory(store.lieux, category);
-        const sortedLieux = sortLieuxByPhysicalOrder(filteredLieux);
-        exportLieuxToCsv(sortedLieux, `export-categorie-${category}.csv`);
         const categoryLabel = AUDIT_CATEGORIES.find(c => c.key === category)?.label || category;
-        showExportSuccessToast(`La catégorie "${categoryLabel}" a été exportée.`, category);
+    
+        handleCsvExportFlow(
+            filteredLieux,
+            `export-categorie-${category}`,
+            `La catégorie "${categoryLabel}" a été exportée.`,
+            category,
+            {
+                title: `Ré-audit ${categoryLabel}`,
+                description: `Planifier le prochain cycle de contrôle pour tous les audits de la catégorie '${categoryLabel}'.`,
+                months: 5
+            }
+        );
     };
     
     const handleExportByModuleType = (moduleType: AuditModuleType) => {
@@ -171,15 +247,40 @@ const App: React.FC = () => {
             })
             .filter((lieu: Lieu) => lieu.modules.length > 0);
         
-        const sortedLieux = sortLieuxByPhysicalOrder(filteredLieux);
-        exportLieuxToCsv(sortedLieux, `export-module-${moduleType}.csv`);
-        showExportSuccessToast(`Les audits de type "${moduleType}" ont été exportés.`);
+        const AUDIT_TYPE_LABELS: Record<string, string> = {
+            [AuditModuleType.DAT]: "Audits DAT",
+            [AuditModuleType.PR]: "Audits P+R",
+            [AuditModuleType.ECA]: "Audits ECA (Valideurs)",
+            [AuditModuleType.PMR_FLOOR_ADHESIVE]: "Adhésifs Sol PMR",
+            [AuditModuleType.COGNITIVE_PICTOGRAMS]: "Pictogrammes Cognitifs",
+        };
+        const moduleLabel = AUDIT_TYPE_LABELS[moduleType] || moduleType;
+    
+        handleCsvExportFlow(
+            filteredLieux,
+            `export-module-${moduleType}`,
+            `Les audits de type "${moduleLabel}" ont été exportés.`,
+            undefined,
+            {
+                title: `Ré-audit ${moduleLabel}`,
+                description: `Planifier le prochain cycle de contrôle pour tous les audits de type '${moduleLabel}'.`,
+                months: 5
+            }
+        );
     };
 
     const handleExportAll = () => {
-        const sortedLieux = sortLieuxByPhysicalOrder(store.lieux);
-        exportLieuxToCsv(sortedLieux, 'export-complet.csv');
-        showExportSuccessToast("Toutes les données ont été exportées.");
+        handleCsvExportFlow(
+            store.lieux,
+            'export-complet',
+            "Toutes les données ont été exportées.",
+            undefined,
+            {
+                title: 'Ré-audit global Tisséo',
+                description: 'Planifier le prochain cycle de contrôle pour tous les modules : DAT, P+R, ECA, Adhésifs Sol PMR, Pictogrammes Cognitifs.',
+                months: 5
+            }
+        );
     };
 
     const handleExportJson = () => {
@@ -394,6 +495,35 @@ const App: React.FC = () => {
             triggerSuccessAnimation
         );
     };
+    
+    const cleanupAfterModal = () => {
+        setIsReminderModalOpen(false);
+        setReminderOptions(null);
+        setPendingExport(null);
+    };
+
+    const handleConfirmAndGenerateReminder = (selectedDate: Date) => {
+        if (pendingExport && reminderOptions) {
+            generateAndDownloadIcsFile({
+                title: reminderOptions.title,
+                description: reminderOptions.description,
+                reminderDate: selectedDate
+            });
+            executeExport(pendingExport);
+        }
+        cleanupAfterModal();
+    };
+
+    const handleSkipReminderAndExport = () => {
+        if (pendingExport) {
+            executeExport(pendingExport);
+        }
+        cleanupAfterModal();
+    };
+    
+    const handleCancelExport = () => {
+        cleanupAfterModal();
+    };
 
     return (
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
@@ -459,6 +589,16 @@ const App: React.FC = () => {
                 title="Confirmation de déconnexion"
                 message="Êtes-vous sûr de vouloir vous déconnecter ? Vous serez redirigé vers l'écran de connexion."
             />
+            {reminderOptions && pendingExport && (
+                 <ReminderModal
+                    isOpen={isReminderModalOpen}
+                    onClose={handleCancelExport}
+                    onConfirm={handleConfirmAndGenerateReminder}
+                    onSkip={handleSkipReminderAndExport}
+                    title={reminderOptions.title}
+                    initialDate={reminderOptions.initialDate}
+                />
+            )}
         </main>
     );
 };

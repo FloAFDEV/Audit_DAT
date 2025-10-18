@@ -1,6 +1,8 @@
+// utils/csvExporter.ts
+
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA
+    AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA, PMRFloorAdhesive
 } from '../types';
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, ECA_ADHESIVES_PMR, ECA_ADHESIVES_STD, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
@@ -41,6 +43,68 @@ export const validateImportedData = (data: any): data is Lieu[] => {
     // Basic structural check
     return 'id' in firstLieu && 'name' in firstLieu && 'modules' in firstLieu && Array.isArray(firstLieu.modules);
 };
+
+// =================================================================
+// SECTION: CALENDAR (.ics) EXPORT
+// =================================================================
+
+/**
+ * Calcule la date de rappel initiale en ajoutant des mois et en s'assurant qu'elle ne tombe pas un vendredi, samedi ou dimanche.
+ * @param monthsToAdd Le nombre de mois à ajouter à la date actuelle.
+ * @returns Un objet Date représentant la date de rappel suggérée.
+ */
+export const calculateInitialReminderDate = (monthsToAdd: number): Date => {
+    const date = new Date();
+    date.setMonth(date.getMonth() + monthsToAdd);
+
+    const day = date.getDay(); // Sunday = 0, Monday = 1, ..., Saturday = 6
+
+    if (day === 5) { // Friday
+        date.setDate(date.getDate() + 3); // Move to Monday
+    } else if (day === 6) { // Saturday
+        date.setDate(date.getDate() + 2); // Move to Monday
+    } else if (day === 0) { // Sunday
+        date.setDate(date.getDate() + 1); // Move to Monday
+    }
+
+    return date;
+};
+
+interface IcsOptions {
+    title: string;
+    description: string;
+    reminderDate: Date;
+}
+
+export const generateAndDownloadIcsFile = (options: IcsOptions) => {
+    const { title, description, reminderDate } = options;
+    
+    const formatDate = (date: Date) => {
+        return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+    };
+
+    const dateString = reminderDate.toISOString().substring(0, 10).replace(/-/g, '');
+    
+    // ICS format requires newlines to be escaped as '\\n'
+    const escapedDescription = description.replace(/\n/g, '\\n');
+
+    const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//AuditRef//NONSGML v1.0//EN',
+        'BEGIN:VEVENT',
+        `UID:${new Date().getTime()}@auditref.app`,
+        `DTSTAMP:${formatDate(new Date())}`,
+        `DTSTART;VALUE=DATE:${dateString}`,
+        `SUMMARY:${title}`,
+        `DESCRIPTION:${escapedDescription}`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\r\n');
+
+    downloadFile(icsContent, 'rappel_suivi_audits.ics', 'text/calendar');
+};
+
 
 // =================================================================
 // SECTION: CSV EXPORT
@@ -92,6 +156,7 @@ interface CsvRow {
     'ID Adhésif': string;
     'Description Adhésif': string;
     'Localisation Adhésif': string;
+    'Photo Jointe': string;
     'Commentaire': string;
     _lieuIndex?: number; // Temporary property for sorting
 }
@@ -129,22 +194,29 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
             const line = module.line || '';
             const mode = getModeFromLine(line);
 
+            const baseRow = {
+                _lieuIndex: lieuIndex,
+                Lieu: lieu.name,
+                'Type d\'Audit': module.name,
+                Ligne: line,
+                Mode: mode,
+                'Station/P+R': '',
+                'Direction/Équipement/Accès': '',
+                'Élément': '',
+                'Statut': '',
+                'Repère': '',
+                'ID Adhésif': '',
+                'Description Adhésif': '',
+                'Localisation Adhésif': '',
+                'Photo Jointe': '',
+                'Commentaire': '',
+            };
+
             if (module.isFuture) {
                  rows.push({
-                    _lieuIndex: lieuIndex,
-                    Lieu: lieu.name,
-                    'Type d\'Audit': module.name,
-                    Ligne: line,
-                    Mode: mode,
-                    'Station/P+R': '',
-                    'Direction/Équipement/Accès': '',
+                    ...baseRow,
                     'Élément': module.name,
                     'Statut': 'N/A',
-                    'Repère': '',
-                    'ID Adhésif': '',
-                    'Description Adhésif': '',
-                    'Localisation Adhésif': '',
-                    'Commentaire': '',
                 });
                 continue;
             }
@@ -160,11 +232,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                                     const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                                     const { description, location } = getAdhesiveDetails(adhesiveId, module.type, null);
                                     rows.push({
-                                        _lieuIndex: lieuIndex,
-                                        Lieu: lieu.name,
-                                        'Type d\'Audit': module.name,
-                                        Ligne: line,
-                                        Mode: mode,
+                                        ...baseRow,
                                         'Station/P+R': station.name,
                                         'Direction/Équipement/Accès': direction.name,
                                         'Élément': dat.name,
@@ -190,11 +258,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                              const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, equipment.type);
                              rows.push({
-                                _lieuIndex: lieuIndex,
-                                Lieu: lieu.name,
-                                'Type d\'Audit': module.name,
-                                Ligne: line,
-                                Mode: mode,
+                                ...baseRow,
                                 'Station/P+R': data.name,
                                 'Direction/Équipement/Accès': equipment.name,
                                 'Élément': equipment.type,
@@ -214,19 +278,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     for (const eca of data.ecas) {
                         if (eca.isNotApplicable) {
                              rows.push({
-                                _lieuIndex: lieuIndex,
-                                Lieu: lieu.name,
-                                'Type d\'Audit': module.name,
-                                Ligne: line,
-                                Mode: mode,
+                                ...baseRow,
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
                                 'Statut': 'Non applicable',
-                                'Repère': '',
-                                'ID Adhésif': '',
-                                'Description Adhésif': '',
-                                'Localisation Adhésif': '',
                                 'Commentaire': eca.comment,
                             });
                             continue;
@@ -237,11 +293,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                              const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                              const { description, location } = getAdhesiveDetails(adhesiveId, module.type, eca.type);
                              rows.push({
-                                _lieuIndex: lieuIndex,
-                                Lieu: lieu.name,
-                                'Type d\'Audit': module.name,
-                                Ligne: line,
-                                Mode: mode,
+                                ...baseRow,
                                 'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': eca.accessPoint,
                                 'Élément': eca.name,
@@ -260,19 +312,14 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                     const data = module.data as PMRFloorAdhesiveData;
                     for (const adhesive of data.adhesives) {
                         rows.push({
-                            _lieuIndex: lieuIndex,
-                            Lieu: lieu.name,
-                            'Type d\'Audit': module.name,
-                            Ligne: line,
-                            Mode: mode,
+                            ...baseRow,
                             'Station/P+R': data.stationName,
-                            'Direction/Équipement/Accès': '',
                             'Élément': adhesive.name,
                             'Statut': adhesive.status,
-                            'Repère': '',
                             'ID Adhésif': adhesive.id,
                             'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
                             'Localisation Adhésif': 'Au sol devant le passage PMR',
+                            'Photo Jointe': adhesive.photo_base64 ? 'Oui' : 'Non',
                             'Commentaire': data.comment,
                         });
                     }
@@ -283,16 +330,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
                      for (const pictogram of data.pictograms) {
                         const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
                         rows.push({
-                            _lieuIndex: lieuIndex,
-                            Lieu: lieu.name,
-                            'Type d\'Audit': module.name,
-                            Ligne: line,
-                            Mode: mode,
+                            ...baseRow,
                             'Station/P+R': data.stationName,
                             'Direction/Équipement/Accès': pictogram.accessPointName,
                             'Élément': 'Pictogramme cognitif (ou totem)',
                             'Statut': pictogram.status,
-                            'Repère': '',
                             'ID Adhésif': pictogram.id,
                             'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
                             'Localisation Adhésif': 'Au sol en amont des valideurs',
