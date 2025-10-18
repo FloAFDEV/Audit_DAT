@@ -156,30 +156,36 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
+            // Step 1: Handle Authentication and Theme from localStorage first.
+            // This is synchronous and less likely to fail. It ensures the user's
+            // auth state is determined before heavy async operations.
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
             const isAuthenticated = storedAuth === 'true';
 
-            const count = await db.lieux.count();
-            if (count > 0) {
-                const data = await db.lieux.toArray();
-                set({ lieux: data, isAuthenticated, isLoading: false });
-            } else {
-                const initialData = await generateInitialLieuxDataAsync();
-                await db.lieux.bulkPut(initialData);
-                set({ lieux: initialData, isAuthenticated, isLoading: false });
-            }
-            
-            // Initialize theme
             const storedTheme = localStorage.getItem('tisseo-audit-theme') as 'light' | 'dark' | null;
             const initialTheme = storedTheme || 'light';
             applyTheme(initialTheme);
-            set({ theme: initialTheme });
+            
+            set({ isAuthenticated, theme: initialTheme });
 
+            // Step 2: Load the main application data from IndexedDB.
+            const count = await db.lieux.count();
+            if (count > 0) {
+                const data = await db.lieux.toArray();
+                set({ lieux: data });
+            } else {
+                const initialData = await generateInitialLieuxDataAsync();
+                await db.lieux.bulkPut(initialData);
+                set({ lieux: initialData });
+            }
         } catch (error) {
             console.error("Échec de l'initialisation de l'application :", error);
+            // Propagate a user-friendly error to the UI. The user will remain on the
+            // app screen (if authenticated) but will see an error toast.
+            throw new Error("Impossible de charger les données. Vérifiez les permissions de stockage, puis rafraîchissez la page.");
+        } finally {
+            // Step 3: Always set isLoading to false at the end, whether it succeeds or fails.
             set({ isLoading: false });
-            // Propagate a user-friendly error to the UI
-            throw new Error("Impossible de charger les données. Vérifiez votre connexion ou les permissions de stockage, puis rafraîchissez la page.");
         }
     },
 
@@ -279,6 +285,7 @@ const useAuditStore = create<AppState>((set, get) => {
         switch (level) {
             case 'home':
                 get().selectLieu(null);
+                get().setActiveFilter('ALL');
                 break;
             case 'lieu':
                 get().selectModule(null);
