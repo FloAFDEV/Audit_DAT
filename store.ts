@@ -176,8 +176,10 @@ const useAuditStore = create<AppState>((set, get) => {
             set({ theme: initialTheme });
 
         } catch (error) {
-            console.error("Failed to initialize the app:", error);
+            console.error("Échec de l'initialisation de l'application :", error);
             set({ isLoading: false });
+            // Propagate a user-friendly error to the UI
+            throw new Error("Impossible de charger les données. Vérifiez votre connexion ou les permissions de stockage, puis rafraîchissez la page.");
         }
     },
 
@@ -688,7 +690,18 @@ const useAuditStore = create<AppState>((set, get) => {
             }
             
             await db.lieux.bulkPut(updatedLieux);
-            set({ lieux: updatedLieux, selectedLieuId: null, selectedModuleId: null });
+            set({
+                lieux: updatedLieux,
+                activeFilter: 'ALL',
+                activeAuditFilters: [],
+                selectedLieuId: null,
+                selectedModuleId: null,
+                selectedStationId: null,
+                selectedDirectionId: null,
+                selectedDatId: null,
+                selectedEquipmentId: null,
+                selectedEcaId: null,
+            });
 
         } catch (error) {
             console.error(`Failed to reset category ${category}:`, error);
@@ -703,6 +716,8 @@ const useAuditStore = create<AppState>((set, get) => {
             await db.lieux.bulkPut(initialData);
             set({
                 lieux: initialData,
+                activeFilter: 'ALL',
+                activeAuditFilters: [],
                 selectedLieuId: null,
                 selectedModuleId: null,
                 selectedStationId: null,
@@ -722,12 +737,17 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     handleImportJsonData: async (jsonString: string) => {
         try {
-            const rawData = JSON.parse(jsonString);
-            // Check for new format { exportDate, data } or old format [Lieu]
+            let rawData;
+            try {
+                rawData = JSON.parse(jsonString);
+            } catch (e) {
+                throw new Error("Format de fichier invalide. Assurez-vous que le fichier est un JSON bien formé.");
+            }
+            
             const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
 
             if (!validateImportedData(dataToValidate)) {
-                throw new Error("Le fichier JSON n'est pas valide ou ne correspond pas au format attendu.");
+                throw new Error("Données invalides. Le contenu du fichier ne correspond pas à la structure attendue.");
             }
             
             await db.lieux.clear();
@@ -743,12 +763,9 @@ const useAuditStore = create<AppState>((set, get) => {
                 selectedEcaId: null,
             });
         } catch (error) {
-            console.error("Failed to import data:", error);
-            // Re-throw the error to be caught by the UI layer (for toasts)
-            if (error instanceof Error) {
-                 throw new Error(`Échec de l'importation : ${error.message}`);
-            }
-            throw new Error("Une erreur inconnue est survenue lors de l'importation.");
+            console.error("Échec de l'importation :", error);
+            // Re-throw the error so it can be displayed in the promise toast
+            throw error;
         }
     },
 }});

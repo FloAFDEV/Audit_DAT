@@ -113,13 +113,19 @@ const App: React.FC = () => {
 
     // Initialize data on app load
     useEffect(() => {
-      console.log(
+        console.log(
             "%cAuditRef %c- Propriété de Florent Perez.",
             "color: #6366F1; font-weight: bold; font-size: 1.2em;",
             "color: initial; font-weight: normal; font-size: 1em;"
         );
         console.log("Contact: florent.perez@tisseo.fr ou 72 76");
-        store.init();
+        store.init().catch(error => {
+            showErrorToast({
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
+                title: "Erreur de chargement",
+                message: error.message,
+            });
+        });
     }, [store.init]);
     
     // --- Data selection logic using useMemo for performance ---
@@ -301,7 +307,7 @@ const App: React.FC = () => {
             triggerSuccessAnimation();
         } else {
             showErrorToast({
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: 'Erreur',
                 message: "Échec de l'exportation JSON.",
             });
@@ -324,7 +330,7 @@ const App: React.FC = () => {
                 message: "Les données ont été chargées.",
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur d'importation",
                 message: "Le fichier est invalide ou corrompu.", // Generic message, specific one comes from promise rejection
             },
@@ -349,7 +355,7 @@ const App: React.FC = () => {
                 message: `La catégorie "${categoryConfig.label}" a été réinitialisée.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -373,7 +379,7 @@ const App: React.FC = () => {
                 message: "Toutes les données ont été réinitialisées.",
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -397,7 +403,7 @@ const App: React.FC = () => {
                 message: `L'audit pour ${selectedDat?.name} a été réinitialisé.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -421,7 +427,7 @@ const App: React.FC = () => {
                 message: `L'audit pour ${selectedEquipment?.name} a été réinitialisé.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -445,7 +451,7 @@ const App: React.FC = () => {
                 message: `L'audit pour ${selectedEca?.name} a été réinitialisé.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -470,7 +476,7 @@ const App: React.FC = () => {
                 message: `Les adhésifs Sol PMR pour ${stationName} ont été réinitialisés.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
@@ -495,7 +501,7 @@ const App: React.FC = () => {
                 message: `Les pictogrammes pour ${stationName} ont été réinitialisés.`,
             },
             {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>,
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
                 title: "Erreur",
                 message: "La réinitialisation a échoué.",
             },
