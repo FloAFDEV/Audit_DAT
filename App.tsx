@@ -598,14 +598,14 @@ const App: React.FC = () => {
             });
             executeExport(pendingExport);
         }
-        cleanupAfterModal();
+        setTimeout(cleanupAfterModal, 100);
     };
 
     const handleSkipReminderAndExport = () => {
         if (pendingExport) {
             executeExport(pendingExport);
         }
-        cleanupAfterModal();
+        setTimeout(cleanupAfterModal, 100);
     };
     
     const handleCancelExport = () => {

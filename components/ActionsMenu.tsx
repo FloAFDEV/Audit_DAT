@@ -104,7 +104,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         </>
     );
 
-    const isViewFiltered = activeFilter !== 'ALL' || activeAuditFilters.length > 0;
+    const isViewFiltered = activeFilter !== 'ALL' && activeAuditFilters.length > 0;
     const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
     const showAuditFilterIcons = activeAuditFilters.length > 0 && availableAuditTypes.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
 
@@ -138,7 +138,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                                     className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
                                     role="menuitem"
                                 >
-                                    <span className="flex-1 min-w-0 truncate font-semibold">Exporter la sélection en csv</span>
+                                    <span className="flex-1 min-w-0 truncate">Exporter la sélection en csv</span>
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
                                         <CategoryIcon categoryConfig={categoryConfig} size="sm" />
                                         {showAuditFilterIcons && activeAuditFilters.map(type => {
