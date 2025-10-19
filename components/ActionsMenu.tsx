@@ -3,25 +3,34 @@ import { ChevronDown, DatabaseBackup, Upload, Download } from 'lucide-react';
 import { AuditCategory, AuditModuleType } from '../types';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
+import { ModuleIcon } from './ModuleIcon';
 
 interface ActionsMenuProps {
     onExportByCategory: (category: AuditCategory) => void;
     onExportByModuleType: (moduleType: AuditModuleType) => void;
     onExportAll: () => void;
+    onExportCurrentView: () => void;
     onExportJson: () => void;
     onImportJson: () => void;
     onResetRequest: (category: AuditCategory | 'ALL') => void;
     isModalOpen: boolean;
+    activeFilter: AuditCategory | 'ALL';
+    activeAuditFilters: AuditModuleType[];
+    availableAuditTypes: AuditModuleType[];
 }
 
 export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     onExportByCategory,
     onExportByModuleType,
     onExportAll,
+    onExportCurrentView,
     onExportJson,
     onImportJson,
     onResetRequest,
     isModalOpen,
+    activeFilter,
+    activeAuditFilters,
+    availableAuditTypes
 }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
@@ -95,6 +104,11 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         </>
     );
 
+    const isViewFiltered = activeFilter !== 'ALL' || activeAuditFilters.length > 0;
+    const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
+    const showAuditFilterIcons = activeAuditFilters.length > 0 && availableAuditTypes.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
+
+
     return (
         <div className="relative" ref={menuRef}>
             <button
@@ -114,8 +128,35 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                     aria-orientation="vertical"
                 >
                     <div className="py-1" role="none">
+                        {isViewFiltered && (
+                            <>
+                                <div className="px-4 py-2">
+                                    <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Export Personnalisé</p>
+                                </div>
+                                <button
+                                    onClick={() => { onExportCurrentView(); setIsOpen(false); }}
+                                    className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                    role="menuitem"
+                                >
+                                    <span className="flex-1 min-w-0 truncate font-semibold">Exporter la sélection en csv</span>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                        <CategoryIcon categoryConfig={categoryConfig} size="sm" />
+                                        {showAuditFilterIcons && activeAuditFilters.map(type => {
+                                            const config = AUDIT_MODULES_CONFIG.find(c => c.type === type);
+                                            return config ? (
+                                                <div key={type} className="flex items-center justify-center w-5 h-5 bg-slate-200 dark:bg-slate-600 rounded-md" title={config.label}>
+                                                    <ModuleIcon type={type} className="w-3 h-3 text-gray-600 dark:text-slate-300" />
+                                                </div>
+                                            ) : null;
+                                        })}
+                                    </div>
+                                </button>
+                                <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
+                            </>
+                        )}
+
                         <div className="px-4 py-2">
-                            <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wider">Exporter en CSV par Ligne / Catégorie</p>
+                            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Ligne / Catégorie</p>
                         </div>
                         <button
                             onClick={() => handleExport('ALL')}
@@ -139,7 +180,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                         
                         <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
                         <div className="px-4 py-2">
-                            <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wider">Exporter en CSV par Type d'Audit</p>
+                            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Type d'Audit</p>
                         </div>
                         {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
                             <button
@@ -157,7 +198,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
 
                         <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
                         <div className="px-4 py-2">
-                            <p className="text-xs font-semibold text-gray-400 dark:text-slate-300 uppercase tracking-wider">Synchronisation JSON</p>
+                            <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Synchronisation JSON</p>
                         </div>
                         <button
                             onClick={handleExportJsonAction}
@@ -201,7 +242,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                         {/* --- Desktop Always-Visible Danger Zone --- */}
                         <div className="hidden sm:block">
                             <div className="px-4 py-2">
-                                <p className="text-xs font-semibold text-red-400 uppercase tracking-wider">Actions irréversibles</p>
+                                <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Actions irréversibles</p>
                             </div>
                             {DangerZoneButtons}
                         </div>

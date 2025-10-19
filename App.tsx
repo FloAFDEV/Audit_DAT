@@ -305,6 +305,71 @@ const App: React.FC = () => {
         );
     };
 
+    const handleExportCurrentView = () => {
+        const { lieux, activeFilter, activeAuditFilters } = store;
+
+        if (activeFilter === 'ALL' && activeAuditFilters.length === 0) {
+            handleExportAll();
+            return;
+        }
+
+        let lieuxToExport = [...lieux];
+        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
+
+        if (activeFilter !== 'ALL') {
+            lieuxToExport = getLieuxForCategory(lieuxToExport, activeFilter);
+        }
+
+        if (activeAuditFilters.length > 0) {
+            lieuxToExport = lieuxToExport
+                .map(lieu => {
+                    const newLieu = JSON.parse(JSON.stringify(lieu));
+                    newLieu.modules = newLieu.modules.filter(module => activeAuditFilters.includes(module.type));
+                    return newLieu;
+                })
+                .filter(lieu => lieu.modules.length > 0);
+        }
+
+        let categoryLabelForFileName = activeFilter === 'ALL' ? 'reseau' : (categoryConfig?.label || activeFilter);
+        let successMessageLabel = activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`;
+
+        const auditLabelsForFileName = activeAuditFilters
+            .map(type => AUDIT_MODULES_CONFIG.find(c => c.type === type)?.shortLabel || type)
+            .join('-');
+        
+        const auditLabelsForMessage = activeAuditFilters
+            .map(type => AUDIT_MODULES_CONFIG.find(c => c.type === type)?.shortLabel || type)
+            .join(', ');
+
+        let fileNameBase = `export-${slugify(categoryLabelForFileName)}`;
+        if (auditLabelsForFileName) {
+            fileNameBase += `-${slugify(auditLabelsForFileName)}`;
+        }
+        
+        let successMessage = `${successMessageLabel} a été exportée.`;
+        if (auditLabelsForMessage) {
+            successMessage = `${successMessageLabel} (filtre: ${auditLabelsForMessage}) a été exportée.`;
+        }
+        
+        let reminderTitle = `Rappel d'audit : ${categoryConfig?.label || 'Vue personnalisée'}`;
+        let reminderDescription = `Ceci est un rappel pour planifier le prochain cycle de contrôle pour la vue que vous venez d'exporter.`;
+        if (auditLabelsForMessage) {
+            reminderDescription += `\n\nFiltres : ${auditLabelsForMessage}`;
+        }
+
+        handleCsvExportFlow(
+            lieuxToExport,
+            fileNameBase,
+            successMessage,
+            activeFilter === 'ALL' ? undefined : activeFilter,
+            {
+                title: reminderTitle,
+                description: reminderDescription,
+                months: 5
+            }
+        );
+    };
+
     const handleExportJson = () => {
         const { success } = exportLieuxToJson(store.lieux);
         if (success) {
@@ -585,6 +650,7 @@ const App: React.FC = () => {
                     onExportByCategory={handleExportByCategory}
                     onExportByModuleType={handleExportByModuleType}
                     onExportAll={handleExportAll}
+                    onExportCurrentView={handleExportCurrentView}
                     onExportJson={handleExportJson}
                     onImportJson={handleImportJson}
                     onResetCategory={handleResetCategoryRequest}

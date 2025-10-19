@@ -1,12 +1,8 @@
 import React from 'react';
 import useAuditStore from '../store';
-import { AuditModuleType, AuditCategory, Lieu } from '../types';
+import { AuditModuleType } from '../types';
 import { ModuleIcon } from './ModuleIcon';
-import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
-
-// A defined order for the filter buttons, derived from the central config
-const AUDIT_TYPE_ORDER = AUDIT_MODULES_CONFIG.map(config => config.type);
 
 // Simple labels for the buttons, derived from the central config
 const AUDIT_TYPE_LABELS: Record<string, string> = AUDIT_MODULES_CONFIG.reduce((acc, config) => {
@@ -15,26 +11,11 @@ const AUDIT_TYPE_LABELS: Record<string, string> = AUDIT_MODULES_CONFIG.reduce((a
 }, {} as Record<string, string>);
 
 interface AuditFilterSelectorProps {
-    lieux: Lieu[];
-    activeCategory: AuditCategory;
+    availableAuditTypes: AuditModuleType[];
 }
 
-export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ lieux, activeCategory }) => {
+export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availableAuditTypes }) => {
     const { activeAuditFilters, setActiveAuditFilters } = useAuditStore();
-
-    const availableAuditTypes = React.useMemo(() => {
-        const lieuxForCategory = getLieuxForCategory(lieux, activeCategory);
-        const types = new Set<AuditModuleType>();
-        for (const lieu of lieuxForCategory) {
-            for (const module of lieu.modules) {
-                if (!module.isFuture) { // Only include active audits
-                    types.add(module.type);
-                }
-            }
-        }
-        // Sort the found types based on our predefined order
-        return AUDIT_TYPE_ORDER.filter(type => types.has(type));
-    }, [lieux, activeCategory]);
 
     const handleToggleFilter = (type: AuditModuleType) => {
         const newFilters = activeAuditFilters.includes(type)

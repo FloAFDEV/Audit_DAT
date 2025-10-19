@@ -3,7 +3,7 @@ import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData, Pr
 import { LieuBadges } from './Icons';
 import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
 import { getLieuxForCategory } from '../data/builder';
-import { AUDIT_CATEGORIES } from '../data/config';
+import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import ConfirmationModal from './ConfirmationModal';
@@ -23,6 +23,7 @@ interface LieuSelectorProps {
   onExportByCategory: (category: AuditCategory) => void;
   onExportByModuleType: (moduleType: AuditModuleType) => void;
   onExportAll: () => void;
+  onExportCurrentView: () => void;
   onExportJson: () => void;
   onImportJson: (fileContent: string) => void;
   onResetCategory: (category: AuditCategory) => void;
@@ -106,8 +107,9 @@ const ProgressBadge: React.FC<{ progress: number; isActive: boolean }> = ({ prog
     );
 };
 
+const AUDIT_TYPE_ORDER = AUDIT_MODULES_CONFIG.map(config => config.type);
 
-const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, activeFilter, onFilterChange, onExportByCategory, onExportByModuleType, onExportAll, onExportJson, onImportJson, onResetCategory, onResetAll, onRequestLogout }) => {
+const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, activeFilter, onFilterChange, onExportByCategory, onExportByModuleType, onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetAll, onRequestLogout }) => {
     const { activeAuditFilters } = useAuditStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOrderReversed, setIsOrderReversed] = useState(false);
@@ -159,6 +161,21 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         };
     }, []);
     
+    const availableAuditTypes = useMemo(() => {
+        if (activeFilter === 'ALL') return []; // No filters for "Tout le réseau" view
+        const lieuxForCategory = getLieuxForCategory(lieux, activeFilter);
+        const types = new Set<AuditModuleType>();
+        for (const lieu of lieuxForCategory) {
+            for (const module of lieu.modules) {
+                if (!module.isFuture) { // Only include active audits
+                    types.add(module.type);
+                }
+            }
+        }
+        // Sort the found types based on our predefined order
+        return AUDIT_TYPE_ORDER.filter(type => types.has(type));
+    }, [lieux, activeFilter]);
+
     // Main display list: respects filters and physical/line order or alphabetical order
     const orderedLieuxForDisplay = useMemo(() => {
         let sortedLieux: Lieu[];
@@ -482,7 +499,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
             </div>
 
             {activeFilter !== 'ALL' && (
-                <AuditFilterSelector lieux={lieux} activeCategory={activeFilter} />
+                <AuditFilterSelector availableAuditTypes={availableAuditTypes} />
             )}
             
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
@@ -544,10 +561,14 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                         onExportByCategory={onExportByCategory}
                         onExportByModuleType={onExportByModuleType}
                         onExportAll={onExportAll}
+                        onExportCurrentView={onExportCurrentView}
                         onExportJson={onExportJson}
                         onImportJson={handleImportClick}
                         onResetRequest={handleResetRequest}
                         isModalOpen={!!resetTarget || !!importFileContent}
+                        activeFilter={activeFilter}
+                        activeAuditFilters={activeAuditFilters}
+                        availableAuditTypes={availableAuditTypes}
                     />
                 </div>
             </div>

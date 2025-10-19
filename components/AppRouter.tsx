@@ -75,6 +75,7 @@ interface AppRouterProps {
     onExportByCategory: any;
     onExportByModuleType: any;
     onExportAll: any;
+    onExportCurrentView: any;
     onExportJson: any;
     onImportJson: any;
     onResetCategory: any;
@@ -227,6 +228,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         onExportByCategory={handlers.onExportByCategory}
         onExportByModuleType={handlers.onExportByModuleType}
         onExportAll={handlers.onExportAll}
+        onExportCurrentView={handlers.onExportCurrentView}
         onExportJson={handlers.onExportJson}
         onImportJson={handlers.onImportJson}
         onResetCategory={handlers.onResetCategory}
