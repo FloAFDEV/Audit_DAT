@@ -189,234 +189,253 @@ interface CsvRow {
     _lieuIndex?: number; // Temporary property for sorting
 }
 
+export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: boolean; error?: string } => {
+    try {
+        const rows: CsvRow[] = [];
+        const exportDate = new Date().toLocaleDateString('fr-FR');
+        
+        for (const [lieuIndex, lieu] of lieux.entries()) {
+            for (const module of lieu.modules) {
+                const line = module.line || '';
+                const mode = getModeFromLine(line);
 
-const getAdhesiveDetails = (id: string, moduleType: AuditModuleType, subType: any) => {
-    let allAdhesives: any[] = [];
-    switch (moduleType) {
-        case AuditModuleType.DAT: allAdhesives = ADHESIVES; break;
-        case AuditModuleType.PR: allAdhesives = [...PR_ADHESIVES_BE, ...PR_ADHESIVES_BS, ...PR_ADHESIVES_CA]; break;
-        case AuditModuleType.ECA: allAdhesives = [...ECA_ADHESIVES_STD, ...ECA_ADHESIVES_PMR]; break;
-    }
-    const adhesive = allAdhesives.find(a => a.id === id);
-    if (!adhesive) return { description: '', location: '' };
+                const baseRow: CsvRow = {
+                    'Date de l\'export': exportDate,
+                    _lieuIndex: lieuIndex,
+                    Lieu: lieu.name,
+                    'Type d\'Audit': module.name,
+                    Ligne: line,
+                    Mode: mode,
+                    'Station/P+R': '',
+                    'Direction/Équipement/Accès': '',
+                    'Élément': '',
+                    'Statut': '',
+                    'Repère': '',
+                    'ID Adhésif': '',
+                    'Description Adhésif': '',
+                    'Localisation Adhésif': '',
+                    'Photo Jointe': '',
+                    'Note Photo': '',
+                    'Commentaire': '',
+                };
 
-    if (moduleType === AuditModuleType.DAT) {
-        const parts = adhesive.description.split('|');
-        if (parts.length > 1) {
-            return {
-                description: parts[0].replace('Dimensions:', '').trim(),
-                location: parts.slice(1).join('|').replace('Localisation:', '').trim()
-            };
-        }
-        return { description: '', location: adhesive.description };
-    }
+                if (module.isFuture) {
+                    rows.push({
+                        ...baseRow,
+                        'Élément': module.name,
+                        'Statut': 'N/A (futur)',
+                    });
+                    continue;
+                }
 
-    return { description: adhesive.description || '', location: adhesive.location || '' };
-}
+                switch (module.type) {
+                    case AuditModuleType.DAT: {
+                        const data = module.data as ModeData;
+                        for (const station of data.stations) {
+                            for (const direction of station.directions) {
+                                for (const dat of direction.dats) {
+                                    for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
+                                        const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
+                                        const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
+                                        
+                                        let description = '';
+                                        let location = '';
+                                        if (adhesive?.description) {
+                                            const parts = adhesive.description.split('|');
+                                            description = (parts[0] || '').replace('Dimensions:', '').trim();
+                                            location = (parts[1] || '').replace('Localisation:', '').trim();
+                                        }
 
-export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): void => {
-    const rows: CsvRow[] = [];
-    const exportDate = new Date().toLocaleDateString('fr-FR');
-    
-    for (const [lieuIndex, lieu] of lieux.entries()) {
-        for (const module of lieu.modules) {
-            const line = module.line || '';
-            const mode = getModeFromLine(line);
-
-            const baseRow = {
-                'Date de l\'export': exportDate,
-                _lieuIndex: lieuIndex,
-                Lieu: lieu.name,
-                'Type d\'Audit': module.name,
-                Ligne: line,
-                Mode: mode,
-                'Station/P+R': '',
-                'Direction/Équipement/Accès': '',
-                'Élément': '',
-                'Statut': '',
-                'Repère': '',
-                'ID Adhésif': '',
-                'Description Adhésif': '',
-                'Localisation Adhésif': '',
-                'Photo Jointe': '',
-                'Note Photo': '',
-                'Commentaire': '',
-            };
-
-            if (module.isFuture) {
-                 rows.push({
-                    ...baseRow,
-                    'Élément': module.name,
-                    'Statut': 'N/A',
-                });
-                continue;
-            }
-
-            switch (module.type) {
-                case AuditModuleType.DAT: {
-                    const data = module.data as ModeData;
-                    for (const station of data.stations) {
-                        for (const direction of station.directions) {
-                            for (const dat of direction.dats) {
-                                for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
-                                    const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
-                                    const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
-                                    const { description, location } = getAdhesiveDetails(adhesiveId, module.type, null);
-                                    rows.push({
-                                        ...baseRow,
-                                        'Station/P+R': station.name,
-                                        'Direction/Équipement/Accès': direction.name,
-                                        'Élément': dat.name,
-                                        'Statut': status,
-                                        'Repère': repere,
-                                        'ID Adhésif': adhesiveId,
-                                        'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
-                                        'Localisation Adhésif': location,
-                                        'Commentaire': dat.comment,
-                                    });
+                                        rows.push({
+                                            ...baseRow,
+                                            'Station/P+R': station.name,
+                                            'Direction/Équipement/Accès': direction.name,
+                                            'Élément': dat.name,
+                                            'Statut': status,
+                                            'Repère': repere,
+                                            'ID Adhésif': adhesiveId,
+                                            'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
+                                            'Localisation Adhésif': location,
+                                            'Commentaire': dat.comment,
+                                        });
+                                    }
                                 }
                             }
                         }
+                        break;
                     }
-                    break;
-                }
-                case AuditModuleType.PR: {
-                    const data = module.data as Pr;
-                    for (const equipment of data.equipments) {
-                        const adhesives = getPrAdhesives(equipment.type);
-                        for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
-                             const adhesive = adhesives.find(a => a.id === adhesiveId);
-                             const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
-                             const { description, location } = getAdhesiveDetails(adhesiveId, module.type, equipment.type);
-                             rows.push({
-                                ...baseRow,
-                                'Station/P+R': data.name,
-                                'Direction/Équipement/Accès': equipment.name,
-                                'Élément': equipment.type,
-                                'Statut': status,
-                                'Repère': repere,
-                                'ID Adhésif': adhesiveId,
-                                'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
-                                'Localisation Adhésif': location,
-                                'Commentaire': equipment.comment,
-                            });
+                    case AuditModuleType.PR: {
+                        const data = module.data as Pr;
+                        for (const equipment of data.equipments) {
+                            const adhesives = getPrAdhesives(equipment.type);
+                            for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
+                                const adhesive = adhesives.find(a => a.id === adhesiveId);
+                                const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
+                                
+                                let description = adhesive?.description || '';
+                                let dimensions = '';
+                                if (description.includes('//')) {
+                                    const parts = description.split('//');
+                                    description = parts[0].trim();
+                                    dimensions = parts[1].trim();
+                                }
+
+                                let finalDescription = description;
+                                if (!description.toLowerCase().includes(parsedAdhesiveName.toLowerCase()) && parsedAdhesiveName) {
+                                    finalDescription = `${parsedAdhesiveName} | ${description}`;
+                                }
+                                if (dimensions) {
+                                    finalDescription += ` | ${dimensions}`;
+                                }
+
+                                rows.push({
+                                    ...baseRow,
+                                    'Station/P+R': data.name,
+                                    'Direction/Équipement/Accès': equipment.name,
+                                    'Élément': equipment.type,
+                                    'Statut': status,
+                                    'Repère': repere,
+                                    'ID Adhésif': adhesiveId,
+                                    'Description Adhésif': finalDescription,
+                                    'Localisation Adhésif': adhesive?.location || '',
+                                    'Commentaire': equipment.comment,
+                                });
+                            }
                         }
+                        break;
                     }
-                    break;
-                }
-                 case AuditModuleType.ECA: {
-                    const data = module.data as EcaData;
-                    for (const eca of data.ecas) {
-                        if (eca.isNotApplicable) {
-                             rows.push({
+                    case AuditModuleType.ECA: {
+                        const data = module.data as EcaData;
+                        for (const eca of data.ecas) {
+                            if (eca.isNotApplicable) {
+                                rows.push({
+                                    ...baseRow,
+                                    'Station/P+R': data.stationName,
+                                    'Direction/Équipement/Accès': eca.accessPoint,
+                                    'Élément': eca.name,
+                                    'Statut': 'Non applicable',
+                                    'Commentaire': eca.comment,
+                                });
+                                continue;
+                            }
+                            const adhesives = getEcaAdhesives(eca.type);
+                            for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
+                                const adhesive = adhesives.find(a => a.id === adhesiveId);
+                                const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
+
+                                let description = '';
+                                let location = '';
+                                if (adhesive?.description) {
+                                    const parts = adhesive.description.split('|');
+                                    description = parts[0].trim();
+                                    location = parts.slice(1).join('|').trim();
+                                }
+                                
+                                rows.push({
+                                    ...baseRow,
+                                    'Station/P+R': data.stationName,
+                                    'Direction/Équipement/Accès': eca.accessPoint,
+                                    'Élément': eca.name,
+                                    'Statut': status,
+                                    'Repère': repere,
+                                    'ID Adhésif': adhesiveId,
+                                    'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
+                                    'Localisation Adhésif': location,
+                                    'Commentaire': eca.comment,
+                                });
+                            }
+                        }
+                        break;
+                    }
+                    case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+                        const data = module.data as PMRFloorAdhesiveData;
+                        for (const adhesive of data.adhesives) {
+                            rows.push({
                                 ...baseRow,
                                 'Station/P+R': data.stationName,
-                                'Direction/Équipement/Accès': eca.accessPoint,
-                                'Élément': eca.name,
-                                'Statut': 'Non applicable',
-                                'Commentaire': eca.comment,
+                                'Élément': adhesive.name,
+                                'Statut': adhesive.status,
+                                'ID Adhésif': adhesive.id,
+                                'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
+                                'Localisation Adhésif': 'Au sol devant le passage PMR',
+                                'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
+                                'Note Photo': adhesive.photo_note || '',
+                                'Commentaire': data.comment,
                             });
-                            continue;
                         }
-                        const adhesives = getEcaAdhesives(eca.type);
-                        for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
-                             const adhesive = adhesives.find(a => a.id === adhesiveId);
-                             const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
-                             const { description, location } = getAdhesiveDetails(adhesiveId, module.type, eca.type);
-                             rows.push({
+                        break;
+                    }
+                    case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                        const data = module.data as CognitivePictogramData;
+                        for (const pictogram of data.pictograms) {
+                            const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
+                            rows.push({
                                 ...baseRow,
                                 'Station/P+R': data.stationName,
-                                'Direction/Équipement/Accès': eca.accessPoint,
-                                'Élément': eca.name,
-                                'Statut': status,
-                                'Repère': repere,
-                                'ID Adhésif': adhesiveId,
-                                'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
-                                'Localisation Adhésif': location,
-                                'Commentaire': eca.comment,
+                                'Direction/Équipement/Accès': pictogram.accessPointName,
+                                'Élément': 'Pictogramme cognitif (ou totem)',
+                                'Statut': pictogram.status,
+                                'ID Adhésif': pictogram.id,
+                                'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
+                                'Localisation Adhésif': 'Au sol en amont des valideurs',
+                                'Commentaire': data.comment,
                             });
                         }
+                        break;
                     }
-                    break;
-                }
-                case AuditModuleType.PMR_FLOOR_ADHESIVE: {
-                    const data = module.data as PMRFloorAdhesiveData;
-                    for (const adhesive of data.adhesives) {
-                        rows.push({
-                            ...baseRow,
-                            'Station/P+R': data.stationName,
-                            'Élément': adhesive.name,
-                            'Statut': adhesive.status,
-                            'ID Adhésif': adhesive.id,
-                            'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
-                            'Localisation Adhésif': 'Au sol devant le passage PMR',
-                            'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
-                            'Note Photo': adhesive.photo_note || '',
-                            'Commentaire': data.comment,
-                        });
-                    }
-                    break;
-                }
-                case AuditModuleType.COGNITIVE_PICTOGRAMS: {
-                     const data = module.data as CognitivePictogramData;
-                     for (const pictogram of data.pictograms) {
-                        const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
-                        rows.push({
-                            ...baseRow,
-                            'Station/P+R': data.stationName,
-                            'Direction/Équipement/Accès': pictogram.accessPointName,
-                            'Élément': 'Pictogramme cognitif (ou totem)',
-                            'Statut': pictogram.status,
-                            'ID Adhésif': pictogram.id,
-                            'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
-                            'Localisation Adhésif': 'Au sol en amont des valideurs',
-                            'Commentaire': data.comment,
-                        });
-                     }
-                     break;
                 }
             }
         }
-    }
-    
-    if (rows.length === 0) return;
-
-    // Sort rows by line, then by original physical lieu order
-    const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', '']; // PR modules will have empty line
-    const lineOrderMap = new Map(lineOrder.map((line, index) => [line, index]));
-
-    rows.sort((a, b) => {
-        const orderA = lineOrderMap.get(a.Ligne) ?? 99;
-        const orderB = lineOrderMap.get(b.Ligne) ?? 99;
-        if (orderA !== orderB) return orderA - orderB;
-
-        // If lines are the same, sort by the original lieu order.
-        return (a._lieuIndex ?? 0) - (b._lieuIndex ?? 0);
-    });
-
-    // Insert blank rows and build final array for CSV conversion
-    const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
-    let lastLigne: string | null = null;
-    
-    // Get header keys from the first row, excluding the temp index key.
-    const headerKeys = Object.keys(rows[0]).filter(k => k !== '_lieuIndex') as (keyof Omit<CsvRow, '_lieuIndex'>)[];
-    const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
-
-    for (const row of rows) {
-        if (lastLigne !== null && row.Ligne !== lastLigne) {
-            finalCsvRowsForStringify.push(blankRow);
+        
+        if (rows.length === 0) {
+            // If after processing everything there are still no rows, we can't create a CSV.
+            // This can happen if a category has only future modules.
+            // Instead of erroring, we can consider this a "success" with an empty result.
+            // Or we can create an empty file. Let's return success as it's not a technical error.
+            return { success: true };
         }
-        const { _lieuIndex, ...restOfRow } = row;
-        finalCsvRowsForStringify.push(restOfRow);
-        lastLigne = row.Ligne;
+
+        // Sort rows by line, then by original physical lieu order
+        const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', '']; // PR modules will have empty line
+        const lineOrderMap = new Map(lineOrder.map((line, index) => [line, index]));
+
+        rows.sort((a, b) => {
+            const orderA = lineOrderMap.get(a.Ligne) ?? 99;
+            const orderB = lineOrderMap.get(b.Ligne) ?? 99;
+            if (orderA !== orderB) return orderA - orderB;
+
+            // If lines are the same, sort by the original lieu order.
+            return (a._lieuIndex ?? 0) - (b._lieuIndex ?? 0);
+        });
+
+        // Insert blank rows and build final array for CSV conversion
+        const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
+        let lastLigne: string | null = null;
+        
+        // Get header keys from the first row, excluding the temp index key.
+        const headerKeys = Object.keys(rows[0]).filter(k => k !== '_lieuIndex') as (keyof Omit<CsvRow, '_lieuIndex'>)[];
+        const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
+
+        for (const row of rows) {
+            if (lastLigne !== null && row.Ligne !== lastLigne) {
+                finalCsvRowsForStringify.push(blankRow);
+            }
+            const { _lieuIndex, ...restOfRow } = row;
+            finalCsvRowsForStringify.push(restOfRow);
+            lastLigne = row.Ligne;
+        }
+
+        const csvContent = [
+            '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
+            ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row[fieldName])).join(','))
+        ].join('\n');
+
+        downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to export to CSV:", error);
+        return { success: false, error: error instanceof Error ? error.message : 'Une erreur inconnue est survenue' };
     }
-
-    const csvContent = [
-        '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
-        ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row[fieldName])).join(','))
-    ].join('\n');
-
-    downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
 };
 
 

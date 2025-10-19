@@ -480,6 +480,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     </div>
                 </div>
             </div>
+
+            {activeFilter !== 'ALL' && (
+                <AuditFilterSelector lieux={lieux} activeCategory={activeFilter} />
+            )}
             
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <div className="relative flex-grow" ref={searchContainerRef}>
@@ -547,10 +551,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                     />
                 </div>
             </div>
-            
-            {activeFilter !== 'ALL' && (
-                <AuditFilterSelector lieux={lieux} activeCategory={activeFilter} />
-            )}
 
             {orderedLieuxForDisplay.length === 0 && searchQuery && !isDropdownOpen ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">

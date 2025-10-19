@@ -201,8 +201,17 @@ const App: React.FC = () => {
             });
         }
         const sortedLieux = sortLieuxByPhysicalOrder(lieux);
-        exportLieuxToCsv(sortedLieux, fileName);
-        showExportSuccessToast(successMessage, category);
+        const result = exportLieuxToCsv(sortedLieux, fileName);
+
+        if (result.success) {
+            showExportSuccessToast(successMessage, category);
+        } else {
+            showErrorToast({
+                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
+                title: 'Exportation Échouée',
+                message: result.error || "Une erreur est survenue lors de la génération du fichier CSV."
+            });
+        }
     };
 
     const handleCsvExportFlow = (
