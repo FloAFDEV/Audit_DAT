@@ -104,7 +104,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         </>
     );
 
-    const isViewFiltered = activeFilter !== 'ALL' && activeAuditFilters.length > 0;
+    const isViewFiltered = activeFilter !== 'ALL' && activeAuditFilters.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
     const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
     const showAuditFilterIcons = activeAuditFilters.length > 0 && availableAuditTypes.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
 
@@ -144,8 +144,8 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                                         {showAuditFilterIcons && activeAuditFilters.map(type => {
                                             const config = AUDIT_MODULES_CONFIG.find(c => c.type === type);
                                             return config ? (
-                                                <div key={type} className="flex items-center justify-center w-5 h-5 bg-slate-200 dark:bg-slate-600 rounded-md" title={config.label}>
-                                                    <ModuleIcon type={type} className="w-3 h-3 text-gray-600 dark:text-slate-300" />
+                                                <div key={type} className="flex items-center justify-center w-5 h-5 bg-teal-100 dark:bg-teal-900/40 rounded-md" title={config.label}>
+                                                    <ModuleIcon type={type} className="w-3 h-3 text-teal-700 dark:text-teal-300" />
                                                 </div>
                                             ) : null;
                                         })}
