@@ -5,6 +5,10 @@ import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import { ModuleIcon } from './ModuleIcon';
 
+interface ResetRequest {
+    type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE';
+    value: 'ALL' | AuditCategory | AuditModuleType;
+}
 interface ActionsMenuProps {
     onExportByCategory: (category: AuditCategory) => void;
     onExportByModuleType: (moduleType: AuditModuleType) => void;
@@ -12,7 +16,7 @@ interface ActionsMenuProps {
     onExportCurrentView: () => void;
     onExportJson: () => void;
     onImportJson: () => void;
-    onResetRequest: (category: AuditCategory | 'ALL') => void;
+    onResetRequest: (request: ResetRequest) => void;
     isModalOpen: boolean;
     activeFilter: AuditCategory | 'ALL';
     activeAuditFilters: AuditModuleType[];
@@ -75,15 +79,15 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         setIsOpen(false);
     };
 
-    const handleReset = (category: AuditCategory | 'ALL') => {
-        onResetRequest(category);
+    const handleReset = (request: ResetRequest) => {
+        onResetRequest(request);
         // Ne ferme pas le menu pour permettre l'annulation via la modale.
     };
 
     const DangerZoneButtons = (
         <>
             <button
-                onClick={() => handleReset('ALL')}
+                onClick={() => handleReset({ type: 'ALL', value: 'ALL' })}
                 className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                 role="menuitem"
             >
@@ -93,12 +97,25 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
             {AUDIT_CATEGORIES.map(cat => (
                 <button
                     key={`reset-${cat.key}`}
-                    onClick={() => handleReset(cat.key)}
+                    onClick={() => handleReset({ type: 'CATEGORY', value: cat.key })}
                     className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
                     role="menuitem"
                 >
                     <CategoryIcon categoryConfig={cat} size="sm" />
                     <span>Réinitialiser {cat.label}</span>
+                </button>
+            ))}
+            {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
+                 <button
+                    key={`reset-module-${type}`}
+                    onClick={() => handleReset({ type: 'MODULE_TYPE', value: type })}
+                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                    role="menuitem"
+                >
+                    <div className="flex items-center justify-center w-6 h-6 rounded-md">
+                         <Icon className="w-4 h-4" />
+                    </div>
+                    <span>{label}</span>
                 </button>
             ))}
         </>

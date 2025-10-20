@@ -4,15 +4,10 @@ import Login from './components/Login';
 import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
 import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
-import { getLieuxForCategory } from './data/builder';
-import { exportLieuxToCsv, exportLieuxToJson, sortLieuxByPhysicalOrder, generateAndDownloadIcsFile, calculateInitialReminderDate, slugify } from './utils/csvExporter';
 import ConfirmationModal from './components/ConfirmationModal';
 import ReminderModal from './components/ReminderModal';
 import { Toaster } from 'react-hot-toast';
-import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
-import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from './data/config';
-import { CategoryIcon } from './components/CategoryIcon';
-import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from './components/ToastManager';
+import { useAppHandlers } from './hooks/useAppHandlers';
 
 // A simple loading spinner component
 const Loader: React.FC = () => (
@@ -74,40 +69,9 @@ const SuccessAnimation: React.FC = () => (
     </div>
 );
 
-const hasPhotos = (lieux: Lieu[]): boolean => {
-    for (const lieu of lieux) {
-        for (const module of lieu.modules) {
-            if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
-                const data = module.data as PMRFloorAdhesiveData;
-                if (data.adhesives.some(a => a.photo_base64)) {
-                    return true;
-                }
-            }
-        }
-    }
-    return false;
-};
-
-interface ReminderOptions {
-    title: string;
-    description: string;
-    initialDate: Date;
-}
-
-interface PendingExport {
-    lieux: Lieu[];
-    fileName: string;
-    successMessage: string;
-    category?: AuditCategory;
-}
-
 const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-    const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
-    const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
-    const [reminderOptions, setReminderOptions] = useState<ReminderOptions | null>(null);
-    const [pendingExport, setPendingExport] = useState<PendingExport | null>(null);
-
+    
     // State selectors from Zustand store
     const store = useAuditStore();
 
@@ -119,14 +83,15 @@ const App: React.FC = () => {
             "color: initial; font-weight: normal; font-size: 1em;"
         );
         console.log("Contact: florent.perez@tisseo.fr ou 72 76");
-        store.init().catch(error => {
-            showErrorToast({
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur de chargement",
-                message: error.message,
-            });
-        });
+        store.init();
     }, [store.init]);
+
+    // FIX: Destructure the return value of useAppHandlers to resolve "Property does not exist on type 'void'" errors.
+    // These errors were caused by syntax issues in the useAppHandlers hook preventing correct type inference.
+    const appHandlers = useAppHandlers();
+    const showSuccessAnimation = appHandlers.showSuccessAnimation;
+    const handlers = appHandlers.handlers;
+    const modalState = appHandlers.modalState;
     
     // --- Data selection logic using useMemo for performance ---
     const selectedLieu = useMemo(() => store.lieux.find(l => l.id === store.selectedLieuId), [store.lieux, store.selectedLieuId]);
@@ -153,34 +118,6 @@ const App: React.FC = () => {
         store.logout();
         setIsLogoutModalOpen(false);
     };
-    
-    const triggerSuccessAnimation = () => {
-        setShowSuccessAnimation(true);
-        setTimeout(() => {
-            setShowSuccessAnimation(false);
-        }, 2200); // Animation duration is ~1.7s, so 2.2s is a good total display time.
-    };
-
-
-    const showExportSuccessToast = (message: string, categoryKey?: AuditCategory) => {
-        const categoryConfig = categoryKey ? AUDIT_CATEGORIES.find(c => c.key === categoryKey) : undefined;
-        
-        const icon = categoryConfig ? (
-            <CategoryIcon categoryConfig={categoryConfig} size="md" />
-        ) : (
-            <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center">
-                <CheckCircle className="h-6 w-6 text-white" />
-            </div>
-        );
-
-        showSuccessToast({
-            icon,
-            title: 'Exportation réussie',
-            message,
-        });
-
-        triggerSuccessAnimation();
-    };
 
     // --- Render logic ---
     if (store.isLoading) {
@@ -191,432 +128,11 @@ const App: React.FC = () => {
         return <Login onLoginSuccess={store.login} />;
     }
     
-    const executeExport = (exportConfig: PendingExport) => {
-        const { lieux, fileName, successMessage, category } = exportConfig;
-        if (hasPhotos(lieux)) {
-            showInfoToast({
-                icon: <div className="h-full w-full rounded-full bg-sky-500 flex items-center justify-center"><Download className="h-6 w-6 text-white" /></div>,
-                title: 'Rappel pour les photos',
-                message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète.",
-            });
-        }
-        const sortedLieux = sortLieuxByPhysicalOrder(lieux);
-        const result = exportLieuxToCsv(sortedLieux, fileName);
-
-        if (result.success) {
-            showExportSuccessToast(successMessage, category);
-        } else {
-            showErrorToast({
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: 'Exportation Échouée',
-                message: result.error || "Une erreur est survenue lors de la génération du fichier CSV."
-            });
-        }
-    };
-
-    const handleCsvExportFlow = (
-        lieuxToExport: Lieu[],
-        baseFileName: string,
-        successMessage: string,
-        category: AuditCategory | undefined,
-        reminder: { title: string; description: string; months: number }
-    ) => {
-        setPendingExport({
-            lieux: lieuxToExport,
-            fileName: `${baseFileName}.csv`,
-            successMessage,
-            category,
-        });
-        
-        const exportDateString = new Date().toLocaleDateString('fr-FR');
-
-        setReminderOptions({
-            title: reminder.title,
-            description: `${reminder.description}\n\nDernier export effectué le : ${exportDateString}`,
-            initialDate: calculateInitialReminderDate(reminder.months),
-        });
-        setIsReminderModalOpen(true);
-    };
-
-
-    const handleExportByCategory = (category: AuditCategory) => {
-        const filteredLieux = getLieuxForCategory(store.lieux, category);
-        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
-        const categoryLabel = categoryConfig?.label || category;
-
-        const fileNameBase = `export-${slugify(categoryLabel)}`;
-    
-        handleCsvExportFlow(
-            filteredLieux,
-            fileNameBase,
-            `La catégorie "${categoryLabel}" a été exportée.`,
-            category,
-            {
-                title: `Planifier le ré-audit : ${categoryLabel}`,
-                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle des audits pour la catégorie '${categoryLabel}'.`,
-                months: 5
-            }
-        );
-    };
-    
-    const handleExportByModuleType = (moduleType: AuditModuleType) => {
-        const filteredLieux = JSON.parse(JSON.stringify(store.lieux))
-            .map((lieu: Lieu) => {
-                lieu.modules = lieu.modules.filter(m => m.type === moduleType);
-                return lieu;
-            })
-            .filter((lieu: Lieu) => lieu.modules.length > 0);
-        
-        const moduleConfig = AUDIT_MODULES_CONFIG.find(m => m.type === moduleType);
-        const moduleLabel = moduleConfig?.label || moduleType;
-        let reminderMonths = 5;
-        if (moduleType === AuditModuleType.COGNITIVE_PICTOGRAMS) {
-            reminderMonths = 11;
-        }
-
-        const fileNameBase = `export-${slugify(moduleLabel)}`;
-    
-        handleCsvExportFlow(
-            filteredLieux,
-            fileNameBase,
-            `Les audits de type "${moduleLabel}" ont été exportés.`,
-            undefined,
-            {
-                title: `Planifier le ré-audit des ${moduleLabel}`,
-                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`,
-                months: reminderMonths
-            }
-        );
-    };
-
-    const handleExportAll = () => {
-        const allModuleTypesDescription = AUDIT_MODULES_CONFIG.map(config => `- ${config.label}`).join('\n');
-        
-        handleCsvExportFlow(
-            store.lieux,
-            'export-reseau-complet',
-            "Toutes les données ont été exportées.",
-            undefined,
-            {
-                title: 'Planifier le suivi global des audits Tisséo',
-                description: `Ceci est un rappel pour planifier le prochain cycle de contrôle global pour l'ensemble des audits.\n\nAudits concernés:\n${allModuleTypesDescription}`,
-                months: 5
-            }
-        );
-    };
-
-    const handleExportCurrentView = () => {
-        const { lieux, activeFilter, activeAuditFilters } = store;
-
-        if (activeFilter === 'ALL' && activeAuditFilters.length === 0) {
-            handleExportAll();
-            return;
-        }
-
-        let lieuxToExport = [...lieux];
-        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
-
-        if (activeFilter !== 'ALL') {
-            lieuxToExport = getLieuxForCategory(lieuxToExport, activeFilter);
-        }
-
-        if (activeAuditFilters.length > 0) {
-            lieuxToExport = lieuxToExport
-                .map(lieu => {
-                    const newLieu = JSON.parse(JSON.stringify(lieu));
-                    newLieu.modules = newLieu.modules.filter(module => activeAuditFilters.includes(module.type));
-                    return newLieu;
-                })
-                .filter(lieu => lieu.modules.length > 0);
-        }
-
-        let categoryLabelForFileName = activeFilter === 'ALL' ? 'reseau' : (categoryConfig?.label || activeFilter);
-        let successMessageLabel = activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`;
-
-        const auditLabelsForFileName = activeAuditFilters
-            .map(type => AUDIT_MODULES_CONFIG.find(c => c.type === type)?.shortLabel || type)
-            .join('-');
-        
-        const auditLabelsForMessage = activeAuditFilters
-            .map(type => AUDIT_MODULES_CONFIG.find(c => c.type === type)?.shortLabel || type)
-            .join(', ');
-
-        let fileNameBase = `export-${slugify(categoryLabelForFileName)}`;
-        if (auditLabelsForFileName) {
-            fileNameBase += `-${slugify(auditLabelsForFileName)}`;
-        }
-        
-        let successMessage = `${successMessageLabel} a été exportée.`;
-        if (auditLabelsForMessage) {
-            successMessage = `${successMessageLabel} (filtre: ${auditLabelsForMessage}) a été exportée.`;
-        }
-        
-        let reminderTitle = `Rappel d'audit : ${categoryConfig?.label || 'Vue personnalisée'}`;
-        let reminderDescription = `Ceci est un rappel pour planifier le prochain cycle de contrôle pour la vue que vous venez d'exporter.`;
-        if (auditLabelsForMessage) {
-            reminderDescription += `\n\nFiltres : ${auditLabelsForMessage}`;
-        }
-
-        handleCsvExportFlow(
-            lieuxToExport,
-            fileNameBase,
-            successMessage,
-            activeFilter === 'ALL' ? undefined : activeFilter,
-            {
-                title: reminderTitle,
-                description: reminderDescription,
-                months: 5
-            }
-        );
-    };
-
-    const handleExportJson = () => {
-        const { success } = exportLieuxToJson(store.lieux);
-        if (success) {
-            showSuccessToast({
-                icon: <div className="h-full w-full rounded-full bg-sky-500 flex items-center justify-center"><CheckCircle className="h-6 w-6 text-white" /></div>,
-                title: 'Exportation JSON réussie',
-                message: 'Le fichier de données a été téléchargé.',
-            });
-            triggerSuccessAnimation();
-        } else {
-            showErrorToast({
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: 'Erreur',
-                message: "Échec de l'exportation JSON.",
-            });
-        }
-    };
-
-    const handleImportJson = (fileContent: string) => {
-        const promise = store.handleImportJsonData(fileContent);
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Importation en cours...",
-                message: "Veuillez patienter.",
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Importation réussie",
-                message: "Les données ont été chargées.",
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur d'importation",
-                message: "Le fichier est invalide ou corrompu.", // Generic message, specific one comes from promise rejection
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetCategoryRequest = (category: AuditCategory) => {
-        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category)!;
-        const promise = store.handleResetCategory(category);
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `Catégorie "${categoryConfig.label}"`,
-            },
-            {
-                icon: <CategoryIcon categoryConfig={categoryConfig} size="md" />,
-                title: "Réinitialisation terminée",
-                message: `La catégorie "${categoryConfig.label}" a été réinitialisée.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetAllRequest = () => {
-        const promise = store.handleResetAll();
-        
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: "Toutes les données sont en cours de réinitialisation.",
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-blue-500 flex items-center justify-center"><RefreshCw className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: "Toutes les données ont été réinitialisées.",
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetDatRequest = () => {
-        const promise = store.handleResetDat();
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `DAT : ${selectedDat?.name}`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: `L'audit pour ${selectedDat?.name} a été réinitialisé.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetPrAdhesiveRequest = () => {
-        const promise = store.handleResetPrAdhesive();
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `Équipement : ${selectedEquipment?.name}`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: `L'audit pour ${selectedEquipment?.name} a été réinitialisé.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetEcaAdhesiveRequest = () => {
-        const promise = store.handleResetEcaAdhesive();
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `ECA : ${selectedEca?.name}`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: `L'audit pour ${selectedEca?.name} a été réinitialisé.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetPmrFloorAdhesiveRequest = () => {
-        const promise = store.handleResetPmrFloorAdhesive();
-        const stationName = (selectedModule?.data as PMRFloorAdhesiveData)?.stationName || 'la station';
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `Adhésifs Sol PMR : ${stationName}`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: `Les adhésifs Sol PMR pour ${stationName} ont été réinitialisés.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-
-    const handleResetCognitivePictogramRequest = () => {
-        const promise = store.handleResetCognitivePictogram();
-        const stationName = (selectedModule?.data as CognitivePictogramData)?.stationName || 'la station';
-
-        showPromiseToast(
-            promise,
-            {
-                icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
-                title: "Réinitialisation en cours...",
-                message: `Pictogrammes Cognitifs : ${stationName}`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle className="h-5 w-5 text-white" /></div>,
-                title: "Réinitialisation terminée",
-                message: `Les pictogrammes pour ${stationName} ont été réinitialisés.`,
-            },
-            {
-                icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-6 w-6 text-white" /></div>,
-                title: "Erreur",
-                message: "La réinitialisation a échoué.",
-            },
-            triggerSuccessAnimation
-        );
-    };
-    
-    const cleanupAfterModal = () => {
-        setIsReminderModalOpen(false);
-        setReminderOptions(null);
-        setPendingExport(null);
-    };
-
-    const handleConfirmAndGenerateReminder = (selectedDate: Date) => {
-        if (pendingExport && reminderOptions) {
-            generateAndDownloadIcsFile({
-                title: reminderOptions.title,
-                description: reminderOptions.description,
-                reminderDate: selectedDate
-            });
-            executeExport(pendingExport);
-        }
-        setTimeout(cleanupAfterModal, 100);
-    };
-
-    const handleSkipReminderAndExport = () => {
-        if (pendingExport) {
-            executeExport(pendingExport);
-        }
-        setTimeout(cleanupAfterModal, 100);
-    };
-    
-    const handleCancelExport = () => {
-        cleanupAfterModal();
-    };
-
     return (
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
-            <div className="container mx-auto px-4 py-8 flex-grow">
+            <div className="container mx-auto px-4 lg:px-8 xl:px-12 py-8 flex-grow">
                 <div className="mb-6">
                     <Breadcrumbs
                         lieu={selectedLieu}
@@ -641,20 +157,21 @@ const App: React.FC = () => {
                     selectedEca={selectedEca}
                     // Pass state and handlers
                     {...store}
-                    // Pass request handlers separately
-                    handleResetDatRequest={handleResetDatRequest}
-                    handleResetPrAdhesiveRequest={handleResetPrAdhesiveRequest}
-                    handleResetEcaAdhesiveRequest={handleResetEcaAdhesiveRequest}
-                    handleResetPmrFloorAdhesiveRequest={handleResetPmrFloorAdhesiveRequest}
-                    handleResetCognitivePictogramRequest={handleResetCognitivePictogramRequest}
-                    onExportByCategory={handleExportByCategory}
-                    onExportByModuleType={handleExportByModuleType}
-                    onExportAll={handleExportAll}
-                    onExportCurrentView={handleExportCurrentView}
-                    onExportJson={handleExportJson}
-                    onImportJson={handleImportJson}
-                    onResetCategory={handleResetCategoryRequest}
-                    onResetAll={handleResetAllRequest}
+                    // Pass request handlers separately from the hook
+                    handleResetDatRequest={() => handlers.handleResetDatRequest(selectedDat)}
+                    handleResetPrAdhesiveRequest={() => handlers.handleResetPrAdhesiveRequest(selectedEquipment)}
+                    handleResetEcaAdhesiveRequest={() => handlers.handleResetEcaAdhesiveRequest(selectedEca)}
+                    handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
+                    handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
+                    onExportByCategory={handlers.handleExportByCategory}
+                    onExportByModuleType={handlers.handleExportByModuleType}
+                    onExportAll={handlers.handleExportAll}
+                    onExportCurrentView={handlers.handleExportCurrentView}
+                    onExportJson={handlers.handleExportJson}
+                    onImportJson={handlers.handleImportJson}
+                    onResetCategory={handlers.handleResetCategoryRequest}
+                    onResetByModuleType={handlers.handleResetByModuleTypeRequest}
+                    onResetAll={handlers.handleResetAllRequest}
                     onRequestLogout={() => setIsLogoutModalOpen(true)}
                 />
             </div>
@@ -677,14 +194,14 @@ const App: React.FC = () => {
                 title="Confirmation de déconnexion"
                 message="Êtes-vous sûr de vouloir vous déconnecter ? Vous serez redirigé vers l'écran de connexion."
             />
-            {reminderOptions && pendingExport && (
+            {modalState.reminderOptions && modalState.pendingExport && (
                  <ReminderModal
-                    isOpen={isReminderModalOpen}
-                    onClose={handleCancelExport}
-                    onConfirm={handleConfirmAndGenerateReminder}
-                    onSkip={handleSkipReminderAndExport}
-                    fileName={pendingExport.fileName}
-                    initialDate={reminderOptions.initialDate}
+                    isOpen={modalState.isReminderModalOpen}
+                    onClose={modalState.handleCancelExport}
+                    onConfirm={modalState.handleConfirmAndGenerateReminder}
+                    onSkip={modalState.handleSkipReminderAndExport}
+                    fileName={modalState.pendingExport.fileName}
+                    initialDate={modalState.reminderOptions.initialDate}
                 />
             )}
         </main>
