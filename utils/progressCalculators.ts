@@ -204,10 +204,6 @@ export const getCategoryProgress = (
     category: AuditCategory | 'ALL',
     activeFilters: AuditModuleType[]
 ): number => {
-    if (activeFilters.length === 0) {
-        return -1; // Indicate no progress to show
-    }
-
     const categoryConfig = category === 'ALL' ? null : AUDIT_CATEGORIES.find(c => c.key === category);
     
     const isModuleInCategory = (module: AuditModule): boolean => {
@@ -219,9 +215,14 @@ export const getCategoryProgress = (
     let totalCheckedItems = 0;
 
     for (const lieu of allLieux) {
-        const modulesToConsider = lieu.modules.filter(m => 
-            isModuleInCategory(m) && activeFilters.includes(m.type)
-        );
+        const modulesToConsider = lieu.modules.filter(m => {
+            if (!isModuleInCategory(m)) {
+                return false;
+            }
+            // If activeFilters is empty, consider all modules in the category.
+            // Otherwise, only consider modules whose type is in activeFilters.
+            return activeFilters.length === 0 ? true : activeFilters.includes(m.type);
+        });
         
         for (const module of modulesToConsider) {
             if (module.isFuture) continue;
@@ -285,7 +286,10 @@ export const getCategoryProgress = (
     
     if (totalApplicableItems === 0) {
         const hasAnyNonFutureModule = allLieux.some(l => 
-            l.modules.some(m => isModuleInCategory(m) && activeFilters.includes(m.type) && !m.isFuture)
+            l.modules.some(m => {
+                if (!isModuleInCategory(m) || m.isFuture) return false;
+                return activeFilters.length === 0 ? true : activeFilters.includes(m.type);
+            })
         );
         return hasAnyNonFutureModule ? 100 : 0;
     }
