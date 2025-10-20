@@ -1,8 +1,10 @@
 import React from 'react';
 import useAuditStore from '../store';
-import { AuditModuleType } from '../types';
+import { AuditModuleType, AuditCategory } from '../types';
 import { ModuleIcon } from './ModuleIcon';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { getCategoryProgress } from '../utils/progressCalculators';
+import { ColoredProgressBadge } from './ColoredProgressBadge';
 
 // Simple labels for the buttons, derived from the central config
 const AUDIT_TYPE_LABELS: Record<string, string> = AUDIT_MODULES_CONFIG.reduce((acc, config) => {
@@ -15,7 +17,7 @@ interface AuditFilterSelectorProps {
 }
 
 export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availableAuditTypes }) => {
-    const { activeAuditFilters, setActiveAuditFilters } = useAuditStore();
+    const { activeAuditFilters, setActiveAuditFilters, lieux, activeFilter } = useAuditStore();
 
     const handleToggleFilter = (type: AuditModuleType) => {
         const newFilters = activeAuditFilters.includes(type)
@@ -31,9 +33,10 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
     return (
         <div className="mb-6 p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
             <label className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 block">Filtrer par type d'audit :</label>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
                 {availableAuditTypes.map(type => {
                     const isActive = activeAuditFilters.includes(type);
+                    const progress = getCategoryProgress(lieux, activeFilter as AuditCategory, [type]);
                     return (
                         <button
                             key={type}
@@ -46,6 +49,7 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
                         >
                             <ModuleIcon type={type} className="w-4 h-4" />
                             <span>{AUDIT_TYPE_LABELS[type] || type}</span>
+                            {progress >= 0 && <ColoredProgressBadge progress={progress} />}
                         </button>
                     );
                 })}

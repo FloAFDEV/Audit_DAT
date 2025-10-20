@@ -213,14 +213,13 @@ export const getCategoryProgress = (
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
+    let hasAnyItems = false; // Flag to check if modules are empty or not
 
     for (const lieu of allLieux) {
         const modulesToConsider = lieu.modules.filter(m => {
             if (!isModuleInCategory(m)) {
                 return false;
             }
-            // If activeFilters is empty, consider all modules in the category.
-            // Otherwise, only consider modules whose type is in activeFilters.
             return activeFilters.length === 0 ? true : activeFilters.includes(m.type);
         });
         
@@ -231,6 +230,7 @@ export const getCategoryProgress = (
                 case AuditModuleType.DAT: {
                     const modeData = module.data as ModeData;
                     const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
+                    if (dats.length > 0) hasAnyItems = true;
                     for (const dat of dats) {
                         const statuses = Object.values(dat.adhesives);
                         totalApplicableItems += statuses.length;
@@ -241,6 +241,7 @@ export const getCategoryProgress = (
                 case AuditModuleType.PR: {
                     const prData = module.data as Pr;
                     const equipments = prData.equipments ?? [];
+                    if (equipments.length > 0) hasAnyItems = true;
                     for (const equipment of equipments) {
                         const statuses = Object.values(equipment.adhesives);
                         totalApplicableItems += statuses.length;
@@ -251,6 +252,7 @@ export const getCategoryProgress = (
                 case AuditModuleType.ECA: {
                     const ecaData = module.data as EcaData;
                     const ecas = ecaData.ecas ?? [];
+                    if (ecas.length > 0) hasAnyItems = true;
                     for (const eca of ecas) {
                         if (eca.isNotApplicable) continue;
                         const adhesiveDefinitions = getEcaAdhesives(eca.type);
@@ -269,6 +271,7 @@ export const getCategoryProgress = (
                 case AuditModuleType.PMR_FLOOR_ADHESIVE: {
                     const pmrData = module.data as PMRFloorAdhesiveData;
                     const adhesives = pmrData.adhesives ?? [];
+                    if (adhesives.length > 0) hasAnyItems = true;
                     totalApplicableItems += adhesives.length;
                     totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
                     break;
@@ -276,6 +279,7 @@ export const getCategoryProgress = (
                 case AuditModuleType.COGNITIVE_PICTOGRAMS: {
                     const cogData = module.data as CognitivePictogramData;
                     const pictos = cogData.pictograms ?? [];
+                    if (pictos.length > 0) hasAnyItems = true;
                     totalApplicableItems += pictos.length;
                     totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
                     break;
@@ -285,13 +289,10 @@ export const getCategoryProgress = (
     }
     
     if (totalApplicableItems === 0) {
-        const hasAnyNonFutureModule = allLieux.some(l => 
-            l.modules.some(m => {
-                if (!isModuleInCategory(m) || m.isFuture) return false;
-                return activeFilters.length === 0 ? true : activeFilters.includes(m.type);
-            })
-        );
-        return hasAnyNonFutureModule ? 100 : 0;
+        // If there are no auditable items:
+        // - If the modules contain content (e.g., ECAs, DATs) but all items are "Not Applicable", it's 100% complete.
+        // - If the modules are simply empty (no ECAs, DATs added yet), it's 0% progress.
+        return hasAnyItems ? 100 : 0;
     }
 
     return (totalCheckedItems / totalApplicableItems) * 100;
