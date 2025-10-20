@@ -234,39 +234,6 @@ const createEcaModule = (
     };
 };
 
-const createPmrFloorAdhesiveModule = (station: Partial<Station>, line: MetroLine): AuditModule | null => {
-    const ecaTemplates = ECA_DEFINITIONS[station.code!] ?? ECA_DEFINITIONS['DEFAULT'];
-    const hasPmrEca = ecaTemplates.some(template => isPmrEcaType(template.type));
-
-    // Only create a module if the station has a PMR ECA and is not Jean Jaurès (handled separately)
-    if (!hasPmrEca || station.isFuture || station.code === 'JJA' || station.code === 'JJB') {
-        return null;
-    }
-
-    const adhesives: PMRFloorAdhesive[] = [{
-        id: `${station.id}-pmr-floor-1`,
-        name: `Présence et état de l'adhésif de signalisation au sol`,
-        status: FloorAdhesiveStatus.NotChecked,
-    }];
-
-    const data: PMRFloorAdhesiveData = {
-        id: `pmr-floor-data-${station.id}`,
-        stationName: station.name!,
-        stationCode: station.code!,
-        adhesives,
-        comment: '',
-    };
-
-    return {
-        id: `module-pmr-floor-${station.id}`,
-        type: AuditModuleType.PMR_FLOOR_ADHESIVE,
-        name: 'Adhésifs PMR au Sol',
-        data: data,
-        isFuture: !!station.isFuture,
-        line: line,
-    };
-};
-
 const createSpecificPmrFloorAdhesiveModule = (
     moduleName: string,
     station: Partial<Station>,
@@ -341,14 +308,52 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_C_STATIONS.map(s => createEcaModule(
                  'ECA (Valideurs)', s.name!, s.code!, 'C', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
             )),
-
-            ...LINE_A_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'A')).filter((m): m is AuditModule => m !== null),
-            ...LINE_B_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'B')).filter((m): m is AuditModule => m !== null),
-            ...LINE_C_STATIONS.map(s => createPmrFloorAdhesiveModule(s, 'C')).filter((m): m is AuditModule => m !== null),
             
             ...LINE_A_STATIONS.map(s => createCognitivePictogramModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createCognitivePictogramModule(s, 'B')),
         ];
+
+        // NEW: Dynamically create PMR Floor Adhesive modules based on ECA definitions
+        const allStationsForPmr = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS];
+    
+        for (const station of allStationsForPmr) {
+            if (station.isFuture || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+                continue; // Skip future, no code, or Jean Jaurès (handled as a special case)
+            }
+        
+            const ecaTemplates = ECA_DEFINITIONS[station.code] ?? ECA_DEFINITIONS['DEFAULT'];
+            const pmrAccessPoints = new Set<string>();
+        
+            ecaTemplates.forEach(template => {
+                if (isPmrEcaType(template.type)) {
+                    pmrAccessPoints.add(template.accessPoint);
+                }
+            });
+        
+            if (pmrAccessPoints.size === 0) {
+                continue; // No PMR ECAs found for this station.
+            }
+        
+            const line = station.id?.startsWith('sta-a-') ? 'A' : 
+                         station.id?.startsWith('sta-b-') ? 'B' : 
+                         station.id?.startsWith('sta-c-') ? 'C' : undefined;
+        
+            if (!line) continue;
+        
+            if (pmrAccessPoints.size === 1) {
+                // Only one access point with PMR equipment. Create a single, generically named module.
+                modules.push(
+                    createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol', station, line)
+                );
+            } else {
+                // Multiple distinct access points with PMR equipment. Create a specific module for each.
+                pmrAccessPoints.forEach(accessPoint => {
+                    modules.push(
+                        createSpecificPmrFloorAdhesiveModule(`Adhésifs PMR au Sol (${accessPoint})`, station, line)
+                    );
+                });
+            }
+        }
 
         const lieuxMap = new Map<string, Lieu>();
 
