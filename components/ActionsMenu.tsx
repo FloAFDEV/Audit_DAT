@@ -12,7 +12,7 @@ interface ActionsMenuProps {
     onExportCurrentView: () => void;
     onExportJson: () => void;
     onImportJson: () => void;
-    onResetRequest: (category: AuditCategory | 'ALL') => void;
+    onResetRequest: (target: { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any }) => void;
     isModalOpen: boolean;
     activeFilter: AuditCategory | 'ALL';
     activeAuditFilters: AuditModuleType[];
@@ -51,6 +51,13 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         };
     }, [isModalOpen]);
 
+    useEffect(() => {
+        // Reset danger zone state every time the main menu is opened
+        if (isOpen) {
+            setIsDangerZoneOpen(false);
+        }
+    }, [isOpen]);
+
     const handleExport = (category: AuditCategory | 'ALL') => {
         if (category === 'ALL') {
             onExportAll();
@@ -75,34 +82,9 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         setIsOpen(false);
     };
 
-    const handleReset = (category: AuditCategory | 'ALL') => {
-        onResetRequest(category);
-        // Ne ferme pas le menu pour permettre l'annulation via la modale.
+    const handleReset = (type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any) => {
+        onResetRequest({ type, value });
     };
-
-    const DangerZoneButtons = (
-        <>
-            <button
-                onClick={() => handleReset('ALL')}
-                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                role="menuitem"
-            >
-                <DatabaseBackup className="w-4 h-4" />
-                <span>Réinitialiser tout le réseau</span>
-            </button>
-            {AUDIT_CATEGORIES.map(cat => (
-                <button
-                    key={`reset-${cat.key}`}
-                    onClick={() => handleReset(cat.key)}
-                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                    role="menuitem"
-                >
-                    <CategoryIcon categoryConfig={cat} size="sm" />
-                    <span>Réinitialiser {cat.label}</span>
-                </button>
-            ))}
-        </>
-    );
 
     const isViewFiltered = activeFilter !== 'ALL' && activeAuditFilters.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
     const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
@@ -219,33 +201,53 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
 
                         <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
                         
-                        {/* --- Mobile Collapsible Danger Zone --- */}
-                        <div className="sm:hidden">
-                             <button
-                                onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
-                                className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                aria-expanded={isDangerZoneOpen}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <DatabaseBackup className="w-4 h-4" />
-                                    <span>Actions irréversibles</span>
-                                </div>
-                                <ChevronDown className={`h-5 w-5 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                            {isDangerZoneOpen && (
-                                <div className="pl-4 border-l-2 border-red-100 dark:border-red-900/30">
-                                    {DangerZoneButtons}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* --- Desktop Always-Visible Danger Zone --- */}
-                        <div className="hidden sm:block">
-                            <div className="px-4 py-2">
-                                <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Actions irréversibles</p>
+                        <button
+                            onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
+                            className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            aria-expanded={isDangerZoneOpen}
+                        >
+                            <div className="flex items-center gap-3">
+                                <DatabaseBackup className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                <span>Actions irréversibles</span>
                             </div>
-                            {DangerZoneButtons}
-                        </div>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isDangerZoneOpen && (
+                            <div className="pl-4 border-l-2 border-red-100 dark:border-red-900/30">
+                                <button
+                                    onClick={() => handleReset('ALL', 'ALL')}
+                                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                    role="menuitem"
+                                >
+                                    <DatabaseBackup className="w-4 h-4" />
+                                    <span>Réinitialiser tout le réseau</span>
+                                </button>
+                                {AUDIT_CATEGORIES.map(cat => (
+                                    <button
+                                        key={`reset-${cat.key}`}
+                                        onClick={() => handleReset('CATEGORY', cat.key)}
+                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        role="menuitem"
+                                    >
+                                        <CategoryIcon categoryConfig={cat} size="sm" />
+                                        <span>Réinitialiser {cat.label}</span>
+                                    </button>
+                                ))}
+                                {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
+                                    <button
+                                        key={`reset-module-${type}`}
+                                        onClick={() => handleReset('MODULE_TYPE', type)}
+                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                                        role="menuitem"
+                                    >
+                                        <div className="flex items-center justify-center w-6 h-6 rounded-md">
+                                            <Icon className="w-4 h-4" />
+                                        </div>
+                                        <span>Réinitialiser {label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

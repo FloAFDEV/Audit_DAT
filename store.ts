@@ -95,6 +95,7 @@ interface AppState {
     
     // Reset actions
     handleResetCategory: (category: AuditCategory) => Promise<void>;
+    handleResetByModuleType: (moduleType: AuditModuleType) => Promise<void>;
     handleResetAll: () => Promise<void>;
 
     // Import action
@@ -712,6 +713,39 @@ const useAuditStore = create<AppState>((set, get) => {
 
         } catch (error) {
             console.error(`Failed to reset category ${category}:`, error);
+            throw error;
+        }
+    },
+
+    handleResetByModuleType: async (moduleType) => {
+        try {
+            const freshData = await generateInitialLieuxDataAsync();
+            const freshModulesMap = new Map<string, AuditModule>();
+            freshData.forEach(lieu => 
+                lieu.modules.forEach(module => {
+                    if (module.type === moduleType) {
+                        freshModulesMap.set(module.id, module);
+                    }
+                })
+            );
+
+            const currentLieux = get().lieux;
+            const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
+
+            for (const lieu of updatedLieux) {
+                lieu.modules = lieu.modules.map((module: AuditModule) => {
+                    if (freshModulesMap.has(module.id)) {
+                        return freshModulesMap.get(module.id);
+                    }
+                    return module;
+                });
+            }
+            
+            await db.lieux.bulkPut(updatedLieux);
+            set({ lieux: updatedLieux });
+
+        } catch (error) {
+            console.error(`Failed to reset module type ${moduleType}:`, error);
             throw error;
         }
     },

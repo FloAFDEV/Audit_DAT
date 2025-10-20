@@ -7,6 +7,7 @@ import { exportLieuxToCsv, exportLieuxToJson, generateAndDownloadIcsFile, calcul
 import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from '../components/ToastManager';
 import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
+import { ModuleIcon } from '../components/ModuleIcon';
 
 interface ReminderOptions {
     title: string;
@@ -43,26 +44,31 @@ export const useAppHandlers = () => {
     };
 
     const showExportSuccessToast = (message: string, categoryKey?: AuditCategory) => {
-        const categoryConfig = categoryKey ? AUDIT_CATEGORIES.find(c => c.key === categoryKey) : undefined;
-        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-        const icon = categoryConfig ? React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" }) : React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
-        showSuccessToast({ icon, title: 'Exportation réussie', message });
+        const catConfig = categoryKey ? AUDIT_CATEGORIES.find(c => c.key === categoryKey) : undefined;
+        const icon = catConfig
+            ? React.createElement(CategoryIcon, { categoryConfig: catConfig, size: 'md' })
+            : React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
+        showSuccessToast({
+            icon,
+            title: 'Exportation réussie',
+            message,
+        });
         triggerSuccessAnimation();
     };
 
     const executeExport = (exportConfig: PendingExport) => {
         const { lieux, fileName, successMessage, category } = exportConfig;
         if (hasPhotos(lieux)) {
-            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-            showInfoToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(Download, { className: "h-6 w-6 text-white" })), title: 'Rappel pour les photos', message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète." });
+            const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(Download, { className: "h-6 w-6 text-white" }));
+            showInfoToast({ icon, title: 'Rappel pour les photos', message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète." });
         }
         const result = exportLieuxToCsv(lieux, fileName);
 
         if (result.success) {
             showExportSuccessToast(successMessage, category);
         } else {
-            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-            showErrorToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: 'Exportation Échouée', message: result.error || "Une erreur est survenue lors de la génération du fichier CSV." });
+            const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+            showErrorToast({ icon, title: 'Exportation Échouée', message: result.error || "Une erreur est survenue lors de la génération du fichier CSV." });
         }
     };
 
@@ -127,40 +133,63 @@ export const useAppHandlers = () => {
     const handleExportJson = () => {
         const { success } = exportLieuxToJson(store.lieux);
         if (success) {
-            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-            showSuccessToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" })), title: 'Exportation JSON réussie', message: 'Le fichier de données a été téléchargé.' });
+            const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
+            showSuccessToast({ icon, title: 'Exportation JSON réussie', message: 'Le fichier de données a été téléchargé.' });
             triggerSuccessAnimation();
         } else {
-            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-            showErrorToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: 'Erreur', message: "Échec de l'exportation JSON." });
+            const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+            showErrorToast({ icon, title: 'Erreur', message: "Échec de l'exportation JSON." });
         }
     };
 
     // --- IMPORT HANDLER ---
     const handleImportJson = (fileContent: string) => {
         const promise = store.handleImportJsonData(fileContent);
-        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Importation en cours...", message: "Veuillez patienter." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Importation réussie", message: "Les données ont été chargées." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur d'importation", message: "Le fichier est invalide ou corrompu." }, triggerSuccessAnimation);
+        const loadingIcon = React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" });
+        const successIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" }));
+        const errorIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+        showPromiseToast(promise, { icon: loadingIcon, title: "Importation en cours...", message: "Veuillez patienter." }, { icon: successIcon, title: "Importation réussie", message: "Les données ont été chargées." }, { icon: errorIcon, title: "Erreur d'importation", message: "Le fichier est invalide ou corrompu." }, triggerSuccessAnimation);
     };
 
     // --- RESET HANDLERS ---
     const handleResetCategoryRequest = (category: AuditCategory) => {
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category)!;
         const promise = store.handleResetCategory(category);
-        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `Catégorie "${categoryConfig.label}"` }, { icon: React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" }), title: "Réinitialisation terminée", message: `La catégorie "${categoryConfig.label}" a été réinitialisée.` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
+        const loadingIcon = React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" });
+        const successIcon = React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" });
+        const errorIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+        showPromiseToast(promise, { icon: loadingIcon, title: "Réinitialisation en cours...", message: `Catégorie "${categoryConfig.label}"` }, { icon: successIcon, title: "Réinitialisation terminée", message: `La catégorie "${categoryConfig.label}" a été réinitialisée.` }, { icon: errorIcon, title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
+    };
+
+    const handleResetByModuleTypeRequest = (moduleType: AuditModuleType) => {
+        const moduleConfig = AUDIT_MODULES_CONFIG.find(c => c.type === moduleType)!;
+        const promise = store.handleResetByModuleType(moduleType);
+        const loadingIcon = React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" });
+        const successIcon = React.createElement(ModuleIcon, { type: moduleType });
+        const errorIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+        showPromiseToast(
+            promise,
+            { icon: loadingIcon, title: "Réinitialisation en cours...", message: `Audit: ${moduleConfig.label}` },
+            { icon: successIcon, title: "Réinitialisation terminée", message: `Les audits "${moduleConfig.label}" ont été réinitialisés.` },
+            { icon: errorIcon, title: "Erreur", message: "La réinitialisation a échoué." },
+            triggerSuccessAnimation
+        );
     };
 
     const handleResetAllRequest = () => {
         const promise = store.handleResetAll();
-        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: "Toutes les données sont en cours de réinitialisation." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-blue-500 flex items-center justify-center" }, React.createElement(RefreshCw, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: "Toutes les données ont été réinitialisées." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
+        const loadingIcon = React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" });
+        const successIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-blue-500 flex items-center justify-center" }, React.createElement(RefreshCw, { className: "h-5 w-5 text-white" }));
+        const errorIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+        showPromiseToast(promise, { icon: loadingIcon, title: "Réinitialisation en cours...", message: "Toutes les données sont en cours de réinitialisation." }, { icon: successIcon, title: "Réinitialisation terminée", message: "Toutes les données ont été réinitialisées." }, { icon: errorIcon, title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
     };
 
     const createResetHandler = (itemName: string, selectedItem: any, resetAction: () => Promise<void>) => {
         const promise = resetAction();
-        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
-        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `${itemName} : ${selectedItem?.name || selectedItem?.stationName}` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: `L'audit a été réinitialisé.` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
+        const loadingIcon = React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" });
+        const successIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" }));
+        const errorIcon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
+        showPromiseToast(promise, { icon: loadingIcon, title: "Réinitialisation en cours...", message: `${itemName} : ${selectedItem?.name || selectedItem?.stationName}` }, { icon: successIcon, title: "Réinitialisation terminée", message: `L'audit a été réinitialisé.` }, { icon: errorIcon, title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
     };
     
     // --- MODAL HANDLERS ---
@@ -172,7 +201,7 @@ export const useAppHandlers = () => {
         }
         setTimeout(cleanupAfterModal, 100);
     };
-    const handleSkipReminderAndExport = () => { if (pendingExport) executeExport(pendingExport); setTimeout(cleanupAfterModal, 100); };
+    const handleSkipReminderAndExport = () => { if (pendingExport) { executeExport(pendingExport); } setTimeout(cleanupAfterModal, 100); };
     const handleCancelExport = () => cleanupAfterModal();
 
     return {
@@ -180,7 +209,7 @@ export const useAppHandlers = () => {
         triggerSuccessAnimation,
         handlers: {
             handleExportByCategory, handleExportByModuleType, handleExportAll, handleExportCurrentView, handleExportJson, handleImportJson,
-            handleResetCategoryRequest, handleResetAllRequest,
+            handleResetCategoryRequest, handleResetByModuleTypeRequest, handleResetAllRequest,
             handleResetDatRequest: (selectedDat: DAT | null | undefined) => createResetHandler('DAT', selectedDat, store.handleResetDat),
             handleResetPrAdhesiveRequest: (selectedEquipment: Equipment | null | undefined) => createResetHandler('Équipement', selectedEquipment, store.handleResetPrAdhesive),
             handleResetEcaAdhesiveRequest: (selectedEca: ECA | null | undefined) => createResetHandler('ECA', selectedEca, store.handleResetEcaAdhesive),
