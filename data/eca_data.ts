@@ -35,34 +35,34 @@ type EcaTemplate = Omit<ECA, 'id' | 'adhesives' | 'comment'>;
 
 // NEW: Definitions for Jean-Jaurès correspondences based on user image
 export const ECA_DEFINITIONS_JJA_A_TO_B: EcaTemplate[] = [
-    { name: "PMR Vantaux Réversible 17", accessPoint: "Correspondance A vers B", type: EcaEquipmentType.PMRVantaux, number: 17 },
-    { name: "Vantaux Réversible 13", accessPoint: "Correspondance A vers B", type: EcaEquipmentType.VantauxReversible, number: 13 },
-    { name: "Vantaux Réversible 14", accessPoint: "Correspondance A vers B", type: EcaEquipmentType.VantauxReversible, number: 14 },
-    { name: "Vantaux Réversible 15", accessPoint: "Correspondance A vers B", type: EcaEquipmentType.VantauxReversible, number: 15 },
-    { name: "Vantaux Réversible 16", accessPoint: "Correspondance A vers B", type: EcaEquipmentType.VantauxReversible, number: 16 },
+    { name: "PMR A->B 8", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantaux, number: 8 },
+    { name: "Tripode A->B 9", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 9 },
+    { name: "Tripode A->B 10", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 10 },
+    { name: "Tripode A->B 11", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 11 },
 ];
 
 export const ECA_DEFINITIONS_JJA_B_TO_A: EcaTemplate[] = [
-    { name: "PMR Vantaux Réversible 8", accessPoint: "Correspondance B vers A", type: EcaEquipmentType.PMRVantaux, number: 8 },
-    { name: "Vantaux Réversible 9", accessPoint: "Correspondance B vers A", type: EcaEquipmentType.VantauxReversible, number: 9 },
-    { name: "Vantaux Réversible 10", accessPoint: "Correspondance B vers A", type: EcaEquipmentType.VantauxReversible, number: 10 },
-    { name: "Vantaux Réversible 11", accessPoint: "Correspondance B vers A", type: EcaEquipmentType.VantauxReversible, number: 11 },
+    { name: "PMR B->A 17", accessPoint: "Correspondance", type: EcaEquipmentType.PMRVantaux, number: 17 },
+    { name: "Tripode B->A 13", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 13 },
+    { name: "Tripode B->A 14", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 14 },
+    { name: "Tripode B->A 15", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 15 },
+    { name: "Tripode B->A 16", accessPoint: "Correspondance", type: EcaEquipmentType.TripodeEntree, number: 16 },
 ];
 
 // NEW: Split definitions for Jean-Jaurès Line A entrances based on user image
 export const ECA_DEFINITIONS_JJA_A_HISTORIQUE: EcaTemplate[] = [
-    { name: "PMR Vantaux 4", accessPoint: "Accès historique", type: EcaEquipmentType.PMRVantaux, number: 4 },
-    { name: "Vantaux entrée 1", accessPoint: "Accès historique", type: EcaEquipmentType.VantauxEntree, number: 1 },
-    { name: "Vantaux entrée 2", accessPoint: "Accès historique", type: EcaEquipmentType.VantauxEntree, number: 2 },
-    { name: "Vantaux entrée 3", accessPoint: "Accès historique", type: EcaEquipmentType.VantauxEntree, number: 3 },
+    { name: "PMR à vantaux 4", accessPoint: "Accès Principal", type: EcaEquipmentType.PMRVantaux, number: 4 },
+    { name: "Tripode d'entrée 1", accessPoint: "Accès Principal", type: EcaEquipmentType.TripodeEntree, number: 1 },
+    { name: "Tripode d'entrée 2", accessPoint: "Accès Principal", type: EcaEquipmentType.TripodeEntree, number: 2 },
+    { name: "Tripode d'entrée 3", accessPoint: "Accès Principal", type: EcaEquipmentType.TripodeEntree, number: 3 },
 ];
 
 export const ECA_DEFINITIONS_JJA_A_PRINCIPAL: EcaTemplate[] = [
-    { name: "PMR Vantaux 7", accessPoint: "Accès principal (côté Ligne B)", type: EcaEquipmentType.PMRVantaux, number: 7 },
-    { name: "Vantaux entrée 8", accessPoint: "Accès principal (côté Ligne B)", type: EcaEquipmentType.VantauxEntree, number: 8 },
-    { name: "Vantaux entrée 9", accessPoint: "Accès principal (côté Ligne B)", type: EcaEquipmentType.VantauxEntree, number: 9 },
-    { name: "Vantaux entrée 10", accessPoint: "Accès principal (côté Ligne B)", type: EcaEquipmentType.VantauxEntree, number: 10 },
-    { name: "Vantaux entrée 11", accessPoint: "Accès principal (côté Ligne B)", type: EcaEquipmentType.VantauxEntree, number: 11 },
+    { name: "PMR à vantaux 7", accessPoint: "Accès JJB A", type: EcaEquipmentType.PMRVantaux, number: 7 },
+    { name: "Tripode d'entrée 8", accessPoint: "Accès JJB A", type: EcaEquipmentType.TripodeEntree, number: 8 },
+    { name: "Tripode d'entrée 9", accessPoint: "Accès JJB A", type: EcaEquipmentType.TripodeEntree, number: 9 },
+    { name: "Tripode d'entrée 10", accessPoint: "Accès JJB A", type: EcaEquipmentType.TripodeEntree, number: 10 },
+    { name: "Tripode d'entrée 11", accessPoint: "Accès JJB A", type: EcaEquipmentType.TripodeEntree, number: 11 },
 ];
 
 
@@ -317,13 +317,13 @@ export const ECA_DEFINITIONS: { [stationCode: string]: EcaTemplate[] } = {
         { name: "Tripode d'entrée 9", accessPoint: "Accès Principal", type: EcaEquipmentType.TripodeEntree, number: 9 },
     ],
     'JJB': [
-        { name: "PMR Vantaux 1", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.PMRVantaux, number: 1 },
-        { name: "Vantaux entrée 2", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxEntree, number: 2 },
-        { name: "Vantaux entrée 3", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxEntree, number: 3 },
-        { name: "Vantaux entrée 4", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxEntree, number: 4 },
-        { name: "Vantaux entrée 5", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxEntree, number: 5 },
-        { name: "Vantaux sortie 6", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxSortie, number: 6 },
-        { name: "Vantaux sortie 7", accessPoint: "Accès Principal Ligne B", type: EcaEquipmentType.VantauxSortie, number: 7 },
+        { name: "PMR à vantaux 1", accessPoint: "Accès JJB B", type: EcaEquipmentType.PMRVantaux, number: 1 },
+        { name: "Tripode d'entrée 2", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeEntree, number: 2 },
+        { name: "Tripode d'entrée 3", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeEntree, number: 3 },
+        { name: "Tripode d'entrée 4", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeEntree, number: 4 },
+        { name: "Tripode d'entrée 5", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: "Tripode de sortie 6", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeSortie, number: 6 },
+        { name: "Tripode de sortie 7", accessPoint: "Accès JJB B", type: EcaEquipmentType.TripodeSortie, number: 7 },
     ],
     'FVE': [
         { name: "PMR 1", accessPoint: "Accès Principal", type: EcaEquipmentType.PMRBras, number: 1 },

@@ -5,13 +5,18 @@ import { Adhesive, PrAdhesive, EcaEquipmentType, EquipmentType } from '../types'
 // =================================================================
 
 export const ADHESIVES: Adhesive[] = [
-    { id: 'dat-1', name: 'Repère 1 - Consignes générales', description: 'Dimensions: 100x150mm | Localisation: Façade', referentiel: 'REF-DAT-01' },
-    { id: 'dat-2', name: 'Repère 2 - Moyens de paiement', description: 'Dimensions: 100x100mm | Localisation: Près du TPE', referentiel: 'REF-DAT-02' },
-    { id: 'dat-3', name: 'Repère 3 - Rendu monnaie', description: 'Dimensions: 80x50mm | Localisation: Trappe monnaie', referentiel: 'REF-DAT-03' },
-    { id: 'dat-4', name: 'Repère 4 - Fente tickets', description: 'Dimensions: 80x50mm | Localisation: Fente ticket', referentiel: 'REF-DAT-04' },
-    { id: 'dat-5', name: 'Repère 5 - Assistance', description: 'Dimensions: 120x80mm | Localisation: Façade, en bas', referentiel: 'REF-DAT-05' },
-    { id: 'dat-6', name: 'Repère 6 - Sans contact', description: 'Dimensions: 50x50mm | Localisation: Zone sans contact', referentiel: 'REF-DAT-06' },
-    { id: 'dat-7', name: 'Repère 7 - Récupération reçu', description: 'Dimensions: 80x50mm | Localisation: Fente reçu', referentiel: 'REF-DAT-07' },
+  { id: 'ad1', name: 'Repère 1 - Adhésif « Achat et rechargement »', description: 'Dimensions: 95x5,8cm | Localisation: En haut de la niche bleue, en butée basse avant le renfoncement.', referentiel: '' },
+  { id: 'ad2', name: 'Repère 2 - Adhésif « bouton-audio »', description: 'Dimensions: 2,5x2,5cm | Localisation: Au dessus du bouton d’action lié, centré sur celui-ci.', referentiel: '' },
+  { id: 'ad3', name: 'Repère 3 - Adhésif « Rechargement + paiement CB »', description: 'Dimensions: 25,3x22cm | Localisation: Au dessus de la platine Carte Bancaire, en butée avec celle-ci.', referentiel: '' },
+  { id: 'ad4', name: 'Repère 4 - Adhésif « paiement monnaie »', description: 'Dimensions: 21,5x22cm | Localisation: Au dessus de la platine insert monnaie, en butée avec celle-ci.', referentiel: '' },
+  { id: 'ad5', name: 'Repère 5 - Adhésif « paiement sans-contact »', description: 'Dimensions: 12,2x10cm | Localisation: A droite du lecteur sans contact, la flèche de l’adhésif doit pointer vers le lecteur.', referentiel: '' },
+  { id: 'ad6', name: 'Repère 6 - Adhésif « tickets-reçus rendu-monnaie »', description: 'Dimensions: 20,5x16cm | Localisation: Au dessus de la trappe rendu monnaie, en butée avec celle-ci et centrée par rapport à celle-ci.', referentiel: '' },
+  { id: 'ad7', name: 'Repère 7 - Adhésif « carte pastel »', description: 'Dimensions: 4,9x4,9cm | Localisation: Sur le lecteur carte Pastel.', referentiel: '' },
+  { id: 'ad8', name: 'Repère 8 - Fiche « Tarif »', description: 'Dimensions: 36x15cm | Localisation: Dans le support dédié (Voir focus page 7).', referentiel: '' },
+  { id: 'ad9', name: 'Repère 9 - « Numéro » du DAT', description: 'Localisation: Dans l’angle gauche de la partie grise au dessus du bandeau « Achat + rechargement » (Voir focus page 8).', referentiel: '' },
+  { id: 'ad10', name: 'Repère 10 - Adhésif « Validation avec carte bancaire » + QR_Code', description: 'Dimensions: 24x52cm | Localisation: A droite et au dessus de l’appel d’urgence (focus en page 9).', referentiel: '' },
+  { id: 'ad11', name: 'Repère 11 - Adhésif « Appel d’urgence. Tous abus sera puni »', description: 'Dimensions: 214x306mm | Localisation: A droite, entoure le bouton d’appel d’urgence (focus en page 9).', referentiel: '' },
+  { id: 'ad12', name: 'Repère 12 - Adhésif « Appel d’urgence + braille»', description: 'Dimensions: 3,7x5,4cm | Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).', referentiel: '' }
 ];
 
 // =================================================================
@@ -19,19 +24,23 @@ export const ADHESIVES: Adhesive[] = [
 // =================================================================
 
 export const PR_ADHESIVES_BE: PrAdhesive[] = [
-    { id: 'pr-be-1', name: 'Repère 1 - Instructions Entrée', description: 'Utilisez votre carte Pastel', location: 'Façade avant', referentiel: 'REF-PR-BE-01' },
-    { id: 'pr-be-2', name: 'Repère 2 - Logo P+R', description: 'Logo Tisséo P+R // 150x150mm', location: 'Haut de la borne', referentiel: 'REF-PR-BE-02' },
+    { id: 'adbe1', name: 'Repère 1 - "cible" Information P+R', description: 'Adhésif « P+r-rustine-entree_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur entrée)', referentiel: '//serveur/docs/PNR/BE/ref-adbe1.pdf' },
+    { id: 'adbe2', name: 'Repère 2 - Information Ticket', description: 'Adhésif « P+r-rustine-ticket-P+r_2025-02-12 » // 9x5cm', location: 'Au dessus du distributeur de ticket parking, centré sur celui-ci', referentiel: '//serveur/docs/PNR/BE/ref-adbe2.pdf' },
+    { id: 'adbe3', name: 'Repère 3 - Tarifs', description: 'Adhésif « Tarifs » sur borne d’entrée // 10x20cm', location: 'A droite de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BE/ref-adbe3.pdf' },
+    { id: 'adbe10', name: 'Repère 10 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-entree-A3_ » // 32,8x45,1cm', location: 'Sur le latéral de la borne en entrée de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BE/ref-adbe10.pdf' }
 ];
-
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
-    { id: 'pr-bs-1', name: 'Repère 1 - Instructions Sortie', description: 'Présentez votre titre de transport validé', location: 'Façade avant', referentiel: 'REF-PR-BS-01' },
-    { id: 'pr-bs-2', name: 'Repère 2 - Merci de votre visite', description: 'Message de courtoisie', location: 'Barrière de sortie', referentiel: 'REF-PR-BS-02' },
+    { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
+    { id: 'adbs5', name: 'Repère 5 - Ticket rechargeable', description: 'Adhésif « adhesif-ticket-rechargeable-p+r-borne-sortie_80x120mm_2025-02-07 » // 10,9x14,9cm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
+    { id: 'adbs11', name: 'Repère 11 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-sortie_A3_ »// 32,8x45,1cm', location: 'Sur le latéral de la borne en sorite de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BS/ref-adbs11.pdf' }
 ];
-
 export const PR_ADHESIVES_CA: PrAdhesive[] = [
-    { id: 'pr-ca-1', name: 'Repère 1 - Tarifs P+R', description: 'Grille tarifaire', location: 'A côté de l\'écran', referentiel: 'REF-PR-CA-01' },
-    { id: 'pr-ca-2', name: 'Repère 2 - Paiement CB', description: 'Logo CB // 50x50mm', location: 'Sur le TPE', referentiel: 'REF-PR-CA-02' },
-    { id: 'pr-ca-3', name: 'Repère 3 - Assistance', description: 'Numéro d\'appel', location: 'Sous l\'écran', referentiel: 'REF-PR-CA-03' },
+    { id: 'adca6', name: 'Repère 6 - Information caisse', description: 'Adhésif « caisse-P+r-gauche-rustine _ 2025-02-05 » // 10,5x12,9cm', location: 'Sous l’écran de la caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca6.pdf' },
+    { id: 'adca7', name: 'Repère 7 - Récupération ticket', description: 'Adhésif « caisse-P+r-gauche-rustine-ticket-P+r_ 2025-02-14 » // 8,2x5,5cm', location: 'En bas à droite au niveau du distributeur de ticket suite à un paiement via caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca7.pdf' },
+    { id: 'adca8', name: 'Repère 8 - Ticket rechargeable', description: 'Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 » // 14,9x10,9cm', location: 'En bas a gauche à l’opposé du n°7', referentiel: '//serveur/docs/PNR/CA/ref-adca8.pdf' },
+    { id: 'adca9', name: 'Repère 9 - Tarifs P+R', description: 'Fiche « P+R_tarifs_caisse_auto_2023_v2 » // 10,5x21cm', location: 'Sur la partie droite de la caisse auto, orientée vers l’usager', referentiel: '//serveur/docs/PNR/CA/ref-adca9.pdf' },
+    { id: 'adca12', name: 'Plan de quartier', description: 'Fiche plan de quartier au format 78x120cm', location: 'Sur la vitre latérale de la caisse auto, côté extérieur, visible par les usagers', referentiel: '' },
+    { id: 'adca13', name: 'Dos gris verso', description: 'Dos gris au format 78x120cm', location: 'Placé au verso de la fiche "Plan de quartier"', referentiel: '' }
 ];
 
 export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
@@ -47,33 +56,54 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
 // ADHÉSIFS ECA (Équipement de Contrôle d'Accès)
 // =================================================================
 
-export const ECA_ADHESIVES_STD: Adhesive[] = [
-    { id: 'eca-1', name: 'Repère 1 - Sens de passage', description: 'Flèche directionnelle', referentiel: 'REF-ECA-STD-01' },
-    { id: 'eca-2', name: 'Repère 2 - Zone de validation', description: 'Validez ici', referentiel: 'REF-ECA-STD-02' },
+const ECA_ADHESIVES_ENTREE: Adhesive[] = [
+    { id: 'eca-1', name: 'Repère 1 - Adhesif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
+    { id: 'eca-2', name: 'Repère 2 - Adhesif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
+    { id: 'eca-3', name: 'Repère 3 - Adhesif valideur-openpayment-metro', description: '183x183mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
 ];
 
-export const ECA_ADHESIVES_PMR: Adhesive[] = [
-    { id: 'eca-3', name: 'Repère 3 - Entrée', description: 'Flèche verte sur fond blanc|Sur le vantail', referentiel: 'REF-ECA-PMR-03' },
-    { id: 'eca-4', name: 'Repère 4 - Sortie', description: 'Sens interdit sur fond blanc|Sur le vantail', referentiel: 'REF-ECA-PMR-04' },
-    { id: 'eca-5', name: 'Repère 5 - Validation Pastel', description: 'Zone de validation carte|Sur le totem', referentiel: 'REF-ECA-PMR-05' },
-    { id: 'eca-6', name: 'Repère 6 - Validation Ticket', description: 'Fente ticket|Sur le totem', referentiel: 'REF-ECA-PMR-06' },
-    { id: 'eca-7', name: 'Repère 7 - Pictogramme PMR', description: '100x100mm|Sur le vantail', referentiel: 'REF-ECA-PMR-07', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR' },
-    { id: 'eca-8', name: 'Repère 8 - Pictogramme Bagages', description: '100x100mm|Sur le vantail', referentiel: 'REF-ECA-PMR-08', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR' },
-    { id: 'eca-9', name: 'Repère 9 - Pictogramme Poussette', description: '100x100mm|Sur le vantail', referentiel: 'REF-ECA-PMR-09', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR' },
-    { id: 'eca-10', name: 'Repère 10 - Pictogramme UFR', description: '100x100mm|Sur le vantail', referentiel: 'REF-ECA-PMR-10', groupId: 'pmr-pictogram', groupName: 'Pictogramme PMR' },
+const ECA_ADHESIVES_SORTIE: Adhesive[] = [];
+
+const ECA_ADHESIVES_REVERSIBLE: Adhesive[] = [
+    ...ECA_ADHESIVES_ENTREE,
+    { id: 'eca-r-1', name: 'Repère R1 - Signalisation dynamique', description: 'Flèche verte / Croix rouge lumineuse | Sur les deux faces du vantail', referentiel: 'REF-ECA-REVERSIBLE-01' },
+];
+
+const ECA_ADHESIVES_PMR_PICTOGRAMS: Adhesive[] = [
+    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+];
+
+const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [
+    ...ECA_ADHESIVES_ENTREE,
+    { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique PMR à bras).', referentiel: '' },
+    { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
+    ...ECA_ADHESIVES_PMR_PICTOGRAMS,
+];
+
+const ECA_ADHESIVES_PMR_VANTAUX: Adhesive[] = [
+    ...ECA_ADHESIVES_ENTREE,
+    { id: 'eca-5', name: 'Repère 5 - Adhésif valideur-PMRVantaux', description: '195x185mm | Sur platine jaune, autour du support de validation (spécifique PMR à vantaux).', referentiel: '' },
+    { id: 'eca-7', name: 'Repère 7 - Adhésif valideur-portillon-PMR-vantaux', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à vantaux).', referentiel: '' },
+    // PMR à vantaux does not have the "Bagages" pictogram
+    ...ECA_ADHESIVES_PMR_PICTOGRAMS.filter(p => p.id !== 'eca-8'),
 ];
 
 export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
     switch (type) {
         case EcaEquipmentType.PMRBras:
+            return ECA_ADHESIVES_PMR_BRAS;
         case EcaEquipmentType.PMRVantaux:
-            return ECA_ADHESIVES_PMR;
+            return ECA_ADHESIVES_PMR_VANTAUX;
         case EcaEquipmentType.TripodeEntree:
-        case EcaEquipmentType.TripodeSortie:
         case EcaEquipmentType.VantauxEntree:
+            return ECA_ADHESIVES_ENTREE;
+        case EcaEquipmentType.TripodeSortie:
         case EcaEquipmentType.VantauxSortie:
+            return ECA_ADHESIVES_SORTIE;
         case EcaEquipmentType.VantauxReversible:
-            return ECA_ADHESIVES_STD;
+            return ECA_ADHESIVES_REVERSIBLE;
         default:
             return [];
     }

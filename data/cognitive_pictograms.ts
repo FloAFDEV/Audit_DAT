@@ -74,23 +74,41 @@ export const getCognitivePictogramDimension = (stationCode: string, accessPointN
 // rather than being handled by a special case in the generation function.
 const initialCounts: Record<string, number> = {
     // Line B
-    'JJB': 0, // No pictos for JJB, they are attached to JJA
+    'BOR': 2,
+    // 'TCO': 2 (default)
+    // 'LVA': 2 (default)
+    // 'BPA': 2 (default)
+    // 'MIN': 2 (default)
+    // 'CAN': 2 (default)
+    'CCA': 3,
+    'JAR': 2,
+    'JJB': 0, // Special case for Jean-Jaurès, user can add accesses if needed
     'FVE': 2,
+    'CAR': 2,
+    'PDJ': 2,
+    'SMI': 2,
     'EMP': 1,
-    'SAG': 1,
-    'RAN': 2,
+    'SAG': 2,
+    'SAO': 2,
+    'RAN': 1,
     'PHA': 2,
+    'UPS': 2,
+    // 'RAM' is a special case
     
     // Line A
-    'BGR': 1,
+    'BGR': 2,
     'ARG': 1,
     'ROS': 1,
-    'MAR': 2,
+    // 'JOL' is a special case
+    'MAR': 1,
+    'JJA': 1,
+    // 'CAP' is a special case
+    // 'ESQ' is a special case
     'SCY': 3,
     'POI': 2,
     'ARE': 2,
     'FLE': 1,
-    'MER': 1,
+    'MER': 2,
     'BAG': 2,
     'MUN': 2,
     'REY': 2,
