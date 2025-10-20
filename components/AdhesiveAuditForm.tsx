@@ -30,12 +30,8 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
   return (
     <AuditFormLayout
       module={module}
-      title={
-        <div className="flex items-center gap-3">
-            <DatIcon dat={dat} size="md" />
-            <span className="text-2xl font-bold text-gray-800 dark:text-slate-100">Audit pour {dat.name}</span>
-        </div>
-      }
+      customIcon={<DatIcon dat={dat} size="md" />}
+      title={`Audit pour ${dat.name}`}
       subtitle={
         <p className="text-gray-600 dark:text-slate-400 text-sm">
           <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Direction :</span> {directionName}

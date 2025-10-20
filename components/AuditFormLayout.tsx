@@ -3,10 +3,12 @@ import { AuditModule } from '../types';
 import { ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
+import { ModuleIcon } from './ModuleIcon';
 
 interface AuditFormLayoutProps {
     module: AuditModule;
     title: React.ReactNode;
+    customIcon?: React.ReactNode;
     subtitle: React.ReactNode;
     progress: number;
     onBack: () => void;
@@ -22,6 +24,7 @@ interface AuditFormLayoutProps {
 const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     module,
     title,
+    customIcon,
     subtitle,
     progress,
     onBack,
@@ -51,11 +54,14 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         >
                             <ArrowLeft className="w-6 h-6" />
                         </button>
-                        <div className="flex-1 min-w-0">
-                            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
-                            <div className="flex items-center gap-3 mt-2">
-                                <LineIcon module={module} size="sm" />
-                                {subtitle}
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                            {customIcon ?? <ModuleIcon type={module.type} className="w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
+                            <div className="flex-1 min-w-0">
+                                <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
+                                <div className="flex items-center gap-3 mt-1">
+                                    <LineIcon module={module} size="sm" />
+                                    {subtitle}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -69,7 +75,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         <span>Réinitialiser</span>
                     </button>
                 </div>
-                <div className="mt-4 pl-0 sm:pl-16">
+                <div className="mt-4 pl-0 sm:pl-[72px]"> {/* Aligned with title content */}
                     <div className="flex justify-between items-center mb-1">
                         <span className="text-sm font-medium text-gray-500 dark:text-slate-400">Progression</span>
                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
