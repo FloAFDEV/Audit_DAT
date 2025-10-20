@@ -13,19 +13,37 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({ progress, isActive
 
     const baseClasses = 'px-2 py-0.5 text-xs font-bold rounded-full transition-colors';
 
-    let colorClasses = '';
-    if (isComplete) {
-        colorClasses = isActive
-            ? 'bg-teal-600 text-white'
-            : 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300';
-    } else {
-        colorClasses = isActive
-            ? 'bg-sky-100 text-sky-800 dark:bg-sky-900/50 dark:text-sky-300'
-            : 'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-300';
+    let backgroundClass = '';
+    let textColorClass = '';
+
+    if (isActive) {
+        if (isComplete) {
+            backgroundClass = 'bg-teal-600';
+            textColorClass = 'text-white';
+        } else {
+            backgroundClass = 'bg-sky-100 dark:bg-sky-900/50';
+            if (roundedProgress === 0) {
+                textColorClass = 'text-slate-500 dark:text-slate-400';
+            } else {
+                textColorClass = 'text-amber-600 dark:text-amber-400';
+            }
+        }
+    } else { // inactive
+        if (isComplete) {
+            backgroundClass = 'bg-teal-100 dark:bg-teal-900/50';
+            textColorClass = 'text-teal-800 dark:text-teal-300';
+        } else {
+            backgroundClass = 'bg-slate-200 dark:bg-slate-700';
+            if (roundedProgress === 0) {
+                textColorClass = 'text-slate-500 dark:text-slate-400';
+            } else {
+                textColorClass = 'text-amber-600 dark:text-amber-400';
+            }
+        }
     }
 
     return (
-        <span className={`${baseClasses} ${colorClasses}`}>
+        <span className={`${baseClasses} ${backgroundClass} ${textColorClass}`}>
             {roundedProgress}%
         </span>
     );
