@@ -131,7 +131,7 @@ const App: React.FC = () => {
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
-            <div className="container mx-auto px-4 lg:px-8 xl:px-12 py-8 flex-grow">
+            <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
                 <div className="mb-6">
                     <Breadcrumbs
                         lieu={selectedLieu}
