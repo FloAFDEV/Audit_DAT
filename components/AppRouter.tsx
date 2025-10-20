@@ -79,7 +79,6 @@ interface AppRouterProps {
     onExportJson: any;
     onImportJson: any;
     onResetCategory: any;
-    onResetByModuleType: any;
     onResetAll: any;
     onRequestLogout: any;
 }
@@ -233,7 +232,6 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         onExportJson={handlers.onExportJson}
         onImportJson={handlers.onImportJson}
         onResetCategory={handlers.onResetCategory}
-        onResetByModuleType={handlers.onResetByModuleType}
         onResetAll={handlers.onResetAll}
         onRequestLogout={handlers.onRequestLogout}
     />;

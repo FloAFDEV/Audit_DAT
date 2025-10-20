@@ -7,7 +7,6 @@ import { exportLieuxToCsv, exportLieuxToJson, generateAndDownloadIcsFile, calcul
 import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from '../components/ToastManager';
 import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
-import { ModuleIcon } from '../components/ModuleIcon';
 
 interface ReminderOptions {
     title: string;
@@ -45,7 +44,7 @@ export const useAppHandlers = () => {
 
     const showExportSuccessToast = (message: string, categoryKey?: AuditCategory) => {
         const categoryConfig = categoryKey ? AUDIT_CATEGORIES.find(c => c.key === categoryKey) : undefined;
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file. This fixes "Cannot redeclare block-scoped variable" and other related JSX parsing errors.
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
         const icon = categoryConfig ? React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" }) : React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
         showSuccessToast({ icon, title: 'Exportation réussie', message });
         triggerSuccessAnimation();
@@ -54,7 +53,7 @@ export const useAppHandlers = () => {
     const executeExport = (exportConfig: PendingExport) => {
         const { lieux, fileName, successMessage, category } = exportConfig;
         if (hasPhotos(lieux)) {
-            // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
+            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
             showInfoToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(Download, { className: "h-6 w-6 text-white" })), title: 'Rappel pour les photos', message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète." });
         }
         const result = exportLieuxToCsv(lieux, fileName);
@@ -62,7 +61,7 @@ export const useAppHandlers = () => {
         if (result.success) {
             showExportSuccessToast(successMessage, category);
         } else {
-            // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
+            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
             showErrorToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: 'Exportation Échouée', message: result.error || "Une erreur est survenue lors de la génération du fichier CSV." });
         }
     };
@@ -128,11 +127,11 @@ export const useAppHandlers = () => {
     const handleExportJson = () => {
         const { success } = exportLieuxToJson(store.lieux);
         if (success) {
-            // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
+            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
             showSuccessToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" })), title: 'Exportation JSON réussie', message: 'Le fichier de données a été téléchargé.' });
             triggerSuccessAnimation();
         } else {
-            // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
+            // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
             showErrorToast({ icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: 'Erreur', message: "Échec de l'exportation JSON." });
         }
     };
@@ -140,57 +139,28 @@ export const useAppHandlers = () => {
     // --- IMPORT HANDLER ---
     const handleImportJson = (fileContent: string) => {
         const promise = store.handleImportJsonData(fileContent);
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
-        showPromiseToast(promise, 
-            { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Importation en cours...", message: "Veuillez patienter." }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Importation réussie", message: "Les données ont été chargées." }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur d'importation", message: "Le fichier est invalide ou corrompu." }, 
-            triggerSuccessAnimation);
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
+        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Importation en cours...", message: "Veuillez patienter." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Importation réussie", message: "Les données ont été chargées." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur d'importation", message: "Le fichier est invalide ou corrompu." }, triggerSuccessAnimation);
     };
 
     // --- RESET HANDLERS ---
     const handleResetCategoryRequest = (category: AuditCategory) => {
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category)!;
         const promise = store.handleResetCategory(category);
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
-        showPromiseToast(promise, 
-            { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `Catégorie "${categoryConfig.label}"` }, 
-            { icon: React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" }), title: "Réinitialisation terminée", message: `La catégorie "${categoryConfig.label}" a été réinitialisée.` },
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, 
-            triggerSuccessAnimation);
-    };
-
-    const handleResetByModuleTypeRequest = (moduleType: AuditModuleType) => {
-        const moduleConfig = AUDIT_MODULES_CONFIG.find(c => c.type === moduleType)!;
-        const promise = store.handleResetByModuleType(moduleType);
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file. This also fixes the "Cannot find namespace 'moduleConfig'" error by correctly referencing the component constructor.
-        showPromiseToast(
-            promise,
-            { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `Audits de type "${moduleConfig.label}"` },
-            { icon: React.createElement('div', { className: "flex items-center justify-center w-10 h-10 bg-teal-100 rounded-full" }, React.createElement(moduleConfig.Icon, { className: "w-6 h-6 text-teal-600" })), title: "Réinitialisation terminée", message: `Les audits "${moduleConfig.label}" ont été réinitialisés.` },
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." },
-            triggerSuccessAnimation
-        );
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
+        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `Catégorie "${categoryConfig.label}"` }, { icon: React.createElement(CategoryIcon, { categoryConfig: categoryConfig, size: "md" }), title: "Réinitialisation terminée", message: `La catégorie "${categoryConfig.label}" a été réinitialisée.` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
     };
 
     const handleResetAllRequest = () => {
         const promise = store.handleResetAll();
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
-        showPromiseToast(promise, 
-            { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: "Toutes les données sont en cours de réinitialisation." }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-blue-500 flex items-center justify-center" }, React.createElement(RefreshCw, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: "Toutes les données ont été réinitialisées." }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, 
-            triggerSuccessAnimation);
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
+        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: "Toutes les données sont en cours de réinitialisation." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-blue-500 flex items-center justify-center" }, React.createElement(RefreshCw, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: "Toutes les données ont été réinitialisées." }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
     };
 
     const createResetHandler = (itemName: string, selectedItem: any, resetAction: () => Promise<void>) => {
         const promise = resetAction();
-        // FIX: Replaced JSX with React.createElement to resolve parsing errors in .ts file.
-        showPromiseToast(promise, 
-            { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `${itemName} : ${selectedItem?.name || selectedItem?.stationName}` }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: `L'audit a été réinitialisé.` }, 
-            { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, 
-            triggerSuccessAnimation);
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
+        showPromiseToast(promise, { icon: React.createElement('div', { className: "animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500" }), title: "Réinitialisation en cours...", message: `${itemName} : ${selectedItem?.name || selectedItem?.stationName}` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-teal-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-5 w-5 text-white" })), title: "Réinitialisation terminée", message: `L'audit a été réinitialisé.` }, { icon: React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" })), title: "Erreur", message: "La réinitialisation a échoué." }, triggerSuccessAnimation);
     };
     
     // --- MODAL HANDLERS ---
@@ -210,7 +180,7 @@ export const useAppHandlers = () => {
         triggerSuccessAnimation,
         handlers: {
             handleExportByCategory, handleExportByModuleType, handleExportAll, handleExportCurrentView, handleExportJson, handleImportJson,
-            handleResetCategoryRequest, handleResetByModuleTypeRequest, handleResetAllRequest,
+            handleResetCategoryRequest, handleResetAllRequest,
             handleResetDatRequest: (selectedDat: DAT | null | undefined) => createResetHandler('DAT', selectedDat, store.handleResetDat),
             handleResetPrAdhesiveRequest: (selectedEquipment: Equipment | null | undefined) => createResetHandler('Équipement', selectedEquipment, store.handleResetPrAdhesive),
             handleResetEcaAdhesiveRequest: (selectedEca: ECA | null | undefined) => createResetHandler('ECA', selectedEca, store.handleResetEcaAdhesive),

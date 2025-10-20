@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig } from '../types';
 import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
-import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
+import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
 import { ActionsMenu } from './ActionsMenu';
@@ -14,12 +14,6 @@ import { LieuCard } from './LieuCard';
 import { useLieuList } from '../hooks/useLieuList';
 import { ProgressBadge } from './ProgressBadge';
 import { LieuBadges } from './Icons';
-import { ModuleIcon } from './ModuleIcon';
-
-interface ResetRequest {
-    type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE';
-    value: 'ALL' | AuditCategory | AuditModuleType;
-}
 
 interface LieuSelectorProps {
   lieux: Lieu[];
@@ -33,7 +27,6 @@ interface LieuSelectorProps {
   onExportJson: () => void;
   onImportJson: (fileContent: string) => void;
   onResetCategory: (category: AuditCategory) => void;
-  onResetByModuleType: (moduleType: AuditModuleType) => void;
   onResetAll: () => void;
   onRequestLogout: () => void;
 }
@@ -41,7 +34,7 @@ interface LieuSelectorProps {
 const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const { 
         lieux, onSelectLieu, activeFilter, onFilterChange, onExportByCategory, onExportByModuleType, 
-        onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetByModuleType, onResetAll, onRequestLogout 
+        onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetAll, onRequestLogout 
     } = props;
     
     const { activeAuditFilters } = useAuditStore();
@@ -51,7 +44,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const searchContainerRef = useRef<HTMLDivElement>(null);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const mobileMenuRef = useRef<HTMLDivElement>(null);
-    const [resetTarget, setResetTarget] = useState<ResetRequest | null>(null);
+    const [resetTarget, setResetTarget] = useState<AuditCategory | 'ALL' | null>(null);
+    const [resetTargetConfig, setResetTargetConfig] = useState<AuditCategoryConfig | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importFileContent, setImportFileContent] = useState<string | null>(null);
 
@@ -118,6 +112,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     };
 
     const showInverter = activeFilter !== 'ALL';
+    // FIX: Added 'useMemo' to the React import to resolve the "Cannot find name 'useMemo'" error.
     const activeCategoryConfig = useMemo(() => AUDIT_CATEGORIES.find(c => c.key === activeFilter), [activeFilter]);
     
     const getCategoryHoverColor = (catKey: AuditCategory | 'ALL'): string => {
@@ -138,53 +133,19 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         return `${baseClasses} border-transparent text-gray-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)]`;
     };
     
-    const handleConfirmReset = () => {
-        if (resetTarget) {
-            switch (resetTarget.type) {
-                case 'ALL':
-                    onResetAll();
-                    break;
-                case 'CATEGORY':
-                    onResetCategory(resetTarget.value as AuditCategory);
-                    break;
-                case 'MODULE_TYPE':
-                    onResetByModuleType(resetTarget.value as AuditModuleType);
-                    break;
-            }
-        }
-        setResetTarget(null);
+    const handleResetRequest = (category: AuditCategory | 'ALL') => {
+        setResetTarget(category);
+        setResetTargetConfig(category === 'ALL' ? null : AUDIT_CATEGORIES.find(c => c.key === category) || null);
     };
 
-    const resetModalInfo = useMemo(() => {
-        if (!resetTarget) return { title: '', message: '', icon: null };
-
-        switch (resetTarget.type) {
-            case 'ALL':
-                return {
-                    title: "Réinitialiser toutes les données",
-                    message: "Êtes-vous sûr de vouloir réinitialiser l'intégralité de l'application ? Toutes vos données seront perdues et remplacées par les données initiales.",
-                    icon: <CategoryIcon size="sm" />
-                };
-            case 'CATEGORY': {
-                const config = AUDIT_CATEGORIES.find(c => c.key === resetTarget.value);
-                return {
-                    title: `Réinitialiser ${config?.label}`,
-                    message: `Êtes-vous sûr de vouloir réinitialiser toutes les données pour la catégorie "${config?.label}" ?`,
-                    icon: <CategoryIcon categoryConfig={config} size="sm" />
-                };
-            }
-            case 'MODULE_TYPE': {
-                const config = AUDIT_MODULES_CONFIG.find(c => c.type === resetTarget.value);
-                return {
-                    title: `Réinitialiser les ${config?.label}`,
-                    message: `Êtes-vous sûr de vouloir réinitialiser tous les audits de type "${config?.label}" sur l'ensemble du réseau ?`,
-                    icon: config ? <div className="flex items-center justify-center w-6 h-6 rounded-md"><config.Icon className="w-4 h-4 text-red-600 dark:text-red-400" /></div> : null
-                };
-            }
-            default:
-                 return { title: '', message: '', icon: null };
+    const handleConfirmReset = () => {
+        if (resetTarget) {
+            if (resetTarget === 'ALL') onResetAll();
+            else onResetCategory(resetTarget);
         }
-    }, [resetTarget]);
+        setResetTarget(null);
+        setResetTargetConfig(null);
+    };
 
     const placeholderText = activeFilter === 'ALL'
         ? "Rechercher un lieu..."
@@ -302,7 +263,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                             <ArrowRightLeft className="h-5 w-5" /><span className="text-xs font-semibold mt-1">Inverser</span>
                         </button>
                     )}
-                    <ActionsMenu onExportByCategory={onExportByCategory} onExportByModuleType={onExportByModuleType} onExportAll={onExportAll} onExportCurrentView={onExportCurrentView} onExportJson={onExportJson} onImportJson={handleImportClick} onResetRequest={setResetTarget} isModalOpen={!!resetTarget || !!importFileContent} activeFilter={activeFilter} activeAuditFilters={activeAuditFilters} availableAuditTypes={availableAuditTypes} />
+                    <ActionsMenu onExportByCategory={onExportByCategory} onExportByModuleType={onExportByModuleType} onExportAll={onExportAll} onExportCurrentView={onExportCurrentView} onExportJson={onExportJson} onImportJson={handleImportClick} onResetRequest={handleResetRequest} isModalOpen={!!resetTarget || !!importFileContent} activeFilter={activeFilter} activeAuditFilters={activeAuditFilters} availableAuditTypes={availableAuditTypes} />
                 </div>
             </div>
 
@@ -317,15 +278,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
             )}
 
-            <ConfirmationModal 
-                isOpen={!!resetTarget} 
-                onClose={() => setResetTarget(null)} 
-                onConfirm={handleConfirmReset} 
-                title={resetModalInfo.title} 
-                message={resetModalInfo.message} 
-                icon={resetModalInfo.icon} 
-                isDestructive 
-            />
+            <ConfirmationModal isOpen={!!resetTarget} onClose={() => setResetTarget(null)} onConfirm={handleConfirmReset} title={resetTarget === 'ALL' ? "Réinitialiser toutes les données" : `Réinitialiser ${resetTargetConfig?.label}`} message={resetTarget === 'ALL' ? "Êtes-vous sûr de vouloir réinitialiser l'intégralité de l'application ? Toutes vos données seront perdues et remplacées par les données initiales." : `Êtes-vous sûr de vouloir réinitialiser toutes les données pour la catégorie "${resetTargetConfig?.label}" ?`} icon={<CategoryIcon categoryConfig={resetTargetConfig || undefined} size="sm" />} isDestructive />
             <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr de vouloir importer ce fichier ? Toutes les données actuelles seront remplacées par le contenu du fichier." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
         </div>
     );

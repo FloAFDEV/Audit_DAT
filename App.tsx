@@ -86,12 +86,12 @@ const App: React.FC = () => {
         store.init();
     }, [store.init]);
 
-    // FIX: Destructure the return value of useAppHandlers to resolve "Property does not exist on type 'void'" errors.
-    // These errors were caused by syntax issues in the useAppHandlers hook preventing correct type inference.
-    const appHandlers = useAppHandlers();
-    const showSuccessAnimation = appHandlers.showSuccessAnimation;
-    const handlers = appHandlers.handlers;
-    const modalState = appHandlers.modalState;
+    const {
+        showSuccessAnimation,
+        triggerSuccessAnimation,
+        handlers,
+        modalState,
+    } = useAppHandlers();
     
     // --- Data selection logic using useMemo for performance ---
     const selectedLieu = useMemo(() => store.lieux.find(l => l.id === store.selectedLieuId), [store.lieux, store.selectedLieuId]);
@@ -132,7 +132,7 @@ const App: React.FC = () => {
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
-            <div className="container mx-auto px-4 lg:px-8 xl:px-12 py-8 flex-grow">
+            <div className="container mx-auto px-4 py-8 flex-grow">
                 <div className="mb-6">
                     <Breadcrumbs
                         lieu={selectedLieu}
@@ -170,7 +170,6 @@ const App: React.FC = () => {
                     onExportJson={handlers.handleExportJson}
                     onImportJson={handlers.handleImportJson}
                     onResetCategory={handlers.handleResetCategoryRequest}
-                    onResetByModuleType={handlers.handleResetByModuleTypeRequest}
                     onResetAll={handlers.handleResetAllRequest}
                     onRequestLogout={() => setIsLogoutModalOpen(true)}
                 />
