@@ -163,7 +163,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                             key={module.id}
                             onClick={() => onSelectModule(module.id)}
                             disabled={module.isFuture}
-                            className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-150 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 dark:disabled:hover:ring-slate-700/50"
+                            className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 dark:disabled:hover:ring-slate-700/50"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">

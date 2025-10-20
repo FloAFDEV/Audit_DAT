@@ -1,8 +1,9 @@
 import React from 'react';
 import { AuditModule, ECA, EcaEquipmentType } from '../types';
-import { ArrowLeft, Check, Edit3 } from 'lucide-react';
+import { ArrowLeft, Check, Edit3, Accessibility, Fence } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
+import { isPmrEcaType } from '../data/eca_data';
 
 interface EcaTripodeSortieDecisionProps {
   module: AuditModule;
@@ -38,16 +39,23 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
           >
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <div className="flex-1 min-w-0">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
-              <FormattedCorrespondence text={eca.name} />
-            </h2>
-            <div className="flex items-center gap-3 mt-2">
-              <LineIcon module={module} size="sm" />
-              <p className="text-gray-600 dark:text-slate-400 text-sm">
-                <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {stationName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Accès :</span> {eca.accessPoint}
-              </p>
-            </div>
+           <div className="flex items-center gap-4 flex-1 min-w-0">
+              {isPmrEcaType(eca.type) ? (
+                  <Accessibility className="w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />
+              ) : (
+                  <Fence className="w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">
+                    <FormattedCorrespondence text={eca.name} />
+                  </h2>
+                  <div className="flex items-center gap-3 mt-1">
+                    <LineIcon module={module} size="sm" />
+                    <p className="text-gray-600 dark:text-slate-400 text-sm">
+                      <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {stationName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Accès :</span> {eca.accessPoint}
+                    </p>
+                  </div>
+              </div>
           </div>
         </div>
       </div>

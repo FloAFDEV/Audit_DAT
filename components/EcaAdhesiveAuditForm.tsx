@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
 import { ECA, AdhesiveStatus, AuditModule, Adhesive } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
-import { CheckCircle2, XCircle, AlertTriangle, Ban, MapPin } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Ban, MapPin, Accessibility, Fence } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import { getEcaProgress } from '../utils/progressCalculators';
 import AuditFormLayout from './AuditFormLayout';
+import { isPmrEcaType } from '../data/eca_data';
 
 interface EcaAdhesiveAuditFormProps {
   module: AuditModule;
@@ -21,6 +22,14 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
   
   const progressData = useMemo(() => getEcaProgress(eca), [eca]);
   const progress = progressData.percentage;
+
+  const formIcon = useMemo(() => {
+    const iconProps = { className: "w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" };
+    if (isPmrEcaType(eca.type)) {
+        return <Accessibility {...iconProps} />;
+    }
+    return <Fence {...iconProps} />;
+  }, [eca.type]);
 
   const { groups, ungrouped } = useMemo(() => {
     const grouped: Record<string, { groupName?: string; adhesives: Adhesive[] }> = {};
@@ -75,7 +84,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             <div className="grid grid-cols-2 gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex sm:flex-wrap sm:gap-3">
             <button
               onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.OK
                   ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
                   : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -86,7 +95,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </button>
             <button
               onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.Absent
                   ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
                   : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -97,7 +106,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </button>
             <button
               onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.ToBeReplaced
                   ? 'bg-orange-500 text-white shadow-sm'
                   : 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -109,7 +118,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             {isPmrPictogram && (
               <button
                 onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.NotApplicable ? AdhesiveStatus.NotChecked : AdhesiveStatus.NotApplicable)}
-                className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                   currentStatus === AdhesiveStatus.NotApplicable
                     ? 'bg-slate-500 text-white shadow-sm dark:bg-slate-600'
                     : 'bg-white text-slate-600 ring-1 ring-inset ring-slate-400 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500 dark:hover:bg-slate-700'
@@ -127,6 +136,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
   return (
     <AuditFormLayout
       module={module}
+      customIcon={formIcon}
       title={<FormattedCorrespondence text={module.name} />}
       subtitle={
         <p className="text-gray-600 dark:text-slate-400 text-sm">

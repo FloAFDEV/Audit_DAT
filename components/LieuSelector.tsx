@@ -161,7 +161,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-150 flex items-center gap-2';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-75 flex items-center gap-2';
         if (activeFilter === catKey) return `${baseClasses} font-semibold`;
         return `${baseClasses} border-transparent text-gray-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)]`;
     };
@@ -280,7 +280,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
             </div>
 
-            {activeFilter !== 'ALL' && <AuditFilterSelector availableAuditTypes={availableAuditTypes} />}
+            {(activeFilter === 'ALL' || availableAuditTypes.length > 1) && (
+                <AuditFilterSelector availableAuditTypes={availableAuditTypes} />
+            )}
             
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <div className="relative flex-grow" ref={searchContainerRef}>

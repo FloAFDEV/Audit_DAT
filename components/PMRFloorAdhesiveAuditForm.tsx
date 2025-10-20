@@ -152,7 +152,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                   <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                     <button
                       onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                         currentStatus === FloorAdhesiveStatus.OK
                           ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
                           : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -163,7 +163,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                     </button>
                     <button
                       onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
-                      className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                      className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                         currentStatus === FloorAdhesiveStatus.ToBeReplaced
                           ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
                           : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -174,7 +174,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                     </button>
                      <button
                         onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.ToPlan ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToPlan)}
-                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                           currentStatus === FloorAdhesiveStatus.ToPlan
                             ? 'bg-sky-600 text-white shadow-sm dark:bg-sky-500'
                             : 'bg-white text-sky-700 ring-1 ring-inset ring-sky-600 hover:bg-sky-50 dark:bg-slate-700/50 dark:text-sky-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -190,7 +190,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => handlePhotoUploadClick(adhesive.id)}
-                            className={`flex items-center justify-center text-sm font-medium transition-all duration-200 active:scale-95 ${
+                            className={`flex items-center justify-center text-sm font-medium transition-all duration-75 active:scale-95 ${
                                 adhesive.photo_base64
                                 ? 'p-2 rounded-full bg-white text-indigo-700 ring-1 ring-inset ring-indigo-500 hover:bg-indigo-50 dark:bg-slate-700/50 dark:text-indigo-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                                 : 'px-3 py-1.5 rounded-md bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 whitespace-nowrap'
@@ -223,7 +223,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                                 <img 
                                     src={adhesive.photo_base64} 
                                     alt="Aperçu de l'adhésif" 
-                                    className="w-24 h-24 rounded-md object-cover shadow-sm transition-transform duration-200"
+                                    className="w-24 h-24 rounded-md object-cover shadow-sm transition-transform duration-75"
                                     style={{ transform: `rotate(${adhesive.photo_rotation || 0}deg)` }}
                                 />
                                 <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-md">

@@ -87,7 +87,7 @@ const AccessPointItem: React.FC<{
                  <div className="flex items-stretch gap-2 sm:flex-wrap sm:gap-3">
                     <button
                         onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
-                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.OK
                                 ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
                                 : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -98,7 +98,7 @@ const AccessPointItem: React.FC<{
                     </button>
                     <button
                         onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
-                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-200 active:scale-95 ${
+                        className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.ToBeReplaced
                                 ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
                                 : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'

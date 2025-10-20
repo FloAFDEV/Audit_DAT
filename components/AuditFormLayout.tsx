@@ -81,7 +81,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className={`${progressBarColor} h-2 rounded-full transition-all duration-300`} style={{ width: `${progress}%` }}></div>
+                        <div className={`${progressBarColor} h-2 rounded-full transition-all duration-75`} style={{ width: `${progress}%` }}></div>
                     </div>
                 </div>
             </div>
