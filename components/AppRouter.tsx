@@ -1,19 +1,21 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData } from '../types';
-import useAuditStore from '../store'; // Import store to get handlers
 import LieuSelector from './LieuSelector';
-import ModuleSelector from './ModuleSelector';
-import DatGroupSelector from './DatGroupSelector';
-import DATList from './DATList';
-import AdhesiveAuditForm from './AdhesiveAuditForm';
-import EquipmentSelector from './EquipmentSelector';
-import PnrAdhesiveAuditForm from './PnrAdhesiveAuditForm';
-import EcaSelector from './EcaSelector';
-import EcaAdhesiveAuditForm from './EcaAdhesiveAuditForm';
-import EcaTripodeSortieDecision from './EcaTripodeSortieDecision';
-import PMRFloorAdhesiveAuditForm from './PMRFloorAdhesiveAuditForm';
-import CognitivePictogramAuditForm from './CognitivePictogramAuditForm';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
+
+// Dynamically import components for code splitting
+const ModuleSelector = lazy(() => import('./ModuleSelector'));
+const DatGroupSelector = lazy(() => import('./DatGroupSelector'));
+const DATList = lazy(() => import('./DATList'));
+const AdhesiveAuditForm = lazy(() => import('./AdhesiveAuditForm'));
+const EquipmentSelector = lazy(() => import('./EquipmentSelector'));
+const PnrAdhesiveAuditForm = lazy(() => import('./PnrAdhesiveAuditForm'));
+const EcaSelector = lazy(() => import('./EcaSelector'));
+const EcaAdhesiveAuditForm = lazy(() => import('./EcaAdhesiveAuditForm'));
+const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision'));
+const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
+const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
+
 
 interface AppRouterProps {
     // Data props

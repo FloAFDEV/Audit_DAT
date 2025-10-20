@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import useAuditStore from './store';
 import Login from './components/Login';
 import AppRouter from './components/AppRouter';
@@ -144,35 +144,37 @@ const App: React.FC = () => {
                         onNavigate={store.navigate}
                     />
                 </div>
-                <AppRouter
-                    // Pass selected data
-                    lieux={store.lieux}
-                    selectedLieu={selectedLieu}
-                    selectedModule={selectedModule}
-                    selectedStation={selectedStation}
-                    selectedDirection={selectedDirection}
-                    selectedDat={selectedDat}
-                    selectedEquipment={selectedEquipment}
-                    selectedEca={selectedEca}
-                    // Pass state and handlers
-                    {...store}
-                    // Pass request handlers separately from the hook
-                    handleResetDatRequest={() => handlers.handleResetDatRequest(selectedDat)}
-                    handleResetPrAdhesiveRequest={() => handlers.handleResetPrAdhesiveRequest(selectedEquipment)}
-                    handleResetEcaAdhesiveRequest={() => handlers.handleResetEcaAdhesiveRequest(selectedEca)}
-                    handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
-                    handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
-                    onExportByCategory={handlers.handleExportByCategory}
-                    onExportByModuleType={handlers.handleExportByModuleType}
-                    onExportAll={handlers.handleExportAll}
-                    onExportCurrentView={handlers.handleExportCurrentView}
-                    onExportJson={handlers.handleExportJson}
-                    onImportJson={handlers.handleImportJson}
-                    onResetCategory={handlers.handleResetCategoryRequest}
-                    onResetByModuleType={handlers.handleResetByModuleTypeRequest}
-                    onResetAll={handlers.handleResetAllRequest}
-                    onRequestLogout={() => setIsLogoutModalOpen(true)}
-                />
+                 <Suspense fallback={<Loader />}>
+                    <AppRouter
+                        // Pass selected data
+                        lieux={store.lieux}
+                        selectedLieu={selectedLieu}
+                        selectedModule={selectedModule}
+                        selectedStation={selectedStation}
+                        selectedDirection={selectedDirection}
+                        selectedDat={selectedDat}
+                        selectedEquipment={selectedEquipment}
+                        selectedEca={selectedEca}
+                        // Pass state and handlers
+                        {...store}
+                        // Pass request handlers separately from the hook
+                        handleResetDatRequest={() => handlers.handleResetDatRequest(selectedDat)}
+                        handleResetPrAdhesiveRequest={() => handlers.handleResetPrAdhesiveRequest(selectedEquipment)}
+                        handleResetEcaAdhesiveRequest={() => handlers.handleResetEcaAdhesiveRequest(selectedEca)}
+                        handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
+                        handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
+                        onExportByCategory={handlers.handleExportByCategory}
+                        onExportByModuleType={handlers.handleExportByModuleType}
+                        onExportAll={handlers.handleExportAll}
+                        onExportCurrentView={handlers.handleExportCurrentView}
+                        onExportJson={handlers.handleExportJson}
+                        onImportJson={handlers.handleImportJson}
+                        onResetCategory={handlers.handleResetCategoryRequest}
+                        onResetByModuleType={handlers.handleResetByModuleTypeRequest}
+                        onResetAll={handlers.handleResetAllRequest}
+                        onRequestLogout={() => setIsLogoutModalOpen(true)}
+                    />
+                </Suspense>
             </div>
       <footer className="text-center py-6 text-gray-800 dark:text-slate-400 text-xs">
 <p>
