@@ -26,8 +26,13 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
 
     const availableAuditTypes = useMemo(() => {
         if (activeFilter === 'ALL') return [];
+        
+        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
+        if (!categoryConfig) return [];
+
         const lieuxForCategory = getLieuxForCategory(lieux, activeFilter);
         const types = new Set<AuditModuleType>();
+
         for (const lieu of lieuxForCategory) {
             for (const module of lieu.modules) {
                 if (!module.isFuture) {

@@ -5,4 +5,5 @@ export const PR_DATA: { id: string, name: string }[] = [
     { id: 'pr-basso', name: 'Basso Cambo' },
     { id: 'pr-borderouge', name: 'Borderouge' },
     { id: 'pr-ramonville', name: 'Ramonville' },
+    { id: 'pr-oncopole', name: 'Oncopole-Lise Enjalbert' },
 ];

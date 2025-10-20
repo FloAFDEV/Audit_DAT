@@ -89,7 +89,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
     const sortedModules = useMemo(() => {
         let modulesToDisplay = [...lieu.modules];
 
-        // Apply filter if any are active
+        // Apply audit type filter (the sub-filters) if any are active
         if (activeAuditFilters.length > 0) {
             modulesToDisplay = modulesToDisplay.filter(module => activeAuditFilters.includes(module.type));
         }

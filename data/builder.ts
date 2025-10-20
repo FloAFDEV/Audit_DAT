@@ -185,7 +185,7 @@ const createPrModule = (prData: { id: string, name: string }): AuditModule => {
     return {
         id: `module-pr-${prData.id}`,
         type: AuditModuleType.PR,
-        name: 'P+R',
+        name: 'Audit Bornes P+R',
         data: pr,
     };
 };

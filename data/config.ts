@@ -28,7 +28,7 @@ export const AUDIT_CATEGORIES: AuditCategoryConfig[] = [
         colors: { primary: '#DC006B', text: 'text-white', badgeBg: '#DC006B', badgeText: 'text-white' }
     },
     { 
-        key: 'PR', label: 'P+R', shortLabel: 'P+R',
+        key: 'PR', label: 'Parkings Relais', shortLabel: 'P+R',
         predicate: m => m.type === AuditModuleType.PR,
         colors: { 
             primary: '#dcfce7', // green-100
@@ -42,7 +42,7 @@ export const AUDIT_CATEGORIES: AuditCategoryConfig[] = [
 
 export const AUDIT_MODULES_CONFIG = [
     { type: AuditModuleType.DAT, label: "Audits DAT", shortLabel: "DAT", Icon: Euro },
-    { type: AuditModuleType.PR, label: "Audits P+R", shortLabel: "P+R", Icon: Car },
+    { type: AuditModuleType.PR, label: "Audits Bornes P+R", shortLabel: "Bornes P+R", Icon: Car },
     { type: AuditModuleType.ECA, label: "Audits ECA (Valideurs)", shortLabel: "Valideurs (ECA)", Icon: Fence },
     { type: AuditModuleType.PMR_FLOOR_ADHESIVE, label: "Adhésifs Sol PMR", shortLabel: "PMR au Sol", Icon: Footprints },
     { type: AuditModuleType.COGNITIVE_PICTOGRAMS, label: "Pictogrammes Cognitifs", shortLabel: "Picto. Cognitifs", Icon: ScanEye },
