@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig } from '../types';
+import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
 import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
@@ -17,6 +17,32 @@ import { LieuBadges } from './Icons';
 import { ModuleIcon } from './ModuleIcon';
 
 type ResetTarget = { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any };
+
+// New sub-component to render search results with station codes
+const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu, onClick }) => {
+    const stationCodes = useMemo(() => lieu.modules
+        .filter(m => m.type === AuditModuleType.DAT)
+        .map(m => (m.data as ModeData).stations[0].code)
+        .filter((code): code is string => !!code)
+        .filter((value, index, self) => self.indexOf(value) === index), [lieu]);
+
+    return (
+        <li
+            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
+            onClick={onClick}
+        >
+            <div className="flex items-center gap-x-2">
+                <LieuBadges lieu={lieu} />
+                <span className="block truncate">{lieu.name}</span>
+                {stationCodes.length > 0 && (
+                    <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-1.5 py-0.5 rounded dark:bg-slate-700 dark:text-slate-300">
+                        {stationCodes.join(' / ')}
+                    </span>
+                )}
+            </div>
+        </li>
+    );
+};
 
 interface LieuSelectorProps {
   lieux: Lieu[];
@@ -268,9 +294,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                 <li className="relative select-none py-2 px-4 text-gray-500">Aucun résultat trouvé.</li>
                             )}
                             {searchResults.inCategory.map(lieu => (
-                                <li key={lieu.id} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => handleSelectLieuFromDropdown(lieu)}>
-                                    <div className="flex items-center gap-x-2"><LieuBadges lieu={lieu} /><span className="block truncate">{lieu.name}</span></div>
-                                </li>
+                                <SearchResultItem key={lieu.id} lieu={lieu} onClick={() => handleSelectLieuFromDropdown(lieu)} />
                             ))}
                             {searchResults.others.length > 0 && (
                                 <li className="relative py-2">
@@ -279,9 +303,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                 </li>
                             )}
                             {searchResults.others.map(lieu => (
-                                <li key={lieu.id} className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => handleSelectLieuFromDropdown(lieu)}>
-                                    <div className="flex items-center gap-x-2"><LieuBadges lieu={lieu} /><span className="block truncate">{lieu.name}</span></div>
-                                </li>
+                                <SearchResultItem key={lieu.id} lieu={lieu} onClick={() => handleSelectLieuFromDropdown(lieu)} />
                             ))}
                         </ul>
                     )}
