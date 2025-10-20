@@ -76,12 +76,12 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
     }, [lieux, activeFilter, isOrderReversed, activeAuditFilters]);
 
     const searchResults = useMemo(() => {
-        const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0000-\u036f]/g, "");
 
         let sourceLieux: Lieu[] = !normalizedQuery
             ? [...lieux]
             : [...lieux].filter(l => {
-                const normalizedName = l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery);
+                const normalizedName = l.name.toLowerCase().normalize("NFD").replace(/[\u0000-\u036f]/g, "").includes(normalizedQuery);
                 const stationCodes = l.modules.filter(m => m.type === AuditModuleType.DAT).map(m => (m.data as ModeData).stations[0].code).filter(Boolean);
                 const matchesCode = stationCodes.some(code => code!.toLowerCase().includes(normalizedQuery));
                 return normalizedName || matchesCode;
@@ -121,6 +121,11 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
                 if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
                 return a.name.localeCompare(b.name, 'fr');
             });
+
+            if (isOrderReversed) {
+                inCategory.reverse();
+            }
+
         } else {
             inCategory.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
         }
@@ -129,7 +134,7 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
 
         return { inCategory, others };
 
-    }, [searchQuery, lieux, activeFilter]);
+    }, [searchQuery, lieux, activeFilter, isOrderReversed]);
 
     return { orderedLieuxForDisplay, searchResults, availableAuditTypes };
 };
