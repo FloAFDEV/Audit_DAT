@@ -84,7 +84,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                              <button
                                 key={direction.id}
                                 onClick={() => onSelectDirection(direction.id)}
-                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-150 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -133,7 +133,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                      <button
                         key={s.id}
                         onClick={() => onSelectStation(s.id)}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-150 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
                         disabled={s.isFuture}
                     >
                          <div className={`flex items-center justify-between ${s.isFuture ? 'opacity-50' : ''}`}>

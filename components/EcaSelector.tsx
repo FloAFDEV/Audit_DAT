@@ -153,7 +153,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                 onClick={isNotApplicable ? undefined : () => onSelectEca(eca.id)}
                                 // We don't use the `disabled` attribute directly to allow child buttons to be interactive.
                                 // Instead, we manage the visual state and click behavior manually.
-                                className={`bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg transition-all duration-300 w-full text-left group dark:ring-1 dark:ring-slate-700/50 ${
+                                className={`bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg transition-all duration-150 w-full text-left group dark:ring-1 dark:ring-slate-700/50 ${
                                     isNotApplicable 
                                     ? 'opacity-70 cursor-default' 
                                     : 'hover:shadow-xl dark:hover:ring-slate-600'

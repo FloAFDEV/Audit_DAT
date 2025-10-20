@@ -132,7 +132,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                 {direction.dats.map((dat) => {
                     const progress = getDatProgress(dat);
                     return (
-                        <div key={dat.id} onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 w-full cursor-pointer group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600">
+                        <div key={dat.id} onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-150 w-full cursor-pointer group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600">
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-1 min-w-0 items-center gap-4">
                                     <DatIcon dat={dat} size="lg" />

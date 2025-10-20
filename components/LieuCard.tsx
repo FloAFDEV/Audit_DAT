@@ -29,7 +29,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
     return (
         <button
             onClick={onSelect}
-            className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600`}
+            className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-150 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600`}
         >
             <div className="flex justify-between items-center">
                  <div className="flex items-center gap-x-2 flex-wrap min-w-0">
