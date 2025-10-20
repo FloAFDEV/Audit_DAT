@@ -104,14 +104,9 @@ const initialCounts: Record<string, number> = {
     'JJA': 1,
     // 'CAP' is a special case
     // 'ESQ' is a special case
-    'SCY': 3,
-    'POI': 2,
     'ARE': 2,
     'FLE': 1,
-    'MER': 2,
-    'BAG': 2,
     'MUN': 2,
-    'REY': 2,
     'BEL': 2,
     'MBC': 2,
 };
@@ -122,10 +117,42 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
 
     // Special cases based on station configuration
     switch (stationCode) {
-        case 'SMI': // Ligne B - Saint-Michel Marcel Langer
+        // --- Ligne A ---
+        case 'REY':
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté Prison',
+                accessPointName: 'Accès côté Ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Principal',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'BAG':
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Ascenseur',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Rue',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'MER':
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Principal',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'POI':
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Principal',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
@@ -134,46 +161,35 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'SAO': // Ligne B - Saouzelong
+        case 'SCY':
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté rue',
+                accessPointName: 'Accès Allées Charles de Fitte',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté metro',
-                status: FloorAdhesiveStatus.NotChecked,
-            });
-            return pictos;
-            
-        case 'UPS': // Ligne B - Université Paul Sabatier
-            pictos.push({
-                id: uuidv4(),
-                accessPointName: 'Accès côté Forum',
+                accessPointName: 'Accès direction Esquirol',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté Lycée',
+                accessPointName: 'Accès direction Patte d\'Oie',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'RAM': // Ligne B
+        case 'ESQ':
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès RAM BOR',
+                accessPointName: 'Accès Rue Saint-Rome',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès RAM BUS',
+                accessPointName: 'Accès Rue des Changes',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-        
         case 'JJA': // Ligne A - Jean Jaurès
             pictos.push({
                 id: uuidv4(),
@@ -186,7 +202,6 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
         case 'JOL': // Ligne A: JOL ASC (1) + JOL PRI (1)
              pictos.push({
                 id: uuidv4(),
@@ -199,7 +214,18 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-            
+        case 'MBC': // Ligne A - Basso Cambo
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Gare Bus (sur mur)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès à définir',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
         case 'CAP': // Ligne A: CAP PRI (2) + CAP ASC (0)
             pictos.push({
                 id: uuidv4(),
@@ -212,21 +238,57 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-        
-        case 'ESQ': // Ligne A: ESQ ASC (1) + ESQ PRI (1)
+            
+        // --- Ligne B ---
+        case 'SMI': // Saint-Michel Marcel Langer
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Esquirol Ascenseur',
+                accessPointName: 'Accès côté Prison',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès Esquirol Principale',
+                accessPointName: 'Accès côté Ascenseur',
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'PDJ': // Ligne B - Palais de Justice
+        case 'SAO': // Saouzelong
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté metro',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'UPS': // Université Paul Sabatier
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Forum',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté Lycée',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'RAM':
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès RAM BOR',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès RAM BUS',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'PDJ': // Palais de Justice
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté Ascenseur',
@@ -238,8 +300,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'CAR': // Ligne B - Carmes
+        case 'CAR': // Carmes
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès direction Esquirol',
@@ -251,8 +312,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-            
-        case 'CCA': // Ligne B - Compans-Caffarelli
+        case 'CCA': // Compans-Caffarelli
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté Rue Lascrosses',
@@ -269,8 +329,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'JAR': // Ligne B - Jeanne d'Arc
+        case 'JAR': // Jeanne d'Arc
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté rue',
@@ -282,8 +341,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'MIN': // Ligne B - Minimes - Claude Nougaro
+        case 'MIN': // Minimes - Claude Nougaro
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté rue (Avenue des Minimes)',
@@ -295,8 +353,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'LVA': // Ligne B - La Vache
+        case 'LVA': // La Vache
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté bus',
@@ -308,8 +365,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'BPA': // Ligne B - Barrière de Paris
+        case 'BPA': // Barrière de Paris
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté Avenue des Minimes',
@@ -321,8 +377,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-        
-        case 'TCO': // Ligne B - Trois Cocus
+        case 'TCO': // Trois Cocus
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté ascenseur',
@@ -334,8 +389,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-
-        case 'BOR': // Ligne B - Borderouge
+        case 'BOR': // Borderouge
             pictos.push({
                 id: uuidv4(),
                 accessPointName: 'Accès côté Place de la Maourine',
@@ -355,7 +409,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
     for (let i = 1; i <= count; i++) {
         pictos.push({
             id: uuidv4(),
-            accessPointName: `Accès ${i}`,
+            accessPointName: `Accès à définir ${i}`,
             status: FloorAdhesiveStatus.NotChecked,
         });
     }
