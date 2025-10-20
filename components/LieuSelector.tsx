@@ -176,7 +176,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         return AUDIT_TYPE_ORDER.filter(type => types.has(type));
     }, [lieux, activeFilter]);
 
-    // Main display list: respects filters and physical/line order or alphabetical order
+    // Main display list: respects filters and physical/line order or alphabetical order.
+    // This list is NOT affected by the search query.
     const orderedLieuxForDisplay = useMemo(() => {
         let sortedLieux: Lieu[];
 
@@ -227,45 +228,66 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
             )
             : sortedLieux;
 
-        // The main display should not be filtered by search query when the dropdown is open.
-        if (isDropdownOpen && searchQuery.trim()) {
-            return [];
-        }
-        
-        // Filter main display if search is active but dropdown is closed (e.g. after selection)
-        if (searchQuery.trim()) {
-            const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-            return filteredByAuditType.filter(l => l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery));
-        }
-
         return filteredByAuditType;
-    }, [searchQuery, lieux, activeFilter, isOrderReversed, isDropdownOpen, activeAuditFilters]);
+    }, [lieux, activeFilter, isOrderReversed, activeAuditFilters]);
 
-    // Search dropdown list: always alphabetical, searches all lieux
-    const dropdownLieux = useMemo(() => {
-        const allLieuxAlphabetical = [...lieux].sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+    // Search dropdown list logic: searches within the appropriate context and groups results.
+    const searchResults = useMemo(() => {
+        const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-        if (!searchQuery.trim()) {
-            return allLieuxAlphabetical;
+        let sourceLieux: Lieu[];
+
+        if (!normalizedQuery) {
+            // No search query: source is ALL lieux
+            sourceLieux = [...lieux];
+        } else {
+            // Search query exists: source is filtered lieux
+            sourceLieux = [...lieux].filter(l => {
+                const normalizedName = l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery);
+                const stationCodes = l.modules
+                    .filter(m => m.type === AuditModuleType.DAT)
+                    .map(m => (m.data as ModeData).stations[0].code)
+                    .filter((code): code is string => !!code);
+                const matchesCode = stationCodes.some(code => code.toLowerCase().includes(normalizedQuery));
+                return normalizedName || matchesCode;
+            });
+        }
+
+        if (activeFilter === 'ALL') {
+            sourceLieux.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+            return { inCategory: sourceLieux, others: [] };
+        }
+
+        // Partition the source list (either all lieux or filtered lieux)
+        const inCategory: Lieu[] = [];
+        const others: Lieu[] = [];
+        const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
+        const predicate = categoryConfig?.predicate;
+
+        if (predicate) {
+            sourceLieux.forEach(lieu => {
+                if (lieu.modules.some(module => predicate(module))) {
+                    inCategory.push(lieu);
+                } else {
+                    others.push(lieu);
+                }
+            });
+        } else {
+            // Fallback if predicate is not found (shouldn't happen with activeFilter !== 'ALL')
+            sourceLieux.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+            return { inCategory: sourceLieux, others: [] };
         }
         
-        const normalizedQuery = searchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        return allLieuxAlphabetical.filter(l => {
-            const normalizedName = l.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(normalizedQuery);
-            
-            const stationCodes = l.modules
-                .filter(m => m.type === AuditModuleType.DAT)
-                .map(m => (m.data as ModeData).stations[0].code)
-                .filter((code): code is string => !!code);
-            
-            const matchesCode = stationCodes.some(code => code.toLowerCase().includes(normalizedQuery));
-            
-            return normalizedName || matchesCode;
-        });
-    }, [searchQuery, lieux]);
+        // Sort each partition alphabetically
+        inCategory.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+        others.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
+        return { inCategory, others };
+
+    }, [searchQuery, lieux, activeFilter]);
     
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
-        setSearchQuery(lieu.name); // Set search bar to selected lieu
+        setSearchQuery(''); // Clear search bar after selection
         setIsDropdownOpen(false);
         onSelectLieu(lieu.id);
     };
@@ -349,6 +371,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
         setResetTarget(null);
         setResetTargetConfig(null);
     };
+
+    const placeholderText = activeFilter === 'ALL'
+        ? "Rechercher un lieu..."
+        : `Rechercher dans ${activeCategoryConfig?.label}...`;
 
     return (
         <div>
@@ -512,19 +538,60 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onFocus={() => setIsDropdownOpen(true)}
-                        placeholder="Rechercher un lieu..."
+                        placeholder={placeholderText}
                         className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base"
                         autoComplete="off"
                     />
                     {isDropdownOpen && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
-                            {dropdownLieux.map((lieu) => {
+                            {searchResults.inCategory.length === 0 && searchResults.others.length === 0 && searchQuery.trim() && (
+                                <li className="relative select-none py-2 px-4 text-gray-500">Aucun résultat trouvé.</li>
+                            )}
+
+                            {searchResults.inCategory.map((lieu) => {
                                 const stationCodes = lieu.modules
                                     .filter(m => m.type === AuditModuleType.DAT)
                                     .map(m => (m.data as ModeData).stations[0].code)
                                     .filter((code): code is string => !!code)
                                     .filter((value, index, self) => self.indexOf(value) === index);
-                                    
+                                return (
+                                <li
+                                    key={lieu.id}
+                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
+                                    onClick={() => handleSelectLieuFromDropdown(lieu)}
+                                >
+                                    <div className="flex items-center gap-x-2">
+                                        <LieuBadges lieu={lieu} />
+                                        <span className="block truncate">{lieu.name}</span>
+                                        {stationCodes.length > 0 && (
+                                            <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
+                                                {stationCodes.join(' / ')}
+                                            </span>
+                                        )}
+                                    </div>
+                                </li>
+                                );
+                            })}
+                            
+                            {searchResults.others.length > 0 && (
+                                <li className="relative py-2">
+                                    <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                        <div className="w-full border-t border-gray-300 dark:border-slate-600" />
+                                    </div>
+                                    <div className="relative flex justify-center">
+                                        <span className="bg-white dark:bg-slate-800 px-3 text-sm font-medium text-gray-500 dark:text-slate-400">
+                                            Résultats dans d'autres catégories
+                                        </span>
+                                    </div>
+                                </li>
+                            )}
+
+                            {searchResults.others.map((lieu) => {
+                                const stationCodes = lieu.modules
+                                    .filter(m => m.type === AuditModuleType.DAT)
+                                    .map(m => (m.data as ModeData).stations[0].code)
+                                    .filter((code): code is string => !!code)
+                                    .filter((value, index, self) => self.indexOf(value) === index);
                                 return (
                                 <li
                                     key={lieu.id}
@@ -573,15 +640,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = ({ lieux, onSelectLieu, active
                 </div>
             </div>
 
-            {orderedLieuxForDisplay.length === 0 && searchQuery && !isDropdownOpen ? (
-                 <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun lieu trouvé</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Votre recherche ne correspond à aucun lieu pour le filtre actif.</p>
-                </div>
-            ) : orderedLieuxForDisplay.length === 0 && !searchQuery ? (
+            {orderedLieuxForDisplay.length === 0 ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun lieu</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun lieu n'est disponible pour ce filtre.</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
