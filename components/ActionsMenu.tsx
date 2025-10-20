@@ -115,7 +115,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                     <div className="flex items-center justify-center w-6 h-6 rounded-md">
                          <Icon className="w-4 h-4" />
                     </div>
-                    <span>{label}</span>
+                    <span>Réinitialiser {label}</span>
                 </button>
             ))}
         </>
@@ -236,8 +236,7 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
 
                         <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
                         
-                        {/* --- Mobile Collapsible Danger Zone --- */}
-                        <div className="sm:hidden">
+                        <div>
                              <button
                                 onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
                                 className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
@@ -254,14 +253,6 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                                     {DangerZoneButtons}
                                 </div>
                             )}
-                        </div>
-
-                        {/* --- Desktop Always-Visible Danger Zone --- */}
-                        <div className="hidden sm:block">
-                            <div className="px-4 py-2">
-                                <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Actions irréversibles</p>
-                            </div>
-                            {DangerZoneButtons}
                         </div>
                     </div>
                 </div>

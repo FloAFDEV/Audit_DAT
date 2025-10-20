@@ -106,7 +106,25 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
             return { inCategory: sourceLieux, others: [] };
         }
         
-        inCategory.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+        // Sort `inCategory` physically if line filter is active, otherwise alphabetically
+        const stationOrderList = lineStationsMap[activeFilter as AuditCategory];
+        if (stationOrderList) {
+            const stationOrderMap = new Map<string, number>();
+            stationOrderList.forEach((station, index) => {
+                const lieuName = station.lieuName || station.name;
+                if (lieuName) stationOrderMap.set(lieuName, index);
+            });
+
+            inCategory.sort((a, b) => {
+                const orderA = stationOrderMap.get(a.name);
+                const orderB = stationOrderMap.get(b.name);
+                if (orderA !== undefined && orderB !== undefined) return orderA - orderB;
+                return a.name.localeCompare(b.name, 'fr');
+            });
+        } else {
+            inCategory.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+        }
+        
         others.sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
 
         return { inCategory, others };
