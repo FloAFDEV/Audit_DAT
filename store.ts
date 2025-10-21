@@ -100,6 +100,7 @@ interface AppState {
 
     // Import action
     handleImportJsonData: (jsonString: string) => Promise<void>;
+    hardResetApplication: () => Promise<void>;
 }
 
 const useAuditStore = create<AppState>((set, get) => {
@@ -333,19 +334,30 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetDat: async () => {
         const { selectedModuleId, selectedStationId, selectedDirectionId, selectedDatId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId);
-            const station = (module?.data as ModeData)?.stations.find(s => s.id === selectedStationId);
-            const direction = station?.directions.find(d => d.id === selectedDirectionId);
-            if (direction) {
-                const datIndex = direction.dats.findIndex(d => d.id === selectedDatId);
-                if (datIndex > -1) {
-                    direction.dats[datIndex] = {
-                        ...direction.dats[datIndex],
-                        adhesives: createInitialAdhesiveStatus(ADHESIVES),
-                        comment: ''
-                    };
+            lieu.modules = lieu.modules.map(module => {
+                if (module.id === selectedModuleId && module.type === AuditModuleType.DAT) {
+                    const data = module.data as ModeData;
+                    const newStations = data.stations.map(station => {
+                        if (station.id === selectedStationId) {
+                            const newDirections = station.directions.map(direction => {
+                                if (direction.id === selectedDirectionId) {
+                                    const newDats = direction.dats.map(dat =>
+                                        dat.id === selectedDatId
+                                            ? { ...dat, adhesives: createInitialAdhesiveStatus(ADHESIVES), comment: '' }
+                                            : dat
+                                    );
+                                    return { ...direction, dats: newDats };
+                                }
+                                return direction;
+                            });
+                            return { ...station, directions: newDirections };
+                        }
+                        return station;
+                    });
+                    return { ...module, data: { ...data, stations: newStations } };
                 }
-            }
+                return module;
+            });
         });
     },
 
@@ -415,19 +427,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetPrAdhesive: async () => {
         const { selectedModuleId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId);
-            if (module) {
-                const data = module.data as Pr;
-                const equipmentIndex = data.equipments.findIndex(e => e.id === selectedEquipmentId);
-                if (equipmentIndex > -1) {
-                    const equipment = data.equipments[equipmentIndex];
-                    data.equipments[equipmentIndex] = {
-                        ...equipment,
-                        adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipment.type)),
-                        comment: ''
-                    };
+            lieu.modules = lieu.modules.map(module => {
+                if (module.id === selectedModuleId && module.type === AuditModuleType.PR) {
+                    const data = module.data as Pr;
+                    const newEquipments = data.equipments.map(equipment =>
+                        equipment.id === selectedEquipmentId
+                            ? { ...equipment, adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipment.type)), comment: '' }
+                            : equipment
+                    );
+                    return { ...module, data: { ...data, equipments: newEquipments } };
                 }
-            }
+                return module;
+            });
         });
     },
 
@@ -457,19 +468,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetEcaAdhesive: async () => {
         const { selectedModuleId, selectedEcaId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId);
-            if (module) {
-                const data = module.data as EcaData;
-                const ecaIndex = data.ecas.findIndex(e => e.id === selectedEcaId);
-                if (ecaIndex > -1) {
-                    const eca = data.ecas[ecaIndex];
-                    data.ecas[ecaIndex] = {
-                        ...eca,
-                        adhesives: createInitialAdhesiveStatus(getEcaAdhesives(eca.type)),
-                        comment: ''
-                    };
+            lieu.modules = lieu.modules.map(module => {
+                if (module.id === selectedModuleId && module.type === AuditModuleType.ECA) {
+                    const data = module.data as EcaData;
+                    const newEcas = data.ecas.map(eca =>
+                        eca.id === selectedEcaId
+                            ? { ...eca, adhesives: createInitialAdhesiveStatus(getEcaAdhesives(eca.type)), comment: '' }
+                            : eca
+                    );
+                    return { ...module, data: { ...data, ecas: newEcas } };
                 }
-            }
+                return module;
+            });
         });
     },
 
@@ -566,20 +576,24 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetPmrFloorAdhesive: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId);
-            if (module) {
-                const oldData = module.data as PMRFloorAdhesiveData;
-                module.data = {
-                    ...oldData,
-                    adhesives: oldData.adhesives.map(adhesive => ({
-                        id: adhesive.id,
-                        name: adhesive.name,
-                        status: FloorAdhesiveStatus.NotChecked
-                        // Photo properties are removed by not being spread
-                    })),
-                    comment: ''
-                };
-            }
+            lieu.modules = lieu.modules.map(module => {
+                if (module.id === selectedModuleId && module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
+                    const oldData = module.data as PMRFloorAdhesiveData;
+                    return {
+                        ...module,
+                        data: {
+                            ...oldData,
+                            adhesives: oldData.adhesives.map(adhesive => ({
+                                id: adhesive.id,
+                                name: adhesive.name,
+                                status: FloorAdhesiveStatus.NotChecked,
+                            })),
+                            comment: ''
+                        }
+                    };
+                }
+                return module;
+            });
         });
     },
 
@@ -647,18 +661,23 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetCognitivePictogram: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId);
-            if (module) {
-                const oldData = module.data as CognitivePictogramData;
-                module.data = {
-                    ...oldData,
-                    pictograms: oldData.pictograms.map(p => ({
-                        ...p,
-                        status: FloorAdhesiveStatus.NotChecked
-                    })),
-                    comment: ''
-                };
-            }
+            lieu.modules = lieu.modules.map(module => {
+                if (module.id === selectedModuleId && module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
+                    const oldData = module.data as CognitivePictogramData;
+                    return {
+                        ...module,
+                        data: {
+                            ...oldData,
+                            pictograms: oldData.pictograms.map(p => ({
+                                ...p,
+                                status: FloorAdhesiveStatus.NotChecked
+                            })),
+                            comment: ''
+                        }
+                    };
+                }
+                return module;
+            });
         });
     },
     
@@ -779,6 +798,16 @@ const useAuditStore = create<AppState>((set, get) => {
         } catch (error) {
             console.error(`Failed to reset module type ${moduleType}:`, error);
             throw error;
+        }
+    },
+    
+    hardResetApplication: async () => {
+        try {
+            await db.delete(); // Delete the database
+            window.location.reload(); // Force a reload to re-initialize everything
+        } catch (error) {
+            console.error("Failed to hard reset the application:", error);
+            throw new Error("La réinitialisation forcée a échoué. Veuillez essayer de vider le cache de votre navigateur manuellement.");
         }
     },
     
