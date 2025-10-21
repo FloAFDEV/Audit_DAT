@@ -333,13 +333,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetDat: async () => {
         const { selectedModuleId, selectedStationId, selectedDirectionId, selectedDatId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
-            const station = module.data.stations.find(s => s.id === selectedStationId);
+            const module = lieu.modules.find(m => m.id === selectedModuleId);
+            const station = (module?.data as ModeData)?.stations.find(s => s.id === selectedStationId);
             const direction = station?.directions.find(d => d.id === selectedDirectionId);
-            const dat = direction?.dats.find(d => d.id === selectedDatId);
-            if (dat) {
-                dat.adhesives = createInitialAdhesiveStatus(ADHESIVES);
-                dat.comment = '';
+            if (direction) {
+                const datIndex = direction.dats.findIndex(d => d.id === selectedDatId);
+                if (datIndex > -1) {
+                    direction.dats[datIndex] = {
+                        ...direction.dats[datIndex],
+                        adhesives: createInitialAdhesiveStatus(ADHESIVES),
+                        comment: ''
+                    };
+                }
             }
         });
     },
@@ -410,11 +415,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetPrAdhesive: async () => {
         const { selectedModuleId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
-            const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
-            if (equipment) {
-                equipment.adhesives = createInitialAdhesiveStatus(getPrAdhesives(equipment.type));
-                equipment.comment = '';
+            const module = lieu.modules.find(m => m.id === selectedModuleId);
+            if (module) {
+                const data = module.data as Pr;
+                const equipmentIndex = data.equipments.findIndex(e => e.id === selectedEquipmentId);
+                if (equipmentIndex > -1) {
+                    const equipment = data.equipments[equipmentIndex];
+                    data.equipments[equipmentIndex] = {
+                        ...equipment,
+                        adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipment.type)),
+                        comment: ''
+                    };
+                }
             }
         });
     },
@@ -445,11 +457,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetEcaAdhesive: async () => {
         const { selectedModuleId, selectedEcaId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
-            const eca = module.data.ecas.find(e => e.id === selectedEcaId);
-            if (eca) {
-                eca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(eca.type));
-                eca.comment = '';
+            const module = lieu.modules.find(m => m.id === selectedModuleId);
+            if (module) {
+                const data = module.data as EcaData;
+                const ecaIndex = data.ecas.findIndex(e => e.id === selectedEcaId);
+                if (ecaIndex > -1) {
+                    const eca = data.ecas[ecaIndex];
+                    data.ecas[ecaIndex] = {
+                        ...eca,
+                        adhesives: createInitialAdhesiveStatus(getEcaAdhesives(eca.type)),
+                        comment: ''
+                    };
+                }
             }
         });
     },
@@ -547,14 +566,20 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetPmrFloorAdhesive: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
-            module.data.adhesives.forEach(adhesive => {
-                adhesive.status = FloorAdhesiveStatus.NotChecked;
-                delete adhesive.photo_base64;
-                delete adhesive.photo_note;
-                delete adhesive.photo_rotation;
-            });
-            module.data.comment = '';
+            const module = lieu.modules.find(m => m.id === selectedModuleId);
+            if (module) {
+                const oldData = module.data as PMRFloorAdhesiveData;
+                module.data = {
+                    ...oldData,
+                    adhesives: oldData.adhesives.map(adhesive => ({
+                        id: adhesive.id,
+                        name: adhesive.name,
+                        status: FloorAdhesiveStatus.NotChecked
+                        // Photo properties are removed by not being spread
+                    })),
+                    comment: ''
+                };
+            }
         });
     },
 
@@ -622,11 +647,18 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetCognitivePictogram: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
-            module.data.pictograms.forEach(pictogram => {
-                pictogram.status = FloorAdhesiveStatus.NotChecked;
-            });
-            module.data.comment = '';
+            const module = lieu.modules.find(m => m.id === selectedModuleId);
+            if (module) {
+                const oldData = module.data as CognitivePictogramData;
+                module.data = {
+                    ...oldData,
+                    pictograms: oldData.pictograms.map(p => ({
+                        ...p,
+                        status: FloorAdhesiveStatus.NotChecked
+                    })),
+                    comment: ''
+                };
+            }
         });
     },
     
