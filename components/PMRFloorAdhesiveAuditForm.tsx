@@ -5,6 +5,7 @@ import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import { getPmrMaterial } from '../data/pmr_materials';
 
 interface PMRFloorAdhesiveAuditFormProps {
   module: AuditModule;
@@ -69,6 +70,8 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
     const checked = pmrData.adhesives.filter(s => s.status !== FloorAdhesiveStatus.NotChecked).length;
     return (checked / total) * 100;
   }, [pmrData.adhesives]);
+
+  const material = useMemo(() => getPmrMaterial(pmrData.stationName, module.name), [pmrData.stationName, module.name]);
 
   const handlePhotoUploadClick = (adhesiveId: string) => {
     currentAdhesiveId.current = adhesiveId;
@@ -148,6 +151,11 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                           // <span className="font-bold text-gray-600 dark:text-slate-400">920x3705mm</span>
                       </span>
                     </h3>
+                    {material && (
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                            <span className="font-semibold">Matière utilisée :</span> {material}
+                        </p>
+                    )}
                   </div>
                   <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                     <button

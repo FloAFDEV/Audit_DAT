@@ -8,6 +8,7 @@ import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, getEcaAdh
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
+import { getPmrMaterial } from '../data/pmr_materials';
 
 /**
  * Converts a string into a URL-friendly slug.
@@ -369,14 +370,19 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.PMR_FLOOR_ADHESIVE: {
                         const data = module.data as PMRFloorAdhesiveData;
+                        const material = getPmrMaterial(data.stationName, module.name);
                         for (const adhesive of data.adhesives) {
+                            let description = 'Adhésif de signalisation PMR au sol | 920x3705mm';
+                            if (material) {
+                                description += ` | ${material}`;
+                            }
                             rows.push({
                                 ...baseRow,
                                 _lieuIndex: lieuIndex,
                                 'Date de Réalisation': formatCompletionDate(data.completionDate),
                                 'Élément': '', // Vidé comme demandé
                                 'Statut': statusTranslations[adhesive.status] || adhesive.status,
-                                'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
+                                'Description Adhésif': description,
                                 'Localisation Adhésif': '', // Vidé comme demandé
                                 'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
                                 'Note Photo': adhesive.photo_note || '',
