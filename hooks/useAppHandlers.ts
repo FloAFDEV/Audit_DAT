@@ -95,7 +95,7 @@ export const useAppHandlers = () => {
         
         const moduleConfig = AUDIT_MODULES_CONFIG.find(m => m.type === moduleType);
         const moduleLabel = moduleConfig?.label || moduleType;
-        const reminderMonths = moduleType === AuditModuleType.COGNITIVE_PICTOGRAMS ? 11 : 5;
+        const reminderMonths = 5;
         handleCsvExportFlow(filteredLieux, `export-${slugify(moduleLabel)}`, `Les audits de type "${moduleLabel}" ont été exportés.`, undefined, { title: `Planifier le ré-audit des ${moduleLabel}`, description: `Ceci est un rappel pour planifier le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`, months: reminderMonths });
     };
     
