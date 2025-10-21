@@ -121,10 +121,12 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     return { percentage, label, isComplete };
 };
 
-export function getModuleProgress(module: AuditModule) {
-    if (module.isFuture) {
-        return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
-    }
+/**
+ * NEW: Centralized helper to get raw progress counts for any module.
+ * This ensures all progress calculations are consistent.
+ */
+const getModuleProgressCounts = (module: AuditModule): { applicable: number; checked: number; hasContent: boolean } => {
+    if (module.isFuture) return { applicable: 0, checked: 0, hasContent: false };
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
@@ -183,15 +185,24 @@ export function getModuleProgress(module: AuditModule) {
             totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
             break;
         }
-        default:
-            return { percentage: 0, label: 'N/A', statusText: 'Non applicable', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
+    }
+    return { applicable: totalApplicableItems, checked: totalCheckedItems, hasContent: hasAuditableContent };
+};
+
+/**
+ * REFACTORED: Now uses the centralized getModuleProgressCounts.
+ */
+export function getModuleProgress(module: AuditModule) {
+    if (module.isFuture) {
+        return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
 
+    const { applicable, checked, hasContent } = getModuleProgressCounts(module);
+
     let percentage = 0;
-    if (totalApplicableItems > 0) {
-        percentage = (totalCheckedItems / totalApplicableItems) * 100;
-    } else if (hasAuditableContent) {
-        // e.g. a module with ECAs that are all N/A or have no applicable adhesives
+    if (applicable > 0) {
+        percentage = (checked / applicable) * 100;
+    } else if (hasContent) {
         percentage = 100;
     }
     
@@ -218,86 +229,41 @@ export function getModuleProgress(module: AuditModule) {
     return { percentage, label, statusText, statusColor, isComplete };
 }
 
-
+/**
+ * REFACTORED: Now uses the centralized getModuleProgressCounts.
+ */
 export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = []): number => {
     if (!lieu?.modules) return 0;
-
-    let totalApplicableItems = 0;
-    let totalCheckedItems = 0;
 
     const modulesToConsider = activeFilters.length > 0
         ? lieu.modules.filter(m => activeFilters.includes(m.type))
         : lieu.modules;
 
+    let totalApplicableItems = 0;
+    let totalCheckedItems = 0;
+    let hasAnyNonFutureModule = false;
+    let hasAnyContent = false;
+
     for (const module of modulesToConsider) {
         if (module.isFuture) continue;
+        hasAnyNonFutureModule = true;
 
-        switch (module.type) {
-            case AuditModuleType.DAT: {
-                const modeData = module.data as ModeData;
-                const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
-                for (const dat of dats) {
-                    const statuses = Object.values(dat.adhesives);
-                    totalApplicableItems += statuses.length;
-                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-                }
-                break;
-            }
-            case AuditModuleType.PR: {
-                const prData = module.data as Pr;
-                const equipments = prData.equipments ?? [];
-                for (const equipment of equipments) {
-                    const statuses = Object.values(equipment.adhesives);
-                    totalApplicableItems += statuses.length;
-                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-                }
-                break;
-            }
-            case AuditModuleType.ECA: {
-                const ecaData = module.data as EcaData;
-                const ecas = ecaData.ecas ?? [];
-                for (const eca of ecas) {
-                    if (eca.isNotApplicable) {
-                        continue;
-                    }
-                    const adhesiveDefinitions = getEcaAdhesives(eca.type);
-                    for (const adDef of adhesiveDefinitions) {
-                        const status = eca.adhesives[adDef.id];
-                        if (status !== AdhesiveStatus.NotApplicable) {
-                            totalApplicableItems++;
-                            if (status && status !== AdhesiveStatus.NotChecked) {
-                                totalCheckedItems++;
-                            }
-                        }
-                    }
-                }
-                break;
-            }
-            case AuditModuleType.PMR_FLOOR_ADHESIVE: {
-                const pmrData = module.data as PMRFloorAdhesiveData;
-                const adhesives = pmrData.adhesives ?? [];
-                totalApplicableItems += adhesives.length;
-                totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
-                break;
-            }
-            case AuditModuleType.COGNITIVE_PICTOGRAMS: {
-                const cogData = module.data as CognitivePictogramData;
-                const pictos = cogData.pictograms ?? [];
-                totalApplicableItems += pictos.length;
-                totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
-                break;
-            }
-        }
+        const counts = getModuleProgressCounts(module);
+        totalApplicableItems += counts.applicable;
+        totalCheckedItems += counts.checked;
+        if(counts.hasContent) hasAnyContent = true;
     }
 
     if (totalApplicableItems === 0) {
-        const hasAnyNonFutureModule = modulesToConsider.some(m => !m.isFuture);
-        return hasAnyNonFutureModule ? 100 : 0;
+        return hasAnyContent || hasAnyNonFutureModule ? 100 : 0;
     }
 
     return (totalCheckedItems / totalApplicableItems) * 100;
 };
 
+/**
+ * REFACTORED: Now uses the centralized getModuleProgressCounts.
+ */
 export const getCategoryProgress = (
     allLieux: Lieu[],
     category: AuditCategory | 'ALL',
@@ -305,91 +271,32 @@ export const getCategoryProgress = (
 ): number => {
     const categoryConfig = category === 'ALL' ? null : AUDIT_CATEGORIES.find(c => c.key === category);
     
-    // 1. Filter the Lieux first, based on the main category
     const relevantLieux = (category === 'ALL' || !categoryConfig)
         ? allLieux
         : allLieux.filter(lieu => lieu.modules.some(module => categoryConfig.predicate(module)));
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
-    let hasAnyItems = false; // Flag to check if modules are empty or not
+    let hasAnyItems = false;
 
     for (const lieu of relevantLieux) {
-        // If there's a sub-filter (activeFilters), only consider those modules.
-        // Otherwise (for main tab), consider modules that match the category predicate.
         const modulesToProcess = activeFilters.length > 0
             ? lieu.modules.filter(m => activeFilters.includes(m.type))
             : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
 
         for (const module of modulesToProcess) {
             if (module.isFuture) continue;
-
-            switch (module.type) {
-                case AuditModuleType.DAT: {
-                    const modeData = module.data as ModeData;
-                    const dats = modeData.stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
-                    if (dats.length > 0) hasAnyItems = true;
-                    for (const dat of dats) {
-                        const statuses = Object.values(dat.adhesives);
-                        totalApplicableItems += statuses.length;
-                        totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-                    }
-                    break;
-                }
-                case AuditModuleType.PR: {
-                    const prData = module.data as Pr;
-                    const equipments = prData.equipments ?? [];
-                    if (equipments.length > 0) hasAnyItems = true;
-                    for (const equipment of equipments) {
-                        const statuses = Object.values(equipment.adhesives);
-                        totalApplicableItems += statuses.length;
-                        totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-                    }
-                    break;
-                }
-                case AuditModuleType.ECA: {
-                    const ecaData = module.data as EcaData;
-                    const ecas = ecaData.ecas ?? [];
-                    if (ecas.length > 0) hasAnyItems = true;
-                    for (const eca of ecas) {
-                        if (eca.isNotApplicable) continue;
-                        const adhesiveDefinitions = getEcaAdhesives(eca.type);
-                        for (const adDef of adhesiveDefinitions) {
-                            const status = eca.adhesives[adDef.id];
-                            if (status !== AdhesiveStatus.NotApplicable) {
-                                totalApplicableItems++;
-                                if (status && status !== AdhesiveStatus.NotChecked) {
-                                    totalCheckedItems++;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                }
-                case AuditModuleType.PMR_FLOOR_ADHESIVE: {
-                    const pmrData = module.data as PMRFloorAdhesiveData;
-                    const adhesives = pmrData.adhesives ?? [];
-                    if (adhesives.length > 0) hasAnyItems = true;
-                    totalApplicableItems += adhesives.length;
-                    totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
-                    break;
-                }
-                case AuditModuleType.COGNITIVE_PICTOGRAMS: {
-                    const cogData = module.data as CognitivePictogramData;
-                    const pictos = cogData.pictograms ?? [];
-                    if (pictos.length > 0) hasAnyItems = true;
-                    totalApplicableItems += pictos.length;
-                    totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
-                    break;
-                }
+            
+            const counts = getModuleProgressCounts(module);
+            totalApplicableItems += counts.applicable;
+            totalCheckedItems += counts.checked;
+            if (counts.hasContent) {
+                hasAnyItems = true;
             }
         }
     }
     
     if (totalApplicableItems === 0) {
-        // If there are no auditable items:
-        // - If the modules contain content (e.g., ECAs, DATs) but all items are "Not Applicable", it's 100% complete.
-        // - If the modules are simply empty (no ECAs, DATs added yet), it's 0% progress.
         return hasAnyItems ? 100 : 0;
     }
 
