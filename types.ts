@@ -1,9 +1,3 @@
-// types.ts
-
-// =================================================================
-// ENUMS
-// =================================================================
-
 export enum AuditModuleType {
     DAT = 'DAT',
     PR = 'PR',
@@ -143,6 +137,8 @@ export interface PMRFloorAdhesiveData {
     adhesives: PMRFloorAdhesive[];
     comment: string;
     completionDate?: string;
+    isNotApplicable?: boolean;
+    notApplicableReason?: string;
 }
 
 export interface CognitivePictogram {

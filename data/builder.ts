@@ -409,6 +409,10 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
 
             // PMR Floor Adhesive modules
             const modulePmrA_Hist = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Historique)', jjaStation, 'A');
+            (modulePmrA_Hist.data as PMRFloorAdhesiveData).isNotApplicable = true;
+            (modulePmrA_Hist.data as PMRFloorAdhesiveData).notApplicableReason = "L'adhésif au sol n'est pas posé car il ne tient pas (exposition partielle aux intempéries).";
+
+
             const modulePmrA_Princ = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Principal Ligne A)', jjaStation, 'A');
             const modulePmrB = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Principal Ligne B)', jjbStation, 'B');
             const modulePmrAtoB = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Liaison A→B)', jjaStation, 'A');

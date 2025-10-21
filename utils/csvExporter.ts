@@ -370,6 +370,17 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.PMR_FLOOR_ADHESIVE: {
                         const data = module.data as PMRFloorAdhesiveData;
+                        if (data.isNotApplicable) {
+                            rows.push({
+                                ...baseRow,
+                                _lieuIndex: lieuIndex,
+                                'Date de Réalisation': formatCompletionDate(data.completionDate),
+                                'Élément': module.name,
+                                'Statut': 'Non applicable',
+                                'Commentaire': data.notApplicableReason || data.comment,
+                            });
+                            break;
+                        }
                         const material = getPmrMaterial(data.stationName, module.name);
                         for (const adhesive of data.adhesives) {
                             let description = 'Adhésif de signalisation PMR au sol | 920x3705mm';

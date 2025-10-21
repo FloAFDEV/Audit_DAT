@@ -19,6 +19,7 @@ interface AuditFormLayoutProps {
     onCommentChange: (comment: string) => void;
     children: React.ReactNode;
     footer?: React.ReactNode;
+    commentIsReadOnly?: boolean;
 }
 
 const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
@@ -35,6 +36,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     onCommentChange,
     children,
     footer,
+    commentIsReadOnly,
 }) => {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -93,10 +95,11 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                 <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
                 <textarea
                     rows={4}
-                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-900 px-3 py-2 text-base text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6"
+                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-900 px-3 py-2 text-base text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6 read-only:bg-slate-100 read-only:dark:bg-slate-800"
                     placeholder="Ajouter un commentaire..."
                     value={comment || ''}
                     onChange={(e) => onCommentChange(e.target.value)}
+                    readOnly={commentIsReadOnly}
                 />
             </div>
 

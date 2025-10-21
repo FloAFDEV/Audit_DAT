@@ -172,7 +172,11 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             break;
         }
         case AuditModuleType.PMR_FLOOR_ADHESIVE: {
-            const adhesives = (module.data as PMRFloorAdhesiveData).adhesives ?? [];
+            const data = module.data as PMRFloorAdhesiveData;
+            if (data.isNotApplicable) {
+                return { applicable: 0, checked: 0, hasContent: true };
+            }
+            const adhesives = data.adhesives ?? [];
             if (adhesives.length > 0) hasAuditableContent = true;
             totalApplicableItems += adhesives.length;
             totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
