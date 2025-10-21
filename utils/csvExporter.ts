@@ -148,6 +148,18 @@ const escapeCsv = (value: any): string => {
     return str;
 };
 
+// FIX: Resolved duplicate key errors by removing redundant entries.
+// The `AdhesiveStatus` and `FloorAdhesiveStatus` enums shared member names (e.g., NotChecked),
+// which resulted in the same computed property key in the object literal.
+const statusTranslations: { [key: string]: string } = {
+    [AdhesiveStatus.NotChecked]: 'Non contrôlé',
+    [AdhesiveStatus.OK]: 'OK',
+    [AdhesiveStatus.Absent]: 'Absent',
+    [AdhesiveStatus.ToBeReplaced]: 'À remplacer',
+    [AdhesiveStatus.NotApplicable]: 'Non applicable',
+    [FloorAdhesiveStatus.ToPlan]: 'À planifier',
+};
+
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
     // This regex captures the number (or text like '10') after "Repère" and the rest of the string.
@@ -175,12 +187,10 @@ interface CsvRow {
     'Type d\'Audit': string;
     Ligne: string;
     Mode: string;
-    'Station/P+R': string;
     'Direction/Équipement/Accès': string;
     'Élément': string;
     'Statut': string;
     'Repère': string;
-    'ID Adhésif': string;
     'Description Adhésif': string;
     'Localisation Adhésif': string;
     'Photo Jointe': string;
@@ -192,7 +202,7 @@ interface CsvRow {
 export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: boolean; error?: string } => {
     try {
         const rows: CsvRow[] = [];
-        const exportDate = new Date().toLocaleDateString('fr-FR');
+        const exportDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
         for (const [lieuIndex, lieu] of lieux.entries()) {
             for (const module of lieu.modules) {
@@ -206,12 +216,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     'Type d\'Audit': module.name,
                     Ligne: line,
                     Mode: mode,
-                    'Station/P+R': '',
                     'Direction/Équipement/Accès': '',
                     'Élément': '',
                     'Statut': '',
                     'Repère': '',
-                    'ID Adhésif': '',
                     'Description Adhésif': '',
                     'Localisation Adhésif': '',
                     'Photo Jointe': '',
@@ -248,12 +256,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                         rows.push({
                                             ...baseRow,
-                                            'Station/P+R': station.name,
                                             'Direction/Équipement/Accès': direction.name,
                                             'Élément': dat.name,
-                                            'Statut': status,
+                                            'Statut': statusTranslations[status] || status,
                                             'Repère': repere,
-                                            'ID Adhésif': adhesiveId,
                                             'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                             'Localisation Adhésif': location,
                                             'Commentaire': dat.comment,
@@ -290,12 +296,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                 rows.push({
                                     ...baseRow,
-                                    'Station/P+R': data.name,
                                     'Direction/Équipement/Accès': equipment.name,
                                     'Élément': equipment.type,
-                                    'Statut': status,
+                                    'Statut': statusTranslations[status] || status,
                                     'Repère': repere,
-                                    'ID Adhésif': adhesiveId,
                                     'Description Adhésif': finalDescription,
                                     'Localisation Adhésif': adhesive?.location || '',
                                     'Commentaire': equipment.comment,
@@ -310,7 +314,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             if (eca.isNotApplicable) {
                                 rows.push({
                                     ...baseRow,
-                                    'Station/P+R': data.stationName,
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
                                     'Statut': 'Non applicable',
@@ -333,12 +336,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 
                                 rows.push({
                                     ...baseRow,
-                                    'Station/P+R': data.stationName,
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
-                                    'Statut': status,
+                                    'Statut': statusTranslations[status] || status,
                                     'Repère': repere,
-                                    'ID Adhésif': adhesiveId,
                                     'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                     'Localisation Adhésif': location,
                                     'Commentaire': eca.comment,
@@ -352,10 +353,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         for (const adhesive of data.adhesives) {
                             rows.push({
                                 ...baseRow,
-                                'Station/P+R': data.stationName,
                                 'Élément': adhesive.name,
-                                'Statut': adhesive.status,
-                                'ID Adhésif': adhesive.id,
+                                'Statut': statusTranslations[adhesive.status] || adhesive.status,
                                 'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
                                 'Localisation Adhésif': 'Au sol devant le passage PMR',
                                 'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
@@ -371,13 +370,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
                             rows.push({
                                 ...baseRow,
-                                'Station/P+R': data.stationName,
                                 'Direction/Équipement/Accès': pictogram.accessPointName,
                                 'Élément': 'Pictogramme cognitif (ou totem)',
-                                'Statut': pictogram.status,
-                                'ID Adhésif': pictogram.id,
+                                'Statut': statusTranslations[pictogram.status] || pictogram.status,
                                 'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
-                                'Localisation Adhésif': 'Au sol en amont des valideurs',
+                                'Localisation Adhésif': '',
                                 'Commentaire': data.comment,
                             });
                         }
@@ -388,31 +385,22 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
         }
         
         if (rows.length === 0) {
-            // If after processing everything there are still no rows, we can't create a CSV.
-            // This can happen if a category has only future modules.
-            // Instead of erroring, we can consider this a "success" with an empty result.
-            // Or we can create an empty file. Let's return success as it's not a technical error.
             return { success: true };
         }
 
-        // Sort rows by line, then by original physical lieu order
-        const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', '']; // PR modules will have empty line
+        const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', ''];
         const lineOrderMap = new Map(lineOrder.map((line, index) => [line, index]));
 
         rows.sort((a, b) => {
             const orderA = lineOrderMap.get(a.Ligne) ?? 99;
             const orderB = lineOrderMap.get(b.Ligne) ?? 99;
             if (orderA !== orderB) return orderA - orderB;
-
-            // If lines are the same, sort by the original lieu order.
             return (a._lieuIndex ?? 0) - (b._lieuIndex ?? 0);
         });
 
-        // Insert blank rows and build final array for CSV conversion
         const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
         let lastLigne: string | null = null;
         
-        // Get header keys from the first row, excluding the temp index key.
         const headerKeys = Object.keys(rows[0]).filter(k => k !== '_lieuIndex') as (keyof Omit<CsvRow, '_lieuIndex'>)[];
         const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
 

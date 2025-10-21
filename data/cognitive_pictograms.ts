@@ -105,7 +105,6 @@ const initialCounts: Record<string, number> = {
     // 'CAP' is a special case
     // 'ESQ' is a special case
     'ARE': 2,
-    'FLE': 1,
     'MUN': 2,
     'BEL': 2,
     'MBC': 2,
@@ -118,6 +117,13 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
     // Special cases based on station configuration
     switch (stationCode) {
         // --- Ligne A ---
+        case 'FLE': // Fontaine-Lestang
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Mur derrière station (côté Rue de la Moselle)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
         case 'REY':
             pictos.push({
                 id: uuidv4(),
