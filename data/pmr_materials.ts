@@ -24,7 +24,7 @@ const materialMap: Record<string, string> = {
     'Marengo-SNCF': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Jolimont|Adhésifs PMR au Sol (Jolimont Principal)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Bas
     'Jolimont|Adhésifs PMR au Sol (Jolimont ascenseur)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Haut
-    'Roseraie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Roseraie': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Argoulets': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Balma-Gramont': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     // Ligne B
