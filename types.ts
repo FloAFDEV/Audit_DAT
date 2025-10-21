@@ -75,6 +75,7 @@ export interface DAT {
     name: string;
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
+    completionDate?: string;
 }
 
 export interface Direction {
@@ -98,6 +99,7 @@ export interface Equipment {
     type: EquipmentType;
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
+    completionDate?: string;
 }
 
 export interface Pr {
@@ -115,6 +117,7 @@ export interface ECA {
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
     isNotApplicable?: boolean;
+    completionDate?: string;
 }
 
 export interface EcaData {
@@ -139,6 +142,7 @@ export interface PMRFloorAdhesiveData {
     stationCode: string;
     adhesives: PMRFloorAdhesive[];
     comment: string;
+    completionDate?: string;
 }
 
 export interface CognitivePictogram {
@@ -153,6 +157,7 @@ export interface CognitivePictogramData {
     stationCode: string;
     pictograms: CognitivePictogram[];
     comment: string;
+    completionDate?: string;
 }
 
 

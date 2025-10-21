@@ -1,3 +1,5 @@
+// utils/progressCalculators.ts
+
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
@@ -119,6 +121,103 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     return { percentage, label, isComplete };
 };
 
+export function getModuleProgress(module: AuditModule) {
+    if (module.isFuture) {
+        return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
+    }
+
+    let totalApplicableItems = 0;
+    let totalCheckedItems = 0;
+    let hasAuditableContent = false;
+
+    switch (module.type) {
+        case AuditModuleType.DAT: {
+            const dats = (module.data as ModeData).stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
+            if (dats.length > 0) hasAuditableContent = true;
+            for (const dat of dats) {
+                const statuses = Object.values(dat.adhesives);
+                totalApplicableItems += statuses.length;
+                totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+            }
+            break;
+        }
+        case AuditModuleType.PR: {
+            const equipments = (module.data as Pr).equipments ?? [];
+            if (equipments.length > 0) hasAuditableContent = true;
+            for (const equipment of equipments) {
+                const statuses = Object.values(equipment.adhesives);
+                totalApplicableItems += statuses.length;
+                totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+            }
+            break;
+        }
+        case AuditModuleType.ECA: {
+            const ecas = (module.data as EcaData).ecas ?? [];
+            if (ecas.length > 0) hasAuditableContent = true;
+            for (const eca of ecas) {
+                if (eca.isNotApplicable) continue;
+                const adhesiveDefinitions = getEcaAdhesives(eca.type);
+                for (const adDef of adhesiveDefinitions) {
+                    const status = eca.adhesives[adDef.id];
+                    if (status !== AdhesiveStatus.NotApplicable) {
+                        totalApplicableItems++;
+                        if (status && status !== AdhesiveStatus.NotChecked) {
+                            totalCheckedItems++;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+            const adhesives = (module.data as PMRFloorAdhesiveData).adhesives ?? [];
+            if (adhesives.length > 0) hasAuditableContent = true;
+            totalApplicableItems += adhesives.length;
+            totalCheckedItems += adhesives.filter(a => a.status !== FloorAdhesiveStatus.NotChecked).length;
+            break;
+        }
+        case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+            const pictos = (module.data as CognitivePictogramData).pictograms ?? [];
+            if (pictos.length > 0) hasAuditableContent = true;
+            totalApplicableItems += pictos.length;
+            totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
+            break;
+        }
+        default:
+            return { percentage: 0, label: 'N/A', statusText: 'Non applicable', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
+    }
+
+    let percentage = 0;
+    if (totalApplicableItems > 0) {
+        percentage = (totalCheckedItems / totalApplicableItems) * 100;
+    } else if (hasAuditableContent) {
+        // e.g. a module with ECAs that are all N/A or have no applicable adhesives
+        percentage = 100;
+    }
+    
+    const isComplete = Math.round(percentage) === 100;
+    
+    let label: string;
+    let statusText: string;
+    let statusColor: string;
+
+    if (isComplete) {
+        label = 'Terminé';
+        statusText = 'Audit terminé';
+        statusColor = 'text-teal-600 dark:text-teal-400';
+    } else if (percentage > 0) {
+        label = 'Progression';
+        statusText = 'Audit en cours';
+        statusColor = 'text-amber-600 dark:text-amber-400';
+    } else {
+        label = 'Progression';
+        statusText = 'En attente de contrôle';
+        statusColor = 'text-gray-500 dark:text-slate-400';
+    }
+    
+    return { percentage, label, statusText, statusColor, isComplete };
+}
+
 
 export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = []): number => {
     if (!lieu?.modules) return 0;
@@ -206,24 +305,23 @@ export const getCategoryProgress = (
 ): number => {
     const categoryConfig = category === 'ALL' ? null : AUDIT_CATEGORIES.find(c => c.key === category);
     
-    const isModuleInCategory = (module: AuditModule): boolean => {
-        if (category === 'ALL' || !categoryConfig) return true;
-        return categoryConfig.predicate(module);
-    };
+    // 1. Filter the Lieux first, based on the main category
+    const relevantLieux = (category === 'ALL' || !categoryConfig)
+        ? allLieux
+        : allLieux.filter(lieu => lieu.modules.some(module => categoryConfig.predicate(module)));
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
     let hasAnyItems = false; // Flag to check if modules are empty or not
 
-    for (const lieu of allLieux) {
-        const modulesToConsider = lieu.modules.filter(m => {
-            if (!isModuleInCategory(m)) {
-                return false;
-            }
-            return activeFilters.length === 0 ? true : activeFilters.includes(m.type);
-        });
-        
-        for (const module of modulesToConsider) {
+    for (const lieu of relevantLieux) {
+        // If there's a sub-filter (activeFilters), only consider those modules.
+        // Otherwise (for main tab), consider modules that match the category predicate.
+        const modulesToProcess = activeFilters.length > 0
+            ? lieu.modules.filter(m => activeFilters.includes(m.type))
+            : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
+
+        for (const module of modulesToProcess) {
             if (module.isFuture) continue;
 
             switch (module.type) {

@@ -181,8 +181,18 @@ const getModeFromLine = (line: string | undefined): string => {
     return '';
 };
 
+const formatCompletionDate = (isoDate?: string): string => {
+    if (!isoDate) return '';
+    return new Date(isoDate).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
+};
+
 interface CsvRow {
     'Date de l\'export': string;
+    'Date de Réalisation': string;
     Lieu: string;
     'Type d\'Audit': string;
     Ligne: string;
@@ -209,9 +219,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                 const line = module.line || '';
                 const mode = getModeFromLine(line);
 
-                const baseRow: CsvRow = {
+                const baseRow: Omit<CsvRow, '_lieuIndex'> = {
                     'Date de l\'export': exportDate,
-                    _lieuIndex: lieuIndex,
+                    'Date de Réalisation': '',
                     Lieu: lieu.name,
                     'Type d\'Audit': module.name,
                     Ligne: line,
@@ -230,6 +240,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                 if (module.isFuture) {
                     rows.push({
                         ...baseRow,
+                        _lieuIndex: lieuIndex,
                         'Élément': module.name,
                         'Statut': 'N/A (futur)',
                     });
@@ -256,6 +267,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                         rows.push({
                                             ...baseRow,
+                                            _lieuIndex: lieuIndex,
+                                            'Date de Réalisation': formatCompletionDate(dat.completionDate),
                                             'Direction/Équipement/Accès': direction.name,
                                             'Élément': dat.name,
                                             'Statut': statusTranslations[status] || status,
@@ -296,6 +309,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                 rows.push({
                                     ...baseRow,
+                                    _lieuIndex: lieuIndex,
+                                    'Date de Réalisation': formatCompletionDate(equipment.completionDate),
                                     'Direction/Équipement/Accès': equipment.name,
                                     'Élément': equipment.type,
                                     'Statut': statusTranslations[status] || status,
@@ -314,6 +329,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             if (eca.isNotApplicable) {
                                 rows.push({
                                     ...baseRow,
+                                    _lieuIndex: lieuIndex,
+                                    'Date de Réalisation': formatCompletionDate(eca.completionDate),
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
                                     'Statut': 'Non applicable',
@@ -336,6 +353,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 
                                 rows.push({
                                     ...baseRow,
+                                    _lieuIndex: lieuIndex,
+                                    'Date de Réalisation': formatCompletionDate(eca.completionDate),
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
                                     'Statut': statusTranslations[status] || status,
@@ -353,10 +372,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         for (const adhesive of data.adhesives) {
                             rows.push({
                                 ...baseRow,
-                                'Élément': adhesive.name,
+                                _lieuIndex: lieuIndex,
+                                'Date de Réalisation': formatCompletionDate(data.completionDate),
+                                'Élément': '', // Vidé comme demandé
                                 'Statut': statusTranslations[adhesive.status] || adhesive.status,
                                 'Description Adhésif': 'Adhésif de signalisation PMR au sol | 920x3705mm',
-                                'Localisation Adhésif': 'Au sol devant le passage PMR',
+                                'Localisation Adhésif': '', // Vidé comme demandé
                                 'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
                                 'Note Photo': adhesive.photo_note || '',
                                 'Commentaire': data.comment,
@@ -370,6 +391,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
                             rows.push({
                                 ...baseRow,
+                                _lieuIndex: lieuIndex,
+                                'Date de Réalisation': formatCompletionDate(data.completionDate),
                                 'Direction/Équipement/Accès': pictogram.accessPointName,
                                 'Élément': 'Pictogramme cognitif (ou totem)',
                                 'Statut': statusTranslations[pictogram.status] || pictogram.status,
@@ -401,7 +424,12 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
         const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
         let lastLigne: string | null = null;
         
-        const headerKeys = Object.keys(rows[0]).filter(k => k !== '_lieuIndex') as (keyof Omit<CsvRow, '_lieuIndex'>)[];
+        const headerKeys: (keyof Omit<CsvRow, '_lieuIndex'>)[] = [
+            'Date de l\'export', 'Date de Réalisation', 'Lieu', 'Type d\'Audit', 'Ligne', 'Mode', 
+            'Direction/Équipement/Accès', 'Élément', 'Statut', 'Repère', 'Description Adhésif', 
+            'Localisation Adhésif', 'Photo Jointe', 'Note Photo', 'Commentaire'
+        ];
+
         const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
 
         for (const row of rows) {

@@ -9,6 +9,7 @@ import { AUDIT_CATEGORIES } from './data/config';
 import { v4 as uuidv4 } from 'uuid';
 import { validateImportedData } from './utils/csvExporter';
 import { canEcaBeNotApplicable } from './data/eca_data';
+import { getEcaProgress } from './utils/progressCalculators';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -316,7 +317,16 @@ const useAuditStore = create<AppState>((set, get) => {
             const station = module.data.stations.find(s => s.id === selectedStationId);
             const direction = station?.directions.find(d => d.id === selectedDirectionId);
             const dat = direction?.dats.find(d => d.id === selectedDatId);
-            if (dat) dat.adhesives[adhesiveId] = status;
+            if (dat) {
+                dat.adhesives[adhesiveId] = status;
+
+                const isComplete = Object.values(dat.adhesives).every(s => s !== AdhesiveStatus.NotChecked);
+                if (isComplete && !dat.completionDate) {
+                    dat.completionDate = new Date().toISOString();
+                } else if (!isComplete && dat.completionDate) {
+                    delete dat.completionDate;
+                }
+            }
         });
     },
 
@@ -334,30 +344,15 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetDat: async () => {
         const { selectedModuleId, selectedStationId, selectedDirectionId, selectedDatId } = get();
         await _updateLieu(lieu => {
-            lieu.modules = lieu.modules.map(module => {
-                if (module.id === selectedModuleId && module.type === AuditModuleType.DAT) {
-                    const data = module.data as ModeData;
-                    const newStations = data.stations.map(station => {
-                        if (station.id === selectedStationId) {
-                            const newDirections = station.directions.map(direction => {
-                                if (direction.id === selectedDirectionId) {
-                                    const newDats = direction.dats.map(dat =>
-                                        dat.id === selectedDatId
-                                            ? { ...dat, adhesives: createInitialAdhesiveStatus(ADHESIVES), comment: '' }
-                                            : dat
-                                    );
-                                    return { ...direction, dats: newDats };
-                                }
-                                return direction;
-                            });
-                            return { ...station, directions: newDirections };
-                        }
-                        return station;
-                    });
-                    return { ...module, data: { ...data, stations: newStations } };
-                }
-                return module;
-            });
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            const direction = station?.directions.find(d => d.id === selectedDirectionId);
+            const dat = direction?.dats.find(d => d.id === selectedDatId);
+            if (dat) {
+                dat.adhesives = createInitialAdhesiveStatus(ADHESIVES);
+                dat.comment = '';
+                delete dat.completionDate;
+            }
         });
     },
 
@@ -411,7 +406,16 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
             const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
-            if (equipment) equipment.adhesives[adhesiveId] = status;
+            if (equipment) {
+                equipment.adhesives[adhesiveId] = status;
+                
+                const isComplete = Object.values(equipment.adhesives).every(s => s !== AdhesiveStatus.NotChecked);
+                if (isComplete && !equipment.completionDate) {
+                    equipment.completionDate = new Date().toISOString();
+                } else if (!isComplete && equipment.completionDate) {
+                    delete equipment.completionDate;
+                }
+            }
         });
     },
 
@@ -427,18 +431,13 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetPrAdhesive: async () => {
         const { selectedModuleId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
-            lieu.modules = lieu.modules.map(module => {
-                if (module.id === selectedModuleId && module.type === AuditModuleType.PR) {
-                    const data = module.data as Pr;
-                    const newEquipments = data.equipments.map(equipment =>
-                        equipment.id === selectedEquipmentId
-                            ? { ...equipment, adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipment.type)), comment: '' }
-                            : equipment
-                    );
-                    return { ...module, data: { ...data, equipments: newEquipments } };
-                }
-                return module;
-            });
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
+            const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
+            if (equipment) {
+                equipment.adhesives = createInitialAdhesiveStatus(getPrAdhesives(equipment.type));
+                equipment.comment = '';
+                delete equipment.completionDate;
+            }
         });
     },
 
@@ -452,6 +451,13 @@ const useAuditStore = create<AppState>((set, get) => {
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
                 eca.adhesives[adhesiveId] = status;
+                
+                const progress = getEcaProgress(eca);
+                if (progress.isComplete && !eca.completionDate) {
+                    eca.completionDate = new Date().toISOString();
+                } else if (!progress.isComplete && eca.completionDate) {
+                    delete eca.completionDate;
+                }
             }
         });
     },
@@ -468,18 +474,13 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetEcaAdhesive: async () => {
         const { selectedModuleId, selectedEcaId } = get();
         await _updateLieu(lieu => {
-            lieu.modules = lieu.modules.map(module => {
-                if (module.id === selectedModuleId && module.type === AuditModuleType.ECA) {
-                    const data = module.data as EcaData;
-                    const newEcas = data.ecas.map(eca =>
-                        eca.id === selectedEcaId
-                            ? { ...eca, adhesives: createInitialAdhesiveStatus(getEcaAdhesives(eca.type)), comment: '' }
-                            : eca
-                    );
-                    return { ...module, data: { ...data, ecas: newEcas } };
-                }
-                return module;
-            });
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
+            const eca = module.data.ecas.find(e => e.id === selectedEcaId);
+            if (eca) {
+                eca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(eca.type));
+                eca.comment = '';
+                delete eca.completionDate;
+            }
         });
     },
 
@@ -490,6 +491,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
                 eca.isNotApplicable = isNA;
+                if (isNA) {
+                    eca.completionDate = new Date().toISOString();
+                } else {
+                    delete eca.completionDate;
+                }
             }
         });
 
@@ -526,15 +532,22 @@ const useAuditStore = create<AppState>((set, get) => {
                     ...ecaData
                 };
 
-                // Si le type a changé, on réinitialise les adhésifs
+                // Si le type a changé, on réinitialise les adhésifs et la date de complétion
                 if (ecaData.type && ecaData.type !== originalEca.type) {
                     updatedEca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type));
+                    delete updatedEca.completionDate;
                 }
 
                 // Si le type ne permet pas le statut N/A, on supprime la propriété.
                 if (!canEcaBeNotApplicable(updatedEca.type)) {
                     delete updatedEca.isNotApplicable;
                 }
+                
+                // Si l'équipement est marqué comme non applicable, on met la date de complétion
+                if (updatedEca.isNotApplicable) {
+                    updatedEca.completionDate = new Date().toISOString();
+                }
+
 
                 module.data.ecas[ecaIndex] = updatedEca;
             }
@@ -559,7 +572,16 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
-            if (adhesive) adhesive.status = status;
+            if (adhesive) {
+                adhesive.status = status;
+                
+                const isComplete = module.data.adhesives.every(a => a.status !== FloorAdhesiveStatus.NotChecked);
+                if (isComplete && !module.data.completionDate) {
+                    module.data.completionDate = new Date().toISOString();
+                } else if (!isComplete && module.data.completionDate) {
+                    delete module.data.completionDate;
+                }
+            }
         });
     },
 
@@ -574,27 +596,30 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handleResetPmrFloorAdhesive: async () => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            lieu.modules = lieu.modules.map(module => {
-                if (module.id === selectedModuleId && module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
-                    const oldData = module.data as PMRFloorAdhesiveData;
-                    return {
-                        ...module,
-                        data: {
-                            ...oldData,
-                            adhesives: oldData.adhesives.map(adhesive => ({
-                                id: adhesive.id,
-                                name: adhesive.name,
-                                status: FloorAdhesiveStatus.NotChecked,
-                            })),
-                            comment: ''
-                        }
-                    };
-                }
-                return module;
-            });
+        const { selectedLieuId, selectedModuleId, lieux } = get();
+        if (!selectedLieuId || !selectedModuleId) return;
+
+        // Create a deep copy to avoid mutation issues
+        const newLieux = JSON.parse(JSON.stringify(lieux));
+        
+        const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
+        if (!lieuToUpdate) return;
+
+        const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
+        if (!moduleToUpdate) return;
+
+        const currentData = moduleToUpdate.data as PMRFloorAdhesiveData;
+        currentData.comment = '';
+        delete currentData.completionDate;
+        currentData.adhesives.forEach(adhesive => {
+            adhesive.status = FloorAdhesiveStatus.NotChecked;
+            delete adhesive.photo_base64;
+            delete adhesive.photo_note;
+            delete adhesive.photo_rotation;
         });
+        
+        await db.lieux.put(lieuToUpdate);
+        set({ lieux: newLieux });
     },
 
     handlePmrFloorAdhesivePhotoChange: async (adhesiveId, photo_base64) => {
@@ -644,7 +669,16 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
-            if (pictogram) pictogram.status = status;
+            if (pictogram) {
+                pictogram.status = status;
+                
+                const isComplete = module.data.pictograms.every(p => p.status !== FloorAdhesiveStatus.NotChecked);
+                if (isComplete && !module.data.completionDate) {
+                    module.data.completionDate = new Date().toISOString();
+                } else if (!isComplete && module.data.completionDate) {
+                    delete module.data.completionDate;
+                }
+            }
         });
     },
 
@@ -661,23 +695,14 @@ const useAuditStore = create<AppState>((set, get) => {
     handleResetCognitivePictogram: async () => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
-            lieu.modules = lieu.modules.map(module => {
-                if (module.id === selectedModuleId && module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
-                    const oldData = module.data as CognitivePictogramData;
-                    return {
-                        ...module,
-                        data: {
-                            ...oldData,
-                            pictograms: oldData.pictograms.map(p => ({
-                                ...p,
-                                status: FloorAdhesiveStatus.NotChecked
-                            })),
-                            comment: ''
-                        }
-                    };
-                }
-                return module;
-            });
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
+            if (module) {
+                module.data.pictograms.forEach(p => {
+                    p.status = FloorAdhesiveStatus.NotChecked;
+                });
+                module.data.comment = '';
+                delete module.data.completionDate;
+            }
         });
     },
     
@@ -692,6 +717,7 @@ const useAuditStore = create<AppState>((set, get) => {
                     status: FloorAdhesiveStatus.NotChecked,
                 };
                 module.data.pictograms.push(newAccessPoint);
+                delete module.data.completionDate; // Adding a new one makes it incomplete
             }
         });
     },
@@ -702,6 +728,13 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
                 module.data.pictograms = module.data.pictograms.filter(p => p.id !== pictogramId);
+                // Re-check completion status
+                const isComplete = module.data.pictograms.length > 0 && module.data.pictograms.every(p => p.status !== FloorAdhesiveStatus.NotChecked);
+                if (isComplete && !module.data.completionDate) {
+                    module.data.completionDate = new Date().toISOString();
+                } else if (!isComplete && module.data.completionDate) {
+                    delete module.data.completionDate;
+                }
             }
         });
     },
@@ -726,26 +759,21 @@ const useAuditStore = create<AppState>((set, get) => {
             const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
             if (!categoryConfig) return;
 
-            const freshData = await generateInitialLieuxDataAsync();
-            const freshModulesMap = new Map<string, AuditModule>();
-            freshData.forEach(lieu => 
-                lieu.modules.forEach(module => {
-                    if (categoryConfig.predicate(module)) {
-                        freshModulesMap.set(module.id, module);
-                    }
-                })
-            );
+            const freshLieux = await generateInitialLieuxDataAsync();
+            const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
 
             const currentLieux = get().lieux;
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
 
             for (const lieu of updatedLieux) {
-                lieu.modules = lieu.modules.map((module: AuditModule) => {
-                    if (freshModulesMap.has(module.id)) {
-                        return freshModulesMap.get(module.id);
-                    }
-                    return module;
-                });
+                const modulesToKeep = lieu.modules.filter((m: AuditModule) => !categoryConfig.predicate(m));
+                
+                const freshLieu = freshLieuxMap.get(lieu.name);
+                const freshModulesToAdd = freshLieu 
+                    ? freshLieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)) 
+                    : [];
+
+                lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
             
             await db.lieux.bulkPut(updatedLieux);
@@ -770,26 +798,21 @@ const useAuditStore = create<AppState>((set, get) => {
 
     handleResetByModuleType: async (moduleType) => {
         try {
-            const freshData = await generateInitialLieuxDataAsync();
-            const freshModulesMap = new Map<string, AuditModule>();
-            freshData.forEach(lieu => 
-                lieu.modules.forEach(module => {
-                    if (module.type === moduleType) {
-                        freshModulesMap.set(module.id, module);
-                    }
-                })
-            );
+            const freshLieux = await generateInitialLieuxDataAsync();
+            const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
 
             const currentLieux = get().lieux;
-            const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
+            const updatedLieux = JSON.parse(JSON.stringify(currentLieux)); 
 
             for (const lieu of updatedLieux) {
-                lieu.modules = lieu.modules.map((module: AuditModule) => {
-                    if (freshModulesMap.has(module.id)) {
-                        return freshModulesMap.get(module.id);
-                    }
-                    return module;
-                });
+                const modulesToKeep = lieu.modules.filter((m: AuditModule) => m.type !== moduleType);
+                
+                const freshLieu = freshLieuxMap.get(lieu.name);
+                const freshModulesToAdd = freshLieu 
+                    ? freshLieu.modules.filter((m: AuditModule) => m.type === moduleType) 
+                    : [];
+
+                lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
             
             await db.lieux.bulkPut(updatedLieux);
