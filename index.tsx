@@ -14,19 +14,3 @@ root.render(
     <App />
   </React.StrictMode>
 );
-
-// Register the service worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Construct an absolute URL for the service worker to avoid cross-origin errors
-    // in some execution environments. The path '/sw.js' ensures it's resolved from the root.
-    const swUrl = new URL('/sw.js', window.location.origin).href;
-    navigator.serviceWorker.register(swUrl)
-      .then(registration => {
-        console.log('PWA service worker registered with scope: ', registration.scope);
-      })
-      .catch(err => {
-        console.error('Service worker registration failed: ', err);
-      });
-  });
-}
