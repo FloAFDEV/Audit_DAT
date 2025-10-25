@@ -4,7 +4,7 @@ import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Chec
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
-import { ActionsMenu } from './ActionsMenu';
+import { ExportMenu, SyncMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
 import { getCategoryProgress } from '../utils/progressCalculators';
@@ -284,8 +284,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 <AuditFilterSelector availableAuditTypes={availableAuditTypes} />
             )}
             
-            <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <div className="relative flex-grow" ref={searchContainerRef}>
+            <div className="flex flex-col sm:flex-row items-center gap-4 mb-8">
+                <div className="relative w-full flex-grow" ref={searchContainerRef}>
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                     </div>
@@ -310,13 +310,28 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                         </ul>
                     )}
                 </div>
-                <div className="flex-shrink-0 flex items-stretch sm:items-center gap-4">
+                <div className="flex-shrink-0 flex w-full sm:w-auto items-center justify-end gap-4">
                     {showInverter && (
                         <button onClick={toggleOrderReversed} className="flex flex-col items-center justify-center text-center px-4 py-2 rounded-md bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors h-full" title="Inverser le sens de la ligne">
                             <ArrowRightLeft className="h-5 w-5" /><span className="text-xs font-semibold mt-1">Inverser</span>
                         </button>
                     )}
-                    <ActionsMenu onExportByCategory={onExportByCategory} onExportByModuleType={onExportByModuleType} onExportAll={onExportAll} onExportCurrentView={onExportCurrentView} onExportJson={onExportJson} onImportJson={handleImportClick} onResetRequest={handleResetRequest} isModalOpen={!!resetTarget || !!importFileContent} activeFilter={activeFilter} activeAuditFilters={activeAuditFilters} availableAuditTypes={availableAuditTypes} />
+                    <ExportMenu
+                        onExportByCategory={onExportByCategory}
+                        onExportByModuleType={onExportByModuleType}
+                        onExportAll={onExportAll}
+                        onExportCurrentView={onExportCurrentView}
+                        isModalOpen={!!resetTarget || !!importFileContent}
+                        activeFilter={activeFilter}
+                        activeAuditFilters={activeAuditFilters}
+                        availableAuditTypes={availableAuditTypes}
+                    />
+                    <SyncMenu
+                        onExportJson={onExportJson}
+                        onImportJson={handleImportClick}
+                        onResetRequest={handleResetRequest}
+                        isModalOpen={!!resetTarget || !!importFileContent}
+                    />
                 </div>
             </div>
 
