@@ -33,8 +33,15 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     availableAuditTypes
 }) => {
     const [isOpen, setIsOpen] = useState(false);
+    const [isClosing, setIsClosing] = useState(false);
     const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    const handleClose = () => {
+        if (isOpen && !isClosing) {
+            setIsClosing(true);
+        }
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -42,21 +49,35 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                 return;
             }
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
+                handleClose();
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [isModalOpen]);
+    }, [isOpen, isClosing, isModalOpen]);
 
     useEffect(() => {
-        // Reset danger zone state every time the main menu is opened
         if (isOpen) {
             setIsDangerZoneOpen(false);
         }
     }, [isOpen]);
+    
+    const handleAnimationEnd = () => {
+        if (isClosing) {
+            setIsOpen(false);
+            setIsClosing(false);
+        }
+    };
+
+    const toggleMenu = () => {
+        if (isOpen) {
+            handleClose();
+        } else {
+            setIsOpen(true);
+        }
+    };
 
     const handleExport = (category: AuditCategory | 'ALL') => {
         if (category === 'ALL') {
@@ -64,22 +85,22 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
         } else {
             onExportByCategory(category);
         }
-        setIsOpen(false);
+        handleClose();
     };
 
     const handleExportModule = (moduleType: AuditModuleType) => {
         onExportByModuleType(moduleType);
-        setIsOpen(false);
+        handleClose();
     }
     
     const handleExportJsonAction = () => {
         onExportJson();
-        setIsOpen(false);
+        handleClose();
     };
     
     const handleImportJsonAction = () => {
         onImportJson();
-        setIsOpen(false);
+        handleClose();
     };
 
     const handleReset = (type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any) => {
@@ -90,35 +111,50 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
     const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
     const showAuditFilterIcons = activeAuditFilters.length > 0 && availableAuditTypes.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
 
-
+    let animationDelayCounter = 0;
+    const getDelay = (increment: boolean = true) => {
+        const delay = `${animationDelayCounter * 20}ms`;
+        if (increment) animationDelayCounter++;
+        return delay;
+    };
+    
+    // Reset counter when menu opens to restart stagger animation
+    if (isOpen && !isClosing) {
+        animationDelayCounter = 0;
+    }
+    
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={toggleMenu}
                 className="inline-flex items-center justify-center gap-x-2 w-full h-full px-4 py-2 rounded-md bg-white text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors dark:bg-slate-700 dark:text-slate-300 dark:ring-slate-600 dark:hover:bg-slate-600"
                 aria-haspopup="true"
                 aria-expanded={isOpen}
             >
                 <span className="text-sm font-semibold">Exporter & Gérer</span>
-                <ChevronDown className={`h-5 w-5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${isOpen && !isClosing ? 'rotate-180' : ''}`} />
             </button>
 
             {isOpen && (
                 <div
-                    className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 origin-top-left sm:origin-top-right rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20"
+                    onAnimationEnd={handleAnimationEnd}
+                    className={`absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 origin-top-left sm:origin-top-right rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${
+                        isClosing ? 'menu-out-animate' : 'menu-in-animate'
+                    }`}
                     role="menu"
                     aria-orientation="vertical"
                 >
                     <div className="py-1" role="none">
                         {isViewFiltered && (
                             <>
-                                <div className="px-4 py-2">
+                                <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}>
                                     <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Export Personnalisé</p>
                                 </div>
                                 <button
-                                    onClick={() => { onExportCurrentView(); setIsOpen(false); }}
-                                    className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                    onClick={() => { onExportCurrentView(); handleClose(); }}
+                                    className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                                     role="menuitem"
+                                    style={{ animationDelay: getDelay() }}
                                 >
                                     <span className="flex-1 min-w-0 truncate">Exporter la sélection en csv</span>
                                     <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -133,17 +169,18 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                                         })}
                                     </div>
                                 </button>
-                                <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
+                                <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
                             </>
                         )}
 
-                        <div className="px-4 py-2">
+                        <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}>
                             <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Ligne / Catégorie</p>
                         </div>
                         <button
                             onClick={() => handleExport('ALL')}
-                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                             role="menuitem"
+                            style={{ animationDelay: getDelay() }}
                         >
                             <CategoryIcon size="sm" />
                             <span>Exporter tout le réseau (CSV)</span>
@@ -152,24 +189,26 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                             <button
                                 key={`export-${cat.key}`}
                                 onClick={() => handleExport(cat.key)}
-                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                                 role="menuitem"
+                                style={{ animationDelay: getDelay() }}
                             >
                                 <CategoryIcon categoryConfig={cat} size="sm" />
                                 <span>Exporter {cat.label} (CSV)</span>
                             </button>
                         ))}
                         
-                        <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
-                        <div className="px-4 py-2">
+                        <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
+                        <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}>
                             <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Type d'Audit</p>
                         </div>
                         {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
                             <button
                                 key={`export-module-${type}`}
                                 onClick={() => handleExportModule(type)}
-                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                                 role="menuitem"
+                                style={{ animationDelay: getDelay() }}
                             >
                                 <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-slate-600 rounded-md">
                                     <Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" />
@@ -178,33 +217,36 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                             </button>
                         ))}
 
-                        <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
-                        <div className="px-4 py-2">
+                        <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
+                        <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}>
                             <p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Synchronisation JSON</p>
                         </div>
                         <button
                             onClick={handleExportJsonAction}
-                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                             role="menuitem"
+                            style={{ animationDelay: getDelay() }}
                         >
                             <Download className="w-4 h-4 text-sky-600" />
                             <span>Exporter les données (.json)</span>
                         </button>
                         <button
                             onClick={handleImportJsonAction}
-                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100"
+                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate"
                             role="menuitem"
+                            style={{ animationDelay: getDelay() }}
                         >
                             <Upload className="w-4 h-4 text-sky-600" />
                             <span>Importer les données (.json)</span>
                         </button>
 
-                        <div className="border-t border-gray-200 dark:border-slate-700 my-1" />
+                        <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
                         
                         <button
                             onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
-                            className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                            className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-teal-600 dark:text-teal-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate"
                             aria-expanded={isDangerZoneOpen}
+                            style={{ animationDelay: getDelay() }}
                         >
                             <div className="flex items-center gap-3">
                                 <DatabaseBackup className="w-4 h-4 text-red-600 dark:text-red-400" />
@@ -214,38 +256,46 @@ export const ActionsMenu: React.FC<ActionsMenuProps> = ({
                         </button>
                         {isDangerZoneOpen && (
                             <div className="pl-4 border-l-2 border-red-100 dark:border-red-900/30">
-                                <button
-                                    onClick={() => handleReset('ALL', 'ALL')}
-                                    className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                    role="menuitem"
-                                >
-                                    <DatabaseBackup className="w-4 h-4" />
-                                    <span>Réinitialiser tout le réseau</span>
-                                </button>
-                                {AUDIT_CATEGORIES.map(cat => (
-                                    <button
-                                        key={`reset-${cat.key}`}
-                                        onClick={() => handleReset('CATEGORY', cat.key)}
-                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                        role="menuitem"
-                                    >
-                                        <CategoryIcon categoryConfig={cat} size="sm" />
-                                        <span>Réinitialiser {cat.label}</span>
-                                    </button>
-                                ))}
-                                {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
-                                    <button
-                                        key={`reset-module-${type}`}
-                                        onClick={() => handleReset('MODULE_TYPE', type)}
-                                        className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                        role="menuitem"
-                                    >
-                                        <div className="flex items-center justify-center w-6 h-6 rounded-md">
-                                            <Icon className="w-4 h-4" />
-                                        </div>
-                                        <span>Réinitialiser {label}</span>
-                                    </button>
-                                ))}
+                                {(() => {
+                                    animationDelayCounter = 0; // Reset for this sub-section
+                                    return (<>
+                                        <button
+                                            onClick={() => handleReset('ALL', 'ALL')}
+                                            className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate"
+                                            role="menuitem"
+                                            style={{ animationDelay: getDelay() }}
+                                        >
+                                            <DatabaseBackup className="w-4 h-4" />
+                                            <span>Réinitialiser tout le réseau</span>
+                                        </button>
+                                        {AUDIT_CATEGORIES.map(cat => (
+                                            <button
+                                                key={`reset-${cat.key}`}
+                                                onClick={() => handleReset('CATEGORY', cat.key)}
+                                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate"
+                                                role="menuitem"
+                                                style={{ animationDelay: getDelay() }}
+                                            >
+                                                <CategoryIcon categoryConfig={cat} size="sm" />
+                                                <span>Réinitialiser {cat.label}</span>
+                                            </button>
+                                        ))}
+                                        {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
+                                            <button
+                                                key={`reset-module-${type}`}
+                                                onClick={() => handleReset('MODULE_TYPE', type)}
+                                                className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate"
+                                                role="menuitem"
+                                                style={{ animationDelay: getDelay() }}
+                                            >
+                                                <div className="flex items-center justify-center w-6 h-6 rounded-md">
+                                                    <Icon className="w-4 h-4" />
+                                                </div>
+                                                <span>Réinitialiser {label}</span>
+                                            </button>
+                                        ))}
+                                    </>);
+                                })()}
                             </div>
                         )}
                     </div>

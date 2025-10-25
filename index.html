@@ -50,6 +50,73 @@
       .dark input[type="date"]::-webkit-calendar-picker-indicator {
         filter: brightness(0) invert(1);
       }
+
+      /* Custom Menu Animations */
+      @keyframes menu-in {
+        from {
+          opacity: 0;
+          transform: translateY(-6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .menu-in-animate {
+        animation: menu-in 220ms ease-out forwards;
+      }
+
+      @keyframes menu-out {
+        from {
+          opacity: 1;
+          transform: scale(1) translateY(0);
+        }
+        to {
+          opacity: 0;
+          transform: scale(0.98) translateY(-6px);
+        }
+      }
+      .menu-out-animate {
+        animation: menu-out 220ms ease-in forwards;
+      }
+      
+      @keyframes menu-item-in {
+        from {
+          opacity: 0;
+          transform: translateY(4px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .menu-item-animate {
+        animation: menu-item-in 200ms ease-out forwards;
+        opacity: 0; /* Start hidden */
+      }
+      
+      @keyframes separator-in {
+        from {
+          transform: scaleX(0);
+        }
+        to {
+          transform: scaleX(1);
+        }
+      }
+      .separator-animate {
+        transform-origin: left;
+        animation: separator-in 200ms ease-out 100ms forwards;
+        transform: scaleX(0); /* Start hidden */
+      }
+      
+      @keyframes title-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+      }
+      .title-animate {
+          animation: title-in 150ms ease-out forwards;
+          opacity: 0; /* Start hidden */
+      }
     </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
