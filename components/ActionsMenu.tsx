@@ -68,7 +68,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                     <div className={`fixed inset-0 z-10 bg-black/10 dark:bg-black/40 backdrop-blur-[2px] ${isClosing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`} onClick={handleClose} />
                     <div
                         onAnimationEnd={handleAnimationEnd}
-                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
+                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
@@ -177,7 +177,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                     <div className={`fixed inset-0 z-10 bg-black/10 dark:bg-black/40 backdrop-blur-[2px] ${isClosing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`} onClick={handleClose} />
                     <div
                         onAnimationEnd={handleAnimationEnd}
-                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
+                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
