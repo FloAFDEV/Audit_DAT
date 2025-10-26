@@ -187,39 +187,52 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                 <Upload className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Restaurer une sauvegarde (.json)</span>
                             </button>
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
-                            <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
-                                <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4 text-red-600 dark:text-red-400" /><span>Zone de Danger</span></div>
+                            <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
+                                <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4" /><span>Zone de Danger</span></div>
                                 <ChevronDown className={`h-5 w-5 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
                             </button>
-                            {isDangerZoneOpen && (
-                                <div className="pl-4 border-l-2 border-red-100 dark:border-red-900/30">
-                                    {(() => {
-                                        animationDelayCounter = 0; // Reset for this sub-section
-                                        return (<>
-                                            <div className="px-4 pt-2"><p className="text-xs text-red-700 dark:text-red-400">Actions irréversibles de réinitialisation des données.</p></div>
-                                            <button onClick={() => handleReset('ALL', 'ALL')} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                                <DatabaseBackup className="w-4 h-4" /><span>Réinitialiser tout le réseau</span>
+                           {isDangerZoneOpen && (
+                                <div className="p-2 border-t border-gray-200 dark:border-slate-700">
+                                    <div className="px-2 pt-2">
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">Ces actions sont irréversibles et remettent à zéro les données d'audit.</p>
+                                    </div>
+
+                                    {/* --- Remise à zéro complète --- */}
+                                    <div className="mt-4">
+                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">🔥 Remise à zéro complète</p>
+                                        <div className="mt-1">
+                                            <button onClick={() => handleReset('ALL', 'ALL')} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
+                                                <DatabaseBackup className="w-4 h-4 flex-shrink-0" />
+                                                <span>Effacer toutes les données réseau</span>
                                             </button>
-                                            <div className="my-1 border-t border-red-200 dark:border-red-900/40 menu-item-animate" style={{ animationDelay: getDelay() }} />
-                                            <div className="sm:grid sm:grid-cols-2 sm:gap-x-2">
-                                                <div>
-                                                    {AUDIT_CATEGORIES.map(cat => (
-                                                        <button key={`reset-${cat.key}`} onClick={() => handleReset('CATEGORY', cat.key)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                                            <CategoryIcon categoryConfig={cat} size="sm" /><span>Réinitialiser {cat.label}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                                 <div>
-                                                    {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
-                                                        <button key={`reset-module-${type}`} onClick={() => handleReset('MODULE_TYPE', type)} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                                            <div className="flex items-center justify-center w-6 h-6 rounded-md"><Icon className="w-4 h-4" /></div>
-                                                            <span>Réinitialiser {label}</span>
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </>);
-                                    })()}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* --- Réinitialisation par Ligne --- */}
+                                    <div className="mt-4">
+                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">⚠️ Réinitialisation par Ligne</p>
+                                        <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                                            {AUDIT_CATEGORIES.filter(c => c.key !== 'PR').map(cat => (
+                                                <button key={`reset-${cat.key}`} onClick={() => handleReset('CATEGORY', cat.key)} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
+                                                    <CategoryIcon categoryConfig={cat} size="sm" />
+                                                    <span className="flex-1 truncate">{cat.label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* --- Réinitialisation par Type d'Audit --- */}
+                                    <div className="mt-4">
+                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">🔸 Réinitialisation par Type d'Audit</p>
+                                        <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
+                                            {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
+                                                <button key={`reset-module-${type}`} onClick={() => handleReset('MODULE_TYPE', type)} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
+                                                    <div className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0"><Icon className="w-4 h-4" /></div>
+                                                    <span className="flex-1 truncate">{label}</span>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
