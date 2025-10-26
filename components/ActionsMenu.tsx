@@ -38,7 +38,6 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
 
     const handleAnimationEnd = () => { if (isClosing) { setIsOpen(false); setIsClosing(false); } };
     const toggleMenu = () => { if (isOpen) handleClose(); else setIsOpen(true); };
-    const handleExport = (category: AuditCategory | 'ALL') => { onExportAll(); handleClose(); };
 
     const isViewFiltered = activeFilter !== 'ALL' && activeAuditFilters.length > 0 && activeAuditFilters.length < availableAuditTypes.length;
     const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === activeFilter);
@@ -75,9 +74,9 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                         <div className="py-1" role="none">
                             {isViewFiltered && (
                                 <>
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Export Personnalisé</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export Personnalisé</p></div>
                                     <button onClick={() => { onExportCurrentView(); handleClose(); }} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                        <span className="flex-1 min-w-0 truncate">Exporter la sélection en csv</span>
+                                        <span className="flex-1 min-w-0 truncate">Sélection actuelle (CSV)</span>
                                         <div className="flex items-center gap-1.5 flex-shrink-0">
                                             <CategoryIcon categoryConfig={categoryConfig} size="sm" />
                                             {showAuditFilterIcons && activeAuditFilters.map(type => {
@@ -91,22 +90,22 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                             )}
                             <div className="sm:grid sm:grid-cols-2 sm:gap-x-2">
                                 <div>
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Ligne / Catégorie</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des données par ligne</p></div>
                                     <button onClick={() => { onExportAll(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                        <CategoryIcon size="sm" /><span>Exporter tout le réseau</span>
+                                        <CategoryIcon size="sm" /><span>Réseau complet (CSV)</span>
                                     </button>
                                     {AUDIT_CATEGORIES.map(cat => (
                                         <button key={`export-${cat.key}`} onClick={() => { onExportByCategory(cat.key); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                            <CategoryIcon categoryConfig={cat} size="sm" /><span>Exporter {cat.label}</span>
+                                            <CategoryIcon categoryConfig={cat} size="sm" /><span>{cat.label} (CSV)</span>
                                         </button>
                                     ))}
                                 </div>
                                 <div className="sm:border-l sm:border-gray-200 sm:dark:border-slate-700 sm:pl-2">
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Exporter en CSV par Type d'Audit</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des audits par type</p></div>
                                     {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
                                         <button key={`export-module-${type}`} onClick={() => { onExportByModuleType(type); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                             <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-slate-600 rounded-md"><Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" /></div>
-                                            <span>{label}</span>
+                                            <span>{label.replace('Audits ', '').replace('Audits ', '')} (CSV)</span>
                                         </button>
                                     ))}
                                 </div>
@@ -157,6 +156,9 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
         return delay;
     };
     if (isOpen && !isClosing) animationDelayCounter = 0;
+    
+    const prCategory = AUDIT_CATEGORIES.find(c => c.key === 'PR');
+    const prModule = AUDIT_MODULES_CONFIG.find(m => m.type === AuditModuleType.PR);
 
     return (
         <div className="relative" ref={menuRef}>
@@ -188,16 +190,15 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                             </button>
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
                             <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
-                                <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4" /><span>Zone de Danger</span></div>
+                                <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4" /><span>Zone de Danger – Actions irréversibles</span></div>
                                 <ChevronDown className={`h-5 w-5 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
                             </button>
                            {isDangerZoneOpen && (
                                 <div className="p-2 border-t border-gray-200 dark:border-slate-700">
                                     <div className="px-2 pt-2">
-                                        <p className="text-xs text-gray-500 dark:text-slate-400">Ces actions sont irréversibles et remettent à zéro les données d'audit.</p>
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">Remet à zéro les données d'audit pour les catégories sélectionnées.</p>
                                     </div>
 
-                                    {/* --- Remise à zéro complète --- */}
                                     <div className="mt-4">
                                         <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">🔥 Remise à zéro complète</p>
                                         <div className="mt-1">
@@ -208,9 +209,8 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                         </div>
                                     </div>
                                     
-                                    {/* --- Réinitialisation par Ligne --- */}
                                     <div className="mt-4">
-                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">⚠️ Réinitialisation par Ligne</p>
+                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">⚠️ Réinitialisation par ligne</p>
                                         <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
                                             {AUDIT_CATEGORIES.filter(c => c.key !== 'PR').map(cat => (
                                                 <button key={`reset-${cat.key}`} onClick={() => handleReset('CATEGORY', cat.key)} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
@@ -221,11 +221,10 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                         </div>
                                     </div>
 
-                                    {/* --- Réinitialisation par Type d'Audit --- */}
                                     <div className="mt-4">
-                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">🔸 Réinitialisation par Type d'Audit</p>
+                                        <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">🔸 Équipements et audits</p>
                                         <div className="mt-1 grid grid-cols-1 sm:grid-cols-2 gap-1">
-                                            {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
+                                            {AUDIT_MODULES_CONFIG.filter(m => m.type !== AuditModuleType.PR).map(({ type, label, Icon }) => (
                                                 <button key={`reset-module-${type}`} onClick={() => handleReset('MODULE_TYPE', type)} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
                                                     <div className="flex items-center justify-center w-6 h-6 rounded-md flex-shrink-0"><Icon className="w-4 h-4" /></div>
                                                     <span className="flex-1 truncate">{label}</span>
@@ -233,6 +232,19 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                             ))}
                                         </div>
                                     </div>
+                                    
+                                    {prCategory && prModule && (
+                                        <div className="mt-4">
+                                            <p className="px-2 text-sm font-medium text-gray-800 dark:text-slate-200">➕ Zones spécifiques</p>
+                                            <div className="mt-1">
+                                                <button onClick={() => handleReset('CATEGORY', 'PR')} className="w-full text-left flex items-center gap-3 px-2 py-2 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 rounded-md" role="menuitem">
+                                                    <CategoryIcon categoryConfig={prCategory} size="sm" />
+                                                    <span className="flex-1 truncate">{prCategory.label}</span>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+
                                 </div>
                             )}
                         </div>

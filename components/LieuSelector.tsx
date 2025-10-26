@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
-import { ChevronRight, Search, ArrowRightLeft, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
+import { ChevronRight, Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -312,8 +312,13 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
                 <div className="flex-shrink-0 flex w-full sm:w-auto items-center justify-center sm:justify-end gap-4">
                     {showInverter && (
-                        <button onClick={toggleOrderReversed} className="flex flex-col items-center justify-center text-center px-4 py-2 rounded-md bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 transition-colors h-full" title="Inverser le sens de la ligne">
-                            <ArrowRightLeft className="h-5 w-5" /><span className="text-xs font-semibold mt-1">Inverser</span>
+                        <button 
+                            onClick={toggleOrderReversed} 
+                            className="inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
+                            title="Inverser l'ordre des stations"
+                        >
+                            <ArrowUpDown className="h-5 w-5" />
+                            <span className="hidden sm:inline">Inverser l'ordre des stations</span>
                         </button>
                     )}
                     <ExportMenu
