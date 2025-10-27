@@ -284,8 +284,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 <AuditFilterSelector availableAuditTypes={availableAuditTypes} />
             )}
             
-            <div className="flex flex-wrap sm:flex-nowrap items-center gap-4 mb-8">
-                <div className="relative w-full sm:w-auto flex-grow" ref={searchContainerRef}>
+            <div className="flex flex-wrap items-center gap-4 mb-8">
+                <div className="relative w-full sm:flex-grow" ref={searchContainerRef}>
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                     </div>
@@ -310,33 +310,35 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                         </ul>
                     )}
                 </div>
-                <div className="flex-shrink-0 flex w-full sm:w-auto items-center justify-center sm:justify-end gap-4">
+                <div className="flex-shrink-0 flex flex-wrap w-full sm:flex-nowrap sm:w-auto items-center justify-center sm:justify-end gap-4">
                     {showInverter && (
                         <button 
                             onClick={toggleOrderReversed} 
-                            className="inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
                             title="Inverser l'ordre des stations"
                         >
                             <ArrowUpDown className="h-5 w-5" />
-                            <span className="hidden sm:inline">Inverser l'ordre des stations</span>
+                            <span>Inverser l'ordre des stations</span>
                         </button>
                     )}
-                    <ExportMenu
-                        onExportByCategory={onExportByCategory}
-                        onExportByModuleType={onExportByModuleType}
-                        onExportAll={onExportAll}
-                        onExportCurrentView={onExportCurrentView}
-                        isModalOpen={!!resetTarget || !!importFileContent}
-                        activeFilter={activeFilter}
-                        activeAuditFilters={activeAuditFilters}
-                        availableAuditTypes={availableAuditTypes}
-                    />
-                    <SyncMenu
-                        onExportJson={onExportJson}
-                        onImportJson={handleImportClick}
-                        onResetRequest={handleResetRequest}
-                        isModalOpen={!!resetTarget || !!importFileContent}
-                    />
+                    <div className="flex w-full sm:w-auto justify-center sm:justify-end gap-4">
+                        <ExportMenu
+                            onExportByCategory={onExportByCategory}
+                            onExportByModuleType={onExportByModuleType}
+                            onExportAll={onExportAll}
+                            onExportCurrentView={onExportCurrentView}
+                            isModalOpen={!!resetTarget || !!importFileContent}
+                            activeFilter={activeFilter}
+                            activeAuditFilters={activeAuditFilters}
+                            availableAuditTypes={availableAuditTypes}
+                        />
+                        <SyncMenu
+                            onExportJson={onExportJson}
+                            onImportJson={handleImportClick}
+                            onResetRequest={handleResetRequest}
+                            isModalOpen={!!resetTarget || !!importFileContent}
+                        />
+                    </div>
                 </div>
             </div>
 
