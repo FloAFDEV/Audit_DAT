@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar } from 'lucide-react';
+import { Calendar, Pencil } from 'lucide-react';
 import { AuditCategoryConfig } from '../types';
 import { CategoryIcon } from './CategoryIcon';
 
@@ -8,14 +8,15 @@ interface ReminderModalProps {
     onClose: () => void;
     onConfirm: (selectedDate: Date) => void;
     onSkip: () => void;
-    title: string;
-    description: string;
+    titlePrefix: string;
+    titleSubject?: string;
+    description: React.ReactNode;
     fileName: string;
     initialDate: Date;
     categoryConfig?: AuditCategoryConfig;
 }
 
-const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, title, description, fileName, initialDate, categoryConfig }) => {
+const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, titlePrefix, titleSubject, description, fileName, initialDate, categoryConfig }) => {
     // State to hold the date value from the input, in YYYY-MM-DD format
     const [dateString, setDateString] = useState('');
 
@@ -56,13 +57,18 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                             <Calendar className="h-6 w-6 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                         </div>
                         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <div className="flex items-center gap-2">
-                                <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
-                                    {title}
-                                </h3>
-                                {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="sm" />}
+                            <h3 className="text-lg font-medium leading-6 text-gray-600 dark:text-slate-400" id="modal-title-prefix">
+                                {titlePrefix}
+                            </h3>
+                            <div className="flex items-baseline gap-2 mt-1">
+                                {titleSubject &&
+                                    <h3 className="text-2xl font-bold text-gray-900 dark:text-white" id="modal-title-subject">
+                                        {titleSubject}
+                                    </h3>
+                                }
+                                {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="md" />}
                             </div>
-                            <div className="mt-2">
+                            <div className="mt-4">
                                 <p className="text-sm text-gray-600 dark:text-slate-300">
                                     {description}
                                 </p>
@@ -71,8 +77,9 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                                 </p>
                             </div>
                             <div className="mt-4">
-                                 <label htmlFor="reminder-date" className="block text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
-                                    N'hésitez pas à modifier la date suggérée ci-dessous
+                                <label htmlFor="reminder-date" className="flex items-center gap-2 text-sm font-medium leading-6 text-gray-900 dark:text-slate-200">
+                                    <span>Date du rappel</span>
+                                    <Pencil className="w-4 h-4 text-gray-400 dark:text-slate-500 sm:hidden" />
                                 </label>
                                 <input
                                     type="date"

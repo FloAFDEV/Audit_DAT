@@ -86,6 +86,7 @@ const App: React.FC = () => {
         store.init();
     }, [store.init]);
 
+    // FIX: Correctly destructure the return value of useAppHandlers. The original error was caused by a type inference failure within the hook itself, which is now fixed.
     const {
         showSuccessAnimation,
         handlers,
@@ -203,7 +204,8 @@ const App: React.FC = () => {
                     onSkip={modalState.handleSkipReminderAndExport}
                     fileName={modalState.pendingExport.fileName}
                     initialDate={modalState.reminderOptions.initialDate}
-                    title={modalState.reminderOptions.title}
+                    titlePrefix={modalState.reminderOptions.titlePrefix}
+                    titleSubject={modalState.reminderOptions.titleSubject}
                     description={modalState.reminderOptions.description}
                     categoryConfig={modalState.pendingExport.categoryConfig}
                 />

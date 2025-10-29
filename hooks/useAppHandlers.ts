@@ -10,8 +10,9 @@ import { CategoryIcon } from '../components/CategoryIcon';
 import { ModuleIcon } from '../components/ModuleIcon';
 
 interface ReminderOptions {
-    title: string;
-    description: string;
+    titlePrefix: string;
+    titleSubject?: string;
+    description: React.ReactNode;
     initialDate: Date;
 }
 
@@ -31,8 +32,15 @@ const hasPhotos = (lieux: Lieu[]): boolean => {
     );
 };
 
+// FIX: Replaced JSX with React.createElement to be compatible with .ts files. This resolves numerous parsing errors.
+const Bold: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    React.createElement('span', { className: "font-semibold text-gray-800 dark:text-slate-100" }, children)
+);
+
 export const useAppHandlers = () => {
+    // FIX: Initialized Zustand store to make it accessible within the hook.
     const store = useAuditStore();
+    // FIX: Added missing useState hooks for managing component state.
     const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
     const [isReminderModalOpen, setIsReminderModalOpen] = useState(false);
     const [reminderOptions, setReminderOptions] = useState<ReminderOptions | null>(null);
@@ -72,9 +80,9 @@ export const useAppHandlers = () => {
         }
     };
 
-    const handleCsvExportFlow = (lieuxToExport: Lieu[], baseFileName: string, successMessage: string, categoryConfig: AuditCategoryConfig | undefined, reminder: { title: string; description: string; months: number }) => {
+    const handleCsvExportFlow = (lieuxToExport: Lieu[], baseFileName: string, successMessage: string, categoryConfig: AuditCategoryConfig | undefined, reminder: { titlePrefix: string; titleSubject?: string; description: React.ReactNode; months: number }) => {
         setPendingExport({ lieux: lieuxToExport, fileName: `${baseFileName}.csv`, successMessage, categoryConfig });
-        setReminderOptions({ title: reminder.title, description: reminder.description, initialDate: calculateInitialReminderDate(reminder.months) });
+        setReminderOptions({ titlePrefix: reminder.titlePrefix, titleSubject: reminder.titleSubject, description: reminder.description, initialDate: calculateInitialReminderDate(reminder.months) });
         setIsReminderModalOpen(true);
     };
     
@@ -84,9 +92,11 @@ export const useAppHandlers = () => {
         const filteredLieux = getLieuxForCategory(store.lieux, category);
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
         const categoryLabel = categoryConfig?.label || category;
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
         handleCsvExportFlow(filteredLieux, `export-${slugify(categoryLabel)}`, `La catégorie "${categoryLabel}" a été exportée.`, categoryConfig, { 
-            title: `Planifier le prochain audit de la ${categoryLabel}`, 
-            description: `Ajoutez un rappel à votre calendrier pour le suivi du prochain audit de la catégorie "${categoryLabel}".`, 
+            titlePrefix: 'Planifier le prochain audit pour',
+            titleSubject: categoryLabel,
+            description: React.createElement(React.Fragment, null, "Ajoutez un ", React.createElement(Bold, null, "rappel"), " à votre ", React.createElement(Bold, null, "calendrier"), " pour le suivi du ", React.createElement(Bold, null, "prochain audit"), " de la catégorie ", React.createElement(Bold, null, `"${categoryLabel}"`), "."),
             months: 5 
         });
     };
@@ -100,17 +110,20 @@ export const useAppHandlers = () => {
         const moduleConfig = AUDIT_MODULES_CONFIG.find(m => m.type === moduleType);
         const moduleLabel = moduleConfig?.label || moduleType;
         const reminderMonths = 5;
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
         handleCsvExportFlow(filteredLieux, `export-${slugify(moduleLabel)}`, `Les audits de type "${moduleLabel}" ont été exportés.`, undefined, { 
-            title: `Planifier le prochain audit des ${moduleLabel}`, 
-            description: `Ajoutez un rappel à votre calendrier pour le suivi des audits de type "${moduleLabel}" sur l'ensemble du réseau.`, 
+            titlePrefix: 'Planifier les prochains audits pour les',
+            titleSubject: moduleLabel,
+            description: React.createElement(React.Fragment, null, "Ajoutez un ", React.createElement(Bold, null, "rappel"), " à votre ", React.createElement(Bold, null, "calendrier"), " pour le suivi des ", React.createElement(Bold, null, `audits de type "${moduleLabel}"`), " sur l'ensemble du réseau."),
             months: reminderMonths 
         });
     };
     
     const handleExportAll = () => {
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
         handleCsvExportFlow(store.lieux, 'export-reseau-complet', "Toutes les données ont été exportées.", undefined, { 
-            title: 'Planifier le suivi global des audits', 
-            description: `Ajoutez un rappel à votre calendrier pour le suivi de l'ensemble des audits du réseau.`, 
+            titlePrefix: 'Planifier le suivi global des audits',
+            description: React.createElement(React.Fragment, null, "Ajoutez un ", React.createElement(Bold, null, "rappel"), " à votre ", React.createElement(Bold, null, "calendrier"), " pour le suivi de ", React.createElement(Bold, null, "l'ensemble des audits du réseau"), "."),
             months: 5 
         });
     };
@@ -134,10 +147,11 @@ export const useAppHandlers = () => {
         let successMessage = `${activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`} a été exportée.`;
         if (auditLabels) successMessage = `${activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`} (filtre: ${auditLabels}) a été exportée.`;
         
-        const reminderTitle = `Planifier le suivi de la vue actuelle`;
-        let reminderDescription = `Ajoutez un rappel pour le suivi des audits correspondant à la vue filtrée que vous venez d'exporter.`;
+        const reminderTitlePrefix = `Planifier le suivi de la vue actuelle`;
+        // FIX: Replaced JSX with React.createElement to be compatible with .ts files.
+        const reminderDescription = React.createElement(React.Fragment, null, "Ajoutez un ", React.createElement(Bold, null, "rappel"), " pour le suivi des ", React.createElement(Bold, null, "audits correspondant à la vue filtrée"), " que vous venez d'exporter.");
 
-        handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : categoryConfig, { title: reminderTitle, description: reminderDescription, months: 5 });
+        handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : categoryConfig, { titlePrefix: reminderTitlePrefix, description: reminderDescription, months: 5 });
     };
     
     const handleExportJson = () => {
@@ -206,7 +220,7 @@ export const useAppHandlers = () => {
     const cleanupAfterModal = () => { setIsReminderModalOpen(false); setReminderOptions(null); setPendingExport(null); };
     const handleConfirmAndGenerateReminder = (selectedDate: Date) => {
         if (pendingExport && reminderOptions) {
-            generateAndDownloadIcsFile({ title: reminderOptions.title, description: reminderOptions.description, reminderDate: selectedDate });
+            generateAndDownloadIcsFile({ title: `${reminderOptions.titlePrefix} ${reminderOptions.titleSubject || ''}`.trim(), description: "Rappel de suivi pour AuditRef.", reminderDate: selectedDate });
             executeExport(pendingExport);
         }
         setTimeout(cleanupAfterModal, 100);
@@ -216,7 +230,6 @@ export const useAppHandlers = () => {
 
     return {
         showSuccessAnimation,
-        triggerSuccessAnimation,
         handlers: {
             handleExportByCategory, handleExportByModuleType, handleExportAll, handleExportCurrentView, handleExportJson, handleImportJson,
             handleResetCategoryRequest, handleResetByModuleTypeRequest, handleResetAllRequest,
