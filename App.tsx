@@ -206,7 +206,7 @@ const App: React.FC = () => {
                     initialDate={modalState.reminderOptions.initialDate}
                     titlePrefix={modalState.reminderOptions.titlePrefix}
                     titleSubject={modalState.reminderOptions.titleSubject}
-                    description={modalState.reminderOptions.description}
+                    reminderDescription={modalState.reminderOptions.reminderDescription}
                     categoryConfig={modalState.pendingExport.categoryConfig}
                 />
             )}
