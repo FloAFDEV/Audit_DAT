@@ -97,7 +97,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         <button
                             type="button"
                             onClick={onClose}
-                            className="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-red-700 shadow-sm ring-1 ring-inset ring-red-300 hover:bg-red-50 dark:bg-slate-700 dark:text-red-400 dark:ring-red-800/50 dark:hover:bg-red-900/20 sm:w-auto"
+                            className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:w-auto"
                         >
                             Annuler
                         </button>
@@ -115,7 +115,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                             onClick={handleConfirm}
                             className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:w-auto"
                         >
-                            Générer & Exporter
+                            Exporter avec rappel
                         </button>
                     </div>
                 </div>
