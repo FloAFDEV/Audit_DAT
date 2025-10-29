@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar } from 'lucide-react';
+import { AuditCategoryConfig } from '../types';
+import { CategoryIcon } from './CategoryIcon';
 
 interface ReminderModalProps {
     isOpen: boolean;
@@ -8,9 +10,10 @@ interface ReminderModalProps {
     onSkip: () => void;
     fileName: string;
     initialDate: Date;
+    categoryConfig?: AuditCategoryConfig;
 }
 
-const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, fileName, initialDate }) => {
+const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfirm, onSkip, fileName, initialDate, categoryConfig }) => {
     // State to hold the date value from the input, in YYYY-MM-DD format
     const [dateString, setDateString] = useState('');
 
@@ -51,9 +54,12 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                             <Calendar className="h-6 w-6 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                         </div>
                         <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                            <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
-                                Ajouter un rappel à votre calendrier
-                            </h3>
+                            <div className="flex items-center gap-2">
+                                {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="sm" />}
+                                <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
+                                    Ajouter un rappel à votre calendrier
+                                </h3>
+                            </div>
                             <div className="mt-2">
                                 <p className="text-sm text-gray-600 dark:text-slate-300">
                                     Vous êtes sur le point d'exporter le fichier CSV <span className="font-semibold text-gray-800 dark:text-slate-100">"{fileName}"</span>.

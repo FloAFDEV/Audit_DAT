@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useAuditStore from '../store';
-import { Lieu, AuditCategory, AuditModuleType, AuditModule, DAT, Equipment, ECA } from '../types';
+import { Lieu, AuditCategory, AuditModuleType, AuditModule, DAT, Equipment, ECA, AuditCategoryConfig } from '../types';
 import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { exportLieuxToCsv, exportLieuxToJson, generateAndDownloadIcsFile, calculateInitialReminderDate, slugify } from '../utils/csvExporter';
@@ -19,7 +19,7 @@ interface PendingExport {
     lieux: Lieu[];
     fileName: string;
     successMessage: string;
-    category?: AuditCategory;
+    categoryConfig?: AuditCategoryConfig;
 }
 
 const hasPhotos = (lieux: Lieu[]): boolean => {
@@ -57,7 +57,7 @@ export const useAppHandlers = () => {
     };
 
     const executeExport = (exportConfig: PendingExport) => {
-        const { lieux, fileName, successMessage, category } = exportConfig;
+        const { lieux, fileName, successMessage, categoryConfig } = exportConfig;
         if (hasPhotos(lieux)) {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(Download, { className: "h-6 w-6 text-white" }));
             showInfoToast({ icon, title: 'Rappel pour les photos', message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète." });
@@ -65,15 +65,15 @@ export const useAppHandlers = () => {
         const result = exportLieuxToCsv(lieux, fileName);
 
         if (result.success) {
-            showExportSuccessToast(successMessage, category);
+            showExportSuccessToast(successMessage, categoryConfig?.key);
         } else {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
             showErrorToast({ icon, title: 'Exportation Échouée', message: result.error || "Une erreur est survenue lors de la génération du fichier CSV." });
         }
     };
 
-    const handleCsvExportFlow = (lieuxToExport: Lieu[], baseFileName: string, successMessage: string, category: AuditCategory | undefined, reminder: { title: string; description: string; months: number }) => {
-        setPendingExport({ lieux: lieuxToExport, fileName: `${baseFileName}.csv`, successMessage, category });
+    const handleCsvExportFlow = (lieuxToExport: Lieu[], baseFileName: string, successMessage: string, categoryConfig: AuditCategoryConfig | undefined, reminder: { title: string; description: string; months: number }) => {
+        setPendingExport({ lieux: lieuxToExport, fileName: `${baseFileName}.csv`, successMessage, categoryConfig });
         setReminderOptions({ title: reminder.title, description: `${reminder.description}\n\nDernier export effectué le : ${new Date().toLocaleDateString('fr-FR')}`, initialDate: calculateInitialReminderDate(reminder.months) });
         setIsReminderModalOpen(true);
     };
@@ -84,7 +84,7 @@ export const useAppHandlers = () => {
         const filteredLieux = getLieuxForCategory(store.lieux, category);
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
         const categoryLabel = categoryConfig?.label || category;
-        handleCsvExportFlow(filteredLieux, `export-${slugify(categoryLabel)}`, `La catégorie "${categoryLabel}" a été exportée.`, category, { title: `Planifier le ré-audit : ${categoryLabel}`, description: `Ceci est un rappel pour planifier le prochain cycle de contrôle des audits pour la catégorie '${categoryLabel}'.`, months: 5 });
+        handleCsvExportFlow(filteredLieux, `export-${slugify(categoryLabel)}`, `La catégorie "${categoryLabel}" a été exportée.`, categoryConfig, { title: `Planifier le ré-audit : ${categoryLabel}`, description: `Ceci est un rappel pour planifier le prochain cycle de contrôle des audits pour la catégorie '${categoryLabel}'.`, months: 5 });
     };
 
     const handleExportByModuleType = (moduleType: AuditModuleType) => {
@@ -127,7 +127,7 @@ export const useAppHandlers = () => {
         let reminderDescription = `Ceci est un rappel pour planifier le prochain cycle de contrôle pour la vue que vous venez d'exporter.`;
         if (auditLabels) reminderDescription += `\n\nFiltres : ${auditLabels}`;
 
-        handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : activeFilter, { title: reminderTitle, description: reminderDescription, months: 5 });
+        handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : categoryConfig, { title: reminderTitle, description: reminderDescription, months: 5 });
     };
     
     const handleExportJson = () => {

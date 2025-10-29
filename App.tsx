@@ -203,6 +203,7 @@ const App: React.FC = () => {
                     onSkip={modalState.handleSkipReminderAndExport}
                     fileName={modalState.pendingExport.fileName}
                     initialDate={modalState.reminderOptions.initialDate}
+                    categoryConfig={modalState.pendingExport.categoryConfig}
                 />
             )}
         </main>
