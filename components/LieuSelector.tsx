@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
-import { ChevronRight, Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';

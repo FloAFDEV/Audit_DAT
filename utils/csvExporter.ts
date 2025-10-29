@@ -5,8 +5,6 @@ import {
     AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA, PMRFloorAdhesive
 } from '../types';
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
-import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
-import { PR_DATA } from '../data/pr_data';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
 
@@ -469,47 +467,4 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
         console.error("Failed to export to CSV:", error);
         return { success: false, error: error instanceof Error ? error.message : 'Une erreur inconnue est survenue' };
     }
-};
-
-
-// =================================================================
-// SECTION: SORTING
-// =================================================================
-
-const ALL_STATIONS_ORDERED = [
-    ...LINE_A_STATIONS,
-    ...LINE_B_STATIONS,
-    ...LINE_C_STATIONS,
-    ...TRAM_STATIONS,
-    ...TELEO_STATIONS,
-    // P+R data does not have a defined physical order, will be sorted alphabetically
-    ...PR_DATA.map(pr => ({ name: pr.name }))
-];
-
-const stationOrderMap = new Map<string, number>();
-ALL_STATIONS_ORDERED.forEach((station, index) => {
-    // Use lieuName if available, otherwise use station name.
-    const name = (station as any).lieuName || station.name;
-    if (name && !stationOrderMap.has(name)) {
-        stationOrderMap.set(name, index);
-    }
-});
-
-export const sortLieuxByPhysicalOrder = (lieux: Lieu[]): Lieu[] => {
-    return [...lieux].sort((a, b) => {
-        const orderA = stationOrderMap.get(a.name);
-        const orderB = stationOrderMap.get(b.name);
-
-        if (orderA !== undefined && orderB !== undefined) {
-            return orderA - orderB;
-        }
-        if (orderA !== undefined) {
-            return -1; // A is in the list, B is not (e.g. correspondence station vs. other)
-        }
-        if (orderB !== undefined) {
-            return 1;
-        }
-        // Neither is in the physical order list, sort alphabetically as a fallback.
-        return a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' });
-    });
 };

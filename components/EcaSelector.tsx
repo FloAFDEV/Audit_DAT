@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AuditModule, EcaData, ECA, AdhesiveStatus, EcaEquipmentType, Adhesive } from '../types';
+import { AuditModule, EcaData, ECA, EcaEquipmentType } from '../types';
 import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle, Fence } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';

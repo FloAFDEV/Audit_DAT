@@ -1,12 +1,10 @@
 import React, { useMemo } from 'react';
-import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, AdhesiveStatus, FloorAdhesiveStatus, CognitivePictogramData } from '../types';
-import { ArrowLeft, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { Lieu, AuditModule, AuditModuleType } from '../types';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges, FormattedCorrespondence } from './Icons';
 import { getModuleProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
-import { CategoryIcon } from './CategoryIcon';
-import { AUDIT_CATEGORIES } from '../data/config';
 import useAuditStore from '../store';
 
 interface ModuleSelectorProps {
