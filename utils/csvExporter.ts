@@ -459,7 +459,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
         const csvContent = [
             '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
             ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row[fieldName])).join(','))
-        ].join('\n');
+        ].join('\n') + '\n\n"Généré avec AuditRef, créé par Florent PEREZ"';
 
         downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
         return { success: true };
