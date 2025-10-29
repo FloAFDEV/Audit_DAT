@@ -74,7 +74,7 @@ export const useAppHandlers = () => {
 
     const handleCsvExportFlow = (lieuxToExport: Lieu[], baseFileName: string, successMessage: string, categoryConfig: AuditCategoryConfig | undefined, reminder: { title: string; description: string; months: number }) => {
         setPendingExport({ lieux: lieuxToExport, fileName: `${baseFileName}.csv`, successMessage, categoryConfig });
-        setReminderOptions({ title: reminder.title, description: `${reminder.description}\n\nDernier export effectué le : ${new Date().toLocaleDateString('fr-FR')}`, initialDate: calculateInitialReminderDate(reminder.months) });
+        setReminderOptions({ title: reminder.title, description: reminder.description, initialDate: calculateInitialReminderDate(reminder.months) });
         setIsReminderModalOpen(true);
     };
     
@@ -84,7 +84,11 @@ export const useAppHandlers = () => {
         const filteredLieux = getLieuxForCategory(store.lieux, category);
         const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
         const categoryLabel = categoryConfig?.label || category;
-        handleCsvExportFlow(filteredLieux, `export-${slugify(categoryLabel)}`, `La catégorie "${categoryLabel}" a été exportée.`, categoryConfig, { title: `Planifier le ré-audit : ${categoryLabel}`, description: `Ceci est un rappel pour planifier le prochain cycle de contrôle des audits pour la catégorie '${categoryLabel}'.`, months: 5 });
+        handleCsvExportFlow(filteredLieux, `export-${slugify(categoryLabel)}`, `La catégorie "${categoryLabel}" a été exportée.`, categoryConfig, { 
+            title: `Planifier le prochain audit de la ${categoryLabel}`, 
+            description: `Ajoutez un rappel à votre calendrier pour le suivi du prochain audit de la catégorie "${categoryLabel}".`, 
+            months: 5 
+        });
     };
 
     const handleExportByModuleType = (moduleType: AuditModuleType) => {
@@ -96,12 +100,19 @@ export const useAppHandlers = () => {
         const moduleConfig = AUDIT_MODULES_CONFIG.find(m => m.type === moduleType);
         const moduleLabel = moduleConfig?.label || moduleType;
         const reminderMonths = 5;
-        handleCsvExportFlow(filteredLieux, `export-${slugify(moduleLabel)}`, `Les audits de type "${moduleLabel}" ont été exportés.`, undefined, { title: `Planifier le ré-audit des ${moduleLabel}`, description: `Ceci est un rappel pour planifier le prochain cycle de contrôle pour les audits de type '${moduleLabel}'.`, months: reminderMonths });
+        handleCsvExportFlow(filteredLieux, `export-${slugify(moduleLabel)}`, `Les audits de type "${moduleLabel}" ont été exportés.`, undefined, { 
+            title: `Planifier le prochain audit des ${moduleLabel}`, 
+            description: `Ajoutez un rappel à votre calendrier pour le suivi des audits de type "${moduleLabel}" sur l'ensemble du réseau.`, 
+            months: reminderMonths 
+        });
     };
     
     const handleExportAll = () => {
-        const allModuleTypesDescription = AUDIT_MODULES_CONFIG.map(config => `- ${config.label}`).join('\n');
-        handleCsvExportFlow(store.lieux, 'export-reseau-complet', "Toutes les données ont été exportées.", undefined, { title: 'Planifier le suivi global des audits Tisséo', description: `Ceci est un rappel pour planifier le prochain cycle de contrôle global pour l'ensemble des audits.\n\nAudits concernés:\n${allModuleTypesDescription}`, months: 5 });
+        handleCsvExportFlow(store.lieux, 'export-reseau-complet', "Toutes les données ont été exportées.", undefined, { 
+            title: 'Planifier le suivi global des audits', 
+            description: `Ajoutez un rappel à votre calendrier pour le suivi de l'ensemble des audits du réseau.`, 
+            months: 5 
+        });
     };
 
     const handleExportCurrentView = () => {
@@ -123,9 +134,8 @@ export const useAppHandlers = () => {
         let successMessage = `${activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`} a été exportée.`;
         if (auditLabels) successMessage = `${activeFilter === 'ALL' ? 'La vue actuelle' : `La catégorie "${categoryConfig?.label}"`} (filtre: ${auditLabels}) a été exportée.`;
         
-        const reminderTitle = `Rappel d'audit : ${categoryConfig?.label || 'Vue personnalisée'}`;
-        let reminderDescription = `Ceci est un rappel pour planifier le prochain cycle de contrôle pour la vue que vous venez d'exporter.`;
-        if (auditLabels) reminderDescription += `\n\nFiltres : ${auditLabels}`;
+        const reminderTitle = `Planifier le suivi de la vue actuelle`;
+        let reminderDescription = `Ajoutez un rappel pour le suivi des audits correspondant à la vue filtrée que vous venez d'exporter.`;
 
         handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : categoryConfig, { title: reminderTitle, description: reminderDescription, months: 5 });
     };
