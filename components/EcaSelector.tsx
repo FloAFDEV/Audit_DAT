@@ -225,6 +225,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                 onConfirm={handleConfirmDelete}
                 title="Supprimer l'ECA"
                 message={`Êtes-vous sûr de vouloir supprimer l'équipement "${ecaToDelete?.name}" ?\n\nCette action est irréversible.`}
+                icon={<LineIcon module={module} size="sm" />}
                 isDestructive
             />
         </div>

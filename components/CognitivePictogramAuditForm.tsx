@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, Trash2, Edit, PlusCircle, SearchCheck } from 'lu
 import ConfirmationModal from './ConfirmationModal';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import AuditFormLayout from './AuditFormLayout';
+import { LineIcon } from './LineIcon';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -193,6 +194,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                 onConfirm={handleConfirmDelete}
                 title="Supprimer l'accès"
                 message={`Êtes-vous sûr de vouloir supprimer l'accès "${pictoToDelete?.accessPointName}" ?`}
+                icon={<LineIcon module={module} size="sm" />}
                 isDestructive
             />
         </AuditFormLayout>
