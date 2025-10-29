@@ -60,7 +60,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                             <h3 className="text-lg font-medium leading-6 text-gray-600 dark:text-slate-400" id="modal-title-prefix">
                                 {titlePrefix}
                             </h3>
-                            <div className="flex items-baseline gap-2 mt-1">
+                             <div className="flex flex-wrap items-baseline gap-2 mt-1 text-center justify-center sm:text-left sm:justify-start">
                                 {titleSubject &&
                                     <h3 className="text-2xl font-bold text-gray-900 dark:text-white" id="modal-title-subject">
                                         {titleSubject}
@@ -97,7 +97,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         <button
                             type="button"
                             onClick={onClose}
-                            className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:w-auto"
+                            className="inline-flex w-full justify-center rounded-md px-3 py-2 text-sm font-semibold text-teal-700 hover:bg-teal-50 dark:text-teal-400 dark:hover:bg-teal-900/20 sm:w-auto"
                         >
                             Annuler
                         </button>
@@ -106,7 +106,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                         <button
                             type="button"
                             onClick={onSkip}
-                            className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:w-auto"
+                            className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-slate-100 dark:hover:bg-slate-600 sm:w-auto hover:ring-slate-400 dark:hover:ring-slate-500"
                         >
                             Exporter sans rappel
                         </button>
