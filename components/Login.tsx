@@ -26,7 +26,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   // 💡 Gestion du halo dynamique
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-
   const translateX = useTransform(mouseX, [0, window.innerWidth], [-30, 30]);
   const translateY = useTransform(mouseY, [0, window.innerHeight], [-30, 30]);
 
@@ -39,7 +38,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     return () => window.removeEventListener("mousemove", handleMouseMove);
   }, [mouseX, mouseY]);
 
+  // 🎨 Fond quadrillé + halo teal
   const backgroundStyle: React.CSSProperties = {
+    backgroundColor: "#0f172a",
     backgroundImage: `
       linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
       linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
@@ -49,7 +50,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 
   return (
     <div
-      className="relative flex flex-col min-h-screen overflow-hidden bg-gray-100 dark:bg-slate-950 transition-colors"
+      className="relative flex flex-col min-h-screen overflow-hidden transition-colors"
       style={backgroundStyle}
     >
       {/* 💫 Halo dynamique */}
@@ -59,7 +60,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           x: translateX,
           y: translateY,
           background:
-            "radial-gradient(circle at center, rgba(20,184,166,0.2), transparent 70%)",
+            "radial-gradient(circle at center, rgba(20,184,166,0.25), transparent 70%)",
           filter: "blur(120px)",
           zIndex: 0,
         }}
@@ -77,12 +78,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
       />
 
-      {/* 🌌 Halo fixe pour profondeur */}
+      {/* 🌌 Halo fixe teal pour profondeur */}
       <motion.div
         className="absolute w-[900px] h-[900px] rounded-full bottom-[-250px] left-[-250px] pointer-events-none"
         style={{
           background:
-            "radial-gradient(circle at center, rgba(56,189,248,0.25), transparent 70%)",
+            "radial-gradient(circle at center, rgba(13,148,136,0.25), transparent 70%)",
           filter: "blur(180px)",
           zIndex: 0,
         }}
@@ -90,11 +91,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           scale: [1, 1.05, 0.95, 1],
           opacity: [0.8, 1, 0.9, 0.8],
         }}
-        transition={{
-          duration: 35,
-          repeat: Infinity,
-          ease: "easeInOut",
-        }}
+        transition={{ duration: 35, repeat: Infinity, ease: "easeInOut" }}
       />
 
       {/* 💻 Contenu principal */}
@@ -103,7 +100,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 1.2 }}
-          className="w-full max-w-md p-8 space-y-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-xl shadow-[0_0_40px_rgba(20,184,166,0.2)]"
+          className="w-full max-w-md p-8 space-y-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-xl shadow-[0_0_40px_rgba(20,184,166,0.25)]"
         >
           <div className="text-center">
             <Globe className="h-10 w-10 mx-auto text-teal-600 dark:text-teal-400 drop-shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
