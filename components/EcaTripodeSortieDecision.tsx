@@ -4,6 +4,7 @@ import { ArrowLeft, Check, Edit3, Accessibility, Fence } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
 import { isPmrEcaType } from '../data/eca_data';
+import { formatEcaTypeForDisplay } from './EcaUiHelpers';
 
 interface EcaTripodeSortieDecisionProps {
   module: AuditModule;
@@ -22,7 +23,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
   onConfirmNA,
   onAudit,
 }) => {
-  const typeDescription = eca.type;
+  const typeDescription = formatEcaTypeForDisplay(eca.type);
   const mainText = eca.type === EcaEquipmentType.TripodeSortie
     ? `La plupart des tripodes de sortie ne possèdent pas d'adhésifs.`
     : `Certains équipements de type "${eca.type}" peuvent ne pas posséder d'adhésifs.`;
@@ -62,6 +63,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
       <div className="p-6 border-t border-gray-200 dark:border-slate-700">
         <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-slate-100">Confirmation pour {typeDescription}</h3>
         <p className="text-center text-gray-600 dark:text-slate-400 mt-2">
+          {/* FIX: Removed `formatEcaTypeForDisplay` call around `mainText` as `mainText` is already a descriptive string. */}
           {mainText} Confirmez-vous que c'est le cas pour cet équipement, ou s'agit-il d'un cas spécial à auditer ?
         </p>
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">

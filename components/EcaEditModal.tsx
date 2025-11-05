@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ECA, EcaEquipmentType } from '../types';
 import { canEcaBeNotApplicable } from '../data/eca_data';
+import { getEcaTypeLabel } from './EcaUiHelpers';
 
 interface EcaEditModalProps {
     isOpen: boolean;
@@ -10,17 +11,6 @@ interface EcaEditModalProps {
     eca: ECA | null;
     stationName: string;
 }
-
-// Define labels for clarity in the dropdown, especially for PMR types as requested.
-const typeLabels: Record<string, string> = {
-    [EcaEquipmentType.TripodeEntree]: "Tripode d'entrée",
-    [EcaEquipmentType.TripodeSortie]: "Tripode de sortie",
-    [EcaEquipmentType.VantauxEntree]: "Vantaux d'entrée",
-    [EcaEquipmentType.VantauxSortie]: "Vantaux de sortie",
-    [EcaEquipmentType.VantauxReversible]: "Vantaux réversible",
-    [EcaEquipmentType.PMRBras]: "PMR à bras",
-    [EcaEquipmentType.PMRVantaux]: "PMR à vantaux",
-};
 
 // The simplified, final list of user-selectable ECA types.
 const EDITABLE_ECA_TYPES = [
@@ -138,7 +128,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                                     >
                                         {EDITABLE_ECA_TYPES.map((t) => (
-                                            <option key={t} value={t}>{typeLabels[t] || t}</option>
+                                            <option key={t} value={t}>{getEcaTypeLabel(t)}</option>
                                         ))}
                                     </select>
                                 </div>

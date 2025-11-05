@@ -7,6 +7,7 @@ import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
+import { formatEcaTypeForDisplay } from './EcaUiHelpers';
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -169,7 +170,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                                 useLogos={isPmr && eca.name.includes('->')}
                                                 className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate" 
                                             />
-                                            <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {eca.type}</p>
+                                            <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {formatEcaTypeForDisplay(eca.type)}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">
