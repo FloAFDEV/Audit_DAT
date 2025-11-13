@@ -193,7 +193,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     
     // P+R Zone Selector
     if (selectedModule?.type === AuditModuleType.PR) {
-        return <PrZoneSelector module={selectedModule} onSelectZone={handlers.selectPrZone} onBack={() => handlers.selectModule(null)} />;
+        return <PrZoneSelector lieu={selectedLieu!} module={selectedModule} onSelectZone={handlers.selectPrZone} onBack={() => handlers.selectModule(null)} />;
     }
     
     // ECA Selector

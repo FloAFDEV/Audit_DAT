@@ -1,9 +1,11 @@
 import React from 'react';
-import { AuditModule, Pr, PrZone } from '../types';
+import { AuditModule, Pr, PrZone, Lieu } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, Building, Navigation2, Users } from 'lucide-react';
 import { getPrZoneProgress } from '../utils/progressCalculators';
+import { LieuBadges } from './Icons';
 
 interface PrZoneSelectorProps {
+  lieu: Lieu;
   module: AuditModule;
   onSelectZone: (zoneId: string) => void;
   onBack: () => void;
@@ -14,7 +16,7 @@ const getZoneIcon = (zone: PrZone) => {
     const name = zone.name.toLowerCase();
     const iconProps = { className: "w-6 h-6" };
 
-    if (name.includes('silo')) return <div className="p-3 bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg"><Building {...iconProps} /></div>;
+    if (name.includes('silo')) return <div className="p-3 bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg"><Building {...iconProps} /></div>;
     if (name.includes('nord')) return <div className="p-3 bg-blue-100 text-blue-600 dark:bg-blue-900/40 dark:text-blue-300 rounded-lg"><Navigation2 {...iconProps} /></div>;
     if (name.includes('sud')) return <div className="p-3 bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300 rounded-lg"><Navigation2 {...iconProps} style={{ transform: 'rotate(180deg)' }} /></div>;
     if (name.includes('est')) return <div className="p-3 bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300 rounded-lg"><Navigation2 {...iconProps} style={{ transform: 'rotate(90deg)' }} /></div>;
@@ -24,17 +26,17 @@ const getZoneIcon = (zone: PrZone) => {
     const numberMatch = name.match(/\d+/);
     if (numberMatch) {
         return (
-            <div className="flex-shrink-0 flex items-center justify-center rounded-lg font-bold shadow-sm w-12 h-12 text-lg bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200">
+            <div className="flex-shrink-0 flex items-center justify-center rounded-lg font-bold shadow-sm w-12 h-12 text-lg bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300">
                 {numberMatch[0]}
             </div>
         );
     }
     
     // Fallback
-    return <div className="p-3 bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300 rounded-lg"><MapPin {...iconProps} /></div>;
+    return <div className="p-3 bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg"><MapPin {...iconProps} /></div>;
 };
 
-const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ module, onSelectZone, onBack }) => {
+const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZone, onBack }) => {
     const prData = module.data as Pr;
 
     return (
@@ -48,8 +50,11 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ module, onSelectZone, o
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name}</h2>
-                    <p className="text-gray-500 dark:text-slate-400">Sélectionner une zone de parking</p>
+                    <div className="flex items-center gap-3">
+                        <LieuBadges lieu={lieu} />
+                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name}</h2>
+                    </div>
+                    <p className="text-gray-500 dark:text-slate-400 mt-1">Sélectionner une zone de parking</p>
                 </div>
             </div>
             <div className="space-y-4">
