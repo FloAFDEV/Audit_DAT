@@ -1,7 +1,7 @@
 // utils/progressCalculators.ts
 
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone } from '../types';
-import { getEcaAdhesives } from '../data/adhesives';
+import { getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 
 export enum ProgressStatus {
@@ -127,9 +127,15 @@ export const getPrZoneProgress = (zone: PrZone): number => {
     let checkedAdhesives = 0;
 
     for (const equipment of zone.equipments) {
-        const statuses = Object.values(equipment.adhesives);
-        totalAdhesives += statuses.length;
-        checkedAdhesives += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+        const adhesiveDefinitions = getPrAdhesives(equipment.type);
+        const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
+        totalAdhesives += activeAdhesives.length;
+
+        const checkedCount = Object.entries(equipment.adhesives)
+            .filter(([id, status]) => 
+                activeAdhesives.some(ad => ad.id === id) && status !== AdhesiveStatus.NotChecked
+            ).length;
+        checkedAdhesives += checkedCount;
     }
 
     if (totalAdhesives === 0) return 100;
@@ -163,9 +169,15 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             if (zones.length > 0) hasAuditableContent = true;
             for (const zone of zones) {
                 for (const equipment of zone.equipments) {
-                    const statuses = Object.values(equipment.adhesives);
-                    totalApplicableItems += statuses.length;
-                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                    const adhesiveDefinitions = getPrAdhesives(equipment.type);
+                    const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
+                    totalApplicableItems += activeAdhesives.length;
+                    
+                    const checkedCount = Object.entries(equipment.adhesives)
+                        .filter(([id, status]) => 
+                            activeAdhesives.some(ad => ad.id === id) && status !== AdhesiveStatus.NotChecked
+                        ).length;
+                    totalCheckedItems += checkedCount;
                 }
             }
             break;

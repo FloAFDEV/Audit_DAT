@@ -22,12 +22,17 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
     }, [equipment.type]);
     
     const progress = useMemo(() => {
-        const statuses = Object.values(equipment.adhesives);
-        const total = adhesives.length;
-        if (total === 0) return 0;
-        const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+        const activeAdhesives = adhesives.filter(ad => !ad.isDisabled);
+        const total = activeAdhesives.length;
+        if (total === 0) return 100;
+
+        const checked = Object.entries(equipment.adhesives)
+            .filter(([id, status]) => 
+                activeAdhesives.some(ad => ad.id === id) && status !== AdhesiveStatus.NotChecked
+            ).length;
+        
         return (checked / total) * 100;
-    }, [equipment.adhesives, adhesives.length]);
+    }, [equipment.adhesives, adhesives]);
 
   return (
     <AuditFormLayout
@@ -49,6 +54,7 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {adhesives.map((adhesive) => {
           const currentStatus = equipment.adhesives[adhesive.id] || AdhesiveStatus.NotChecked;
+          const isDisabled = adhesive.isDisabled;
             const [descText, dimensions] = (() => {
                 if (!adhesive.description) return [null, null];
                 const parts = adhesive.description.split('//');
@@ -58,17 +64,24 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                 return [adhesive.description, null];
             })();
           return (
-            <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+            <li key={adhesive.id} className={`p-6 transition-colors ${isDisabled ? 'opacity-60 bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                    {adhesive.name}
-                     {dimensions && (
-                        <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
-                            // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
-                        </span>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <h3 className={`text-lg font-semibold text-gray-900 dark:text-slate-100 ${isDisabled ? 'line-through' : ''}`}>
+                      {adhesive.name}
+                      {dimensions && (
+                          <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
+                              // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
+                          </span>
+                      )}
+                    </h3>
+                    {isDisabled && (
+                    <span className="text-xs font-bold uppercase tracking-wider bg-yellow-200 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 px-2 py-0.5 rounded-full">
+                      Suspendu
+                    </span>
                     )}
-                  </h3>
+                  </div>
                    {descText && <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">{descText}</p>}
                   <div className="flex items-start text-sm text-gray-500 dark:text-slate-400 mt-2">
                     <MapPin className="w-4 h-4 mr-2 mt-1 text-gray-400 flex-shrink-0" />
@@ -78,7 +91,8 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+                    disabled={isDisabled}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                       currentStatus === AdhesiveStatus.OK
                         ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
                         : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -89,7 +103,8 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                   </button>
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+                    disabled={isDisabled}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                       currentStatus === AdhesiveStatus.Absent
                         ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
                         : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -100,7 +115,8 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                   </button>
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
-                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+                    disabled={isDisabled}
+                    className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                       currentStatus === AdhesiveStatus.ToBeReplaced
                         ? 'bg-orange-500 text-white shadow-sm'
                         : 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700'

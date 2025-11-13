@@ -58,6 +58,7 @@ export interface Adhesive {
     referentiel: string;
     groupId?: string;
     groupName?: string;
+    isDisabled?: boolean;
 }
 
 export interface PrAdhesive extends Adhesive {
