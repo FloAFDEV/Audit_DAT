@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
-import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3 } from 'lucide-react';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -67,7 +67,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetByModuleType, onResetAll, onRequestLogout 
     } = props;
     
-    const { activeAuditFilters } = useAuditStore();
+    const { activeAuditFilters, setIsStatsViewActive } = useAuditStore();
     const [searchQuery, setSearchQuery] = useState('');
     const [isOrderReversed, setIsOrderReversed] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -210,6 +210,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                 <h2 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
+                    <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Afficher les statistiques" title="Afficher les statistiques">
+                        <BarChart3 className="w-5 h-5" />
+                    </button>
                     <ThemeSelector />
                     <button onClick={onRequestLogout} className="flex-shrink-0 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors" aria-label="Se déconnecter">
                         <LogOut className="w-5 h-5" />

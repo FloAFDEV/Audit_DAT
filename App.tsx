@@ -136,6 +136,7 @@ const App: React.FC = () => {
             <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-grow">
                 <div className="mb-6">
                     <Breadcrumbs
+                        isStatsPage={store.isStatsViewActive}
                         lieu={selectedLieu}
                         module={selectedModule}
                         station={selectedStation}
@@ -149,6 +150,7 @@ const App: React.FC = () => {
                 </div>
                  <Suspense fallback={<Loader />}>
                     <AppRouter
+                        isStatsViewActive={store.isStatsViewActive}
                         // Pass selected data
                         lieux={store.lieux}
                         selectedLieu={selectedLieu}

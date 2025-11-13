@@ -204,3 +204,25 @@ export interface AuditCategoryConfig {
         hoverPrimary?: string;
     };
 }
+
+// =================================================================
+// STATS-SPECIFIC TYPES
+// =================================================================
+export interface AdhesiveInventoryItem {
+    id: string;
+    auditType: string;
+    repere: string;
+    name: string;
+    dimensions: string;
+    material: string;
+    quantity: number;
+}
+
+export interface RecentAuditItem {
+    id: string;
+    type: 'DAT' | AuditModuleType | EquipmentType;
+    name: string;
+    location: string;
+    completionDate: string;
+    module: AuditModule; // For LineIcon context
+}

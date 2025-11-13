@@ -24,6 +24,7 @@ interface AppState {
 
     // UI State
     theme: 'light' | 'dark';
+    isStatsViewActive: boolean;
 
     // Navigation
     activeFilter: AuditCategory | 'ALL';
@@ -44,6 +45,7 @@ interface AppState {
     
     // UI Actions
     setTheme: (theme: 'light' | 'dark') => void;
+    setIsStatsViewActive: (isActive: boolean) => void;
 
     // Navigation Actions
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
@@ -146,6 +148,7 @@ const useAuditStore = create<AppState>((set, get) => {
     isLoading: true,
     isAuthenticated: false,
     theme: 'light',
+    isStatsViewActive: false,
     activeFilter: 'ALL',
     activeAuditFilters: [],
     selectedLieuId: null,
@@ -214,6 +217,7 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedPrZoneId: null,
             selectedEquipmentId: null,
             selectedEcaId: null,
+            isStatsViewActive: false,
         });
     },
     
@@ -224,6 +228,18 @@ const useAuditStore = create<AppState>((set, get) => {
         applyTheme(theme);
         set({ theme });
     },
+    setIsStatsViewActive: (isActive) => set({ 
+        isStatsViewActive: isActive,
+        selectedLieuId: null,
+        selectedModuleId: null,
+        selectedStationId: null,
+        selectedDirectionId: null,
+        selectedDatId: null,
+        selectedPrZoneId: null,
+        selectedEquipmentId: null,
+        selectedEcaId: null,
+    }),
+
 
     // =================================================================
     // Navigation State Management
@@ -232,6 +248,7 @@ const useAuditStore = create<AppState>((set, get) => {
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
 
     selectLieu: (lieuId) => set({
+        isStatsViewActive: false,
         selectedLieuId: lieuId,
         selectedModuleId: null,
         selectedStationId: null,
@@ -300,6 +317,7 @@ const useAuditStore = create<AppState>((set, get) => {
             case 'home':
                 get().selectLieu(null);
                 get().setActiveFilter('ALL');
+                get().setIsStatsViewActive(false);
                 break;
             case 'lieu':
                 get().selectModule(null);

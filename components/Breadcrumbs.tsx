@@ -5,6 +5,7 @@ import { Home, ChevronRight } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 
 interface BreadcrumbsProps {
+  isStatsPage?: boolean;
   lieu?: Lieu | null;
   module?: AuditModule | null;
   // DAT props
@@ -20,7 +21,7 @@ interface BreadcrumbsProps {
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
-    const { lieu, module, station, direction, dat, prZone, equipment, eca, onNavigate } = props;
+    const { isStatsPage, lieu, module, station, direction, dat, prZone, equipment, eca, onNavigate } = props;
 
     return (
         <nav className="flex" aria-label="Breadcrumb">
@@ -34,8 +35,17 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                         Accueil
                     </button>
                 </li>
+                
+                {isStatsPage && (
+                    <li aria-current="page">
+                        <div className="flex items-center">
+                            <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
+                            <span className="ms-1 text-sm font-medium text-gray-500 md:ms-2 dark:text-gray-400">Statistiques</span>
+                        </div>
+                    </li>
+                )}
 
-                {lieu && (
+                {lieu && !isStatsPage && (
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -46,7 +56,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                     </li>
                 )}
 
-                {module && (
+                {module && !isStatsPage && (
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -62,7 +72,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                 )}
 
                 {/* --- DAT Specific Breadcrumbs --- */}
-                {module?.type === AuditModuleType.DAT && station && (
+                {module?.type === AuditModuleType.DAT && station && !isStatsPage && (
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -72,7 +82,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                         </div>
                     </li>
                 )}
-                {module?.type === AuditModuleType.DAT && direction && (
+                {module?.type === AuditModuleType.DAT && direction && !isStatsPage && (
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -82,7 +92,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                         </div>
                     </li>
                 )}
-                {module?.type === AuditModuleType.DAT && dat && (
+                {module?.type === AuditModuleType.DAT && dat && !isStatsPage && (
                     <li aria-current="page">
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -92,7 +102,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                 )}
 
                 {/* --- P+R Specific Breadcrumbs --- */}
-                {module?.type === AuditModuleType.PR && prZone && (
+                {module?.type === AuditModuleType.PR && prZone && !isStatsPage && (
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -102,7 +112,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                         </div>
                     </li>
                 )}
-                {module?.type === AuditModuleType.PR && equipment && (
+                {module?.type === AuditModuleType.PR && equipment && !isStatsPage && (
                      <li aria-current="page">
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
@@ -112,7 +122,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                 )}
 
                 {/* --- ECA Specific Breadcrumbs --- */}
-                {module?.type === AuditModuleType.ECA && eca && (
+                {module?.type === AuditModuleType.ECA && eca && !isStatsPage && (
                      <li aria-current="page">
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />

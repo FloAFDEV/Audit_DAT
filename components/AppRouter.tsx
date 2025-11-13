@@ -16,9 +16,11 @@ const EcaAdhesiveAuditForm = lazy(() => import('./EcaAdhesiveAuditForm'));
 const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision'));
 const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
 const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
+const StatsPage = lazy(() => import('./StatsPage'));
 
 
 interface AppRouterProps {
+    isStatsViewActive: boolean;
     // Data props
     lieux: Lieu[];
     selectedLieu: Lieu | null | undefined;
@@ -35,6 +37,7 @@ interface AppRouterProps {
     // while the main App component manages all state logic.
     activeFilter: any;
     setActiveFilter: any;
+    setIsStatsViewActive: any;
     selectLieu: any;
     selectModule: any;
     selectStation: any;
@@ -91,9 +94,13 @@ interface AppRouterProps {
 
 const AppRouter: React.FC<AppRouterProps> = (props) => {
     const {
-        lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
+        isStatsViewActive, lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
+
+    if (isStatsViewActive) {
+        return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;
+    }
 
     // --- DEEPEST LEVEL: AUDIT FORMS ---
 
