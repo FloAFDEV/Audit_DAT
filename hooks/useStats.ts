@@ -48,7 +48,7 @@ export const useStats = (lieux: Lieu[]) => {
         const stationCountC = LINE_C_STATIONS.filter(s => !s.isFuture).length;
         const stationCountTram = TRAM_STATIONS.filter(s => !s.isFuture).length;
         const stationCountTeleo = TELEO_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountTotal = stationCountA + stationCountB;
+        const stationCountTotal = stationCountA + stationCountB + stationCountC + stationCountTram + stationCountTeleo;
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {

@@ -118,7 +118,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                          <div>
                             <SectionTitle>Stations</SectionTitle>
                             <div className="space-y-2">
-                                 <StatRow icon={<MapPin className="w-4 h-4"/>} label="Total Stations (A+B)" value={globalCounts.stationCountTotal} />
+                                 <StatRow icon={<MapPin className="w-4 h-4"/>} label="Total Stations" value={globalCounts.stationCountTotal} />
                                  <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" /> Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
                                  <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" /> Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
                                  <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" /> Tram</span>} value={globalCounts.stationCountTram} isSubItem />
