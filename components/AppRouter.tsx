@@ -188,7 +188,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
                 handlers.selectModule(null); // Go back to module selector for single-zone P+R
             }
         };
-        return <EquipmentSelector prData={prData} zone={selectedPrZone} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
+        return <EquipmentSelector lieu={selectedLieu!} prData={prData} zone={selectedPrZone} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
     }
     
     // P+R Zone Selector

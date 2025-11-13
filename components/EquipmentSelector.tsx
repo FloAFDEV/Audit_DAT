@@ -1,10 +1,10 @@
-
-
 import React from 'react';
-import { Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../types';
+import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../types';
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
+import { LieuBadges } from './Icons';
 
 interface EquipmentSelectorProps {
+  lieu: Lieu;
   prData: Pr;
   zone: PrZone;
   onSelectEquipment: (equipmentId: string) => void;
@@ -28,7 +28,7 @@ const getEquipmentIcon = (type: EquipmentType) => {
     }
 }
 
-const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ prData, zone, onSelectEquipment, onBack }) => {
+const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zone, onSelectEquipment, onBack }) => {
 
     return (
         <div>
@@ -42,8 +42,11 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ prData, zone, onS
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <div>
-                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name} - {zone.name}</h2>
-                        <p className="text-gray-500 dark:text-slate-400">Sélectionner un équipement à auditer</p>
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <LieuBadges lieu={lieu} />
+                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name} - {zone.name}</h2>
+                        </div>
+                        <p className="text-gray-500 dark:text-slate-400 mt-1">Sélectionner un équipement à auditer</p>
                     </div>
                 </div>
             </div>
