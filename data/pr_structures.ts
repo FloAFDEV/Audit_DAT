@@ -120,7 +120,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
         name: 'Borderouge',
         zones: [
             {
-                name: 'Bord 2',
+                name: 'Parking du fond (Bord 2)',
                 equipments: [
                     { name: 'BE01', type: EquipmentType.BE },
                     { name: 'BS01', type: EquipmentType.BS },
@@ -128,7 +128,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                 ]
             },
             {
-                name: 'Bord 1 – Côté Est',
+                name: 'Parking Principal - Accès Est (Métronum)',
                 equipments: [
                     { name: 'BE11', type: EquipmentType.BE },
                     { name: 'BE12', type: EquipmentType.BE },
@@ -137,7 +137,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                 ]
             },
             {
-                name: 'Bord 1 – Côté Covoiturage / Bornes électriques',
+                name: 'Parking Principal - Accès Covoiturage / VL Électrique',
                 equipments: [
                     { name: 'BE01', type: EquipmentType.BE },
                     { name: 'BS01', type: EquipmentType.BS },
@@ -145,7 +145,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                 ]
             },
             {
-                name: 'Bord 1 – Côté Nord-Est',
+                name: 'Parking Principal - Accès Nord-Est (Garage Atelier)',
                 equipments: [
                     { name: 'BE21', type: EquipmentType.BE },
                     { name: 'BE22', type: EquipmentType.BE },
@@ -153,17 +153,12 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                 ]
             },
             {
-                name: 'Bord 1 – Côté Sud-Ouest',
+                name: 'Parking Principal - Accès Sud-Ouest (Bd Netwiller)',
                 equipments: [
                     { name: 'BE31', type: EquipmentType.BE },
                     { name: 'BE32', type: EquipmentType.BE },
                     { name: 'BS31', type: EquipmentType.BS },
                     { name: 'BS32', type: EquipmentType.BS },
-                ]
-            },
-            {
-                name: 'Bord 1',
-                equipments: [
                     { name: 'CA01', type: EquipmentType.CA },
                 ]
             },
