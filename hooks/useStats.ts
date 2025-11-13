@@ -321,7 +321,7 @@ export const useStats = (lieux: Lieu[]) => {
                     auditType: pmrModule.shortLabel,
                     repere: '-',
                     name: "Adhésif de signalisation au sol",
-                    dimensions: "920x3705mm",
+                    dimensions: "920x370mm",
                     material: material,
                     quantity: data.quantity
                 });
@@ -335,7 +335,31 @@ export const useStats = (lieux: Lieu[]) => {
             });
         });
         
-        return Array.from(inventoryMap.values()).sort((a, b) => a.auditType.localeCompare(b.auditType) || a.name.localeCompare(b.name));
+        return Array.from(inventoryMap.values()).sort((a, b) => {
+            const typeCompare = a.auditType.localeCompare(b.auditType);
+            if (typeCompare !== 0) {
+                return typeCompare;
+            }
+
+            const repA = parseInt(a.repere, 10);
+            const repB = parseInt(b.repere, 10);
+
+            const isRepANumeric = !isNaN(repA);
+            const isRepBNumeric = !isNaN(repB);
+
+            if (isRepANumeric && isRepBNumeric) {
+                if (repA !== repB) {
+                    return repA - repB;
+                }
+            } else if (isRepANumeric) {
+                return -1; // Numeric reperes first
+            } else if (isRepBNumeric) {
+                return 1;
+            }
+            
+            // Fallback to name if reperes are equal, non-numeric, or not present
+            return a.name.localeCompare(b.name);
+        });
 
     }, [lieux]);
 

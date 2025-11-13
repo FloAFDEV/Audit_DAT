@@ -11,21 +11,21 @@ const materialMap: Record<string, string> = {
     'Mermoz': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Fontaine-Lestang': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Arènes': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Patte d\'Oie': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Saint-Cyprien - République': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Esquirol|Adhésifs PMR au Sol (Esquirol Principale)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Esquirol|Adhésifs PMR au Sol (Esquirol Ascenseur)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Capitole|Adhésifs PMR au Sol (Capitole Principale)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Capitole|Adhésifs PMR au Sol (Capitole Ascenseur)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Patte d\'Oie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Saint-Cyprien - République': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Esquirol|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Esquirol|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Capitole|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Capitole|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Accès Principal Ligne A)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Accès Principal Ligne B)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Liaison A→B)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Liaison B→A)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Marengo-SNCF': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Jolimont|Adhésifs PMR au Sol (Jolimont Principal)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Bas
-    'Jolimont|Adhésifs PMR au Sol (Jolimont ascenseur)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Haut
-    'Roseraie': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Argoulets': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Jolimont|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Bas
+    'Jolimont|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Haut
+    'Roseraie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Argoulets': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Balma-Gramont': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     // Ligne B
     'Borderouge': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
@@ -46,8 +46,8 @@ const materialMap: Record<string, string> = {
     'Rangueil': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Faculté de Pharmacie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Université Paul-Sabatier': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
-    'Ramonville|Adhésifs PMR au Sol (Accès RAM BUS)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Ramonville|Adhésifs PMR au Sol (Accès RAM BOR)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Ramonville|Adhésifs PMR au Sol (Accès Bus)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Ramonville|Adhésifs PMR au Sol (Accès Square)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
 };
 
 /**

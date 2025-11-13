@@ -157,7 +157,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                         {adhesive.name}
                         <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
-                            // <span className="font-bold text-gray-600 dark:text-slate-400">920x3705mm</span>
+                            // <span className="font-bold text-gray-600 dark:text-slate-400">920x370mm</span>
                         </span>
                         </h3>
                         {material && (

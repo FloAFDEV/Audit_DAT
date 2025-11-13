@@ -386,7 +386,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         }
                         const material = getPmrMaterial(data.stationName, module.name);
                         for (const adhesive of data.adhesives) {
-                            let description = 'Adhésif de signalisation PMR au sol | 920x3705mm';
+                            let description = 'Adhésif de signalisation PMR au sol | 920x370mm';
                             if (material) {
                                 description += ` | ${material}`;
                             }
