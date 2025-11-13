@@ -48,7 +48,7 @@ if (name.includes('est'))
 if (name.includes('ouest'))
   return (
     <div className="p-3 bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300 rounded-lg">
-      <Navigation2 {...iconProps} style={{ transform: 'rotate(270deg) scaleX(-1)' }} />
+      <Navigation2 {...iconProps} style={{ transform: 'rotate(270deg)' }} />
     </div>
   );
 
