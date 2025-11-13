@@ -51,6 +51,14 @@ const materialMap: Record<string, string> = {
 };
 
 /**
+ * Retrieves the unique list of all possible materials for PMR floor adhesives.
+ * @returns An array of material strings.
+ */
+export const getAllPmrMaterials = (): string[] => {
+    return [...new Set(Object.values(materialMap))];
+};
+
+/**
  * Retrieves the material used for a PMR floor adhesive based on the station and module name.
  * It first checks for a specific key combining station and module name for complex stations,
  * then falls back to checking by station name for simpler cases.
