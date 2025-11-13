@@ -96,10 +96,16 @@ export interface Equipment {
     completionDate?: string;
 }
 
-export interface Pr {
+export interface PrZone {
     id: string;
     name: string;
     equipments: Equipment[];
+}
+
+export interface Pr {
+    id: string;
+    name: string;
+    zones: PrZone[];
 }
 
 export interface ECA {

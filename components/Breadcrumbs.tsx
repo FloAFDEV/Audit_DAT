@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, Pr, Equipment, ECA } from '../types';
+import { Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, Pr, Equipment, ECA, PrZone } from '../types';
 import { Home, ChevronRight } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 
@@ -12,6 +12,7 @@ interface BreadcrumbsProps {
   direction?: Direction | null;
   dat?: DAT | null;
   // P+R props
+  prZone?: PrZone | null;
   equipment?: Equipment | null;
   // ECA props
   eca?: ECA | null;
@@ -19,7 +20,7 @@ interface BreadcrumbsProps {
 }
 
 export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
-    const { lieu, module, station, direction, dat, equipment, eca, onNavigate } = props;
+    const { lieu, module, station, direction, dat, prZone, equipment, eca, onNavigate } = props;
 
     return (
         <nav className="flex" aria-label="Breadcrumb">
@@ -51,8 +52,8 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
                             <button 
                                 onClick={() => onNavigate('module')} 
-                                disabled={module.type === AuditModuleType.DAT ? !station : !equipment && !eca} 
-                                className={`ms-1 text-sm font-medium ${station || equipment || eca ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}
+                                disabled={module.type === AuditModuleType.DAT ? !station : !prZone && !equipment && !eca} 
+                                className={`ms-1 text-sm font-medium ${station || prZone || equipment || eca ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}
                             >
                                 {module.name}
                             </button>
@@ -91,6 +92,16 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                 )}
 
                 {/* --- P+R Specific Breadcrumbs --- */}
+                {module?.type === AuditModuleType.PR && prZone && (
+                    <li>
+                        <div className="flex items-center">
+                            <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
+                            <button onClick={() => onNavigate('module')} disabled={!equipment} className={`ms-1 text-sm font-medium ${equipment ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}>
+                                {prZone.name}
+                            </button>
+                        </div>
+                    </li>
+                )}
                 {module?.type === AuditModuleType.PR && equipment && (
                      <li aria-current="page">
                         <div className="flex items-center">

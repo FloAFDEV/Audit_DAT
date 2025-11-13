@@ -3,7 +3,7 @@ import useAuditStore from './store';
 import Login from './components/Login';
 import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
-import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData } from './types';
+import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData, PrZone } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import ReminderModal from './components/ReminderModal';
 import { Toaster } from 'react-hot-toast';
@@ -108,7 +108,8 @@ const App: React.FC = () => {
 
     // P+R flow data
     const selectedPrData = useMemo(() => (selectedModule?.type === AuditModuleType.PR ? selectedModule.data as Pr : null), [selectedModule]);
-    const selectedEquipment = useMemo(() => selectedPrData?.equipments.find(e => e.id === store.selectedEquipmentId), [selectedPrData, store.selectedEquipmentId]);
+    const selectedPrZone = useMemo(() => selectedPrData?.zones.find(z => z.id === store.selectedPrZoneId), [selectedPrData, store.selectedPrZoneId]);
+    const selectedEquipment = useMemo(() => selectedPrZone?.equipments.find(e => e.id === store.selectedEquipmentId), [selectedPrZone, store.selectedEquipmentId]);
 
     // ECA flow data
     const selectedEcaData = useMemo(() => (selectedModule?.type === AuditModuleType.ECA ? selectedModule.data as EcaData : null), [selectedModule]);
@@ -140,6 +141,7 @@ const App: React.FC = () => {
                         station={selectedStation}
                         direction={selectedDirection}
                         dat={selectedDat}
+                        prZone={selectedPrZone}
                         equipment={selectedEquipment}
                         eca={selectedEca}
                         onNavigate={store.navigate}
@@ -154,6 +156,7 @@ const App: React.FC = () => {
                         selectedStation={selectedStation}
                         selectedDirection={selectedDirection}
                         selectedDat={selectedDat}
+                        selectedPrZone={selectedPrZone}
                         selectedEquipment={selectedEquipment}
                         selectedEca={selectedEca}
                         // Pass state and handlers

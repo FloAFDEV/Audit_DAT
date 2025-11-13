@@ -2,7 +2,7 @@
 
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA, PMRFloorAdhesive
+    AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA, PMRFloorAdhesive, PrZone
 } from '../types';
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
@@ -147,7 +147,6 @@ const escapeCsv = (value: any): string => {
     return str;
 };
 
-// FIX: Resolved duplicate key errors by removing redundant entries.
 // The `AdhesiveStatus` and `FloorAdhesiveStatus` enums shared member names (e.g., NotChecked),
 // which resulted in the same computed property key in the object literal.
 const statusTranslations: { [key: string]: string } = {
@@ -270,7 +269,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             'Date de Réalisation': formatCompletionDate(dat.completionDate),
                                             'Direction/Équipement/Accès': direction.name,
                                             'Élément': dat.name,
-                                            'Statut': statusTranslations[status] || status,
+// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error.
+                                            'Statut': statusTranslations[status as string] || status,
                                             'Repère': repere,
                                             'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                             'Localisation Adhésif': location,
@@ -284,40 +284,44 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.PR: {
                         const data = module.data as Pr;
-                        for (const equipment of data.equipments) {
-                            const adhesives = getPrAdhesives(equipment.type);
-                            for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
-                                const adhesive = adhesives.find(a => a.id === adhesiveId);
-                                const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
-                                
-                                let description = adhesive?.description || '';
-                                let dimensions = '';
-                                if (description.includes('//')) {
-                                    const parts = description.split('//');
-                                    description = parts[0].trim();
-                                    dimensions = parts[1].trim();
-                                }
+// @FIX: The original code was missing a loop over `zones`. The `equipments` array exists on each `zone`, not directly on the `Pr` data object.
+                        for (const zone of data.zones) {
+                            for (const equipment of zone.equipments) {
+                                const adhesives = getPrAdhesives(equipment.type);
+                                for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
+                                    const adhesive = adhesives.find(a => a.id === adhesiveId);
+                                    const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
+                                    
+                                    let description = adhesive?.description || '';
+                                    let dimensions = '';
+                                    if (description.includes('//')) {
+                                        const parts = description.split('//');
+                                        description = parts[0].trim();
+                                        dimensions = parts[1].trim();
+                                    }
 
-                                let finalDescription = description;
-                                if (!description.toLowerCase().includes(parsedAdhesiveName.toLowerCase()) && parsedAdhesiveName) {
-                                    finalDescription = `${parsedAdhesiveName} | ${description}`;
-                                }
-                                if (dimensions) {
-                                    finalDescription += ` | ${dimensions}`;
-                                }
+                                    let finalDescription = description;
+                                    if (!description.toLowerCase().includes(parsedAdhesiveName.toLowerCase()) && parsedAdhesiveName) {
+                                        finalDescription = `${parsedAdhesiveName} | ${description}`;
+                                    }
+                                    if (dimensions) {
+                                        finalDescription += ` | ${dimensions}`;
+                                    }
 
-                                rows.push({
-                                    ...baseRow,
-                                    _lieuIndex: lieuIndex,
-                                    'Date de Réalisation': formatCompletionDate(equipment.completionDate),
-                                    'Direction/Équipement/Accès': equipment.name,
-                                    'Élément': equipment.type,
-                                    'Statut': statusTranslations[status] || status,
-                                    'Repère': repere,
-                                    'Description Adhésif': finalDescription,
-                                    'Localisation Adhésif': adhesive?.location || '',
-                                    'Commentaire': equipment.comment,
-                                });
+                                    rows.push({
+                                        ...baseRow,
+                                        _lieuIndex: lieuIndex,
+                                        'Date de Réalisation': formatCompletionDate(equipment.completionDate),
+                                        'Direction/Équipement/Accès': zone.name,
+                                        'Élément': `${equipment.name} (${equipment.type})`,
+// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error. This is likely due to a strict TypeScript configuration where `Object.entries` values are not strongly typed.
+                                        'Statut': statusTranslations[status as string] || status,
+                                        'Repère': repere,
+                                        'Description Adhésif': finalDescription,
+                                        'Localisation Adhésif': adhesive?.location || '',
+                                        'Commentaire': equipment.comment,
+                                    });
+                                }
                             }
                         }
                         break;
@@ -356,7 +360,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                     'Date de Réalisation': formatCompletionDate(eca.completionDate),
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
-                                    'Statut': statusTranslations[status] || status,
+// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error.
+                                    'Statut': statusTranslations[status as string] || status,
                                     'Repère': repere,
                                     'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
                                     'Localisation Adhésif': location,

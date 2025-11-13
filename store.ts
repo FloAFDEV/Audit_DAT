@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { 
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram 
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone 
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -33,6 +33,7 @@ interface AppState {
     selectedStationId: string | null;
     selectedDirectionId: string | null;
     selectedDatId: string | null;
+    selectedPrZoneId: string | null;
     selectedEquipmentId: string | null;
     selectedEcaId: string | null;
 
@@ -63,6 +64,7 @@ interface AppState {
     handleUpdateDatName: (datId: string, newName: string) => Promise<void>;
 
     // P+R Flow Actions
+    selectPrZone: (zoneId: string | null) => void;
     selectEquipment: (equipmentId: string | null) => void;
     handlePrAdhesiveStatusChange: (adhesiveId: string, status: AdhesiveStatus) => Promise<void>;
     handlePrAdhesiveCommentChange: (comment: string) => Promise<void>;
@@ -151,6 +153,7 @@ const useAuditStore = create<AppState>((set, get) => {
     selectedStationId: null,
     selectedDirectionId: null,
     selectedDatId: null,
+    selectedPrZoneId: null,
     selectedEquipmentId: null,
     selectedEcaId: null,
 
@@ -208,6 +211,7 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedStationId: null,
             selectedDirectionId: null,
             selectedDatId: null,
+            selectedPrZoneId: null,
             selectedEquipmentId: null,
             selectedEcaId: null,
         });
@@ -233,6 +237,7 @@ const useAuditStore = create<AppState>((set, get) => {
         selectedStationId: null,
         selectedDirectionId: null,
         selectedDatId: null,
+        selectedPrZoneId: null,
         selectedEquipmentId: null,
         selectedEcaId: null,
     }),
@@ -241,25 +246,30 @@ const useAuditStore = create<AppState>((set, get) => {
         const { lieux, selectedLieuId } = get();
         const lieu = lieux.find(l => l.id === selectedLieuId);
         const module = lieu?.modules.find(m => m.id === moduleId);
-
-        let stationIdToAutoSelect: string | null = null;
         
-        // Auto-select station if there's only one for DAT modules and it's not a future station
+        const baseState = {
+            selectedModuleId: moduleId,
+            selectedStationId: null,
+            selectedDirectionId: null,
+            selectedDatId: null,
+            selectedPrZoneId: null,
+            selectedEquipmentId: null,
+            selectedEcaId: null,
+        };
+
         if (module?.type === AuditModuleType.DAT) {
             const modeData = module.data as ModeData;
             if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
-                stationIdToAutoSelect = modeData.stations[0].id;
+                baseState.selectedStationId = modeData.stations[0].id;
+            }
+        } else if (module?.type === AuditModuleType.PR) {
+            const prData = module.data as Pr;
+            if (prData.zones.length === 1) {
+                baseState.selectedPrZoneId = prData.zones[0].id;
             }
         }
 
-        set({
-            selectedModuleId: moduleId,
-            selectedStationId: stationIdToAutoSelect,
-            selectedDirectionId: null,
-            selectedDatId: null,
-            selectedEquipmentId: null,
-            selectedEcaId: null,
-        });
+        set(baseState);
     },
 
     selectStation: (stationId) => {
@@ -281,6 +291,7 @@ const useAuditStore = create<AppState>((set, get) => {
     
     selectDirection: (directionId) => set({ selectedDirectionId: directionId, selectedDatId: null }),
     selectDat: (datId) => set({ selectedDatId: datId }),
+    selectPrZone: (zoneId) => set({ selectedPrZoneId: zoneId, selectedEquipmentId: null }),
     selectEquipment: (equipmentId) => set({ selectedEquipmentId: equipmentId }),
     selectEca: (ecaId) => set({ selectedEcaId: ecaId }),
 
@@ -294,7 +305,8 @@ const useAuditStore = create<AppState>((set, get) => {
                 get().selectModule(null);
                 break;
             case 'module':
-                get().selectStation(null); // works for DAT, P+R, ECA flows
+                get().selectStation(null);
+                get().selectPrZone(null);
                 get().selectEquipment(null);
                 get().selectEca(null);
                 break;
@@ -402,10 +414,11 @@ const useAuditStore = create<AppState>((set, get) => {
     // P+R Audit Actions
     // =================================================================
     handlePrAdhesiveStatusChange: async (adhesiveId, status) => {
-        const { selectedModuleId, selectedEquipmentId } = get();
+        const { selectedModuleId, selectedPrZoneId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
-            const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
+            const zone = module.data.zones.find(z => z.id === selectedPrZoneId);
+            const equipment = zone?.equipments.find(e => e.id === selectedEquipmentId);
             if (equipment) {
                 equipment.adhesives[adhesiveId] = status;
                 
@@ -420,19 +433,21 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handlePrAdhesiveCommentChange: async (comment) => {
-        const { selectedModuleId, selectedEquipmentId } = get();
+        const { selectedModuleId, selectedPrZoneId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
-            const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
+            const zone = module.data.zones.find(z => z.id === selectedPrZoneId);
+            const equipment = zone?.equipments.find(e => e.id === selectedEquipmentId);
             if (equipment) equipment.comment = comment;
         });
     },
 
     handleResetPrAdhesive: async () => {
-        const { selectedModuleId, selectedEquipmentId } = get();
+        const { selectedModuleId, selectedPrZoneId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: Pr };
-            const equipment = module.data.equipments.find(e => e.id === selectedEquipmentId);
+            const zone = module.data.zones.find(z => z.id === selectedPrZoneId);
+            const equipment = zone?.equipments.find(e => e.id === selectedEquipmentId);
             if (equipment) {
                 equipment.adhesives = createInitialAdhesiveStatus(getPrAdhesives(equipment.type));
                 equipment.comment = '';

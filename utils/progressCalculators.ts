@@ -1,6 +1,6 @@
 // utils/progressCalculators.ts
 
-import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory } from '../types';
+import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone } from '../types';
 import { getEcaAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 
@@ -121,6 +121,21 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     return { percentage, label, isComplete };
 };
 
+
+export const getPrZoneProgress = (zone: PrZone): number => {
+    let totalAdhesives = 0;
+    let checkedAdhesives = 0;
+
+    for (const equipment of zone.equipments) {
+        const statuses = Object.values(equipment.adhesives);
+        totalAdhesives += statuses.length;
+        checkedAdhesives += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+    }
+
+    if (totalAdhesives === 0) return 100;
+    return (checkedAdhesives / totalAdhesives) * 100;
+};
+
 /**
  * NEW: Centralized helper to get raw progress counts for any module.
  * This ensures all progress calculations are consistent.
@@ -144,12 +159,14 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             break;
         }
         case AuditModuleType.PR: {
-            const equipments = (module.data as Pr).equipments ?? [];
-            if (equipments.length > 0) hasAuditableContent = true;
-            for (const equipment of equipments) {
-                const statuses = Object.values(equipment.adhesives);
-                totalApplicableItems += statuses.length;
-                totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+            const zones = (module.data as Pr).zones ?? [];
+            if (zones.length > 0) hasAuditableContent = true;
+            for (const zone of zones) {
+                for (const equipment of zone.equipments) {
+                    const statuses = Object.values(equipment.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
             }
             break;
         }

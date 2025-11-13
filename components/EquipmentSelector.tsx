@@ -1,11 +1,12 @@
 
 
 import React from 'react';
-import { AuditModule, Pr, Equipment, AdhesiveStatus, EquipmentType } from '../types';
+import { Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../types';
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
 
 interface EquipmentSelectorProps {
-  module: AuditModule;
+  prData: Pr;
+  zone: PrZone;
   onSelectEquipment: (equipmentId: string) => void;
   onBack: () => void;
 }
@@ -27,8 +28,7 @@ const getEquipmentIcon = (type: EquipmentType) => {
     }
 }
 
-const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ module, onSelectEquipment, onBack }) => {
-    const prData = module.data as Pr;
+const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ prData, zone, onSelectEquipment, onBack }) => {
 
     return (
         <div>
@@ -42,21 +42,21 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ module, onSelectE
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <div>
-                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name}</h2>
+                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{prData.name} - {zone.name}</h2>
                         <p className="text-gray-500 dark:text-slate-400">Sélectionner un équipement à auditer</p>
                     </div>
                 </div>
             </div>
 
-            {prData.equipments.length === 0 ? (
+            {zone.equipments.length === 0 ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <Ticket className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun équipement</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun équipement n'est enregistré pour ce P+R.</p>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun équipement n'est enregistré pour cette zone du P+R.</p>
                 </div>
             ) : (
                 <div className="space-y-4">
-                    {prData.equipments.map((equipment) => {
+                    {zone.equipments.map((equipment) => {
                         const progress = getEquipmentProgress(equipment);
                         const isComplete = progress === 100;
                         const isInProgress = progress > 0 && !isComplete;

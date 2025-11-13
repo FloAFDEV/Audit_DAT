@@ -1,5 +1,5 @@
 import React, { lazy } from 'react';
-import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData } from '../types';
+import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone } from '../types';
 import LieuSelector from './LieuSelector';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
 
@@ -8,6 +8,7 @@ const ModuleSelector = lazy(() => import('./ModuleSelector'));
 const DatGroupSelector = lazy(() => import('./DatGroupSelector'));
 const DATList = lazy(() => import('./DATList'));
 const AdhesiveAuditForm = lazy(() => import('./AdhesiveAuditForm'));
+const PrZoneSelector = lazy(() => import('./PrZoneSelector'));
 const EquipmentSelector = lazy(() => import('./EquipmentSelector'));
 const PnrAdhesiveAuditForm = lazy(() => import('./PnrAdhesiveAuditForm'));
 const EcaSelector = lazy(() => import('./EcaSelector'));
@@ -25,6 +26,7 @@ interface AppRouterProps {
     selectedStation: Station | null | undefined;
     selectedDirection: Direction | null | undefined;
     selectedDat: DAT | null | undefined;
+    selectedPrZone: PrZone | null | undefined;
     selectedEquipment: Equipment | null | undefined;
     selectedEca: ECA | null | undefined;
     
@@ -38,6 +40,7 @@ interface AppRouterProps {
     selectStation: any;
     selectDirection: any;
     selectDat: any;
+    selectPrZone: any;
     selectEquipment: any;
     selectEca: any;
     
@@ -89,13 +92,13 @@ interface AppRouterProps {
 const AppRouter: React.FC<AppRouterProps> = (props) => {
     const {
         lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
-        selectedDat, selectedEquipment, selectedEca, ...handlers
+        selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
     // --- DEEPEST LEVEL: AUDIT FORMS ---
 
     // P+R Audit Form
-    if (selectedModule && selectedEquipment) {
+    if (selectedModule?.type === AuditModuleType.PR && selectedPrZone && selectedEquipment) {
         return <PnrAdhesiveAuditForm
             module={selectedModule}
             equipment={selectedEquipment}
@@ -108,7 +111,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // ECA Audit Form or Decision Screen
-    if (selectedModule && selectedEca) {
+    if (selectedModule?.type === AuditModuleType.ECA && selectedEca) {
         const isJauresPMR = (selectedModule.data as EcaData).stationName === 'Jean-Jaurès' && isPmrEcaType(selectedEca.type);
         if (canEcaBeNotApplicable(selectedEca.type) && typeof selectedEca.isNotApplicable === 'undefined' && !isJauresPMR) {
             return <EcaTripodeSortieDecision
@@ -132,7 +135,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // DAT Audit Form
-    if (selectedModule && selectedStation && selectedDirection && selectedDat) {
+    if (selectedModule?.type === AuditModuleType.DAT && selectedStation && selectedDirection && selectedDat) {
          return <AdhesiveAuditForm
             module={selectedModule}
             dat={selectedDat}
@@ -176,8 +179,21 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     // --- INTERMEDIATE SELECTION SCREENS ---
 
     // P+R Equipment Selector
+    if (selectedModule?.type === AuditModuleType.PR && selectedPrZone) {
+        const prData = selectedModule.data as Pr;
+        const handleBack = () => {
+            if (prData.zones.length > 1) {
+                handlers.selectPrZone(null); // Go back to zone selector for multi-zone P+R
+            } else {
+                handlers.selectModule(null); // Go back to module selector for single-zone P+R
+            }
+        };
+        return <EquipmentSelector prData={prData} zone={selectedPrZone} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
+    }
+    
+    // P+R Zone Selector
     if (selectedModule?.type === AuditModuleType.PR) {
-        return <EquipmentSelector module={selectedModule} onSelectEquipment={handlers.selectEquipment} onBack={() => handlers.selectModule(null)} />;
+        return <PrZoneSelector module={selectedModule} onSelectZone={handlers.selectPrZone} onBack={() => handlers.selectModule(null)} />;
     }
     
     // ECA Selector
@@ -193,7 +209,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // DAT List (after selecting a direction)
-    if (selectedModule && selectedStation && selectedDirection) {
+    if (selectedModule?.type === AuditModuleType.DAT && selectedStation && selectedDirection) {
         return <DATList
             module={selectedModule}
             station={selectedStation}

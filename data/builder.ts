@@ -1,6 +1,6 @@
 import {
     Lieu, AuditModule, ModeData, AuditModuleType, TransportMode, MetroLine, Station, Direction, DAT, AdhesiveStatus, Pr,
-    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram
+    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './adhesives';
@@ -10,8 +10,9 @@ import { AUDIT_CATEGORIES } from './config';
 import { ECA_DEFINITIONS, isPmrEcaType, ECA_DEFINITIONS_JJA_A_TO_B, ECA_DEFINITIONS_JJA_B_TO_A, ECA_DEFINITIONS_JJA_A_HISTORIQUE, ECA_DEFINITIONS_JJA_A_PRINCIPAL } from './eca_data';
 import { PMR_PICTOGRAM_CONFIG } from './pmr_pictogram_config';
 import { generateInitialCognitivePictogramsForStation } from './cognitive_pictograms';
+import { PR_STRUCTURES } from './pr_structures';
 
-const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
+export const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
 };
 
@@ -165,22 +166,31 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
 };
 
 const createPrModule = (prData: { id: string, name: string }): AuditModule => {
-    const equipments: Equipment[] = [
-        ...Array.from({ length: 2 }, (_, i) => ({
-            id: `${prData.id}-be-${i + 1}`, name: `Borne Entrée ${i + 1}`, type: EquipmentType.BE,
-            adhesives: createInitialAdhesiveStatus(getPrAdhesives(EquipmentType.BE)), comment: '',
-        })),
-        ...Array.from({ length: 2 }, (_, i) => ({
-            id: `${prData.id}-bs-${i + 1}`, name: `Borne Sortie ${i + 1}`, type: EquipmentType.BS,
-            adhesives: createInitialAdhesiveStatus(getPrAdhesives(EquipmentType.BS)), comment: '',
-        })),
-        ...Array.from({ length: 1 }, (_, i) => ({
-            id: `${prData.id}-ca-${i + 1}`, name: `Caisse Auto ${i + 1}`, type: EquipmentType.CA,
-            adhesives: createInitialAdhesiveStatus(getPrAdhesives(EquipmentType.CA)), comment: '',
-        })),
-    ];
+    const structure = PR_STRUCTURES[prData.id];
+    if (!structure) {
+        console.warn(`No structure found for P+R: ${prData.name}. Creating an empty module.`);
+        const emptyPr: Pr = { id: prData.id, name: prData.name, zones: [] };
+        return {
+            id: `module-pr-${prData.id}`,
+            type: AuditModuleType.PR,
+            name: 'Audit Bornes P+R',
+            data: emptyPr,
+        };
+    }
+    
+    const zones: PrZone[] = structure.zones.map(zoneTemplate => ({
+        id: uuidv4(),
+        name: zoneTemplate.name,
+        equipments: zoneTemplate.equipments.map(equipTemplate => ({
+            id: uuidv4(),
+            name: equipTemplate.name,
+            type: equipTemplate.type,
+            adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipTemplate.type)),
+            comment: '',
+        }))
+    }));
 
-    const pr: Pr = { id: prData.id, name: prData.name, equipments };
+    const pr: Pr = { id: prData.id, name: prData.name, zones };
 
     return {
         id: `module-pr-${prData.id}`,
