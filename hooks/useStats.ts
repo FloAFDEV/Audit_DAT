@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { 
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
-    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem, RecentAuditItem 
+    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
@@ -189,39 +189,6 @@ export const useStats = (lieux: Lieu[]) => {
         return { toBeReplaced, absent, toPlan };
     }, [lieux]);
 
-    const recentAudits = useMemo(() => {
-        const completed: RecentAuditItem[] = [];
-        for (const lieu of lieux) {
-            for (const module of lieu.modules) {
-                if (module.isFuture) continue;
-                 switch (module.type) {
-                    case AuditModuleType.DAT:
-                        (module.data as ModeData).stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
-                            if(dat.completionDate) completed.push({ id: dat.id, type: 'DAT', name: dat.name, location: `${lieu.name} - ${s.name}`, completionDate: dat.completionDate, module });
-                        })));
-                        break;
-                    case AuditModuleType.PR:
-                        (module.data as Pr).zones.forEach(z => z.equipments.forEach(eq => {
-                            if(eq.completionDate) completed.push({ id: eq.id, type: eq.type, name: eq.name, location: `${lieu.name} - ${z.name}`, completionDate: eq.completionDate, module });
-                        }));
-                        break;
-                    case AuditModuleType.ECA:
-                        (module.data as EcaData).ecas.forEach(eca => {
-                             if(eca.completionDate) completed.push({ id: eca.id, type: AuditModuleType.ECA, name: eca.name, location: lieu.name, completionDate: eca.completionDate, module });
-                        });
-                        break;
-                    case AuditModuleType.PMR_FLOOR_ADHESIVE:
-                    case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                        // @FIX: The type of `module.data` is a union. Cast to the correct types for this case.
-                        const data = module.data as PMRFloorAdhesiveData | CognitivePictogramData;
-                        if(data.completionDate) completed.push({ id: module.id, type: module.type, name: module.name, location: data.stationName, completionDate: data.completionDate, module });
-                        break;
-                }
-            }
-        }
-        return completed.sort((a, b) => new Date(b.completionDate).getTime() - new Date(a.completionDate).getTime()).slice(0, 10);
-    }, [lieux]);
-
     const adhesiveInventory = useMemo(() => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
         const auditModules = AUDIT_MODULES_CONFIG;
@@ -364,5 +331,5 @@ export const useStats = (lieux: Lieu[]) => {
 
     }, [lieux]);
 
-    return { globalCounts, ecaBreakdown, maintenanceSummary, recentAudits, adhesiveInventory };
+    return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
 };

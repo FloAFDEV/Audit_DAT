@@ -217,12 +217,3 @@ export interface AdhesiveInventoryItem {
     material: string;
     quantity: number;
 }
-
-export interface RecentAuditItem {
-    id: string;
-    type: 'DAT' | AuditModuleType | EquipmentType;
-    name: string;
-    location: string;
-    completionDate: string;
-    module: AuditModule; // For LineIcon context
-}
