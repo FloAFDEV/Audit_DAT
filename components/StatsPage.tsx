@@ -1,9 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle } from 'lucide-react';
-import { Lieu } from '../types';
+import { Lieu, MaintenanceItem } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
+import MaintenanceListModal from './MaintenanceListModal';
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -57,7 +58,8 @@ const StatRow: React.FC<{
   value: React.ReactNode;
   isSubItem?: boolean;
   highlight?: 'danger' | 'warning' | 'info' | 'primary' | null; // Ajout de 'primary' pour les totaux
-}> = ({ icon, label, value, isSubItem = false, highlight = null }) => {
+  onClick?: () => void;
+}> = ({ icon, label, value, isSubItem = false, highlight = null, onClick }) => {
   
   let valueClass = isSubItem ? 'text-sm' : 'text-base';
   let labelClass = isSubItem ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300';
@@ -77,15 +79,30 @@ const StatRow: React.FC<{
                     : 'font-semibold px-2 py-0.5 rounded text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-700';
   }
 
-  return (
-    <div className={`flex justify-between items-center ${isSubItem ? 'pl-8' : 'pl-0'} py-1`}> 
-      <div className={`flex items-center gap-3 ${labelClass}`}>
-        {icon && !highlight && <div className="w-5 h-5 flex items-center justify-center">{icon}</div>}
-        <div className={`${isSubItem ? 'text-sm' : 'font-medium'}`}>{label}</div>
+  const content = (
+      <div className={`flex justify-between items-center ${isSubItem ? 'pl-8' : 'pl-0'} py-1`}> 
+        <div className={`flex items-center gap-3 ${labelClass}`}>
+          {icon && !highlight && <div className="w-5 h-5 flex items-center justify-center">{icon}</div>}
+          <div className={`${isSubItem ? 'text-sm' : 'font-medium'}`}>{label}</div>
+        </div>
+        <div className={`${valueClass} ${badgeClass}`}>{value}</div>
       </div>
-      <div className={`${valueClass} ${badgeClass}`}>{value}</div>
-    </div>
   );
+
+  if (onClick) {
+    const numericValue = typeof value === 'string' ? parseInt(value, 10) : typeof value === 'number' ? value : -1;
+    return (
+      <button 
+        onClick={onClick} 
+        disabled={numericValue === 0}
+        className="w-full text-left rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 -mx-2 px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return content;
 };
 
 /* =====================
@@ -95,6 +112,7 @@ const StatRow: React.FC<{
 const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(lieux);
   const [searchTerm, setSearchTerm] = useState('');
+  const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
   const filteredInventory = adhesiveInventory.filter(item =>
     (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -220,8 +238,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
           >
             <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention.</p>
             <div className="space-y-4">
-              <StatRow label="Adhésifs absents" value={maintenanceSummary.absent} highlight="danger" />
-              <StatRow label="Adhésifs à remplacer" value={maintenanceSummary.toBeReplaced} highlight="warning" />
+              <StatRow label="Adhésifs absents" value={maintenanceSummary.absent.count} highlight="danger" onClick={() => setModalContent({ title: 'Adhésifs Absents', items: maintenanceSummary.absent.items })} />
+              <StatRow label="Adhésifs à remplacer" value={maintenanceSummary.toBeReplaced.count} highlight="warning" onClick={() => setModalContent({ title: 'Adhésifs à Remplacer', items: maintenanceSummary.toBeReplaced.items })} />
               <StatRow label="Adhésifs OK" value={maintenanceSummary.okCount} highlight="info" />
             </div>
           </StatCard>
@@ -280,6 +298,12 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
         </div>
       </StatCard>
       
+      <MaintenanceListModal
+        isOpen={!!modalContent}
+        onClose={() => setModalContent(null)}
+        title={modalContent?.title || ''}
+        items={modalContent?.items || []}
+      />
     </Container>
   );
 };

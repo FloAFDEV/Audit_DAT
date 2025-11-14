@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { 
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
-    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem
+    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem, MaintenanceItem
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
@@ -140,56 +140,116 @@ export const useStats = (lieux: Lieu[]) => {
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
-        let toBeReplaced = 0;
-        let absent = 0;
+        const toBeReplaced: MaintenanceItem[] = [];
+        const absent: MaintenanceItem[] = [];
         let okCount = 0;
+
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
                 if (module.isFuture) continue;
+                
+                const baseItem = {
+                    lieuName: lieu.name,
+                    moduleName: module.name,
+                };
+
                 switch (module.type) {
                     case AuditModuleType.DAT:
                         (module.data as ModeData).stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
-                            Object.values(dat.adhesives).forEach(status => {
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
-                                if (status === AdhesiveStatus.Absent) absent++;
+                            Object.entries(dat.adhesives).forEach(([adhesiveId, status]) => {
+                                const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
+                                if (!adhesive) return;
+
+                                const item: MaintenanceItem = {
+                                    ...baseItem,
+                                    elementName: dat.name,
+                                    context: `Station: ${s.name} > ${d.name}`,
+                                    adhesiveName: adhesive.name,
+                                    status: status as string,
+                                };
+
+                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
+                                if (status === AdhesiveStatus.Absent) absent.push(item);
                                 if (status === AdhesiveStatus.OK) okCount++;
                             });
                         })));
                         break;
                     case AuditModuleType.PR:
                         (module.data as Pr).zones.forEach(z => z.equipments.forEach(eq => {
-                            Object.values(eq.adhesives).forEach(status => {
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
-                                if (status === AdhesiveStatus.Absent) absent++;
+                            const allPrAdhesives = getPrAdhesives(eq.type);
+                            Object.entries(eq.adhesives).forEach(([adhesiveId, status]) => {
+                                const adhesive = allPrAdhesives.find(a => a.id === adhesiveId);
+                                if (!adhesive) return;
+
+                                const item: MaintenanceItem = {
+                                    ...baseItem,
+                                    elementName: eq.name,
+                                    context: `Zone: ${z.name}`,
+                                    adhesiveName: adhesive.name,
+                                    status: status as string,
+                                };
+
+                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
+                                if (status === AdhesiveStatus.Absent) absent.push(item);
                                 if (status === AdhesiveStatus.OK) okCount++;
                             });
                         }));
                         break;
                     case AuditModuleType.ECA:
                         (module.data as EcaData).ecas.forEach(eca => {
-                            Object.values(eca.adhesives).forEach(status => {
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
-                                if (status === AdhesiveStatus.Absent) absent++;
+                            const allEcaAdhesives = getEcaAdhesives(eca.type);
+                            Object.entries(eca.adhesives).forEach(([adhesiveId, status]) => {
+                                const adhesive = allEcaAdhesives.find(a => a.id === adhesiveId);
+                                if (!adhesive) return;
+
+                                const item: MaintenanceItem = {
+                                    ...baseItem,
+                                    elementName: eca.name,
+                                    context: `Station: ${(module.data as EcaData).stationName} > ${eca.accessPoint}`,
+                                    adhesiveName: adhesive.name,
+                                    status: status as string,
+                                };
+
+                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
+                                if (status === AdhesiveStatus.Absent) absent.push(item);
                                 if (status === AdhesiveStatus.OK) okCount++;
                             });
                         });
                         break;
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
                         (module.data as PMRFloorAdhesiveData).adhesives.forEach(ad => {
-                            if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced++;
+                            const item: MaintenanceItem = {
+                                ...baseItem,
+                                elementName: "Adhésif au sol",
+                                context: `Station: ${(module.data as PMRFloorAdhesiveData).stationName}`,
+                                adhesiveName: ad.name,
+                                status: ad.status as string,
+                            };
+                            if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
                             if (ad.status === FloorAdhesiveStatus.OK) okCount++;
                         });
                         break;
                     case AuditModuleType.COGNITIVE_PICTOGRAMS:
                          (module.data as CognitivePictogramData).pictograms.forEach(p => {
-                            if (p.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced++;
+                            const item: MaintenanceItem = {
+                                ...baseItem,
+                                elementName: "Pictogramme cognitif",
+                                context: `Station: ${(module.data as CognitivePictogramData).stationName} > ${p.accessPointName}`,
+                                adhesiveName: "Pictogramme",
+                                status: p.status as string,
+                            };
+                            if (p.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
                             if (p.status === FloorAdhesiveStatus.OK) okCount++;
                         });
                         break;
                 }
             }
         }
-        return { toBeReplaced, absent, okCount };
+        return { 
+            toBeReplaced: { count: toBeReplaced.length, items: toBeReplaced },
+            absent: { count: absent.length, items: absent },
+            okCount 
+        };
     }, [lieux]);
 
     const adhesiveInventory = useMemo(() => {

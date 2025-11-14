@@ -216,3 +216,12 @@ export interface AdhesiveInventoryItem {
     dimensions: string;
     material: string;
 }
+
+export interface MaintenanceItem {
+  lieuName: string;
+  moduleName: string;
+  elementName: string;
+  context: string;
+  adhesiveName: string;
+  status: string;
+}
