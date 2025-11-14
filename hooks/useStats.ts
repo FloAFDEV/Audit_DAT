@@ -5,7 +5,7 @@ import {
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
-import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
+import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getPmrMaterial, getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
 // FIX: Import station data for all lines to calculate stats correctly.
@@ -142,7 +142,7 @@ export const useStats = (lieux: Lieu[]) => {
     const maintenanceSummary = useMemo(() => {
         let toBeReplaced = 0;
         let absent = 0;
-        let toPlan = 0;
+        let okCount = 0;
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
                 if (module.isFuture) continue;
@@ -152,6 +152,7 @@ export const useStats = (lieux: Lieu[]) => {
                             Object.values(dat.adhesives).forEach(status => {
                                 if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
                                 if (status === AdhesiveStatus.Absent) absent++;
+                                if (status === AdhesiveStatus.OK) okCount++;
                             });
                         })));
                         break;
@@ -160,6 +161,7 @@ export const useStats = (lieux: Lieu[]) => {
                             Object.values(eq.adhesives).forEach(status => {
                                 if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
                                 if (status === AdhesiveStatus.Absent) absent++;
+                                if (status === AdhesiveStatus.OK) okCount++;
                             });
                         }));
                         break;
@@ -168,25 +170,26 @@ export const useStats = (lieux: Lieu[]) => {
                             Object.values(eca.adhesives).forEach(status => {
                                 if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced++;
                                 if (status === AdhesiveStatus.Absent) absent++;
+                                if (status === AdhesiveStatus.OK) okCount++;
                             });
                         });
                         break;
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
                         (module.data as PMRFloorAdhesiveData).adhesives.forEach(ad => {
                             if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced++;
-                            if (ad.status === FloorAdhesiveStatus.ToPlan) toPlan++;
+                            if (ad.status === FloorAdhesiveStatus.OK) okCount++;
                         });
                         break;
                     case AuditModuleType.COGNITIVE_PICTOGRAMS:
                          (module.data as CognitivePictogramData).pictograms.forEach(p => {
                             if (p.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced++;
-                            if (p.status === FloorAdhesiveStatus.ToPlan) toPlan++;
+                            if (p.status === FloorAdhesiveStatus.OK) okCount++;
                         });
                         break;
                 }
             }
         }
-        return { toBeReplaced, absent, toPlan };
+        return { toBeReplaced, absent, okCount };
     }, [lieux]);
 
     const adhesiveInventory = useMemo(() => {
@@ -203,7 +206,7 @@ export const useStats = (lieux: Lieu[]) => {
                 } else if (material.includes('//')) {
                      [material, dimensions] = material.split('//').map(s => s.trim());
                 }
-                inventoryMap.set(ad.id, { id: ad.id, auditType, repere, name, dimensions, material, quantity: 0 });
+                inventoryMap.set(ad.id, { id: ad.id, auditType, repere, name, dimensions, material });
             });
         };
         
@@ -215,75 +218,10 @@ export const useStats = (lieux: Lieu[]) => {
         Object.values(EcaEquipmentType).forEach(type => {
             processAdhesiveList(getEcaAdhesives(type), auditModules.find(c=>c.type === AuditModuleType.ECA)!.shortLabel);
         });
-
-        // Tally quantities from actual audit data
-        for (const lieu of lieux) {
-            for (const module of lieu.modules) {
-                 if (module.isFuture) continue;
-                 switch(module.type) {
-                     case AuditModuleType.DAT:
-                         (module.data as ModeData).stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
-                            Object.entries(dat.adhesives).forEach(([id, status]) => {
-                                if ((status === AdhesiveStatus.OK || status === AdhesiveStatus.ToBeReplaced) && inventoryMap.has(id)) {
-                                    inventoryMap.get(id)!.quantity++;
-                                }
-                            });
-                         })));
-                         break;
-                    case AuditModuleType.PR:
-                        (module.data as Pr).zones.forEach(z => z.equipments.forEach(eq => {
-                             Object.entries(eq.adhesives).forEach(([id, status]) => {
-                                if ((status === AdhesiveStatus.OK || status === AdhesiveStatus.ToBeReplaced) && inventoryMap.has(id)) {
-                                    inventoryMap.get(id)!.quantity++;
-                                }
-                            });
-                        }));
-                        break;
-                    case AuditModuleType.ECA:
-                        (module.data as EcaData).ecas.forEach(eca => {
-                             Object.entries(eca.adhesives).forEach(([id, status]) => {
-                                if ((status === AdhesiveStatus.OK || status === AdhesiveStatus.ToBeReplaced) && inventoryMap.has(id)) {
-                                    inventoryMap.get(id)!.quantity++;
-                                }
-                            });
-                        });
-                        break;
-                 }
-            }
-        }
         
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE)!;
         const allPmrMaterials = getAllPmrMaterials();
-        const pmrByMaterial: Record<string, { quantity: number }> = Object.fromEntries(
-            allPmrMaterials.map(material => [material, { quantity: 0 }])
-        );
-
-        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS)!;
-        const cogPictoCounts: Record<string, number> = {};
-
-        lieux.forEach(lieu => lieu.modules.forEach(module => {
-            if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE && !module.isFuture) {
-                const data = module.data as PMRFloorAdhesiveData;
-                const material = getPmrMaterial(data.stationName, module.name);
-                if (material && pmrByMaterial[material]) {
-                    data.adhesives.forEach(ad => {
-                        if(ad.status === FloorAdhesiveStatus.OK || ad.status === FloorAdhesiveStatus.ToBeReplaced) {
-                            pmrByMaterial[material].quantity++;
-                        }
-                    });
-                }
-            } else if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS && !module.isFuture) {
-                const data = module.data as CognitivePictogramData;
-                data.pictograms.forEach(p => {
-                    if (p.status === FloorAdhesiveStatus.OK || p.status === FloorAdhesiveStatus.ToBeReplaced) {
-                        const dims = getCognitivePictogramDimension(data.stationCode, p.accessPointName);
-                        cogPictoCounts[dims] = (cogPictoCounts[dims] || 0) + 1;
-                    }
-                })
-            }
-        }));
-
-        Object.entries(pmrByMaterial).forEach(([material, data]) => {
+        allPmrMaterials.forEach(material => {
             const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
             inventoryMap.set(id, {
                 id: id,
@@ -292,14 +230,21 @@ export const useStats = (lieux: Lieu[]) => {
                 name: "Adhésif de signalisation au sol",
                 dimensions: "920x370mm",
                 material: material,
-                quantity: data.quantity
             });
         });
-        
-        Object.entries(cogPictoCounts).forEach(([dims, quantity]) => {
+
+        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS)!;
+        const allCogPictoDims = new Set<string>();
+        Object.values(COGNITIVE_PICTOGRAM_DIMENSIONS).forEach(dim => {
+            if(typeof dim === 'string') allCogPictoDims.add(dim);
+            else if(typeof dim === 'object' && dim !== null) {
+                Object.values(dim).forEach(d => allCogPictoDims.add(d));
+            }
+        });
+        allCogPictoDims.forEach(dims => {
             inventoryMap.set(`cog-picto-${dims}`, {
                 id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
-                dimensions: dims, material: 'Vinyle + Plastification', quantity
+                dimensions: dims, material: 'Vinyle + Plastification'
             });
         });
         
@@ -329,7 +274,7 @@ export const useStats = (lieux: Lieu[]) => {
             return a.name.localeCompare(b.name);
         });
 
-    }, [lieux]);
+    }, []);
 
     return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
 };

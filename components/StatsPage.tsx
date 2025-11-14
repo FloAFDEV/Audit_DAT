@@ -218,11 +218,11 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
             icon={<AlertTriangle className="w-6 h-6 text-red-500" />} 
             className="!border-red-500/10 dark:!border-red-900/50" // Surcharge de la bordure pour l'alerte
           >
-            <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention immédiate.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention.</p>
             <div className="space-y-4">
               <StatRow label="Adhésifs absents" value={maintenanceSummary.absent} highlight="danger" />
               <StatRow label="Adhésifs à remplacer" value={maintenanceSummary.toBeReplaced} highlight="warning" />
-              <StatRow label="Poses à planifier (Nouveaux)" value={maintenanceSummary.toPlan} highlight="info" />
+              <StatRow label="Adhésifs OK" value={maintenanceSummary.okCount} highlight="info" />
             </div>
           </StatCard>
         </div>
@@ -271,7 +271,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 
                 {filteredInventory.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
+                    <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
                   </tr>
                 )}
               </tbody>
