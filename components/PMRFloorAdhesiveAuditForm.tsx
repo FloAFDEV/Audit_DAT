@@ -120,6 +120,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
         ref={fileInputRef}
         onChange={handleFileChange}
         accept="image/*"
+        capture="environment"
         className="hidden"
       />
       <AuditFormLayout
