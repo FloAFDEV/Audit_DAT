@@ -1,3 +1,4 @@
+
 import { useMemo } from 'react';
 import { 
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
@@ -257,9 +258,14 @@ export const useStats = (lieux: Lieu[]) => {
                 }
             }
         }
+
+        // FUSION POUR L'AFFICHAGE UNIQUE
+        const allDefects = [...toBeReplaced, ...absent];
+
         return { 
             toBeReplaced: { count: toBeReplaced.length, items: toBeReplaced },
             absent: { count: absent.length, items: absent },
+            allDefects: { count: allDefects.length, items: allDefects },
             okCount 
         };
     }, [lieux]);

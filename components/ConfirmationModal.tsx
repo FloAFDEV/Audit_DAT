@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
@@ -41,6 +42,13 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
     const isConfirmationRequired = isDestructive && confirmationCode;
     const isConfirmationMatch = !isConfirmationRequired || userInput === confirmationCode;
+    
+    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter' && isConfirmationMatch) {
+            e.preventDefault();
+            onConfirm();
+        }
+    };
     
     const renderMessage = () => {
         const highlightClassName = "font-semibold text-gray-900 dark:text-white";
@@ -166,6 +174,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                 pattern="[0-9]*"
                                 value={userInput}
                                 onChange={(e) => setUserInput(e.target.value.trim())}
+                                onKeyDown={handleKeyDown}
                                 className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6"
                                 placeholder="****"
                                 maxLength={4}

@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle } from 'lucide-react';
 import { Lieu, MaintenanceItem } from '../types';
@@ -238,8 +239,28 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
           >
             <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention.</p>
             <div className="space-y-4">
-              <StatRow label="Adhésifs absents" value={maintenanceSummary.absent.count} highlight="danger" onClick={() => setModalContent({ title: 'Adhésifs Absents', items: maintenanceSummary.absent.items })} />
-              <StatRow label="Adhésifs à remplacer" value={maintenanceSummary.toBeReplaced.count} highlight="warning" onClick={() => setModalContent({ title: 'Adhésifs à Remplacer', items: maintenanceSummary.toBeReplaced.items })} />
+              {/* BOUTON UNIQUE PRINCIPAL */}
+              <StatRow 
+                label="Total Anomalies" 
+                value={maintenanceSummary.allDefects.count} 
+                highlight="danger" 
+                onClick={() => setModalContent({ title: 'Anomalies constatées', items: maintenanceSummary.allDefects.items })} 
+              />
+              
+              {/* DÉTAILS NON CLIQUABLES (À TITRE INFORMATIF) */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                 <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 text-center">
+                    <div className="text-2xl font-bold text-red-600 dark:text-red-400">{maintenanceSummary.absent.count}</div>
+                    <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
+                 </div>
+                 <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 text-center">
+                    <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{maintenanceSummary.toBeReplaced.count}</div>
+                    <div className="text-xs font-semibold text-orange-800 dark:text-orange-300 uppercase mt-1">À remplacer</div>
+                 </div>
+              </div>
+
+              <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+
               <StatRow label="Adhésifs OK" value={maintenanceSummary.okCount} highlight="info" />
             </div>
           </StatCard>
