@@ -1,6 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { X, AlertTriangle } from 'lucide-react';
-import { MaintenanceItem } from '../types';
+import { MaintenanceItem, AuditCategory } from '../types';
+import { AUDIT_CATEGORIES } from '../data/config';
+import { CategoryIcon } from './CategoryIcon';
+import { ModuleIcon } from './ModuleIcon';
 
 interface MaintenanceListModalProps {
   isOpen: boolean;
@@ -10,6 +13,32 @@ interface MaintenanceListModalProps {
 }
 
 const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onClose, title, items }) => {
+    const sortedItems = useMemo(() => {
+        // Define sorting order for categories
+        const categoryOrder: (AuditCategory | undefined)[] = ['METRO_A', 'METRO_B', 'METRO_C', 'TRAM', 'TELEO', 'PR', undefined];
+        
+        return [...items].sort((a, b) => {
+            // 1. Sort by Category (Line)
+            const indexA = categoryOrder.indexOf(a.category);
+            const indexB = categoryOrder.indexOf(b.category);
+            
+            // Handle cases where category might not be in the list (put at the end)
+            const safeIndexA = indexA === -1 ? 999 : indexA;
+            const safeIndexB = indexB === -1 ? 999 : indexB;
+
+            if (safeIndexA !== safeIndexB) {
+                return safeIndexA - safeIndexB;
+            }
+
+            // 2. Sort by Lieu Name
+            const lieuCompare = a.lieuName.localeCompare(b.lieuName);
+            if (lieuCompare !== 0) return lieuCompare;
+
+            // 3. Sort by Element Name
+            return a.elementName.localeCompare(b.elementName);
+        });
+    }, [items]);
+
     if (!isOpen) return null;
 
     return (
@@ -48,24 +77,46 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                    {items.length === 0 ? (
+                    {sortedItems.length === 0 ? (
                          <div className="flex items-center justify-center h-full">
                             <p className="text-gray-500 dark:text-slate-400">Aucun élément à afficher.</p>
                         </div>
                     ) : (
                         <ul className="divide-y divide-gray-200 dark:divide-slate-700">
-                            {items.map((item, index) => (
-                                <li key={index} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50">
-                                    <p className="font-semibold text-gray-800 dark:text-slate-100">{item.adhesiveName}</p>
-                                    <p className="text-sm text-gray-600 dark:text-slate-300">
-                                        <span className="font-medium text-gray-800 dark:text-slate-200">Élément :</span> {item.elementName}
-                                    </p>
-                                    <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                                        <span className="font-medium">Lieu :</span> {item.lieuName} ({item.moduleName})
-                                    </p>
-                                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{item.context}</p>
-                                </li>
-                            ))}
+                            {sortedItems.map((item, index) => {
+                                const categoryConfig = item.category ? AUDIT_CATEGORIES.find(c => c.key === item.category) : undefined;
+                                
+                                return (
+                                    <li key={index} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                        {/* Header: Badge Line + Lieu Name + Context */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="sm" />}
+                                                <span className="font-bold text-lg text-gray-800 dark:text-slate-100">{item.lieuName}</span>
+                                                <span className="hidden sm:inline text-gray-300 dark:text-slate-600">|</span>
+                                                <span className="text-sm text-gray-500 dark:text-slate-400">{item.context}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Body: Audit Type Icon + Element Name + Adhesive Name */}
+                                        <div className="flex items-start gap-3 pl-1">
+                                            {item.auditType && (
+                                                <div className="mt-0.5 flex-shrink-0" title={item.moduleName}>
+                                                    <ModuleIcon type={item.auditType} className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                                                </div>
+                                            )}
+                                            <div>
+                                                <p className="text-base font-semibold text-gray-900 dark:text-slate-50">
+                                                    {item.adhesiveName}
+                                                </p>
+                                                <p className="text-sm text-gray-600 dark:text-slate-300">
+                                                    <span className="font-medium">Élément concerné :</span> {item.elementName}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </li>
+                                );
+                            })}
                         </ul>
                     )}
                 </div>

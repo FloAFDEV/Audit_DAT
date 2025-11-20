@@ -1,14 +1,13 @@
 import { useMemo } from 'react';
 import { 
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
-    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem, MaintenanceItem
+    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem, MaintenanceItem, AuditCategory
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getPmrMaterial, getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
-// FIX: Import station data for all lines to calculate stats correctly.
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 
@@ -21,9 +20,18 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
+const getCategoryForModule = (module: AuditModule): AuditCategory | undefined => {
+    if (module.type === AuditModuleType.PR) return 'PR';
+    if (module.line === 'A') return 'METRO_A';
+    if (module.line === 'B') return 'METRO_B';
+    if (module.line === 'C') return 'METRO_C';
+    if (module.line === 'TRAM') return 'TRAM';
+    if (module.line === 'TELEO') return 'TELEO';
+    return undefined;
+};
+
 export const useStats = (lieux: Lieu[]) => {
 
-    // FIX: Expanded globalCounts to include missing stats properties.
     const globalCounts = useMemo(() => {
         let datCount = 0;
         let datCountA = 0;
@@ -148,9 +156,13 @@ export const useStats = (lieux: Lieu[]) => {
             for (const module of lieu.modules) {
                 if (module.isFuture) continue;
                 
+                const category = getCategoryForModule(module);
+
                 const baseItem = {
                     lieuName: lieu.name,
                     moduleName: module.name,
+                    category: category,
+                    auditType: module.type,
                 };
 
                 switch (module.type) {
@@ -205,7 +217,7 @@ export const useStats = (lieux: Lieu[]) => {
                                 const item: MaintenanceItem = {
                                     ...baseItem,
                                     elementName: eca.name,
-                                    context: `Station: ${(module.data as EcaData).stationName} > ${eca.accessPoint}`,
+                                    context: `Accès : ${eca.accessPoint}`,
                                     adhesiveName: adhesive.name,
                                     status: status as string,
                                 };
@@ -234,7 +246,7 @@ export const useStats = (lieux: Lieu[]) => {
                             const item: MaintenanceItem = {
                                 ...baseItem,
                                 elementName: "Pictogramme cognitif",
-                                context: `Station: ${(module.data as CognitivePictogramData).stationName} > ${p.accessPointName}`,
+                                context: `Accès : ${p.accessPointName}`,
                                 adhesiveName: "Pictogramme",
                                 status: p.status as string,
                             };

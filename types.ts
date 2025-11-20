@@ -224,4 +224,6 @@ export interface MaintenanceItem {
   context: string;
   adhesiveName: string;
   status: string;
+  category?: AuditCategory;
+  auditType?: AuditModuleType;
 }
