@@ -1,12 +1,14 @@
+
 // utils/csvExporter.ts
 
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    AdhesiveStatus, FloorAdhesiveStatus, Station, DAT, Equipment, ECA, PMRFloorAdhesive, PrZone
+    AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType
 } from '../types';
-import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
+import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
+import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 
 /**
  * Converts a string into a URL-friendly slug.
@@ -69,26 +71,101 @@ export const validateImportedData = (data: any): data is Lieu[] => {
 };
 
 // =================================================================
-// SECTION: CALENDAR (.ics) EXPORT
+// SECTION: CALENDAR (.ics) EXPORT & HOLIDAY LOGIC
 // =================================================================
 
 /**
- * Calcule la date de rappel initiale en ajoutant des mois et en s'assurant qu'elle ne tombe pas un vendredi, samedi ou dimanche.
+ * Calcule le jour de Pâques pour une année donnée (Algorithme de Meeus/Jones/Butcher).
+ */
+const getEasterDate = (year: number): Date => {
+    const a = year % 19;
+    const b = Math.floor(year / 100);
+    const c = year % 100;
+    const d = Math.floor(b / 4);
+    const e = b % 4;
+    const f = Math.floor((b + 8) / 25);
+    const g = Math.floor((b - f + 1) / 3);
+    const h = (19 * a + b - d - g + 15) % 30;
+    const i = Math.floor(c / 4);
+    const k = c % 4;
+    const l = (32 + 2 * e + 2 * i - h - k) % 7;
+    const m = Math.floor((a + 11 * h + 22 * l) / 451);
+    const month = Math.floor((h + l - 7 * m + 114) / 31);
+    const day = ((h + l - 7 * m + 114) % 31) + 1;
+    return new Date(year, month - 1, day);
+};
+
+/**
+ * Vérifie si une date est un jour férié en France.
+ */
+const isHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1; // Janvier = 1
+    const year = date.getFullYear();
+
+    // Jours fériés fixes
+    if (
+        (d === 1 && m === 1) ||   // Jour de l'An
+        (d === 1 && m === 5) ||   // Fête du Travail
+        (d === 8 && m === 5) ||   // Victoire 1945
+        (d === 14 && m === 7) ||  // Fête Nationale
+        (d === 15 && m === 8) ||  // Assomption
+        (d === 1 && m === 11) ||  // Toussaint
+        (d === 11 && m === 11) || // Armistice 1918
+        (d === 25 && m === 12)    // Noël
+    ) {
+        return true;
+    }
+
+    // Jours fériés mobiles (basés sur Pâques)
+    const easter = getEasterDate(year);
+    
+    // Lundi de Pâques (+1 jour)
+    const easterMonday = new Date(easter);
+    easterMonday.setDate(easter.getDate() + 1);
+    if (date.getTime() === easterMonday.getTime()) return true;
+
+    // Ascension (+39 jours)
+    const ascension = new Date(easter);
+    ascension.setDate(easter.getDate() + 39);
+    if (date.getTime() === ascension.getTime()) return true;
+
+    // Lundi de Pentecôte (+50 jours)
+    const pentecostMonday = new Date(easter);
+    pentecostMonday.setDate(easter.getDate() + 50);
+    if (date.getTime() === pentecostMonday.getTime()) return true;
+
+    return false;
+};
+
+/**
+ * Vérifie si une date est un jour ouvré (ni week-end, ni férié).
+ */
+const isBusinessDay = (date: Date): boolean => {
+    const day = date.getDay();
+    // 0 = Dimanche, 6 = Samedi
+    if (day === 0 || day === 6) return false;
+    // Normaliser l'heure pour la comparaison de jours fériés
+    const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    if (isHoliday(normalizedDate)) return false;
+    return true;
+};
+
+/**
+ * Calcule la date de rappel initiale en ajoutant des mois.
+ * Si la date tombe un week-end ou un jour férié, elle est décalée au prochain jour ouvré.
  * @param monthsToAdd Le nombre de mois à ajouter à la date actuelle.
  * @returns Un objet Date représentant la date de rappel suggérée.
  */
 export const calculateInitialReminderDate = (monthsToAdd: number): Date => {
-    const date = new Date();
+    let date = new Date();
+    // Reset hours to avoid timezone shifts affecting the date calculation roughly
+    date.setHours(12, 0, 0, 0);
     date.setMonth(date.getMonth() + monthsToAdd);
 
-    const day = date.getDay(); // Sunday = 0, Monday = 1, ..., Saturday = 6
-
-    if (day === 5) { // Friday
-        date.setDate(date.getDate() + 3); // Move to Monday
-    } else if (day === 6) { // Saturday
-        date.setDate(date.getDate() + 2); // Move to Monday
-    } else if (day === 0) { // Sunday
-        date.setDate(date.getDate() + 1); // Move to Monday
+    // Boucle jusqu'à trouver un jour ouvré
+    while (!isBusinessDay(date)) {
+        date.setDate(date.getDate() + 1);
     }
 
     return date;
@@ -147,8 +224,6 @@ const escapeCsv = (value: any): string => {
     return str;
 };
 
-// The `AdhesiveStatus` and `FloorAdhesiveStatus` enums shared member names (e.g., NotChecked),
-// which resulted in the same computed property key in the object literal.
 const statusTranslations: { [key: string]: string } = {
     [AdhesiveStatus.NotChecked]: 'Non contrôlé',
     [AdhesiveStatus.OK]: 'OK',
@@ -160,7 +235,6 @@ const statusTranslations: { [key: string]: string } = {
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
-    // This regex captures the number (or text like '10') after "Repère" and the rest of the string.
     const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
     if (repereMatch) {
         return {
@@ -181,6 +255,7 @@ const getModeFromLine = (line: string | undefined): string => {
 
 const formatCompletionDate = (isoDate?: string): string => {
     if (!isoDate) return '';
+    // Force date format only (no time)
     return new Date(isoDate).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: '2-digit',
@@ -204,20 +279,38 @@ interface CsvRow {
     'Photo Jointe': string;
     'Note Photo': string;
     'Commentaire': string;
-    _lieuIndex?: number; // Temporary property for sorting
 }
+
+// Configuration pour le tri physique des stations
+const STATION_ORDER_MAP = new Map<string, Map<string, number>>();
+
+const buildStationIndexMap = (line: string, stations: any[]) => {
+    const map = new Map<string, number>();
+    stations.forEach((s, index) => {
+        const name = s.lieuName || s.name;
+        if (name) map.set(name, index);
+    });
+    STATION_ORDER_MAP.set(line, map);
+};
+
+// Build the maps once
+buildStationIndexMap('A', LINE_A_STATIONS);
+buildStationIndexMap('B', LINE_B_STATIONS);
+buildStationIndexMap('C', LINE_C_STATIONS);
+buildStationIndexMap('TRAM', TRAM_STATIONS);
+buildStationIndexMap('TELEO', TELEO_STATIONS);
 
 export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: boolean; error?: string } => {
     try {
         const rows: CsvRow[] = [];
         const exportDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
-        for (const [lieuIndex, lieu] of lieux.entries()) {
+        for (const lieu of lieux) {
             for (const module of lieu.modules) {
                 const line = module.line || '';
                 const mode = getModeFromLine(line);
 
-                const baseRow: Omit<CsvRow, '_lieuIndex'> = {
+                const baseRow: CsvRow = {
                     'Date de l\'export': exportDate,
                     'Date de Réalisation': '',
                     Lieu: lieu.name,
@@ -238,7 +331,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                 if (module.isFuture) {
                     rows.push({
                         ...baseRow,
-                        _lieuIndex: lieuIndex,
                         'Élément': module.name,
                         'Statut': 'N/A (futur)',
                     });
@@ -265,11 +357,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                         rows.push({
                                             ...baseRow,
-                                            _lieuIndex: lieuIndex,
                                             'Date de Réalisation': formatCompletionDate(dat.completionDate),
                                             'Direction/Équipement/Accès': direction.name,
                                             'Élément': dat.name,
-// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error.
                                             'Statut': statusTranslations[status as string] || status,
                                             'Repère': repere,
                                             'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
@@ -284,7 +374,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.PR: {
                         const data = module.data as Pr;
-// @FIX: The original code was missing a loop over `zones`. The `equipments` array exists on each `zone`, not directly on the `Pr` data object.
                         for (const zone of data.zones) {
                             for (const equipment of zone.equipments) {
                                 const adhesives = getPrAdhesives(equipment.type);
@@ -310,11 +399,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
                                     rows.push({
                                         ...baseRow,
-                                        _lieuIndex: lieuIndex,
                                         'Date de Réalisation': formatCompletionDate(equipment.completionDate),
                                         'Direction/Équipement/Accès': zone.name,
                                         'Élément': `${equipment.name} (${equipment.type})`,
-// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error. This is likely due to a strict TypeScript configuration where `Object.entries` values are not strongly typed.
                                         'Statut': statusTranslations[status as string] || status,
                                         'Repère': repere,
                                         'Description Adhésif': finalDescription,
@@ -332,7 +419,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             if (eca.isNotApplicable) {
                                 rows.push({
                                     ...baseRow,
-                                    _lieuIndex: lieuIndex,
                                     'Date de Réalisation': formatCompletionDate(eca.completionDate),
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
@@ -356,11 +442,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 
                                 rows.push({
                                     ...baseRow,
-                                    _lieuIndex: lieuIndex,
                                     'Date de Réalisation': formatCompletionDate(eca.completionDate),
                                     'Direction/Équipement/Accès': eca.accessPoint,
                                     'Élément': eca.name,
-// @FIX: Cast `status` to string to resolve "Type 'unknown' cannot be used as an index type" error.
                                     'Statut': statusTranslations[status as string] || status,
                                     'Repère': repere,
                                     'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
@@ -376,7 +460,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         if (data.isNotApplicable) {
                             rows.push({
                                 ...baseRow,
-                                _lieuIndex: lieuIndex,
                                 'Date de Réalisation': formatCompletionDate(data.completionDate),
                                 'Élément': module.name,
                                 'Statut': 'Non applicable',
@@ -392,12 +475,11 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             }
                             rows.push({
                                 ...baseRow,
-                                _lieuIndex: lieuIndex,
                                 'Date de Réalisation': formatCompletionDate(data.completionDate),
-                                'Élément': '', // Vidé comme demandé
+                                'Élément': '',
                                 'Statut': statusTranslations[adhesive.status] || adhesive.status,
                                 'Description Adhésif': description,
-                                'Localisation Adhésif': '', // Vidé comme demandé
+                                'Localisation Adhésif': '',
                                 'Photo Jointe': adhesive.photo_base64 ? 'Oui (disponible via export/import JSON)' : 'Non',
                                 'Note Photo': adhesive.photo_note || '',
                                 'Commentaire': data.comment,
@@ -411,7 +493,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             const dimensions = getCognitivePictogramDimension(data.stationCode, pictogram.accessPointName);
                             rows.push({
                                 ...baseRow,
-                                _lieuIndex: lieuIndex,
                                 'Date de Réalisation': formatCompletionDate(data.completionDate),
                                 'Direction/Équipement/Accès': pictogram.accessPointName,
                                 'Élément': 'Pictogramme cognitif (ou totem)',
@@ -431,20 +512,50 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
             return { success: true };
         }
 
-        const lineOrder = ['A', 'B', 'C', 'TRAM', 'TELEO', ''];
-        const lineOrderMap = new Map(lineOrder.map((line, index) => [line, index]));
+        // --- TRI PHYSIQUE ET PAR LIGNE ---
+        const lineRank = new Map([
+            ['A', 1],
+            ['B', 2],
+            ['C', 3],
+            ['TRAM', 4],
+            ['TELEO', 5],
+            ['', 99] // Autres / P+R
+        ]);
 
         rows.sort((a, b) => {
-            const orderA = lineOrderMap.get(a.Ligne) ?? 99;
-            const orderB = lineOrderMap.get(b.Ligne) ?? 99;
-            if (orderA !== orderB) return orderA - orderB;
-            return (a._lieuIndex ?? 0) - (b._lieuIndex ?? 0);
+            // 1. Tri par Ligne (A > B > C > TRAM > TELEO > Autres)
+            const rankA = lineRank.get(a.Ligne) ?? 99;
+            const rankB = lineRank.get(b.Ligne) ?? 99;
+            
+            if (rankA !== rankB) {
+                return rankA - rankB;
+            }
+
+            // 2. Tri Physique (Ordre des stations sur la ligne)
+            // Utilisation de STATION_ORDER_MAP générée plus haut
+            const stationsOnLine = STATION_ORDER_MAP.get(a.Ligne);
+            if (stationsOnLine) {
+                const stationIndexA = stationsOnLine.get(a.Lieu) ?? 999;
+                const stationIndexB = stationsOnLine.get(b.Lieu) ?? 999;
+                
+                if (stationIndexA !== stationIndexB) {
+                    return stationIndexA - stationIndexB;
+                }
+            }
+
+            // 3. Fallback : Tri alphabétique sur le Lieu si pas d'ordre physique trouvé
+            const lieuCompare = a.Lieu.localeCompare(b.Lieu);
+            if (lieuCompare !== 0) return lieuCompare;
+
+            // 4. Tri par Élément (pour regrouper les équipements identiques)
+            return a['Élément'].localeCompare(b['Élément']);
         });
 
+        // --- CONSTRUCTION CSV ---
         const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
         let lastLigne: string | null = null;
         
-        const headerKeys: (keyof Omit<CsvRow, '_lieuIndex'>)[] = [
+        const headerKeys: (keyof CsvRow)[] = [
             'Date de l\'export', 'Date de Réalisation', 'Lieu', 'Type d\'Audit', 'Ligne', 'Mode', 
             'Direction/Équipement/Accès', 'Élément', 'Statut', 'Repère', 'Description Adhésif', 
             'Localisation Adhésif', 'Photo Jointe', 'Note Photo', 'Commentaire'
@@ -456,14 +567,13 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
             if (lastLigne !== null && row.Ligne !== lastLigne) {
                 finalCsvRowsForStringify.push(blankRow);
             }
-            const { _lieuIndex, ...restOfRow } = row;
-            finalCsvRowsForStringify.push(restOfRow);
+            finalCsvRowsForStringify.push(row);
             lastLigne = row.Ligne;
         }
 
         const csvContent = [
             '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
-            ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row[fieldName])).join(','))
+            ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row ? row[fieldName] : '')).join(','))
         ].join('\n') + '\n\n"Généré avec AuditRef, créé par Florent PEREZ"';
 
         downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
