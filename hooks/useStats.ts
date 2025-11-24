@@ -176,7 +176,7 @@ export const useStats = (lieux: Lieu[]) => {
                                 const item: MaintenanceItem = {
                                     ...baseItem,
                                     elementName: dat.name,
-                                    context: `Station: ${s.name} > ${d.name}`,
+                                    context: d.name, // Just the direction name (e.g., "Direction HAUT (PRI)")
                                     adhesiveName: adhesive.name,
                                     status: status as string,
                                 };
@@ -197,7 +197,7 @@ export const useStats = (lieux: Lieu[]) => {
                                 const item: MaintenanceItem = {
                                     ...baseItem,
                                     elementName: eq.name,
-                                    context: `Zone: ${z.name}`,
+                                    context: z.name, // Specific Zone
                                     adhesiveName: adhesive.name,
                                     status: status as string,
                                 };
@@ -218,7 +218,7 @@ export const useStats = (lieux: Lieu[]) => {
                                 const item: MaintenanceItem = {
                                     ...baseItem,
                                     elementName: eca.name,
-                                    context: `Accès : ${eca.accessPoint}`,
+                                    context: eca.accessPoint, // Just the Access Point (e.g., "Accès Principal")
                                     adhesiveName: adhesive.name,
                                     status: status as string,
                                 };
@@ -230,11 +230,18 @@ export const useStats = (lieux: Lieu[]) => {
                         });
                         break;
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
+                        // Extract location context from Module Name if possible (e.g. "Adhésifs PMR (Accès Historique)")
+                        let pmrContext = "Zone générale";
+                        const contextMatch = module.name.match(/\((.*?)\)/);
+                        if (contextMatch && contextMatch[1]) {
+                            pmrContext = contextMatch[1];
+                        }
+
                         (module.data as PMRFloorAdhesiveData).adhesives.forEach(ad => {
                             const item: MaintenanceItem = {
                                 ...baseItem,
                                 elementName: "Adhésif au sol",
-                                context: `Station: ${(module.data as PMRFloorAdhesiveData).stationName}`,
+                                context: pmrContext,
                                 adhesiveName: ad.name,
                                 status: ad.status as string,
                             };
@@ -247,7 +254,7 @@ export const useStats = (lieux: Lieu[]) => {
                             const item: MaintenanceItem = {
                                 ...baseItem,
                                 elementName: "Pictogramme cognitif",
-                                context: `Accès : ${p.accessPointName}`,
+                                context: p.accessPointName, // Specific Access Name
                                 adhesiveName: "Pictogramme",
                                 status: p.status as string,
                             };

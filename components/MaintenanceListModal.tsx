@@ -150,12 +150,19 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                 return (
                                     <li key={index} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         {/* Header: Badge Ligne + Nom du Lieu + Zone */}
-                                        <div className="flex items-center gap-3 mb-2">
-                                            {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="sm" />}
-                                            <div className="min-w-0 flex-1">
-                                                <span className="font-bold text-lg text-gray-800 dark:text-slate-100 mr-2">{item.lieuName}</span>
-                                                <span className="text-sm text-gray-500 dark:text-slate-400 border-l border-gray-300 dark:border-slate-600 pl-2">{item.context}</span>
+                                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                                            <div className="flex items-center gap-3">
+                                                {categoryConfig && <CategoryIcon categoryConfig={categoryConfig} size="sm" />}
+                                                <span className="font-bold text-lg text-gray-800 dark:text-slate-100">{item.lieuName}</span>
                                             </div>
+                                            {item.context && (
+                                                <div className="flex items-center">
+                                                    <span className="hidden sm:inline text-gray-300 dark:text-slate-600 mr-2">|</span>
+                                                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded">
+                                                        {item.context}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                         
                                         {/* Body: Icône Module + Nom Élément + Nom Adhésif */}
