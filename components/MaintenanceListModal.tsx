@@ -1,11 +1,13 @@
 
 import React, { useMemo, useState } from 'react';
-import { X, AlertTriangle, ArrowUpDown } from 'lucide-react';
+import { X, AlertTriangle, ArrowUpDown, Download } from 'lucide-react';
 import { MaintenanceItem, AuditCategory, Station } from '../types';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import { ModuleIcon } from './ModuleIcon';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
+import { exportMaintenanceListToCsv } from '../utils/csvExporter';
+import toast from 'react-hot-toast';
 
 interface MaintenanceListModalProps {
   isOpen: boolean;
@@ -76,6 +78,16 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
             return a.elementName.localeCompare(b.elementName);
         });
     }, [items, isAlphaSort]);
+
+    const handleExport = () => {
+        const fileName = `anomalies-maintenance-${new Date().toISOString().slice(0, 10)}.csv`;
+        const result = exportMaintenanceListToCsv(sortedItems, fileName);
+        if (result.success) {
+            toast.success('Export CSV téléchargé !');
+        } else {
+            toast.error('Erreur lors de l\'export.');
+        }
+    };
 
     if (!isOpen) return null;
 
@@ -176,13 +188,21 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                     )}
                 </div>
 
-                <div className="bg-gray-50 dark:bg-slate-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-200 dark:border-slate-700 flex-shrink-0">
+                <div className="bg-gray-50 dark:bg-slate-800/50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6 border-t border-gray-200 dark:border-slate-700 flex-shrink-0 gap-2">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
+                        className="inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:w-auto"
                     >
                         Fermer
+                    </button>
+                    <button
+                        type="button"
+                        onClick={handleExport}
+                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:w-auto mt-3 sm:mt-0"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>Exporter (CSV)</span>
                     </button>
                 </div>
             </div>

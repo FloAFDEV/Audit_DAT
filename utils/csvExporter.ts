@@ -3,12 +3,13 @@
 
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType
+    AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem
 } from '../types';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
+import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 
 /**
  * Converts a string into a URL-friendly slug.
@@ -581,5 +582,43 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
     } catch (error) {
         console.error("Failed to export to CSV:", error);
         return { success: false, error: error instanceof Error ? error.message : 'Une erreur inconnue est survenue' };
+    }
+};
+
+// =================================================================
+// SECTION: MAINTENANCE LIST EXPORT
+// =================================================================
+
+export const exportMaintenanceListToCsv = (items: MaintenanceItem[], fileName: string): { success: boolean; error?: string } => {
+    try {
+        const headerKeys = ['Lieu', 'Ligne', 'Type d\'Audit', 'Élément', 'Contexte', 'Adhésif', 'Statut'];
+        const rows = items.map(item => {
+            const categoryConfig = item.category ? AUDIT_CATEGORIES.find(c => c.key === item.category) : undefined;
+            const moduleConfig = item.auditType ? AUDIT_MODULES_CONFIG.find(m => m.type === item.auditType) : undefined;
+            
+            const status = item.status === 'Absent' ? 'Absent' : 
+                           item.status === 'ToBeReplaced' ? 'À remplacer' : item.status;
+
+            return {
+                'Lieu': item.lieuName,
+                'Ligne': categoryConfig?.shortLabel || '',
+                'Type d\'Audit': moduleConfig?.shortLabel || '',
+                'Élément': item.elementName,
+                'Contexte': item.context,
+                'Adhésif': item.adhesiveName,
+                'Statut': status,
+            };
+        });
+
+        const csvContent = [
+            '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
+            ...rows.map(row => Object.values(row).map(escapeCsv).join(','))
+        ].join('\n');
+
+        downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to export maintenance list:", error);
+        return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' };
     }
 };
