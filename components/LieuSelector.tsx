@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
 import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { useLieuList } from '../hooks/useLieuList';
 import { ProgressBadge } from './ProgressBadge';
 import { LieuBadges } from './Icons';
 import { ModuleIcon } from './ModuleIcon';
+import { Logo } from './Logo';
 
 type ResetTarget = { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any };
 
@@ -208,7 +210,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         <div>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/json" className="hidden" />
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <h2 className="text-3xl font-bold text-gray-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
+                <div className="flex items-center gap-3">
+                    <Logo className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
+                </div>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
                     <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Afficher les statistiques" title="Afficher les statistiques">
                         <BarChart3 className="w-5 h-5" />
