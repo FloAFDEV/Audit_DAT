@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { CognitivePictogram, FloorAdhesiveStatus } from '../types';
 
@@ -87,26 +88,26 @@ const initialCounts: Record<string, number> = {
     'CAR': 2,
     'PDJ': 2,
     'SMI': 2,
-    'EMP': 1,
-    'SAG': 2,
+    // 'EMP': 1, // Handled in switch
+    // 'SAG': 2, // Handled in switch
     'SAO': 2,
-    'RAN': 1,
-    'PHA': 2,
+    // 'RAN': 1, // Handled in switch
+    // 'PHA': 2, // Handled in switch
     'UPS': 2,
     // 'RAM' is a special case
     
     // Line A
-    'BGR': 2,
-    'ARG': 1,
-    'ROS': 1,
+    // 'BGR': 2, // Handled in switch
+    // 'ARG': 1, // Handled in switch
+    // 'ROS': 1, // Handled in switch
     // 'JOL' is a special case
-    'MAR': 1,
+    // 'MAR': 1, // Handled in switch
     'JJA': 1,
     // 'CAP' is a special case
     // 'ESQ' is a special case
-    'ARE': 2,
-    'MUN': 2,
-    'BEL': 2,
+    // 'ARE': 2, // Handled in switch
+    // 'MUN': 2, // Handled in switch
+    // 'BEL': 2, // Handled in switch
     'MBC': 2,
 };
 
@@ -117,6 +118,65 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
     // Special cases based on station configuration
     switch (stationCode) {
         // --- Ligne A ---
+        case 'BEL': // Bellefontaine
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté allée de Bellefontaine',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'MUN': // Mirail-Université
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté rue de l’Université du Mirail',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'ARE': // Arènes
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté tram',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'MAR': // Marengo-SNCF
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté boulevard de Marengo (proche gare bus)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'ROS': // Roseraie
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté place de la Roseraie',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'ARG': // Argoulets (Unique mais 2 pictos)
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Principal (Picto 1)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès Principal (Picto 2)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'BGR': // Balma-Gramont
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté gare bus',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté centre commercial',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
         case 'FLE': // Fontaine-Lestang
             pictos.push({
                 id: uuidv4(),
@@ -246,6 +306,46 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
             return pictos;
             
         // --- Ligne B ---
+        case 'CAN': // Canal du Midi
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté boulevard de l’Embouchure (commissariat)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'EMP': // Empalot
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté gare bus (avenue Jean Moulin)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'SAG': // Saint-Agne SNCF (2 pictos)
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès avenue de l’URSS (Picto 1)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès avenue de l’URSS (Picto 2)',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'RAN': // Rangueil
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès côté parking bus, rue Émile Guyou',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
+        case 'PHA': // Faculté de Pharmacie
+            pictos.push({
+                id: uuidv4(),
+                accessPointName: 'Accès chemin des Maraîchers',
+                status: FloorAdhesiveStatus.NotChecked,
+            });
+            return pictos;
         case 'SMI': // Saint-Michel Marcel Langer
             pictos.push({
                 id: uuidv4(),
