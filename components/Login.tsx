@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { motion, useMotionValue, useTransform } from "framer-motion";
-import { Globe } from "lucide-react";
+import { Logo } from "./Logo";
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -103,10 +104,13 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           className="w-full max-w-md p-8 space-y-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-xl shadow-[0_0_40px_rgba(20,184,166,0.25)]"
         >
           <div className="text-center">
-            <Globe className="h-10 w-10 mx-auto text-teal-600 dark:text-teal-400 drop-shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
+            <div className="mx-auto flex justify-center drop-shadow-[0_0_10px_rgba(20,184,166,0.5)]">
+                <Logo className="h-16 w-16 text-teal-600 dark:text-teal-400" />
+            </div>
             <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">
-              Portail d'Audit Tisséo
+              AuditRef
             </h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">Portail d'Audit Tisséo</p>
           </div>
 
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
