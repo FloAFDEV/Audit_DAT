@@ -1,16 +1,17 @@
 
 import { useMemo } from 'react';
 import { 
-    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
-    EquipmentType, EcaEquipmentType, AdhesiveInventoryItem, MaintenanceItem, AuditCategory
+    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
-import { getPmrMaterial, getAllPmrMaterials } from '../data/pmr_materials';
+import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
+import { EquipmentType, EcaEquipmentType } from '../types';
+import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
@@ -19,16 +20,6 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
         return { repere: repereMatch[1], name: repereMatch[2].trim() };
     }
     return { repere: '', name: name };
-};
-
-const getCategoryForModule = (module: AuditModule): AuditCategory | undefined => {
-    if (module.type === AuditModuleType.PR) return 'PR';
-    if (module.line === 'A') return 'METRO_A';
-    if (module.line === 'B') return 'METRO_B';
-    if (module.line === 'C') return 'METRO_C';
-    if (module.line === 'TRAM') return 'TRAM';
-    if (module.line === 'TELEO') return 'TELEO';
-    return undefined;
 };
 
 export const useStats = (lieux: Lieu[]) => {
@@ -149,132 +140,12 @@ export const useStats = (lieux: Lieu[]) => {
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
-        const toBeReplaced: MaintenanceItem[] = [];
-        const absent: MaintenanceItem[] = [];
-        let okCount = 0;
-
-        for (const lieu of lieux) {
-            for (const module of lieu.modules) {
-                if (module.isFuture) continue;
-                
-                const category = getCategoryForModule(module);
-
-                const baseItem = {
-                    lieuName: lieu.name,
-                    moduleName: module.name,
-                    category: category,
-                    auditType: module.type,
-                };
-
-                switch (module.type) {
-                    case AuditModuleType.DAT:
-                        (module.data as ModeData).stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
-                            Object.entries(dat.adhesives).forEach(([adhesiveId, status]) => {
-                                const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
-                                if (!adhesive) return;
-
-                                const item: MaintenanceItem = {
-                                    ...baseItem,
-                                    elementName: dat.name,
-                                    context: d.name, // Just the direction name (e.g., "Direction HAUT (PRI)")
-                                    adhesiveName: adhesive.name,
-                                    status: status as string,
-                                };
-
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
-                                if (status === AdhesiveStatus.Absent) absent.push(item);
-                                if (status === AdhesiveStatus.OK) okCount++;
-                            });
-                        })));
-                        break;
-                    case AuditModuleType.PR:
-                        (module.data as Pr).zones.forEach(z => z.equipments.forEach(eq => {
-                            const allPrAdhesives = getPrAdhesives(eq.type);
-                            Object.entries(eq.adhesives).forEach(([adhesiveId, status]) => {
-                                const adhesive = allPrAdhesives.find(a => a.id === adhesiveId);
-                                if (!adhesive) return;
-
-                                const item: MaintenanceItem = {
-                                    ...baseItem,
-                                    elementName: eq.name,
-                                    context: z.name, // Specific Zone
-                                    adhesiveName: adhesive.name,
-                                    status: status as string,
-                                };
-
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
-                                if (status === AdhesiveStatus.Absent) absent.push(item);
-                                if (status === AdhesiveStatus.OK) okCount++;
-                            });
-                        }));
-                        break;
-                    case AuditModuleType.ECA:
-                        (module.data as EcaData).ecas.forEach(eca => {
-                            const allEcaAdhesives = getEcaAdhesives(eca.type);
-                            Object.entries(eca.adhesives).forEach(([adhesiveId, status]) => {
-                                const adhesive = allEcaAdhesives.find(a => a.id === adhesiveId);
-                                if (!adhesive) return;
-
-                                const item: MaintenanceItem = {
-                                    ...baseItem,
-                                    elementName: eca.name,
-                                    context: eca.accessPoint, // Just the Access Point (e.g., "Accès Principal")
-                                    adhesiveName: adhesive.name,
-                                    status: status as string,
-                                };
-
-                                if (status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
-                                if (status === AdhesiveStatus.Absent) absent.push(item);
-                                if (status === AdhesiveStatus.OK) okCount++;
-                            });
-                        });
-                        break;
-                    case AuditModuleType.PMR_FLOOR_ADHESIVE:
-                        // Extract location context from Module Name if possible (e.g. "Adhésifs PMR (Accès Historique)")
-                        let pmrContext = "Zone générale";
-                        const contextMatch = module.name.match(/\((.*?)\)/);
-                        if (contextMatch && contextMatch[1]) {
-                            pmrContext = contextMatch[1];
-                        }
-
-                        (module.data as PMRFloorAdhesiveData).adhesives.forEach(ad => {
-                            const item: MaintenanceItem = {
-                                ...baseItem,
-                                elementName: "Adhésif au sol",
-                                context: pmrContext,
-                                adhesiveName: ad.name,
-                                status: ad.status as string,
-                            };
-                            if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
-                            if (ad.status === FloorAdhesiveStatus.OK) okCount++;
-                        });
-                        break;
-                    case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                         (module.data as CognitivePictogramData).pictograms.forEach(p => {
-                            const item: MaintenanceItem = {
-                                ...baseItem,
-                                elementName: "Pictogramme cognitif",
-                                context: p.accessPointName, // Specific Access Name
-                                adhesiveName: "Pictogramme",
-                                status: p.status as string,
-                            };
-                            if (p.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
-                            if (p.status === FloorAdhesiveStatus.OK) okCount++;
-                        });
-                        break;
-                }
-            }
-        }
-
-        // FUSION POUR L'AFFICHAGE UNIQUE
-        const allDefects = [...toBeReplaced, ...absent];
-
-        return { 
-            toBeReplaced: { count: toBeReplaced.length, items: toBeReplaced },
-            absent: { count: absent.length, items: absent },
-            allDefects: { count: allDefects.length, items: allDefects },
-            okCount 
-        };
+        // Filter out future modules before passing to generator for live stats
+        const activeLieux = lieux.map(lieu => ({
+            ...lieu,
+            modules: lieu.modules.filter(m => !m.isFuture)
+        }));
+        return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
 
     const adhesiveInventory = useMemo(() => {

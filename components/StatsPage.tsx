@@ -1,13 +1,15 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar } from 'lucide-react';
-import { Lieu, MaintenanceItem, HistoryEntry } from '../types';
+import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2 } from 'lucide-react';
+import { Lieu, MaintenanceItem, HistoryEntry, AuditModule } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import MaintenanceListModal from './MaintenanceListModal';
 import { Logo } from './Logo';
 import { db } from '../db'; // Access history DB
+import ConfirmationModal from './ConfirmationModal';
+import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -114,17 +116,47 @@ const StatRow: React.FC<{
 /* =====================
    History Component
    ===================== */
-const HistoryList: React.FC = () => {
+interface HistoryListProps {
+    onViewSnapshot: (entry: HistoryEntry) => void;
+}
+
+const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
     const [history, setHistory] = useState<HistoryEntry[]>([]);
+    const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
+
+    const loadHistory = () => {
+        db.history.orderBy('date').reverse().toArray().then(setHistory);
+    };
 
     useEffect(() => {
-        db.history.orderBy('date').reverse().toArray().then(setHistory);
+        loadHistory();
     }, []);
 
-    const formatDate = (dateStr: string) => {
-        return new Date(dateStr).toLocaleDateString('fr-FR', {
-            day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit'
-        });
+    const handleDelete = async () => {
+        if (entryToDelete && entryToDelete.id) {
+            await db.history.delete(entryToDelete.id);
+            setEntryToDelete(null);
+            loadHistory();
+        }
+    };
+
+    const getDateParts = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const day = date.toLocaleDateString('fr-FR', { day: '2-digit' });
+        const month = date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+        const year = date.getFullYear();
+        const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        return { day, month, year, time };
+    };
+
+    const getSubtitle = (type: string) => {
+        switch(type) {
+            case 'GLOBAL': return 'Réinitialisation complète du réseau';
+            case 'CATEGORY': return 'Réinitialisation par ligne / catégorie';
+            case 'MODULE_TYPE': return 'Réinitialisation par type d\'équipement';
+            case 'SINGLE_AUDIT': return 'Réinitialisation d\'audit unique';
+            default: return 'Instantané';
+        }
     };
 
     if (history.length === 0) {
@@ -138,30 +170,71 @@ const HistoryList: React.FC = () => {
     }
 
     return (
-        <div className="space-y-4">
-            {history.map((entry) => (
-                <div key={entry.id} className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition-shadow">
-                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
-                        <div>
-                            <h4 className="font-bold text-gray-900 dark:text-slate-100">{entry.title}</h4>
-                            <div className="flex items-center text-sm text-gray-500 dark:text-slate-400 mt-1">
-                                <Calendar className="w-4 h-4 mr-1.5" />
-                                {formatDate(entry.date)}
+        <>
+            <div className="space-y-4">
+                {history.map((entry) => {
+                    const { day, month, year, time } = getDateParts(entry.date);
+                    return (
+                        <div key={entry.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-0 flex hover:shadow-md transition-shadow overflow-hidden group">
+                            {/* Gauche : Date */}
+                            <div className="flex flex-col items-center justify-center min-w-[90px] bg-slate-50 dark:bg-slate-700/50 border-r border-slate-200 dark:border-slate-700 py-4">
+                                <span className="text-2xl font-bold text-gray-700 dark:text-slate-200 leading-none">{day}</span>
+                                <span className="text-xs font-bold uppercase text-gray-500 dark:text-slate-400 mt-1">{month}</span>
+                                <span className="text-xs text-gray-400 dark:text-slate-500 mt-2">{year}</span>
+                                <span className="text-xs text-gray-400 dark:text-slate-500">{time}</span>
+                            </div>
+
+                            {/* Centre : Contenu (Cliquable) */}
+                            <button 
+                                onClick={() => onViewSnapshot(entry)}
+                                className="flex-1 flex items-center p-4 text-left outline-none focus:bg-slate-50 dark:focus:bg-slate-700/50"
+                            >
+                                <div className="flex-1 min-w-0 pr-4">
+                                    <h4 className="font-bold text-lg text-gray-900 dark:text-slate-100 truncate mb-1 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                        {entry.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2">
+                                        <History className="w-3 h-3" />
+                                        {getSubtitle(entry.type)}
+                                    </p>
+                                </div>
+                                
+                                {/* Droite : Score */}
+                                <div className="flex-shrink-0">
+                                    <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
+                                        entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                        entry.score >= 50 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                    }`}>
+                                        {entry.score}%
+                                    </span>
+                                </div>
+                            </button>
+
+                            {/* Action : Supprimer */}
+                            <div className="flex items-center pr-4 pl-2 border-l border-slate-100 dark:border-slate-700">
+                                <button 
+                                    onClick={() => setEntryToDelete(entry)}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                    title="Supprimer cette entrée"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <span className={`text-sm font-semibold px-2.5 py-0.5 rounded-full ${
-                                entry.score === 100 ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300' :
-                                entry.score > 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' :
-                                'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
-                            }`}>
-                                Conformité : {entry.score}%
-                            </span>
-                        </div>
-                    </div>
-                </div>
-            ))}
-        </div>
+                    );
+                })}
+            </div>
+
+            <ConfirmationModal 
+                isOpen={!!entryToDelete}
+                onClose={() => setEntryToDelete(null)}
+                onConfirm={handleDelete}
+                title="Supprimer l'historique"
+                message="Êtes-vous sûr de vouloir supprimer cette entrée d'historique ? Cette action est irréversible."
+                isDestructive
+            />
+        </>
     );
 };
 
@@ -193,6 +266,37 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const teleoConfig = categoryMap['TELEO'];
   const lineCConfig = categoryMap['METRO_C'];
 
+  const handleViewSnapshot = (entry: HistoryEntry) => {
+      try {
+          const data = JSON.parse(entry.details);
+          // Normalisation des données pour le générateur
+          let lieuxToAnalyze: Lieu[] = [];
+          
+          if (Array.isArray(data)) {
+              // Cas GLOBAL ou CATEGORY : c'est déjà une liste de Lieux
+              lieuxToAnalyze = data as Lieu[];
+          } else if (data && typeof data === 'object' && 'type' in data) {
+              // Cas SINGLE_AUDIT : c'est un Module seul.
+              // On doit le wrapper dans une structure Lieu pour que le générateur fonctionne
+              const module = data as AuditModule;
+              lieuxToAnalyze = [{
+                  id: 'snapshot-wrapper',
+                  name: 'Archive',
+                  modules: [module]
+              }];
+          }
+
+          const summary = generateMaintenanceSummary(lieuxToAnalyze);
+          setModalContent({
+              title: `Détails de l'archive : ${entry.title}`,
+              items: summary.allDefects.items
+          });
+
+      } catch (e) {
+          console.error("Failed to parse history entry details", e);
+      }
+  };
+
   return (
     <Container>
       <Header title="Statistiques du Réseau" onBack={onBack} />
@@ -219,7 +323,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
       {activeTab === 'history' ? (
           <StatCard title="Historique des Audits" icon={<History className="w-6 h-6" />}>
-              <HistoryList />
+              <HistoryList onViewSnapshot={handleViewSnapshot} />
           </StatCard>
       ) : (
         <>
