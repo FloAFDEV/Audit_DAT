@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { AuditModule } from '../types';
 import { ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
 import { ModuleIcon } from './ModuleIcon';
+import VoiceInput from './VoiceInput';
 
 interface AuditFormLayoutProps {
     module: AuditModule;
@@ -93,12 +95,10 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
             <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Commentaires</h3>
                 <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
-                <textarea
-                    rows={4}
-                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-900 px-3 py-2 text-base text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6 read-only:bg-slate-100 read-only:dark:bg-slate-800"
-                    placeholder="Ajouter un commentaire..."
+                <VoiceInput
                     value={comment || ''}
-                    onChange={(e) => onCommentChange(e.target.value)}
+                    onChange={onCommentChange}
+                    placeholder="Ajouter un commentaire (ou utilisez le micro)..."
                     readOnly={commentIsReadOnly}
                 />
             </div>

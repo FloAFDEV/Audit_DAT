@@ -228,3 +228,16 @@ export interface MaintenanceItem {
   category?: AuditCategory;
   auditType?: AuditModuleType;
 }
+
+// =================================================================
+// HISTORY TYPES
+// =================================================================
+export interface HistoryEntry {
+    id?: number; // Auto-incremented by Dexie
+    date: string; // ISO Date
+    title: string;
+    type: 'GLOBAL' | 'CATEGORY' | 'MODULE_TYPE' | 'SINGLE_AUDIT';
+    score: number; // Percentage 0-100
+    details: string; // JSON stringified data (lightweight, no photos)
+    categoryKey?: string; // For filtering
+}

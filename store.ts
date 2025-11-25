@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 import { 
     Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone 
@@ -10,6 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { validateImportedData } from './utils/csvExporter';
 import { canEcaBeNotApplicable } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
+import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -140,6 +142,21 @@ const useAuditStore = create<AppState>((set, get) => {
         }
     };
 
+    // HISTORY HELPERS (INTERNAL)
+    const saveHistoryEntry = async (title: string, type: 'GLOBAL' | 'CATEGORY' | 'MODULE_TYPE' | 'SINGLE_AUDIT', data: any, categoryKey?: string) => {
+        const score = calculateComplianceScore(data, type);
+        const cleanData = sanitizeDataForHistory(data);
+        
+        await db.history.add({
+            date: new Date().toISOString(),
+            title,
+            type,
+            score,
+            details: JSON.stringify(cleanData),
+            categoryKey
+        });
+    };
+
     return {
     // =================================================================
     // Initial State
@@ -165,9 +182,6 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
-            // Step 1: Handle Authentication and Theme from localStorage first.
-            // This is synchronous and less likely to fail. It ensures the user's
-            // auth state is determined before heavy async operations.
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
             const isAuthenticated = storedAuth === 'true';
 
@@ -177,7 +191,6 @@ const useAuditStore = create<AppState>((set, get) => {
             
             set({ isAuthenticated, theme: initialTheme });
 
-            // Step 2: Load the main application data from IndexedDB.
             const count = await db.lieux.count();
             if (count > 0) {
                 const data = await db.lieux.toArray();
@@ -189,11 +202,8 @@ const useAuditStore = create<AppState>((set, get) => {
             }
         } catch (error) {
             console.error("Échec de l'initialisation de l'application :", error);
-            // Propagate a user-friendly error to the UI. The user will remain on the
-            // app screen (if authenticated) but will see an error toast.
             throw new Error("Impossible de charger les données. Vérifiez les permissions de stockage, puis rafraîchissez la page.");
         } finally {
-            // Step 3: Always set isLoading to false at the end, whether it succeeds or fails.
             set({ isLoading: false });
         }
     },
@@ -221,9 +231,6 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
     
-    // =================================================================
-    // UI State Management
-    // =================================================================
     setTheme: (theme) => {
         applyTheme(theme);
         set({ theme });
@@ -240,10 +247,6 @@ const useAuditStore = create<AppState>((set, get) => {
         selectedEcaId: null,
     }),
 
-
-    // =================================================================
-    // Navigation State Management
-    // =================================================================
     setActiveFilter: (filter) => set({ activeFilter: filter, activeAuditFilters: [] }),
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
 
@@ -297,7 +300,6 @@ const useAuditStore = create<AppState>((set, get) => {
         if (module?.type === AuditModuleType.DAT) {
              const modeData = module.data as ModeData;
              const station = modeData.stations.find(s => s.id === stationId);
-             // Auto-select direction if only one exists
              if (station?.directions.length === 1) {
                  set({ selectedStationId: stationId, selectedDirectionId: station.directions[0].id, selectedDatId: null });
                  return;
@@ -337,9 +339,6 @@ const useAuditStore = create<AppState>((set, get) => {
         }
     },
 
-    // =================================================================
-    // DAT Audit Actions
-    // =================================================================
     handleDatStatusChange: async (adhesiveId, status) => {
         const { selectedModuleId, selectedStationId, selectedDirectionId, selectedDatId } = get();
         await _updateLieu(lieu => {
@@ -349,13 +348,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const dat = direction?.dats.find(d => d.id === selectedDatId);
             if (dat) {
                 dat.adhesives[adhesiveId] = status;
-
                 const isComplete = Object.values(dat.adhesives).every(s => s !== AdhesiveStatus.NotChecked);
-                if (isComplete && !dat.completionDate) {
-                    dat.completionDate = new Date().toISOString();
-                } else if (!isComplete && dat.completionDate) {
-                    delete dat.completionDate;
-                }
+                if (isComplete && !dat.completionDate) dat.completionDate = new Date().toISOString();
+                else if (!isComplete && dat.completionDate) delete dat.completionDate;
             }
         });
     },
@@ -379,6 +374,10 @@ const useAuditStore = create<AppState>((set, get) => {
             const direction = station?.directions.find(d => d.id === selectedDirectionId);
             const dat = direction?.dats.find(d => d.id === selectedDatId);
             if (dat) {
+                // HISTORY SNAPSHOT
+                // We don't save history for individual DAT reset typically, as it's too granular.
+                // But we can if requested. For now, skipping detailed DAT history to avoid clutter.
+                
                 dat.adhesives = createInitialAdhesiveStatus(ADHESIVES);
                 dat.comment = '';
                 delete dat.completionDate;
@@ -428,9 +427,6 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    // =================================================================
-    // P+R Audit Actions
-    // =================================================================
     handlePrAdhesiveStatusChange: async (adhesiveId, status) => {
         const { selectedModuleId, selectedPrZoneId, selectedEquipmentId } = get();
         await _updateLieu(lieu => {
@@ -439,13 +435,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const equipment = zone?.equipments.find(e => e.id === selectedEquipmentId);
             if (equipment) {
                 equipment.adhesives[adhesiveId] = status;
-                
                 const isComplete = Object.values(equipment.adhesives).every(s => s !== AdhesiveStatus.NotChecked);
-                if (isComplete && !equipment.completionDate) {
-                    equipment.completionDate = new Date().toISOString();
-                } else if (!isComplete && equipment.completionDate) {
-                    delete equipment.completionDate;
-                }
+                if (isComplete && !equipment.completionDate) equipment.completionDate = new Date().toISOString();
+                else if (!isComplete && equipment.completionDate) delete equipment.completionDate;
             }
         });
     },
@@ -474,9 +466,6 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    // =================================================================
-    // ECA Audit Actions
-    // =================================================================
     handleEcaAdhesiveStatusChange: async (adhesiveId, status) => {
         const { selectedModuleId, selectedEcaId } = get();
         await _updateLieu(lieu => {
@@ -484,13 +473,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
                 eca.adhesives[adhesiveId] = status;
-                
                 const progress = getEcaProgress(eca);
-                if (progress.isComplete && !eca.completionDate) {
-                    eca.completionDate = new Date().toISOString();
-                } else if (!progress.isComplete && eca.completionDate) {
-                    delete eca.completionDate;
-                }
+                if (progress.isComplete && !eca.completionDate) eca.completionDate = new Date().toISOString();
+                else if (!progress.isComplete && eca.completionDate) delete eca.completionDate;
             }
         });
     },
@@ -524,17 +509,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
                 eca.isNotApplicable = isNA;
-                if (isNA) {
-                    eca.completionDate = new Date().toISOString();
-                } else {
-                    delete eca.completionDate;
-                }
+                if (isNA) eca.completionDate = new Date().toISOString();
+                else delete eca.completionDate;
             }
         });
-
-        if (isNA) {
-            set({ selectedEcaId: null });
-        }
+        if (isNA) set({ selectedEcaId: null });
     },
     
     handleAddEca: async (ecaData) => {
@@ -560,28 +539,13 @@ const useAuditStore = create<AppState>((set, get) => {
             const ecaIndex = module.data.ecas.findIndex(e => e.id === ecaData.id);
             if (ecaIndex > -1) {
                 const originalEca = module.data.ecas[ecaIndex];
-                const updatedEca = {
-                    ...originalEca,
-                    ...ecaData
-                };
-
-                // Si le type a changé, on réinitialise les adhésifs et la date de complétion
+                const updatedEca = { ...originalEca, ...ecaData };
                 if (ecaData.type && ecaData.type !== originalEca.type) {
                     updatedEca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type));
                     delete updatedEca.completionDate;
                 }
-
-                // Si le type ne permet pas le statut N/A, on supprime la propriété.
-                if (!canEcaBeNotApplicable(updatedEca.type)) {
-                    delete updatedEca.isNotApplicable;
-                }
-                
-                // Si l'équipement est marqué comme non applicable, on met la date de complétion
-                if (updatedEca.isNotApplicable) {
-                    updatedEca.completionDate = new Date().toISOString();
-                }
-
-
+                if (!canEcaBeNotApplicable(updatedEca.type)) delete updatedEca.isNotApplicable;
+                if (updatedEca.isNotApplicable) updatedEca.completionDate = new Date().toISOString();
                 module.data.ecas[ecaIndex] = updatedEca;
             }
         });
@@ -597,9 +561,6 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    // =================================================================
-    // PMR Floor Adhesive Actions
-    // =================================================================
     handlePmrFloorAdhesiveStatusChange: async (adhesiveId, status) => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
@@ -607,13 +568,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) {
                 adhesive.status = status;
-                
                 const isComplete = module.data.adhesives.every(a => a.status !== FloorAdhesiveStatus.NotChecked);
-                if (isComplete && !module.data.completionDate) {
-                    module.data.completionDate = new Date().toISOString();
-                } else if (!isComplete && module.data.completionDate) {
-                    delete module.data.completionDate;
-                }
+                if (isComplete && !module.data.completionDate) module.data.completionDate = new Date().toISOString();
+                else if (!isComplete && module.data.completionDate) delete module.data.completionDate;
             }
         });
     },
@@ -622,9 +579,7 @@ const useAuditStore = create<AppState>((set, get) => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
-            if (module) {
-                module.data.comment = comment;
-            }
+            if (module) module.data.comment = comment;
         });
     },
 
@@ -632,14 +587,19 @@ const useAuditStore = create<AppState>((set, get) => {
         const { selectedLieuId, selectedModuleId, lieux } = get();
         if (!selectedLieuId || !selectedModuleId) return;
 
-        // Create a deep copy to avoid mutation issues
         const newLieux = JSON.parse(JSON.stringify(lieux));
-        
         const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
         if (!lieuToUpdate) return;
-
         const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
         if (!moduleToUpdate) return;
+
+        // SNAPSHOT BEFORE RESET
+        await saveHistoryEntry(
+            `Audit Sol PMR - ${lieuToUpdate.name}`, 
+            'SINGLE_AUDIT', 
+            moduleToUpdate, 
+            undefined
+        );
 
         const currentData = moduleToUpdate.data as PMRFloorAdhesiveData;
         currentData.comment = '';
@@ -661,9 +621,8 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) {
-                if (photo_base64) {
-                    adhesive.photo_base64 = photo_base64;
-                } else {
+                if (photo_base64) adhesive.photo_base64 = photo_base64;
+                else {
                     delete adhesive.photo_base64;
                     delete adhesive.photo_note;
                     delete adhesive.photo_rotation;
@@ -677,9 +636,7 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
-            if (adhesive) {
-                adhesive.photo_note = note;
-            }
+            if (adhesive) adhesive.photo_note = note;
         });
     },
 
@@ -688,15 +645,10 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
-            if (adhesive) {
-                adhesive.photo_rotation = rotation;
-            }
+            if (adhesive) adhesive.photo_rotation = rotation;
         });
     },
 
-    // =================================================================
-    // Cognitive Pictogram Actions
-    // =================================================================
     handleCognitivePictogramStatusChange: async (pictogramId, status) => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
@@ -704,13 +656,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
             if (pictogram) {
                 pictogram.status = status;
-                
                 const isComplete = module.data.pictograms.every(p => p.status !== FloorAdhesiveStatus.NotChecked);
-                if (isComplete && !module.data.completionDate) {
-                    module.data.completionDate = new Date().toISOString();
-                } else if (!isComplete && module.data.completionDate) {
-                    delete module.data.completionDate;
-                }
+                if (isComplete && !module.data.completionDate) module.data.completionDate = new Date().toISOString();
+                else if (!isComplete && module.data.completionDate) delete module.data.completionDate;
             }
         });
     },
@@ -719,14 +667,26 @@ const useAuditStore = create<AppState>((set, get) => {
         const { selectedModuleId } = get();
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
-            if (module) {
-                module.data.comment = comment;
-            }
+            if (module) module.data.comment = comment;
         });
     },
 
     handleResetCognitivePictogram: async () => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        // Snapshot logic duplicate logic due to _updateLieu only allowing state modification
+        // Need to fetch the *current* state before reset
+        const lieuToSnapshot = lieux.find(l => l.id === selectedLieuId);
+        const moduleToSnapshot = lieuToSnapshot?.modules.find(m => m.id === selectedModuleId);
+        
+        if(moduleToSnapshot) {
+             await saveHistoryEntry(
+                `Audit Pictogrammes - ${lieuToSnapshot?.name}`, 
+                'SINGLE_AUDIT', 
+                moduleToSnapshot, 
+                undefined
+            );
+        }
+
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
@@ -750,7 +710,7 @@ const useAuditStore = create<AppState>((set, get) => {
                     status: FloorAdhesiveStatus.NotChecked,
                 };
                 module.data.pictograms.push(newAccessPoint);
-                delete module.data.completionDate; // Adding a new one makes it incomplete
+                delete module.data.completionDate;
             }
         });
     },
@@ -761,13 +721,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
                 module.data.pictograms = module.data.pictograms.filter(p => p.id !== pictogramId);
-                // Re-check completion status
                 const isComplete = module.data.pictograms.length > 0 && module.data.pictograms.every(p => p.status !== FloorAdhesiveStatus.NotChecked);
-                if (isComplete && !module.data.completionDate) {
-                    module.data.completionDate = new Date().toISOString();
-                } else if (!isComplete && module.data.completionDate) {
-                    delete module.data.completionDate;
-                }
+                if (isComplete && !module.data.completionDate) module.data.completionDate = new Date().toISOString();
+                else if (!isComplete && module.data.completionDate) delete module.data.completionDate;
             }
         });
     },
@@ -777,50 +733,47 @@ const useAuditStore = create<AppState>((set, get) => {
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
-            if (pictogram) {
-                pictogram.accessPointName = newName;
-            }
+            if (pictogram) pictogram.accessPointName = newName;
         });
     },
 
-
-    // =================================================================
-    // Global Reset Actions
-    // =================================================================
     handleResetCategory: async (category) => {
         try {
             const categoryConfig = AUDIT_CATEGORIES.find(c => c.key === category);
             if (!categoryConfig) return;
 
+            const currentLieux = get().lieux;
+            
+            // SNAPSHOT HISTORY for CATEGORY
+            const lieuxToSnapshot = currentLieux.filter(lieu => lieu.modules.some(module => categoryConfig.predicate(module)));
+            // We only snapshot the relevant modules in the history entry
+            const snapshotData = lieuxToSnapshot.map(lieu => ({
+                ...lieu,
+                modules: lieu.modules.filter(m => categoryConfig.predicate(m))
+            })).filter(l => l.modules.length > 0);
+
+            await saveHistoryEntry(
+                `Historique complet - ${categoryConfig.label}`, 
+                'CATEGORY', 
+                snapshotData, 
+                category
+            );
+
             const freshLieux = await generateInitialLieuxDataAsync();
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
-
-            const currentLieux = get().lieux;
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
 
             for (const lieu of updatedLieux) {
                 const modulesToKeep = lieu.modules.filter((m: AuditModule) => !categoryConfig.predicate(m));
-                
                 const freshLieu = freshLieuxMap.get(lieu.name);
-                const freshModulesToAdd = freshLieu 
-                    ? freshLieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)) 
-                    : [];
-
+                const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)) : [];
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
             
             await db.lieux.bulkPut(updatedLieux);
             set({
                 lieux: updatedLieux,
-                activeFilter: 'ALL',
-                activeAuditFilters: [],
-                selectedLieuId: null,
-                selectedModuleId: null,
-                selectedStationId: null,
-                selectedDirectionId: null,
-                selectedDatId: null,
-                selectedEquipmentId: null,
-                selectedEcaId: null,
+                activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
 
         } catch (error) {
@@ -831,20 +784,31 @@ const useAuditStore = create<AppState>((set, get) => {
 
     handleResetByModuleType: async (moduleType) => {
         try {
+            // SNAPSHOT HISTORY
+            const currentLieux = get().lieux;
+            const snapshotData = currentLieux.map(lieu => ({
+                ...lieu,
+                modules: lieu.modules.filter(m => m.type === moduleType)
+            })).filter(l => l.modules.length > 0);
+
+            // Find label
+            const config = AUDIT_CATEGORIES.flatMap(c => c).find(x => false) || { label: moduleType }; // Fallback
+            
+            await saveHistoryEntry(
+                `Historique - ${moduleType}`, 
+                'MODULE_TYPE', 
+                snapshotData, 
+                undefined
+            );
+
             const freshLieux = await generateInitialLieuxDataAsync();
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
-
-            const currentLieux = get().lieux;
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux)); 
 
             for (const lieu of updatedLieux) {
                 const modulesToKeep = lieu.modules.filter((m: AuditModule) => m.type !== moduleType);
-                
                 const freshLieu = freshLieuxMap.get(lieu.name);
-                const freshModulesToAdd = freshLieu 
-                    ? freshLieu.modules.filter((m: AuditModule) => m.type === moduleType) 
-                    : [];
-
+                const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => m.type === moduleType) : [];
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
             
@@ -859,30 +823,31 @@ const useAuditStore = create<AppState>((set, get) => {
     
     hardResetApplication: async () => {
         try {
-            await db.delete(); // Delete the database
-            window.location.reload(); // Force a reload to re-initialize everything
+            await db.delete();
+            window.location.reload();
         } catch (error) {
             console.error("Failed to hard reset the application:", error);
-            throw new Error("La réinitialisation forcée a échoué. Veuillez essayer de vider le cache de votre navigateur manuellement.");
+            throw new Error("La réinitialisation forcée a échoué.");
         }
     },
     
     handleResetAll: async () => {
         try {
+            // SNAPSHOT GLOBAL HISTORY
+            const currentLieux = get().lieux;
+            await saveHistoryEntry(
+                `Historique Complet Réseau`, 
+                'GLOBAL', 
+                currentLieux, 
+                undefined
+            );
+
             await db.lieux.clear();
             const initialData = await generateInitialLieuxDataAsync();
             await db.lieux.bulkPut(initialData);
             set({
                 lieux: initialData,
-                activeFilter: 'ALL',
-                activeAuditFilters: [],
-                selectedLieuId: null,
-                selectedModuleId: null,
-                selectedStationId: null,
-                selectedDirectionId: null,
-                selectedDatId: null,
-                selectedEquipmentId: null,
-                selectedEcaId: null,
+                activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
         } catch (error) {
             console.error("Failed to reset all data:", error);
@@ -890,39 +855,25 @@ const useAuditStore = create<AppState>((set, get) => {
         }
     },
 
-    // =================================================================
-    // Import/Export Actions
-    // =================================================================
     handleImportJsonData: async (jsonString: string) => {
         try {
             let rawData;
             try {
                 rawData = JSON.parse(jsonString);
             } catch (e) {
-                throw new Error("Format de fichier invalide. Assurez-vous que le fichier est un JSON bien formé.");
+                throw new Error("Format de fichier invalide.");
             }
-            
             const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
-
-            if (!validateImportedData(dataToValidate)) {
-                throw new Error("Données invalides. Le contenu du fichier ne correspond pas à la structure attendue.");
-            }
+            if (!validateImportedData(dataToValidate)) throw new Error("Données invalides.");
             
             await db.lieux.clear();
             await db.lieux.bulkPut(dataToValidate);
             set({
                 lieux: dataToValidate,
-                selectedLieuId: null,
-                selectedModuleId: null,
-                selectedStationId: null,
-                selectedDirectionId: null,
-                selectedDatId: null,
-                selectedEquipmentId: null,
-                selectedEcaId: null,
+                selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
         } catch (error) {
             console.error("Échec de l'importation :", error);
-            // Re-throw the error so it can be displayed in the promise toast
             throw error;
         }
     },

@@ -2,6 +2,7 @@
   "name": "AuditRef",
   "description": "Un portail d'applications pour auditer les équipements du réseau Tisséo.",
   "requestFramePermissions": [
-    "camera"
+    "camera",
+    "microphone"
   ]
 }
