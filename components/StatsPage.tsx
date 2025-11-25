@@ -204,9 +204,10 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                                     <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
                                         entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                                         entry.score >= 50 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
-                                        'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
+                                        entry.score > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                        'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400' // Style neutre pour 0%
                                     }`}>
-                                        {entry.score}%
+                                        {entry.score > 0 ? `${entry.score}%` : '-'}
                                     </span>
                                 </div>
                             </button>

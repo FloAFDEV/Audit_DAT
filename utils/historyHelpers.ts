@@ -113,12 +113,10 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
     else if ('modules' in data) {
         data.modules.forEach((m: any) => processModule(m));
     }
-    // If data is a specific item (DAT, Equipment, etc.), we need context. 
-    // But usually reset is done at Module or App level. 
-    // For single item reset, we might just want to record the snapshot without a complex score, or score just that item.
     
-    // Simplification: If totalApplicable is 0, return 100 (Considered compliant or nothing to complain about)
-    if (totalApplicable === 0) return 100;
+    // Correction stricte : Si aucun élément n'a été vérifié (totalApplicable === 0),
+    // le score est de 0% (vide), et non 100% (parfait).
+    if (totalApplicable === 0) return 0;
 
     return Math.round((totalOk / totalApplicable) * 100);
 };
