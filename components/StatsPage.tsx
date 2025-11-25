@@ -10,6 +10,7 @@ import { Logo } from './Logo';
 import { db } from '../db'; // Access history DB
 import ConfirmationModal from './ConfirmationModal';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
+import { HistoryChart } from './HistoryChart';
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -171,6 +172,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
 
     return (
         <>
+            <HistoryChart data={history} />
+            
             <div className="space-y-4">
                 {history.map((entry) => {
                     const { day, month, year, time } = getDateParts(entry.date);

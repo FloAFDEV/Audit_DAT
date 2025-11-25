@@ -16,7 +16,8 @@
     "dexie": "^4.2.0",
     "uuid": "^13.0.0",
     "react-hot-toast": "^2.4.1",
-    "framer-motion": "^12.23.24"
+    "framer-motion": "^12.23.24",
+    "recharts": "^2.15.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
