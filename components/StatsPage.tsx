@@ -6,6 +6,7 @@ import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import MaintenanceListModal from './MaintenanceListModal';
+import { Logo } from './Logo';
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -31,7 +32,10 @@ const Header: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack
     >
       <ArrowLeft className="w-5 h-5" />
     </button>
-    <h1 className="text-3xl md:text-4xl font-extrabold leading-tight text-gray-900 dark:text-slate-100">{title}</h1>
+    <div className="flex items-center gap-3">
+        <Logo className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
+        <h1 className="text-3xl md:text-4xl font-extrabold leading-tight text-gray-900 dark:text-slate-100">{title}</h1>
+    </div>
   </div>
 );
 
