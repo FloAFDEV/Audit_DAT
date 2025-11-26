@@ -1,7 +1,7 @@
 
-import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive } from 'lucide-react';
-import { Lieu, MaintenanceItem, HistoryEntry, AuditModule } from '../types';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
+import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive, X, Filter } from 'lucide-react';
+import { Lieu, MaintenanceItem, HistoryEntry, AuditModule, ModeData, AuditModuleType } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
@@ -11,6 +11,7 @@ import { db } from '../db'; // Access history DB
 import ConfirmationModal from './ConfirmationModal';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { HistoryChart } from './HistoryChart';
+import { LieuBadges } from './Icons';
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -250,7 +251,47 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
 const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const [activeTab, setActiveTab] = useState<'current' | 'history'>('current');
   
-  const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(lieux);
+  // --- LOCATION FILTER LOGIC ---
+  const [selectedLieuId, setSelectedLieuId] = useState<string | null>(null);
+  const [filterQuery, setFilterQuery] = useState('');
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const filterRef = useRef<HTMLDivElement>(null);
+
+  // Fermer le dropdown si on clique ailleurs
+  useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+          if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+              setIsFilterDropdownOpen(false);
+          }
+      };
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Filtrer les lieux disponibles pour le calcul des stats
+  const filteredLieux = useMemo(() => {
+      if (selectedLieuId) {
+          return lieux.filter(l => l.id === selectedLieuId);
+      }
+      return lieux;
+  }, [lieux, selectedLieuId]);
+
+  const selectedLieuObject = useMemo(() => lieux.find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
+
+  // Filtrer la liste des options du dropdown
+  const filterOptions = useMemo(() => {
+      if (!filterQuery) return lieux;
+      const lowerQuery = filterQuery.toLowerCase();
+      return lieux.filter(l => 
+          l.name.toLowerCase().includes(lowerQuery) ||
+          // On peut aussi chercher par code station si besoin
+          l.modules.some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations[0]?.code?.toLowerCase().includes(lowerQuery))
+      );
+  }, [lieux, filterQuery]);
+
+  // Use filtered lieux for stats calculation
+  const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
@@ -331,13 +372,92 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
           </StatCard>
       ) : (
         <>
+            {/* --- BARRE DE FILTRE PAR LIEU --- */}
+            <div className="relative mb-6 z-20" ref={filterRef}>
+                <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <Filter className={`h-5 w-5 ${selectedLieuId ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400'}`} aria-hidden="true" />
+                    </div>
+                    <input
+                        type="text"
+                        placeholder={selectedLieuId ? selectedLieuObject?.name : "Filtrer les données par lieu (Tout le réseau)..."}
+                        value={filterQuery}
+                        onChange={(e) => {
+                            setFilterQuery(e.target.value);
+                            setIsFilterDropdownOpen(true);
+                        }}
+                        onFocus={() => setIsFilterDropdownOpen(true)}
+                        className={`block w-full rounded-lg border py-3 pl-10 pr-10 text-sm shadow-sm focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base transition-colors ${
+                            selectedLieuId 
+                            ? 'border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:border-teal-500/50 dark:text-teal-100 placeholder:text-teal-700 dark:placeholder:text-teal-300 font-semibold'
+                            : 'border-gray-300 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-gray-400'
+                        }`}
+                    />
+                    {selectedLieuId && (
+                        <button
+                            onClick={() => {
+                                setSelectedLieuId(null);
+                                setFilterQuery('');
+                            }}
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                    )}
+                </div>
+
+                {isFilterDropdownOpen && (
+                    <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                        {/* Option "Tout le réseau" */}
+                        <li
+                            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700 font-medium border-b border-gray-100 dark:border-slate-700"
+                            onClick={() => {
+                                setSelectedLieuId(null);
+                                setFilterQuery('');
+                                setIsFilterDropdownOpen(false);
+                            }}
+                        >
+                            <div className="flex items-center">
+                                <span className="truncate text-teal-600 dark:text-teal-400">Tout le réseau</span>
+                            </div>
+                        </li>
+
+                        {filterOptions.length === 0 ? (
+                            <li className="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-500 dark:text-slate-400 italic">
+                                Aucun lieu trouvé
+                            </li>
+                        ) : (
+                            filterOptions.map((lieu) => (
+                                <li
+                                    key={lieu.id}
+                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
+                                    onClick={() => {
+                                        setSelectedLieuId(lieu.id);
+                                        setFilterQuery('');
+                                        setIsFilterDropdownOpen(false);
+                                    }}
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <LieuBadges lieu={lieu} />
+                                        <span className="truncate">{lieu.name}</span>
+                                    </div>
+                                </li>
+                            ))
+                        )}
+                    </ul>
+                )}
+            </div>
+
             {/* Grille principale : Aperçu Global (2/3) + Alertes (1/3) */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 
                 {/* COLONNE GAUCHE (2/3) : Aperçu Global */}
                 <div className="lg:col-span-2 space-y-8">
                 
-                <StatCard title="Aperçu Global du Réseau" icon={<Building className="w-6 h-6" />}>
+                <StatCard 
+                    title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"} 
+                    icon={<Building className="w-6 h-6" />}
+                >
                     <div className="space-y-6">
                     
                     {/* Ligne 1 : Billettique et P+R */}
@@ -351,10 +471,14 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div>
                             <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
                             <div className="space-y-1 mt-1">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
+                                {selectedLieuId ? null : (
+                                    <>
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
+                                    </>
+                                )}
                             </div>
                             </div>
                             
@@ -364,8 +488,14 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div>
                             <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
                             <div className="space-y-1 mt-1">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={<>{ecaBreakdown.byLine.A.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.A.pmr} PMR)</span></>} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={<>{ecaBreakdown.byLine.B.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.B.pmr} PMR)</span></>} isSubItem />
+                                {selectedLieuId ? (
+                                    <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
+                                ) : (
+                                    <>
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={<>{ecaBreakdown.byLine.A.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.A.pmr} PMR)</span></>} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={<>{ecaBreakdown.byLine.B.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.B.pmr} PMR)</span></>} isSubItem />
+                                    </>
+                                )}
                             </div>
                             </div>
                         </div>
@@ -375,7 +505,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         <div>
                         <SectionTitle>Parkings Relais (P+R)</SectionTitle>
                         <div className="space-y-4">
-                            <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />
+                            {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
                             <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
                             <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
                             <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
@@ -390,15 +520,23 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         
                         {/* Stations */}
                         <div>
-                        <SectionTitle>Stations par Ligne</SectionTitle>
-                        <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                        <div className="space-y-1 mt-1">
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C (Projet)</span>} value={globalCounts.stationCountC} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
-                        </div>
+                        {selectedLieuId ? (
+                             <div className="py-4">
+                                <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
+                             </div>
+                        ) : (
+                            <>
+                            <SectionTitle>Stations par Ligne</SectionTitle>
+                            <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
+                            <div className="space-y-1 mt-1">
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C (Projet)</span>} value={globalCounts.stationCountC} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                            </div>
+                            </>
+                        )}
                         </div>
                         
                         {/* Audits */}
@@ -407,17 +545,21 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         <div className="space-y-4">
                             <div>
                             <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} />
-                            <div className="space-y-1 mt-1">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
-                            </div>
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
+                                </div>
+                            )}
                             </div>
                             <div>
                             <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} />
-                            <div className="space-y-1 mt-1">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
-                            </div>
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
+                                </div>
+                            )}
                             </div>
                         </div>
                         </div>
@@ -462,7 +604,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
             <hr className="border-dashed border-slate-200 dark:border-slate-700 my-4" />
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
-            <StatCard title="Inventaire Détaillé des Adhésifs" icon={<Search className="w-6 h-6" />}>
+            <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />}>
                 <div>
                 <div className="relative mb-4">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
