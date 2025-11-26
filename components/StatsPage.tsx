@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect } from 'react';
-import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2 } from 'lucide-react';
+import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive } from 'lucide-react';
 import { Lieu, MaintenanceItem, HistoryEntry, AuditModule } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
@@ -163,9 +163,9 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
     if (history.length === 0) {
         return (
             <div className="text-center py-12 text-gray-500 dark:text-slate-400">
-                <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>Aucun historique disponible.</p>
-                <p className="text-sm mt-1">L'historique se remplit automatiquement lors de la réinitialisation d'un audit.</p>
+                <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Aucune archive disponible.</p>
+                <p className="text-sm mt-1">Les archives se créent automatiquement lors de la réinitialisation d'un audit.</p>
             </div>
         );
     }
@@ -234,8 +234,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                 isOpen={!!entryToDelete}
                 onClose={() => setEntryToDelete(null)}
                 onConfirm={handleDelete}
-                title="Supprimer l'historique"
-                message="Êtes-vous sûr de vouloir supprimer cette entrée d'historique ? Cette action est irréversible."
+                title="Supprimer l'archive"
+                message="Êtes-vous sûr de vouloir supprimer cette entrée d'archive ? Cette action est irréversible."
                 isDestructive
             />
         </>
@@ -313,20 +313,20 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 className={`${activeTab === 'current' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-slate-400 hover:border-gray-300 hover:text-gray-700'} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
             >
                 <Building className="w-4 h-4" />
-                Vue Actuelle
+                Audit en cours
             </button>
             <button
                 onClick={() => setActiveTab('history')}
                 className={`${activeTab === 'history' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-slate-400 hover:border-gray-300 hover:text-gray-700'} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
             >
-                <History className="w-4 h-4" />
-                Historique
+                <Archive className="w-4 h-4" />
+                Archives
             </button>
         </nav>
       </div>
 
       {activeTab === 'history' ? (
-          <StatCard title="Historique des Audits" icon={<History className="w-6 h-6" />}>
+          <StatCard title="Archives des Audits" icon={<Archive className="w-6 h-6" />}>
               <HistoryList onViewSnapshot={handleViewSnapshot} />
           </StatCard>
       ) : (
