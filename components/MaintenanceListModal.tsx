@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
-import { X, AlertTriangle, ArrowUpDown, Download } from 'lucide-react';
-import { MaintenanceItem, AuditCategory, Station } from '../types';
+import { X, AlertTriangle, ArrowUpDown, Download, Filter } from 'lucide-react';
+import { MaintenanceItem, AuditCategory, Station, AuditModuleType } from '../types';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import { ModuleIcon } from './ModuleIcon';
@@ -25,8 +25,19 @@ const STATION_LISTS: Partial<Record<AuditCategory, Partial<Station>[]>> = {
     'TELEO': TELEO_STATIONS,
 };
 
+// Ordre de priorité des types d'audit pour le tri
+const AUDIT_TYPE_PRIORITY: AuditModuleType[] = [
+    AuditModuleType.DAT,
+    AuditModuleType.ECA,
+    AuditModuleType.PMR_FLOOR_ADHESIVE,
+    AuditModuleType.COGNITIVE_PICTOGRAMS,
+    AuditModuleType.PR
+];
+
+type SortMode = 'LINE' | 'AUDIT';
+
 const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onClose, title, items }) => {
-    const [isAlphaSort, setIsAlphaSort] = useState(false);
+    const [sortMode, setSortMode] = useState<SortMode>('LINE');
 
     const sortedItems = useMemo(() => {
         // 1. Définir l'ordre des catégories
@@ -44,7 +55,18 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
         });
 
         return [...items].sort((a, b) => {
-            // A. Tri par Catégorie (Ligne)
+            // --- NIVEAU 0 : Tri par Type d'Audit (si activé) ---
+            if (sortMode === 'AUDIT') {
+                const typeRankA = a.auditType ? AUDIT_TYPE_PRIORITY.indexOf(a.auditType) : 99;
+                const typeRankB = b.auditType ? AUDIT_TYPE_PRIORITY.indexOf(b.auditType) : 99;
+                
+                if (typeRankA !== typeRankB) {
+                    return typeRankA - typeRankB;
+                }
+                // Si même type d'audit, on continue avec la logique géographique ci-dessous
+            }
+
+            // --- NIVEAU 1 : Tri par Catégorie (Ligne) ---
             const indexA = categoryOrder.indexOf(a.category);
             const indexB = categoryOrder.indexOf(b.category);
             const safeIndexA = indexA === -1 ? 999 : indexA;
@@ -54,30 +76,25 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                 return safeIndexA - safeIndexB;
             }
 
-            // B. Tri par Lieu (Station)
-            if (isAlphaSort) {
-                // Tri Alphabétique simple
-                const lieuCompare = a.lieuName.localeCompare(b.lieuName);
-                if (lieuCompare !== 0) return lieuCompare;
-            } else {
-                // Tri Géographique (Ordre de la ligne)
-                if (a.category && b.category && a.category === b.category) {
-                    const map = stationIndexMaps.get(a.category);
-                    if (map) {
-                        const posA = map.get(a.lieuName) ?? 999;
-                        const posB = map.get(b.lieuName) ?? 999;
-                        if (posA !== posB) return posA - posB;
-                    }
+            // --- NIVEAU 2 : Tri Géographique (Ordre de la ligne) ---
+            // Si les deux éléments sont sur la même ligne, on regarde leur position géographique
+            if (a.category && b.category && a.category === b.category) {
+                const map = stationIndexMaps.get(a.category);
+                if (map) {
+                    const posA = map.get(a.lieuName) ?? 999;
+                    const posB = map.get(b.lieuName) ?? 999;
+                    if (posA !== posB) return posA - posB;
                 }
-                // Fallback alphabétique si pas de donnée géo ou catégories différentes (déjà traité par A)
-                const lieuCompare = a.lieuName.localeCompare(b.lieuName);
-                if (lieuCompare !== 0) return lieuCompare;
             }
+            
+            // Fallback alphabétique sur le nom du lieu si pas de donnée géo
+            const lieuCompare = a.lieuName.localeCompare(b.lieuName);
+            if (lieuCompare !== 0) return lieuCompare;
 
-            // C. Tri par Nom de l'élément (Équipement)
+            // --- NIVEAU 3 : Tri par Nom de l'élément (Équipement) ---
             return a.elementName.localeCompare(b.elementName);
         });
-    }, [items, isAlphaSort]);
+    }, [items, sortMode]);
 
     const handleExport = () => {
         const fileName = `anomalies-maintenance-${new Date().toISOString().slice(0, 10)}.csv`;
@@ -87,6 +104,10 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
         } else {
             toast.error('Erreur lors de l\'export.');
         }
+    };
+
+    const toggleSortMode = () => {
+        setSortMode(prev => prev === 'LINE' ? 'AUDIT' : 'LINE');
     };
 
     if (!isOpen) return null;
@@ -118,12 +139,12 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                         </div>
                         <div className="flex items-center gap-2 self-end sm:self-auto">
                             <button
-                                onClick={() => setIsAlphaSort(!isAlphaSort)}
+                                onClick={toggleSortMode}
                                 className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 transition-colors"
-                                title={isAlphaSort ? "Passer en ordre géographique (Ligne)" : "Passer en ordre alphabétique"}
+                                title={sortMode === 'LINE' ? "Actuellement : Groupé par Ligne" : "Actuellement : Groupé par Audit"}
                             >
-                                <ArrowUpDown className="w-4 h-4" />
-                                <span>{isAlphaSort ? "Alphabétique" : "Par Ligne"}</span>
+                                {sortMode === 'LINE' ? <ArrowUpDown className="w-4 h-4" /> : <Filter className="w-4 h-4" />}
+                                <span>{sortMode === 'LINE' ? "Par Ligne" : "Par Audit"}</span>
                             </button>
                             <button
                                 onClick={onClose}
