@@ -320,7 +320,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 className={`${activeTab === 'history' ? 'border-teal-500 text-teal-600 dark:text-teal-400' : 'border-transparent text-gray-500 dark:text-slate-400 hover:border-gray-300 hover:text-gray-700'} whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2`}
             >
                 <History className="w-4 h-4" />
-                Historique & Sauvegardes
+                Historique
             </button>
         </nav>
       </div>
@@ -454,10 +454,6 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div className="text-xs font-semibold text-orange-800 dark:text-orange-300 uppercase mt-1">À remplacer</div>
                         </div>
                     </div>
-
-                    <hr className="border-dashed border-slate-200 dark:border-slate-700" />
-
-                    <StatRow label="Adhésifs OK" value={maintenanceSummary.okCount} highlight="info" />
                     </div>
                 </StatCard>
                 </div>
