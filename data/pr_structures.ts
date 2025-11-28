@@ -1,3 +1,4 @@
+
 import { EquipmentType } from '../types';
 
 type EquipmentTemplate = {
@@ -26,7 +27,6 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                     { name: 'BE02', type: EquipmentType.BE },
                     { name: 'BS01', type: EquipmentType.BS },
                     { name: 'BS02', type: EquipmentType.BS },
-                    { name: 'CA01', type: EquipmentType.CA },
                 ]
             },
             {
@@ -36,6 +36,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
                     { name: 'BE02', type: EquipmentType.BE },
                     { name: 'BS01', type: EquipmentType.BS },
                     { name: 'BS02', type: EquipmentType.BS },
+                    { name: 'CA01', type: EquipmentType.CA },
                 ]
             }
         ]
