@@ -11,7 +11,10 @@ export const db = new Dexie('TisseoAuditDB') as Dexie & {
     history: EntityTable<HistoryEntry, 'id'>;
 };
 
-db.version(2).stores({ // Bump version to 2
+// V3 Update: Clear 'lieux' table to force regeneration of station data (codes, removed stations)
+db.version(3).stores({
     lieux: 'id, name',
-    history: '++id, date, type, categoryKey', // Add history table
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').clear();
 });

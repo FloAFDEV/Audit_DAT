@@ -1,3 +1,4 @@
+
 import { Station } from '../types';
 
 export const LINE_A_STATIONS: Partial<Station>[] = [
@@ -47,28 +48,27 @@ export const LINE_B_STATIONS: Partial<Station>[] = [
 ];
 
 export const LINE_C_STATIONS: Partial<Station>[] = [
-    { id: 'sta-c-1', name: 'Colomiers Gare', isFuture: true },
-    { id: 'sta-c-2', name: 'Colomiers Lycée International', isFuture: true },
-    { id: 'sta-c-3', name: 'Fontaine Lumineuse', isFuture: true },
-    { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', isFuture: true },
-    { id: 'sta-c-5', name: 'Blagnac', isFuture: true },
-    { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', isFuture: true },
-    { id: 'sta-c-7', name: 'Ponts-Jumeaux', isFuture: true },
-    { id: 'sta-c-8', name: 'Fondeyre', isFuture: true },
-    { id: 'sta-c-9', name: 'La Vache', isFuture: true, lieuName: 'La Vache' },
-    { id: 'sta-c-10', name: 'Lycée Toulouse-Lautrec', isFuture: true },
-    { id: 'sta-c-11', name: 'Raisin', isFuture: true },
-    { id: 'sta-c-12', name: 'Bonnefoy', isFuture: true },
-    { id: 'sta-c-13', name: 'Matabiau Gare', isFuture: true, lieuName: 'Marengo-SNCF' },
-    { id: 'sta-c-14', name: 'François-Verdier', isFuture: true, lieuName: 'François Verdier' },
-    { id: 'sta-c-15', name: 'Côte Pavée', isFuture: true },
-    { id: 'sta-c-16', name: 'Limayrac – Cité de l’Espace', isFuture: true },
-    { id: 'sta-c-17', name: 'Ormeau', isFuture: true },
-    { id: 'sta-c-18', name: 'Montaudran Gare', isFuture: true },
-    { id: 'sta-c-19', name: 'Aerospace Campus', isFuture: true },
-    { id: 'sta-c-20', name: 'Labège Madron', isFuture: true, lieuName: 'Labège Madron' },
-    { id: 'sta-c-21', name: 'Diagora', isFuture: true },
-    { id: 'sta-c-22', name: 'Labège Gare', isFuture: true },
+    { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
+    { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
+    { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
+    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true },
+    { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
+    { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
+    { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },
+    { id: 'sta-c-9', name: 'La Vache', code: 'LVH', isFuture: true, lieuName: 'La Vache' },
+    { id: 'sta-c-10', name: 'Lycée Toulouse-Lautrec', code: 'TLA', isFuture: true },
+    { id: 'sta-c-11', name: 'Raisin', code: 'RAI', isFuture: true },
+    { id: 'sta-c-12', name: 'Bonnefoy', code: 'BON', isFuture: true },
+    { id: 'sta-c-13', name: 'Matabiau Gare', code: 'MAT', isFuture: true, lieuName: 'Marengo-SNCF' },
+    { id: 'sta-c-14', name: 'François-Verdier', code: 'FVD', isFuture: true, lieuName: 'François Verdier' },
+    { id: 'sta-c-15', name: 'Côte Pavée', code: 'CPA', isFuture: true },
+    { id: 'sta-c-16', name: 'Limayrac – Cité de l’Espace', code: 'LIM', isFuture: true },
+    { id: 'sta-c-17', name: 'Ormeau', code: 'ORM', isFuture: true },
+    { id: 'sta-c-18', name: 'Montaudran Gare', code: 'MOG', isFuture: true },
+    { id: 'sta-c-19', name: 'Aerospace Campus', code: 'AEC', isFuture: true },
+    { id: 'sta-c-20', name: 'Labège Madron', code: 'LMA', isFuture: true, lieuName: 'Labège Madron' },
+    { id: 'sta-c-21', name: 'Diagora', code: 'DIA', isFuture: true },
+    { id: 'sta-c-22', name: 'Labège Gare', code: 'LAG', isFuture: true },
 ];
 
 export const TRAM_STATIONS: Partial<Station>[] = [

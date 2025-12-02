@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Lieu, AuditCategory, AuditModuleType, ModeData } from '../types';
 import { LieuBadges } from './Icons';
@@ -36,7 +37,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
                      {stationCodes.length > 0 && (
-                        <span className="flex-shrink-0 bg-gray-200 text-gray-700 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
+                        <span className="flex-shrink-0 bg-slate-200 text-slate-800 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
                             {stationCodes.join(' / ')}
                         </span>
                     )}
