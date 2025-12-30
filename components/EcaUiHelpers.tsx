@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { EcaEquipmentType } from '../types';
 
@@ -7,8 +8,8 @@ import { EcaEquipmentType } from '../types';
  * @returns A ReactNode with highlighted keywords.
  */
 export const formatEcaTypeForDisplay = (type: EcaEquipmentType): React.ReactNode => {
-    const keywordsToHighlight = ["entrée", "sortie"];
-    // Create a regex that captures "entrée" or "sortie" words with word boundaries.
+    const keywordsToHighlight = ["entrée", "sortie", "réversible"];
+    // Create a regex that captures keywords words with word boundaries.
     const regex = new RegExp(`\\b(${keywordsToHighlight.join('|')})\\b`, 'gi');
 
     const parts: React.ReactNode[] = [];
@@ -47,6 +48,7 @@ export const getEcaTypeLabel = (type: EcaEquipmentType): string => {
         case EcaEquipmentType.VantauxReversible: return "Vantaux réversible";
         case EcaEquipmentType.PMRBras: return "PMR à bras";
         case EcaEquipmentType.PMRVantaux: return "PMR à vantaux";
+        case EcaEquipmentType.PMRVantauxReversible: return "PMR à vantaux réversible";
         default: return type;
     }
 };

@@ -44,6 +44,7 @@ export enum EcaEquipmentType {
     VantauxReversible = "Vantaux réversible",
     PMRBras = "PMR à bras",
     PMRVantaux = "PMR à vantaux",
+    PMRVantauxReversible = "PMR à vantaux réversible",
 }
 
 export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR';

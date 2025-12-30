@@ -8,7 +8,9 @@ type EcaTemplate = Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' 
  * Checks if a given ECA equipment type is a PMR (Personnes à Mobilité Réduite) type.
  */
 export const isPmrEcaType = (type: EcaEquipmentType): boolean => {
-    return type === EcaEquipmentType.PMRBras || type === EcaEquipmentType.PMRVantaux;
+    return type === EcaEquipmentType.PMRBras || 
+           type === EcaEquipmentType.PMRVantaux || 
+           type === EcaEquipmentType.PMRVantauxReversible;
 };
 
 /**
@@ -24,7 +26,7 @@ export const canEcaBeNotApplicable = (type: EcaEquipmentType): boolean => {
 // =================================================================
 
 export const ECA_DEFINITIONS_JJA_A_TO_B: EcaTemplate[] = [
-    { name: 'Liaison A→B - PMR 17', accessPoint: 'Liaison A→B', type: EcaEquipmentType.VantauxReversible, number: 17 },
+    { name: 'Liaison A→B - PMR 17', accessPoint: 'Liaison A→B', type: EcaEquipmentType.PMRVantauxReversible, number: 17 },
     { name: 'Liaison A→B - Valideur 13', accessPoint: 'Liaison A→B', type: EcaEquipmentType.VantauxReversible, number: 13 },
     { name: 'Liaison A→B - Valideur 14', accessPoint: 'Liaison A→B', type: EcaEquipmentType.VantauxReversible, number: 14 },
     { name: 'Liaison A→B - Valideur 15', accessPoint: 'Liaison A→B', type: EcaEquipmentType.VantauxReversible, number: 15 },
@@ -32,7 +34,7 @@ export const ECA_DEFINITIONS_JJA_A_TO_B: EcaTemplate[] = [
 ];
 
 export const ECA_DEFINITIONS_JJA_B_TO_A: EcaTemplate[] = [
-    { name: 'Liaison B→A - PMR 8', accessPoint: 'Liaison B→A', type: EcaEquipmentType.VantauxReversible, number: 8 },
+    { name: 'Liaison B→A - PMR 8', accessPoint: 'Liaison B→A', type: EcaEquipmentType.PMRVantauxReversible, number: 8 },
     { name: 'Liaison B→A - Valideur 9', accessPoint: 'Liaison B→A', type: EcaEquipmentType.VantauxReversible, number: 9 },
     { name: 'Liaison B→A - Valideur 10', accessPoint: 'Liaison B→A', type: EcaEquipmentType.VantauxReversible, number: 10 },
     { name: 'Liaison B→A - Valideur 11', accessPoint: 'Liaison B→A', type: EcaEquipmentType.VantauxReversible, number: 11 },
@@ -46,9 +48,6 @@ export const ECA_DEFINITIONS_JJA_A_HISTORIQUE: EcaTemplate[] = [
 ];
 
 export const ECA_DEFINITIONS_JJA_A_PRINCIPAL: EcaTemplate[] = [
-    // This part is for Line A Principal side, if relevant. 
-    // In the image provided, JJA is split into JJB A, JJB B, JJB AB, JJB BA.
-    // I'll keep the generic definitions and update JJB specific ones.
     { name: 'Valideur 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 1 },
     { name: 'Valideur 2', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 2 },
     { name: 'Valideur 3', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 3 },
@@ -92,11 +91,11 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
     ],
     'JOL': [ 
         // JOL ASC (Accès Bas)
+        { name: 'PMR 8', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.PMRVantaux, number: 8 },
         { name: 'Valideur 9', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.TripodeEntree, number: 9 },
         { name: 'Valideur 10', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.TripodeEntree, number: 10 },
         { name: 'Valideur 11 (Sortie)', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.TripodeSortie, number: 11 },
         { name: 'Valideur 12 (Sortie)', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.TripodeSortie, number: 12 },
-        { name: 'PMR 8', accessPoint: 'Accès Bas (ASC)', type: EcaEquipmentType.PMRVantaux, number: 8 },
         // JOL PRI (Accès Haut)
         { name: 'PMR 1', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.PMRBras, number: 1 },
         { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.TripodeSortie, number: 2 },
@@ -151,7 +150,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 7', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.TripodeEntree, number: 7 },
         { name: 'Valideur 8', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.TripodeEntree, number: 8 },
         { name: 'Valideur 9', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.TripodeEntree, number: 9 },
-        { name: 'PMR 10', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.PMRBras, number: 10 },
+        { name: 'Valideur 10', accessPoint: 'Accès Haut (PRI)', type: EcaEquipmentType.TripodeEntree, number: 10 },
     ],
     'SCY': [
         { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
@@ -256,6 +255,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
         { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
         { name: 'PMR 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 5 },
+        { name: 'PMR 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 7 },
     ],
     'LVA': [
         { name: 'Valideur 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 1 },
@@ -296,6 +296,8 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
         { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
         { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
+        { name: 'Valideur 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 7 },
+        { name: 'Valideur 8', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 8 },
     ],
     'JAR': [
         { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
@@ -309,15 +311,14 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 9', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 9 },
     ],
     'JJB': [
-        // Jaurès B - Côté B
+        // Jaurès B - Côté B (JJB B)
         { name: 'PMR 1', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.PMRVantaux, number: 1 },
         { name: 'Valideur 2', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 2 },
         { name: 'Valideur 3', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 3 },
         { name: 'Valideur 4', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 4 },
         { name: 'Valideur 5', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 5 },
         { name: 'Valideur 6', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 6 },
-        { name: 'Valideur 7 (Sortie)', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxSortie, number: 7 },
-        // Jaurès B - Côté A
+        // Jaurès B - Côté A (JJB A)
         { name: 'PMR 7', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.PMRVantaux, number: 7 },
         { name: 'Valideur 8', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 8 },
         { name: 'Valideur 9', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 9 },
@@ -339,7 +340,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 2 },
         { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
         { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
-        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: 'Valideur 5 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 5 },
         { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
         { name: 'Valideur 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 7 },
         { name: 'Valideur 8', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 8 },
@@ -349,7 +350,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 2 },
         { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
         { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
-        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: 'Valideur 5 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 5 },
         { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
         { name: 'Valideur 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 7 },
         { name: 'Valideur 8', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 8 },
@@ -364,7 +365,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'PMR 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 7 },
     ],
     'EMP': [
-        { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
+        { name: 'Valideur 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 1 },
         { name: 'Valideur 2', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 2 },
         { name: 'Valideur 3', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 3 },
         { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
@@ -412,7 +413,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'PMR 8', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 8 },
     ],
     'RAM': [ 
-        // RAM Square
+        // RAM Square (RAM BOR)
         { name: 'Valideur 1', accessPoint: 'Accès Square', type: EcaEquipmentType.TripodeEntree, number: 1 },
         { name: 'Valideur 2', accessPoint: 'Accès Square', type: EcaEquipmentType.TripodeEntree, number: 2 },
         { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Square', type: EcaEquipmentType.TripodeSortie, number: 3 },

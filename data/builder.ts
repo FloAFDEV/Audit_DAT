@@ -1,3 +1,4 @@
+
 import {
     Lieu, AuditModule, ModeData, AuditModuleType, TransportMode, MetroLine, Station, Direction, DAT, AdhesiveStatus, Pr,
     Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone
@@ -221,14 +222,14 @@ const createEcaModule = (
 
         return {
             ...template,
-            id: `${stationCode}-${line}-eca-${index + 1}`,
+            id: `${stationCode}-${line}-eca-${index + 1}-${uuidv4().substring(0,4)}`,
             adhesives: initialAdhesives,
             comment: ''
         };
     });
 
     const ecaData: EcaData = {
-        id: `eca-data-${stationCode}-${line}`,
+        id: `eca-data-${stationCode}-${line}-${uuidv4().substring(0,4)}`,
         stationName,
         stationCode,
         ecas,
@@ -305,14 +306,13 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
-            // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA')
+            // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA') et Ligne B ('JJB')
             ...LINE_A_STATIONS.filter(s => s.code !== 'JJA').map(s => createEcaModule(
                 'ECA (Valideurs)', s.name!, s.code!, 'A', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
             )),
-            ...LINE_B_STATIONS.map(s => {
-                const moduleName = s.code === 'JJB' ? 'ECA (Entrée Principale)' : 'ECA (Valideurs)';
+            ...LINE_B_STATIONS.filter(s => s.code !== 'JJB').map(s => {
                 return createEcaModule(
-                    moduleName, s.name!, s.code!, 'B', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+                    'ECA (Valideurs)', s.name!, s.code!, 'B', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
                 );
             }),
             ...LINE_C_STATIONS.map(s => createEcaModule(
@@ -411,17 +411,33 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             const jjaStation = LINE_A_STATIONS.find(s => s.code === 'JJA')!;
             const jjbStation = LINE_B_STATIONS.find(s => s.code === 'JJB')!;
 
-            // ECA modules
+            // LIGNE A - Modules
             const moduleAtoB = createEcaModule('ECA Liaison A→B', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_TO_B);
-            const moduleBtoA = createEcaModule('ECA Liaison B→A', 'Jean-Jaurès', 'JJB', 'B', false, ECA_DEFINITIONS_JJA_B_TO_A);
             const moduleJjaHist = createEcaModule('ECA (Accès Historique)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_HISTORIQUE);
             const moduleJjaPrinc = createEcaModule('ECA (Accès Principal)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_PRINCIPAL);
+
+            // LIGNE B - Modules
+            const moduleJjbB = createEcaModule('ECA Jaurès B', 'Jean-Jaurès', 'JJB', 'B', false, [
+                { name: 'PMR 1', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.PMRVantaux, number: 1 },
+                { name: 'Valideur 2', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 2 },
+                { name: 'Valideur 3', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 3 },
+                { name: 'Valideur 4', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 4 },
+                { name: 'Valideur 5', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 5 },
+                { name: 'Valideur 6', accessPoint: 'Accès Jaurès B', type: EcaEquipmentType.VantauxEntree, number: 6 },
+            ]);
+            const moduleJjbA = createEcaModule('ECA Jaurès A', 'Jean-Jaurès', 'JJB', 'B', false, [
+                { name: 'PMR 7', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.PMRVantaux, number: 7 },
+                { name: 'Valideur 8', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 8 },
+                { name: 'Valideur 9', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 9 },
+                { name: 'Valideur 10', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 10 },
+                { name: 'Valideur 11', accessPoint: 'Accès Jaurès A', type: EcaEquipmentType.VantauxEntree, number: 11 },
+            ]);
+            const moduleBtoA = createEcaModule('ECA Liaison B→A', 'Jean-Jaurès', 'JJB', 'B', false, ECA_DEFINITIONS_JJA_B_TO_A);
 
             // PMR Floor Adhesive modules
             const modulePmrA_Hist = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Historique)', jjaStation, 'A');
             (modulePmrA_Hist.data as PMRFloorAdhesiveData).isNotApplicable = true;
             (modulePmrA_Hist.data as PMRFloorAdhesiveData).notApplicableReason = "L'adhésif au sol n'est pas posé car il ne tient pas (exposition partielle aux intempéries).";
-
 
             const modulePmrA_Princ = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Principal Ligne A)', jjaStation, 'A');
             const modulePmrB = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Principal Ligne B)', jjbStation, 'B');
@@ -429,7 +445,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             const modulePmrBtoA = createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Liaison B→A)', jjbStation, 'B');
 
             jjLieu.modules.push(
-                moduleAtoB, moduleBtoA, moduleJjaHist, moduleJjaPrinc,
+                moduleAtoB, moduleBtoA, moduleJjaHist, moduleJjaPrinc, moduleJjbB, moduleJjbA,
                 modulePmrA_Hist, modulePmrA_Princ, modulePmrB, modulePmrAtoB, modulePmrBtoA
             );
         }
@@ -445,9 +461,6 @@ export const getLieuxForCategory = (lieux: Lieu[], category: AuditCategory): Lie
     return lieux
         .filter(lieu => lieu.modules.some(module => categoryConfig.predicate(module)))
         .map(lieu => {
-            // For the category view, it might be desirable to only show modules of that category
-            // but for now we return the full lieu object to avoid breaking navigation logic
-            // that expects all modules to be present.
             return lieu;
         });
 };
