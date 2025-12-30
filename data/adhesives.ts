@@ -1,3 +1,4 @@
+
 import { Adhesive, PrAdhesive, EcaEquipmentType, EquipmentType } from '../types';
 
 // =================================================================
@@ -56,13 +57,23 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
 // ADHÉSIFS ECA (Équipement de Contrôle d'Accès)
 // =================================================================
 
+const ECA_IDENTIFIANT_ADHESIVE: Adhesive = { 
+    id: 'eca-11', 
+    name: 'Repère 11 - Adhésif identifiant (N° ECA)', 
+    description: 'Adhésif identifiant unique de l\'équipement | Sur le capot supérieur ou latéral, visible par le personnel.', 
+    referentiel: '' 
+};
+
 const ECA_ADHESIVES_ENTREE: Adhesive[] = [
     { id: 'eca-1', name: 'Repère 1 - Adhesif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
     { id: 'eca-2', name: 'Repère 2 - Adhesif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
     { id: 'eca-3', name: 'Repère 3 - Adhesif valideur-openpayment-metro', description: '183x183mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
+    ECA_IDENTIFIANT_ADHESIVE,
 ];
 
-const ECA_ADHESIVES_SORTIE: Adhesive[] = [];
+const ECA_ADHESIVES_SORTIE: Adhesive[] = [
+    ECA_IDENTIFIANT_ADHESIVE,
+];
 
 const ECA_ADHESIVES_REVERSIBLE: Adhesive[] = [
     ...ECA_ADHESIVES_ENTREE,
@@ -105,6 +116,6 @@ export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
         case EcaEquipmentType.VantauxReversible:
             return ECA_ADHESIVES_REVERSIBLE;
         default:
-            return [];
+            return [ECA_IDENTIFIANT_ADHESIVE];
     }
 };
