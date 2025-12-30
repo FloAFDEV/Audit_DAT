@@ -51,7 +51,7 @@ export const ECA_DEFINITIONS_JJA_A_PRINCIPAL: EcaTemplate[] = [
     { name: 'Valideur 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 1 },
     { name: 'Valideur 2', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 2 },
     { name: 'Valideur 3', accessPoint: 'Accès Principal', type: EcaEquipmentType.VantauxEntree, number: 3 },
-    { name: 'PMR 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 4 },
+    // PMR supprimé ici pour éviter le doublon avec l'accès historique sur la Ligne A
 ];
 
 // =================================================================

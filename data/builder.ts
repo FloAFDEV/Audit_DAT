@@ -412,7 +412,8 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             const jjbStation = LINE_B_STATIONS.find(s => s.code === 'JJB')!;
 
             // LIGNE A - Modules
-            const moduleAtoB = createEcaModule('ECA Liaison A→B', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_TO_B);
+            // Liaison A→B moved to Line B to count in the 25 PMR of Line B as per user spreadsheet logic
+            const moduleAtoB = createEcaModule('ECA Liaison A→B', 'Jean-Jaurès', 'JJA', 'B', false, ECA_DEFINITIONS_JJA_A_TO_B);
             const moduleJjaHist = createEcaModule('ECA (Accès Historique)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_HISTORIQUE);
             const moduleJjaPrinc = createEcaModule('ECA (Accès Principal)', 'Jean-Jaurès', 'JJA', 'A', false, ECA_DEFINITIONS_JJA_A_PRINCIPAL);
 
