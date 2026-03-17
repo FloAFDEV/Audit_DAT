@@ -226,19 +226,20 @@ const escapeCsv = (value: any): string => {
 };
 
 const statusTranslations: { [key: string]: string } = {
-    [AdhesiveStatus.NotChecked]: 'Non contrôlé',
-    [AdhesiveStatus.OK]: 'OK',
-    [AdhesiveStatus.Absent]: 'Absent',
-    [AdhesiveStatus.ToBeReplaced]: 'À remplacer',
-    [AdhesiveStatus.NotApplicable]: 'Non applicable',
-    [FloorAdhesiveStatus.ToPlan]: 'À planifier',
+    // AdhesiveStatus values
+    'NotChecked': 'Non contrôlé',
+    'Absent': 'Absent',
+    'ToBeReplaced': 'À remplacer',
+    'NotApplicable': 'Non applicable',
+    // FloorAdhesiveStatus values
+    'ToPlan': 'À planifier',
+    // EquipmentStatusType values
     'OK': 'OK',
     'DEGRADED': 'Dégradé',
     'HS': 'HS',
     'ABSENT': 'Absent',
     'TO_REPLACE': 'À remplacer',
     'NOT_APPLICABLE': 'Non applicable',
-    'NotChecked': 'Non contrôlé'
 };
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {

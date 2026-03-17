@@ -163,6 +163,7 @@ export interface Station {
     directions: Direction[];
     lieuName?: string;
     signaletique?: SignaletiqueData;
+    signaletiqueCompletionDate?: string;
     comment?: string;
 }
 
