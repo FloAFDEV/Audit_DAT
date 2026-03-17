@@ -143,7 +143,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
     const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
     categories.forEach(cat => {
-      const items = signaletique[cat][directionKey];
+      const items = signaletique[cat]?.[directionKey] ?? [];
       items.forEach(item => {
         total++;
         if (item.status !== 'NotChecked') {
@@ -423,7 +423,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
               {expandedSections[category] && (
                 <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                  {signaletique[category][directionKey].map((item, idx) => renderItem(category, directionKey, idx, item))}
+                  {(signaletique[category]?.[directionKey] ?? []).map((item, idx) => renderItem(category, directionKey, idx, item))}
                 </div>
               )}
             </div>
