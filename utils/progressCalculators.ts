@@ -155,12 +155,15 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
 
     switch (module.type) {
         case AuditModuleType.DAT: {
-            const dats = (module.data as ModeData).stations?.flatMap(s => s.directions?.flatMap(d => d.dats ?? []) ?? []) ?? [];
-            if (dats.length > 0) hasAuditableContent = true;
-            for (const dat of dats) {
-                const statuses = Object.values(dat.adhesives);
-                totalApplicableItems += statuses.length;
-                totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+            const stations = (module.data as ModeData).stations ?? [];
+            if (stations.length > 0) hasAuditableContent = true;
+            for (const station of stations) {
+                const dats = station.directions?.flatMap(d => d.dats ?? []) ?? [];
+                for (const dat of dats) {
+                    const statuses = Object.values(dat.adhesives);
+                    totalApplicableItems += statuses.length;
+                    totalCheckedItems += statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+                }
             }
             break;
         }
@@ -216,6 +219,24 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             if (pictos.length > 0) hasAuditableContent = true;
             totalApplicableItems += pictos.length;
             totalCheckedItems += pictos.filter(p => p.status !== FloorAdhesiveStatus.NotChecked).length;
+            break;
+        }
+        case AuditModuleType.SIGNALETIQUE: {
+            const stations = (module.data as ModeData).stations ?? [];
+            if (stations.length > 0) hasAuditableContent = true;
+            for (const station of stations) {
+                if (station.signaletique) {
+                    const sig = station.signaletique;
+                    const allEquipment = [
+                        ...sig.totem.meett, ...sig.totem.pdj,
+                        ...sig.biv.meett, ...sig.biv.pdj,
+                        ...sig.planReseau.meett, ...sig.planReseau.pdj,
+                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
+                    ];
+                    totalApplicableItems += allEquipment.length;
+                    totalCheckedItems += allEquipment.filter(e => e.status !== 'NotChecked').length;
+                }
+            }
             break;
         }
     }

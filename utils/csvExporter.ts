@@ -232,6 +232,13 @@ const statusTranslations: { [key: string]: string } = {
     [AdhesiveStatus.ToBeReplaced]: 'À remplacer',
     [AdhesiveStatus.NotApplicable]: 'Non applicable',
     [FloorAdhesiveStatus.ToPlan]: 'À planifier',
+    'OK': 'OK',
+    'DEGRADED': 'Dégradé',
+    'HS': 'HS',
+    'ABSENT': 'Absent',
+    'TO_REPLACE': 'À remplacer',
+    'NOT_APPLICABLE': 'Non applicable',
+    'NotChecked': 'Non contrôlé'
 };
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
@@ -502,6 +509,44 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 'Localisation Adhésif': '',
                                 'Commentaire': data.comment,
                             });
+                        }
+                        break;
+                    }
+                    case AuditModuleType.SIGNALETIQUE: {
+                        const data = module.data as ModeData;
+                        const CATEGORY_LABELS: Record<string, string> = {
+                            totem: 'Totem',
+                            biv: 'BIV',
+                            planReseau: 'Plan Réseau',
+                            planQuartier: 'Plan Quartier'
+                        };
+
+                        for (const station of data.stations) {
+                            if (!station.signaletique) continue;
+                            const sig = station.signaletique;
+                            
+                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier'] as const;
+                            const directions = ['meett', 'pdj'] as const;
+
+                            for (const cat of categories) {
+                                for (const dir of directions) {
+                                    const items = sig[cat][dir];
+                                    items.forEach((item, index) => {
+                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`;
+                                        rows.push({
+                                            ...baseRow,
+                                            'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
+                                            'Direction/Équipement/Accès': dir.toUpperCase(),
+                                            'Élément': itemName,
+                                            'Statut': statusTranslations[item.status] || item.status,
+                                            'Description Adhésif': item.dimensions || '',
+                                            'Commentaire': item.comment || '',
+                                            'Note Photo': item.photo_note || '',
+                                            'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
+                                        });
+                                    });
+                                }
+                            }
                         }
                         break;
                     }

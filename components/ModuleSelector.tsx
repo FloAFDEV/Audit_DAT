@@ -26,10 +26,11 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
 
         const order = {
             [AuditModuleType.DAT]: 1,
-            [AuditModuleType.ECA]: 2,
-            [AuditModuleType.PMR_FLOOR_ADHESIVE]: 3,
-            [AuditModuleType.COGNITIVE_PICTOGRAMS]: 4,
-            [AuditModuleType.PR]: 5,
+            [AuditModuleType.SIGNALETIQUE]: 2,
+            [AuditModuleType.ECA]: 3,
+            [AuditModuleType.PMR_FLOOR_ADHESIVE]: 4,
+            [AuditModuleType.COGNITIVE_PICTOGRAMS]: 5,
+            [AuditModuleType.PR]: 6,
         };
 
         // Special sorting for Jean-Jaurès

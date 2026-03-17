@@ -1,10 +1,11 @@
 
 import { create } from 'zustand';
 import { 
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone 
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType 
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
+import { getInitialSignaletiqueData } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { v4 as uuidv4 } from 'uuid';
@@ -39,6 +40,7 @@ interface AppState {
     selectedPrZoneId: string | null;
     selectedEquipmentId: string | null;
     selectedEcaId: string | null;
+    isSignaletiqueActive: boolean;
 
     // Actions
     init: () => Promise<void>;
@@ -99,6 +101,17 @@ interface AppState {
     handleAddCognitivePictogramAccessPoint: () => Promise<void>;
     handleRemoveCognitivePictogramAccessPoint: (pictogramId: string) => Promise<void>;
     handleUpdateCognitivePictogramAccessPointName: (pictogramId: string, newName: string) => Promise<void>;
+    
+    // Signaletique Actions
+    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
+    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, comment: string) => Promise<void>;
+    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, field: string, value: any) => Promise<void>;
+    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, photo_base64: string | null) => Promise<void>;
+    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, note: string) => Promise<void>;
+    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, rotation: number) => Promise<void>;
+    handleResetSignaletique: () => Promise<void>;
+    handleSignaletiqueStationCommentChange: (comment: string) => Promise<void>;
+    setIsSignaletiqueActive: (isActive: boolean) => void;
     
     // Reset actions
     handleResetCategory: (category: AuditCategory) => Promise<void>;
@@ -176,6 +189,7 @@ const useAuditStore = create<AppState>((set, get) => {
     selectedPrZoneId: null,
     selectedEquipmentId: null,
     selectedEcaId: null,
+    isSignaletiqueActive: false,
 
     // =================================================================
     // Initialization & Auth
@@ -192,8 +206,30 @@ const useAuditStore = create<AppState>((set, get) => {
             set({ isAuthenticated, theme: initialTheme });
 
             const count = await db.lieux.count();
+            let data: Lieu[] = [];
             if (count > 0) {
-                const data = await db.lieux.toArray();
+                data = await db.lieux.toArray();
+                
+                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized
+                let dataChanged = false;
+                data.forEach(lieu => {
+                    lieu.modules.forEach(module => {
+                        if (module.type === AuditModuleType.DAT && module.line === 'TRAM') {
+                            const modeData = module.data as ModeData;
+                            modeData.stations.forEach(station => {
+                                if (!station.isFuture && !station.signaletique) {
+                                    station.signaletique = getInitialSignaletiqueData(station.name || '');
+                                    dataChanged = true;
+                                }
+                            });
+                        }
+                    });
+                });
+
+                if (dataChanged) {
+                    await db.lieux.bulkPut(data);
+                }
+                
                 set({ lieux: data });
             } else {
                 const initialData = await generateInitialLieuxDataAsync();
@@ -252,6 +288,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
     selectLieu: (lieuId) => set({
         isStatsViewActive: false,
+        isSignaletiqueActive: false,
         selectedLieuId: lieuId,
         selectedModuleId: null,
         selectedStationId: null,
@@ -275,6 +312,7 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedPrZoneId: null,
             selectedEquipmentId: null,
             selectedEcaId: null,
+            isSignaletiqueActive: false,
         };
 
         if (module?.type === AuditModuleType.DAT) {
@@ -301,14 +339,15 @@ const useAuditStore = create<AppState>((set, get) => {
              const modeData = module.data as ModeData;
              const station = modeData.stations.find(s => s.id === stationId);
              if (station?.directions.length === 1) {
-                 set({ selectedStationId: stationId, selectedDirectionId: station.directions[0].id, selectedDatId: null });
+                 set({ selectedStationId: stationId, selectedDirectionId: station.directions[0].id, selectedDatId: null, isSignaletiqueActive: false });
                  return;
              }
         }
-        set({ selectedStationId: stationId, selectedDirectionId: null, selectedDatId: null });
+        set({ selectedStationId: stationId, selectedDirectionId: null, selectedDatId: null, isSignaletiqueActive: false });
     },
     
-    selectDirection: (directionId) => set({ selectedDirectionId: directionId, selectedDatId: null }),
+    selectDirection: (directionId) => set({ selectedDirectionId: directionId, selectedDatId: null, isSignaletiqueActive: false }),
+    setIsSignaletiqueActive: (isActive) => set({ isSignaletiqueActive: isActive }),
     selectDat: (datId) => set({ selectedDatId: datId }),
     selectPrZone: (zoneId) => set({ selectedPrZoneId: zoneId, selectedEquipmentId: null }),
     selectEquipment: (equipmentId) => set({ selectedEquipmentId: equipmentId }),
@@ -734,6 +773,144 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             const pictogram = module.data.pictograms.find(p => p.id === pictogramId);
             if (pictogram) pictogram.accessPointName = newName;
+        });
+    },
+
+    handleSignaletiqueStatusChange: async (equipmentType, direction, index, status) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    equipment.status = status;
+                }
+            }
+        });
+    },
+
+    handleSignaletiqueCommentChange: async (equipmentType, direction, index, comment) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    equipment.comment = comment;
+                }
+            }
+        });
+    },
+
+    handleSignaletiqueFieldChange: async (equipmentType, direction, index, field, value) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    (equipment as any)[field] = value;
+                }
+            }
+        });
+    },
+
+    handleSignaletiquePhotoChange: async (equipmentType, direction, index, photo_base64) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    if (photo_base64) {
+                        equipment.photo_base64 = photo_base64;
+                    } else {
+                        delete equipment.photo_base64;
+                        delete equipment.photo_note;
+                        delete equipment.photo_rotation;
+                    }
+                }
+            }
+        });
+    },
+
+    handleSignaletiquePhotoNoteChange: async (equipmentType, direction, index, note) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    equipment.photo_note = note;
+                }
+            }
+        });
+    },
+
+    handleSignaletiquePhotoRotationChange: async (equipmentType, direction, index, rotation) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const equipment = station.signaletique[equipmentType][direction][index];
+                if (equipment) {
+                    equipment.photo_rotation = rotation;
+                }
+            }
+        });
+    },
+
+    handleSignaletiqueStationCommentChange: async (comment) => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station) {
+                station.comment = comment;
+            }
+        });
+    },
+
+    handleResetSignaletique: async () => {
+        const { selectedModuleId, selectedStationId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
+            const station = module.data.stations.find(s => s.id === selectedStationId);
+            if (station?.signaletique) {
+                const types: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier'];
+                types.forEach(type => {
+                    ['meett', 'pdj'].forEach(dir => {
+                        station.signaletique![type][dir as 'meett' | 'pdj'].forEach((eq: any) => {
+                            eq.status = 'NotChecked';
+                            eq.comment = '';
+                            delete eq.photo_base64;
+                            delete eq.photo_note;
+                            delete eq.photo_rotation;
+                            
+                            // Reset specific fields
+                            if (type === 'biv') {
+                                eq.screenFunctioning = 'NotChecked';
+                                eq.whiteTextAdhesives = 'NotChecked';
+                            } else if (type === 'planReseau') {
+                                eq.bannerStationName = 'NotChecked';
+                                eq.hap = 'NotChecked';
+                            } else if (type === 'planQuartier') {
+                                eq.bannerDirection = 'NotChecked';
+                                eq.relayInfo = 'NotChecked';
+                                eq.terminusCase = 'NotChecked';
+                                eq.hap = 'NotChecked';
+                            }
+                        });
+                    });
+                });
+                station.comment = '';
+            }
         });
     },
 

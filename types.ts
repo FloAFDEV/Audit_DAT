@@ -5,6 +5,7 @@ export enum AuditModuleType {
     ECA = 'ECA',
     PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
     COGNITIVE_PICTOGRAMS = 'COGNITIVE_PICTOGRAMS',
+    SIGNALETIQUE = 'SIGNALETIQUE',
 }
 
 export enum TransportMode {
@@ -81,6 +82,65 @@ export interface Direction {
     dats: DAT[];
 }
 
+export enum EquipmentStatusType {
+    OK = 'OK',
+    DEGRADED = 'DEGRADED',
+    ABSENT = 'ABSENT',
+    TO_REPLACE = 'TO_REPLACE',
+    HS = 'HS',
+    NOT_APPLICABLE = 'NOT_APPLICABLE',
+}
+
+export interface EquipmentStatus {
+    status: EquipmentStatusType | 'NotChecked';
+    comment?: string;
+    photo_base64?: string | null;
+    photo_note?: string;
+    photo_rotation?: number;
+}
+
+export interface TotemStatus extends EquipmentStatus {
+    dimensions?: string; // "61,6 x 91,6 cm"
+}
+
+export interface BivStatus extends EquipmentStatus {
+    screenFunctioning: EquipmentStatusType | 'NotChecked';
+    whiteTextAdhesives: EquipmentStatusType | 'NotChecked';
+}
+
+export interface PlanReseauStatus extends EquipmentStatus {
+    dimensions?: string; // "80 x 100 cm"
+    bannerStationName: EquipmentStatusType | 'NotChecked';
+    hap: EquipmentStatusType | 'NotChecked';
+}
+
+export interface PlanQuartierStatus extends EquipmentStatus {
+    dimensions?: string; // "80 x 100 cm"
+    bannerDirection: EquipmentStatusType | 'NotChecked';
+    relayInfo: EquipmentStatusType | 'NotChecked';
+    terminusCase: EquipmentStatusType | 'NotChecked';
+    hap: EquipmentStatusType | 'NotChecked';
+}
+
+export interface SignaletiqueData {
+    totem: {
+        meett: TotemStatus[];
+        pdj: TotemStatus[];
+    };
+    biv: {
+        meett: BivStatus[];
+        pdj: BivStatus[];
+    };
+    planReseau: {
+        meett: PlanReseauStatus[];
+        pdj: PlanReseauStatus[];
+    };
+    planQuartier: {
+        meett: PlanQuartierStatus[];
+        pdj: PlanQuartierStatus[];
+    };
+}
+
 export interface Station {
     id: string;
     name: string;
@@ -88,6 +148,8 @@ export interface Station {
     isFuture?: boolean;
     directions: Direction[];
     lieuName?: string;
+    signaletique?: SignaletiqueData;
+    comment?: string;
 }
 
 export interface Equipment {

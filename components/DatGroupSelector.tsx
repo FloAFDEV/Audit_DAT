@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
-import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft, Layout } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { getDirectionProgress } from '../utils/progressCalculators';
 import { CategoryIcon } from './CategoryIcon';
@@ -28,7 +28,7 @@ const DirectionName: React.FC<{ name: string }> = ({ name }) => {
         return (
             <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
                 <span className="truncate">{textPart}</span>
-                {config && <CategoryIcon categoryConfig={config} size="sm" />}
+                {config && <CategoryIcon categoryConfig={config} size="sm" asDiv />}
             </div>
         );
     }
@@ -40,6 +40,7 @@ const DirectionName: React.FC<{ name: string }> = ({ name }) => {
 const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, onSelectStation, onSelectDirection, onBack }) => {
     const modeData = module.data as ModeData;
     const stations = modeData.stations;
+    const isTram = module.line === 'TRAM';
 
     const handleBack = () => {
         const moduleData = module.data as ModeData;
@@ -74,41 +75,47 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                         </div>
                     </div>
                 </div>
-                <div className="space-y-4">
-                    {station.directions.map(direction => {
-                        const progress = getDirectionProgress(direction);
-                        const isInProgress = progress.percentage > 0 && !progress.isComplete;
-                        const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
-                        
-                        return (
-                             <button
-                                key={direction.id}
-                                onClick={() => onSelectDirection(direction.id)}
-                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
-                            >
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                                        <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
-                                        <DirectionName name={direction.name} />
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
-                                </div>
-                                <div className="mt-4">
-                                    <div className="flex justify-between items-center mb-1">
-                                         <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                                            {progress.isComplete ? 'Terminé' : 'Progression'}
-                                        </span>
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
-                                            {progress.completedCount} / {progress.totalCount} DATs
-                                        </span>
-                                    </div>
-                                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
-                                    </div>
-                                </div>
-                            </button>
-                        );
-                    })}
+
+                <div className="space-y-6">
+                    <section>
+                        <h3 className="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3 ml-1">Audit DAT</h3>
+                        <div className="space-y-4">
+                            {station.directions.map(direction => {
+                                const progress = getDirectionProgress(direction);
+                                const isInProgress = progress.percentage > 0 && !progress.isComplete;
+                                const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                                
+                                return (
+                                    <button
+                                        key={direction.id}
+                                        onClick={() => onSelectDirection(direction.id)}
+                                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <ArrowRightLeft className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
+                                                <DirectionName name={direction.name} />
+                                            </div>
+                                            <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
+                                        </div>
+                                        <div className="mt-4">
+                                            <div className="flex justify-between items-center mb-1">
+                                                <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                                    {progress.isComplete ? 'Terminé' : 'Progression'}
+                                                </span>
+                                                <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+                                                    {progress.completedCount} / {progress.totalCount} DATs
+                                                </span>
+                                            </div>
+                                            <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                                <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </section>
                 </div>
             </div>
         )

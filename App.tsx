@@ -97,13 +97,25 @@ const App: React.FC = () => {
     const selectedLieu = useMemo(() => store.lieux.find(l => l.id === store.selectedLieuId), [store.lieux, store.selectedLieuId]);
     const selectedModule = useMemo(() => selectedLieu?.modules.find(m => m.id === store.selectedModuleId), [selectedLieu, store.selectedModuleId]);
     
-    // DAT flow data
+    // DAT/Signaletique flow data
     const selectedStation = useMemo(() => {
-        if (selectedModule?.type !== AuditModuleType.DAT) return null;
-        return (selectedModule.data as ModeData).stations.find((s: Station) => s.id === store.selectedStationId);
-    }, [selectedModule, store.selectedStationId]);
+        if (!selectedLieu || !store.selectedStationId) return null;
+        
+        // Find the station in any module that has stations (DAT or SIGNALETIQUE)
+        for (const module of selectedLieu.modules) {
+            if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
+                const modeData = module.data as ModeData;
+                const station = modeData.stations.find((s: Station) => s.id === store.selectedStationId);
+                if (station) return station;
+            }
+        }
+        return null;
+    }, [selectedLieu, store.selectedStationId]);
 
-    const selectedDirection = useMemo(() => selectedStation?.directions.find((d: Direction) => d.id === store.selectedDirectionId), [selectedStation, store.selectedDirectionId]);
+    const selectedDirection = useMemo(() => {
+        if (!selectedStation || !store.selectedDirectionId) return null;
+        return selectedStation.directions.find((d: Direction) => d.id === store.selectedDirectionId);
+    }, [selectedStation, store.selectedDirectionId]);
     const selectedDat = useMemo(() => selectedDirection?.dats.find((d: DAT) => d.id === store.selectedDatId), [selectedDirection, store.selectedDatId]);
 
     // P+R flow data
@@ -151,6 +163,7 @@ const App: React.FC = () => {
                  <Suspense fallback={<Loader />}>
                     <AppRouter
                         isStatsViewActive={store.isStatsViewActive}
+                        isSignaletiqueActive={store.isSignaletiqueActive}
                         // Pass selected data
                         lieux={store.lieux}
                         selectedLieu={selectedLieu}
@@ -169,6 +182,11 @@ const App: React.FC = () => {
                         handleResetEcaAdhesiveRequest={() => handlers.handleResetEcaAdhesiveRequest(selectedEca)}
                         handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
                         handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
+                        handleResetSignaletiqueRequest={() => handlers.handleResetSignaletiqueRequest(selectedStation)}
+                        onPhotoNoteChange={handlers.handleSignaletiquePhotoNoteChange}
+                        onPhotoRotationChange={handlers.handleSignaletiquePhotoRotationChange}
+                        onFieldChange={handlers.handleSignaletiqueFieldChange}
+                        setIsSignaletiqueActive={handlers.setIsSignaletiqueActive}
                         onExportByCategory={handlers.handleExportByCategory}
                         onExportByModuleType={handlers.handleExportByModuleType}
                         onExportAll={handlers.handleExportAll}

@@ -28,9 +28,12 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
 
     return (
-        <button
+        <div
             onClick={onSelect}
-            className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-75 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
+            className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-75 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 cursor-pointer`}
         >
             <div className="flex justify-between items-center">
                  <div className="flex items-center gap-x-2 flex-wrap min-w-0">
@@ -53,6 +56,6 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     <div className={`${progressBarColor} h-1.5 rounded-full`} style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
-        </button>
+        </div>
     );
 };

@@ -139,11 +139,14 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     ];
 };
 
+import { getInitialSignaletiqueData } from './signaletique_config';
+
 const createDatModule = (station: Partial<Station>, type: TransportMode, line: MetroLine | 'TRAM' | 'TELEO'): AuditModule => {
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
         directions: station.isFuture ? [] : createDatDirectionsAndDatsForStation(station, line),
+        signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
     };
 
     const modeData: ModeData = {
@@ -162,6 +165,29 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
         name: moduleName,
         data: modeData,
         isFuture: station.isFuture,
+        line: line,
+    };
+};
+
+const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM'): AuditModule => {
+    const fullStation: Station = {
+        ...station,
+        id: station.id!, name: station.name!,
+        directions: [],
+        signaletique: getInitialSignaletiqueData(station.name!)
+    };
+
+    const modeData: ModeData = {
+        id: `mode-sig-${station.id}`, name: station.name!, type: TransportMode.TRAM, line,
+        stations: [fullStation],
+    };
+
+    return {
+        id: `module-sig-${station.id}`,
+        type: AuditModuleType.SIGNALETIQUE,
+        name: 'Équipements Station',
+        data: modeData,
+        isFuture: !!station.isFuture,
         line: line,
     };
 };
@@ -303,6 +329,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_B_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'B')),
             ...LINE_C_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'C')),
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
+            ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
@@ -368,7 +395,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
         const lieuxMap = new Map<string, Lieu>();
 
         const getLieuName = (module: AuditModule): string => {
-            if (module.type === AuditModuleType.DAT) {
+            if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
                 const station = (module.data as ModeData).stations[0];
                 return station.lieuName || station.name;
             }

@@ -6,6 +6,8 @@ import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
 // Dynamically import components for code splitting
 const ModuleSelector = lazy(() => import('./ModuleSelector'));
 const DatGroupSelector = lazy(() => import('./DatGroupSelector'));
+const TramDirectionSelector = lazy(() => import('./TramDirectionSelector'));
+const SignaletiqueAuditForm = lazy(() => import('./SignaletiqueAuditForm'));
 const DATList = lazy(() => import('./DATList'));
 const AdhesiveAuditForm = lazy(() => import('./AdhesiveAuditForm'));
 const PrZoneSelector = lazy(() => import('./PrZoneSelector'));
@@ -80,6 +82,17 @@ interface AppRouterProps {
     handleRemoveCognitivePictogramAccessPoint: any;
     handleUpdateCognitivePictogramAccessPointName: any;
 
+    handleSignaletiqueStatusChange: any;
+    handleSignaletiqueCommentChange: any;
+    handleSignaletiquePhotoChange: any;
+    handleSignaletiqueStationCommentChange: any;
+    onPhotoNoteChange: any;
+    onPhotoRotationChange: any;
+    onFieldChange: any;
+    handleResetSignaletiqueRequest: any;
+    setIsSignaletiqueActive: any;
+    isSignaletiqueActive: boolean;
+
     onExportByCategory: any;
     onExportByModuleType: any;
     onExportAll: any;
@@ -94,12 +107,28 @@ interface AppRouterProps {
 
 const AppRouter: React.FC<AppRouterProps> = (props) => {
     const {
-        isStatsViewActive, lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
+        isStatsViewActive, isSignaletiqueActive, lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
     if (isStatsViewActive) {
         return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;
+    }
+
+    // Signaletique Audit Form
+    if (selectedModule?.type === AuditModuleType.SIGNALETIQUE && selectedDirection) {
+        const station = (selectedModule.data as ModeData).stations[0];
+        return <SignaletiqueAuditForm
+            module={selectedModule}
+            station={station}
+            direction={selectedDirection}
+            onStatusChange={handlers.handleSignaletiqueStatusChange}
+            onCommentChange={handlers.handleSignaletiqueCommentChange}
+            onPhotoChange={handlers.handleSignaletiquePhotoChange}
+            onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
+            onReset={handlers.handleResetSignaletiqueRequest}
+            onBack={() => handlers.selectModule(null)}
+        />;
     }
 
     // --- DEEPEST LEVEL: AUDIT FORMS ---
@@ -229,8 +258,55 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    // DAT Station/Direction Selector
-    if (selectedModule?.type === AuditModuleType.DAT) {
+    // --- TOP LEVEL: LIEU SELECTOR (DASHBOARD) ---
+    if (!selectedLieu) {
+        return <LieuSelector
+            lieux={lieux}
+            onSelectLieu={handlers.selectLieu}
+            activeFilter={handlers.activeFilter}
+            onFilterChange={handlers.setActiveFilter}
+            onExportByCategory={handlers.onExportByCategory}
+            onExportByModuleType={handlers.onExportByModuleType}
+            onExportAll={handlers.onExportAll}
+            onExportCurrentView={handlers.onExportCurrentView}
+            onExportJson={handlers.onExportJson}
+            onImportJson={handlers.onImportJson}
+            onResetCategory={handlers.onResetCategory}
+            onResetByModuleType={handlers.onResetByModuleType}
+            onResetAll={handlers.onResetAll}
+            onRequestLogout={handlers.onRequestLogout}
+        />;
+    }
+
+    // Tram Direction Selector (after selecting a lieu, before module)
+    const isTramLieu = selectedLieu.modules.some(m => m.line === 'TRAM');
+    if (isTramLieu && !selectedDirection) {
+        return <TramDirectionSelector
+            lieu={selectedLieu}
+            onSelectStation={handlers.selectStation}
+            onSelectDirection={handlers.selectDirection}
+            onBack={() => handlers.selectLieu(null)}
+        />;
+    }
+
+    // Module Selector (after selecting a lieu and direction if tram)
+    if (!selectedModule) {
+        return <ModuleSelector 
+            lieu={selectedLieu} 
+            onSelectModule={handlers.selectModule} 
+            onBack={() => {
+                if (isTramLieu) {
+                    handlers.selectDirection(null);
+                } else {
+                    handlers.selectLieu(null);
+                }
+            }} 
+        />;
+    }
+
+    // DAT Station/Direction Selector (if DAT selected and no direction yet)
+    // This part might be redundant for Tram now, but good for Metro
+    if (selectedModule.type === AuditModuleType.DAT && !selectedDirection) {
          return <DatGroupSelector
             module={selectedModule}
             station={selectedStation}
@@ -240,28 +316,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    // Module Selector (after selecting a lieu)
-    if (selectedLieu) {
-        return <ModuleSelector lieu={selectedLieu} onSelectModule={handlers.selectModule} onBack={() => handlers.selectLieu(null)} />;
-    }
-
-    // --- TOP LEVEL: LIEU SELECTOR (DASHBOARD) ---
-    return <LieuSelector
-        lieux={lieux}
-        onSelectLieu={handlers.selectLieu}
-        activeFilter={handlers.activeFilter}
-        onFilterChange={handlers.setActiveFilter}
-        onExportByCategory={handlers.onExportByCategory}
-        onExportByModuleType={handlers.onExportByModuleType}
-        onExportAll={handlers.onExportAll}
-        onExportCurrentView={handlers.onExportCurrentView}
-        onExportJson={handlers.onExportJson}
-        onImportJson={handlers.onImportJson}
-        onResetCategory={handlers.onResetCategory}
-        onResetByModuleType={handlers.onResetByModuleType}
-        onResetAll={handlers.onResetAll}
-        onRequestLogout={handlers.onRequestLogout}
-    />;
+    return null; // Should be handled by forms above
 };
 
 export default AppRouter;

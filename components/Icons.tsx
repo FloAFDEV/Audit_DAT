@@ -108,7 +108,7 @@ export const LieuBadges: React.FC<{ lieu: Lieu; activeFilter?: AuditCategory | '
     return (
         <div className="flex items-center gap-1.5 flex-wrap">
             {categories.map(({ config, allFuture }) => (
-                <CategoryIcon key={config.key} categoryConfig={config} size="sm" isFuture={allFuture} />
+                <CategoryIcon key={config.key} categoryConfig={config} size="sm" isFuture={allFuture} asDiv />
             ))}
         </div>
     );

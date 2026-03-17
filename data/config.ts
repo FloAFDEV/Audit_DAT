@@ -1,5 +1,5 @@
 import { AuditCategoryConfig, AuditModuleType } from "../types";
-import { Euro, Car, Fence, Footprints, ScanEye } from 'lucide-react';
+import { Euro, Car, Fence, Footprints, ScanEye, Layout } from 'lucide-react';
 
 export const AUDIT_CATEGORIES: AuditCategoryConfig[] = [
     { 
@@ -46,4 +46,5 @@ export const AUDIT_MODULES_CONFIG = [
     { type: AuditModuleType.ECA, label: "Audits ECA (Valideurs)", shortLabel: "Valideurs (ECA)", Icon: Fence },
     { type: AuditModuleType.PMR_FLOOR_ADHESIVE, label: "Adhésifs Sol PMR", shortLabel: "PMR au Sol", Icon: Footprints },
     { type: AuditModuleType.COGNITIVE_PICTOGRAMS, label: "Pictogrammes Cognitifs", shortLabel: "Picto. Cognitifs", Icon: ScanEye },
+    { type: AuditModuleType.SIGNALETIQUE, label: "Équipements Station", shortLabel: "Équipements", Icon: Layout },
 ];

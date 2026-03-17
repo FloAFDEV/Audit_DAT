@@ -35,9 +35,10 @@ interface CategoryIconProps {
     categoryConfig?: AuditCategoryConfig;
     size?: 'sm' | 'md';
     isFuture?: boolean;
+    asDiv?: boolean;
 }
 
-export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md', isFuture = false }) => {
+export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md', isFuture = false, asDiv = false }) => {
     const sizeClasses = size === 'md' ? 'w-6 h-6' : 'w-5 h-5';
     const textSize = size === 'md' ? 'text-sm' : 'text-xs';
 
@@ -72,11 +73,24 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         }
     };
 
+    const commonClasses = `flex-shrink-0 flex items-center justify-center rounded-sm font-bold shadow-sm transition-opacity ${sizing} ${colors.badgeText}`;
+
+    if (asDiv) {
+        return (
+            <div
+                className={commonClasses}
+                style={{ backgroundColor: colors.badgeBg }}
+                title={info.tooltip}
+            >
+                {shortLabel}
+            </div>
+        );
+    }
 
     return (
         <button
             type="button"
-            className={`flex-shrink-0 flex items-center justify-center rounded-sm font-bold shadow-sm transition-opacity ${sizing} ${colors.badgeText}`}
+            className={commonClasses}
             style={{ backgroundColor: colors.badgeBg }}
             title={info.tooltip}
             onClick={handleIconClick}

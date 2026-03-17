@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import useAuditStore from '../store';
-import { Lieu, AuditCategory, AuditModuleType, AuditModule, DAT, Equipment, ECA, AuditCategoryConfig } from '../types';
+import { Lieu, AuditCategory, AuditModuleType, AuditModule, DAT, Equipment, ECA, AuditCategoryConfig, Station } from '../types';
 import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { exportLieuxToCsv, exportLieuxToJson, generateAndDownloadIcsFile, calculateInitialReminderDate, slugify } from '../utils/csvExporter';
@@ -234,6 +234,11 @@ export const useAppHandlers = () => {
             handleResetEcaAdhesiveRequest: (selectedEca: ECA | null | undefined) => createResetHandler('ECA', selectedEca, store.handleResetEcaAdhesive),
             handleResetPmrFloorAdhesiveRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Adhésifs Sol PMR', selectedModule?.data, store.handleResetPmrFloorAdhesive),
             handleResetCognitivePictogramRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Pictogrammes', selectedModule?.data, store.handleResetCognitivePictogram),
+            handleResetSignaletiqueRequest: (station: Station | null | undefined) => createResetHandler('Signalétique', station, store.handleResetSignaletique),
+            handleSignaletiquePhotoNoteChange: store.handleSignaletiquePhotoNoteChange,
+            handleSignaletiquePhotoRotationChange: store.handleSignaletiquePhotoRotationChange,
+            handleSignaletiqueFieldChange: store.handleSignaletiqueFieldChange,
+            setIsSignaletiqueActive: store.setIsSignaletiqueActive,
         },
         modalState: {
             isReminderModalOpen, reminderOptions, pendingExport,
