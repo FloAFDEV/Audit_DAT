@@ -300,14 +300,17 @@ const useAuditStore = create<AppState>((set, get) => {
     }),
 
     selectModule: (moduleId) => {
-        const { lieux, selectedLieuId } = get();
+        const { lieux, selectedLieuId, selectedStationId, selectedDirectionId } = get();
         const lieu = lieux.find(l => l.id === selectedLieuId);
+        // Pour les lieux tram, la direction est choisie AVANT le module (via TramDirectionSelector).
+        // Il faut donc préserver station et direction lors de la sélection du module.
+        const isTramLieu = lieu?.modules.some(m => m.line === 'TRAM');
         const module = lieu?.modules.find(m => m.id === moduleId);
-        
+
         const baseState = {
             selectedModuleId: moduleId,
-            selectedStationId: null,
-            selectedDirectionId: null,
+            selectedStationId: isTramLieu ? selectedStationId : null,
+            selectedDirectionId: isTramLieu ? selectedDirectionId : null,
             selectedDatId: null,
             selectedPrZoneId: null,
             selectedEquipmentId: null,
@@ -315,12 +318,14 @@ const useAuditStore = create<AppState>((set, get) => {
             isSignaletiqueActive: false,
         };
 
-        if (module?.type === AuditModuleType.DAT) {
+        if (!isTramLieu && module?.type === AuditModuleType.DAT) {
             const modeData = module.data as ModeData;
             if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
                 baseState.selectedStationId = modeData.stations[0].id;
             }
-        } else if (module?.type === AuditModuleType.PR) {
+        }
+
+        if (module?.type === AuditModuleType.PR) {
             const prData = module.data as Pr;
             if (prData.zones.length === 1) {
                 baseState.selectedPrZoneId = prData.zones[0].id;

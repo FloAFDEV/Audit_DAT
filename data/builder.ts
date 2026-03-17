@@ -94,17 +94,15 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
                     dats: [createDat('01'), createDat('02')]
                 }];
             case 'Aéroconstellation':
-                return [{
-                    id: `${stationId}-dir-1`,
-                    name: 'Direction Palais de Justice',
-                    dats: [createDat('01'), createDat('02')]
-                }];
+                return [
+                    { id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01')] },
+                    { id: `${stationId}-dir-2`, name: 'Direction Palais de Justice', dats: [createDat('02')] }
+                ];
             case 'MEETT':
-                return [{
-                    id: `${stationId}-dir-1`,
-                    name: 'Direction Palais de Justice',
-                    dats: [createDat('01'), createDat('02')]
-                }];
+                return [
+                    { id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01')] },
+                    { id: `${stationId}-dir-2`, name: 'Direction Palais de Justice', dats: [createDat('02')] }
+                ];
             default: // All other tram stations
                 return [
                     { id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01')] },
