@@ -111,6 +111,8 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
+    const isTramLieu = selectedLieu?.modules.some(m => m.line === 'TRAM') ?? false;
+
     if (isStatsViewActive) {
         return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;
     }
@@ -255,7 +257,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onAddDat={handlers.handleAddDat}
             onRemoveDat={handlers.handleRemoveDat}
             onUpdateDatName={handlers.handleUpdateDatName}
-            onBack={() => handlers.selectDirection(null)}
+            onBack={() => isTramLieu ? handlers.selectModule(null) : handlers.selectDirection(null)}
         />;
     }
 
@@ -280,7 +282,6 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // Tram Direction Selector (after selecting a lieu, before module)
-    const isTramLieu = selectedLieu.modules.some(m => m.line === 'TRAM');
     if (isTramLieu && !selectedDirection) {
         return <TramDirectionSelector
             lieu={selectedLieu}
