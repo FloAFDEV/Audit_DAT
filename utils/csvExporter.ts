@@ -522,6 +522,15 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             hap: 'HAP (Fiche Horaire)'
                         };
 
+                        const MULTI_QUAI_STATIONS_CSV = ['Arènes', 'Odyssud'];
+                        const BIV_ADHESIVES = [
+                            { field: 'ligneCaisson', label: 'BIV - Ligne caisson', dimensions: '6,7 × 2 cm' },
+                            { field: 'destinationCaisson', label: 'BIV - Destination caisson', dimensions: '15,2 × 2 cm' },
+                            { field: 'attenteMinCaisson', label: 'BIV - Attente en min caisson', dimensions: '18,2 × 2 cm' },
+                            { field: 'dureeApproxCaisson', label: 'BIV - Durée approximative caisson', dimensions: '22,4 × 1,5 cm' },
+                            { field: 'quaiCaisson', label: 'BIV - Quai caisson (multi-quais)', dimensions: '6 × 2 cm', multiQuaiOnly: true },
+                        ];
+
                         for (const station of data.stations) {
                             if (!station.signaletique) continue;
                             const sig = station.signaletique;
@@ -533,7 +542,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 for (const dir of directions) {
                                     const items = sig[cat]?.[dir] ?? [];
                                     items.forEach((item, index) => {
-                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`;
+                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`.trim();
                                         rows.push({
                                             ...baseRow,
                                             'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
@@ -545,6 +554,22 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             'Note Photo': item.photo_note || '',
                                             'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
                                         });
+                                        // Lignes supplémentaires pour les adhésifs BIV
+                                        if (cat === 'biv') {
+                                            BIV_ADHESIVES.forEach(adhesive => {
+                                                if (adhesive.multiQuaiOnly && !MULTI_QUAI_STATIONS_CSV.includes(station.name || '')) return;
+                                                const status = (item as any)[adhesive.field] ?? 'NotChecked';
+                                                rows.push({
+                                                    ...baseRow,
+                                                    'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
+                                                    'Direction/Équipement/Accès': dir.toUpperCase(),
+                                                    'Élément': items.length > 1 ? `${adhesive.label} #${index + 1}` : adhesive.label,
+                                                    'Statut': statusTranslations[status] || status,
+                                                    'Description Adhésif': adhesive.dimensions,
+                                                    'Commentaire': '',
+                                                });
+                                            });
+                                        }
                                     });
                                 }
                             }

@@ -106,6 +106,12 @@ export interface TotemStatus extends EquipmentStatus {
 export interface BivStatus extends EquipmentStatus {
     screenFunctioning: EquipmentStatusType | 'NotChecked';
     whiteTextAdhesives: EquipmentStatusType | 'NotChecked';
+    // Adhésifs IV sur le caisson
+    ligneCaisson: EquipmentStatusType | 'NotChecked';        // 6,7x2cm
+    destinationCaisson: EquipmentStatusType | 'NotChecked';  // 15,2x2cm
+    attenteMinCaisson: EquipmentStatusType | 'NotChecked';   // 18,2x2cm
+    dureeApproxCaisson: EquipmentStatusType | 'NotChecked';  // 22,4x1,5cm
+    quaiCaisson: EquipmentStatusType | 'NotChecked';         // 6x2cm - multi-quais seulement (Arènes, Odyssud)
 }
 
 export interface PlanReseauStatus extends EquipmentStatus {

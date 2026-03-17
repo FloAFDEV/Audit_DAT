@@ -14,8 +14,6 @@ import {
   Camera,
   Trash2,
   Edit,
-  ChevronDown,
-  ChevronUp,
   Map as MapIcon,
   Navigation,
   Monitor,
@@ -98,6 +96,7 @@ const CATEGORY_ICONS: Record<keyof SignaletiqueData, React.ReactNode> = {
 
 const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
 const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
+const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   module,
@@ -115,16 +114,6 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentUploadRef = useRef<{ category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number } | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<{ item: EquipmentStatus, category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number } | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
-    'totem': true,
-    'biv': true,
-    'planReseau': true,
-    'planQuartier': true
-  });
-
-  const toggleSection = (category: string) => {
-    setExpandedSections(prev => ({ ...prev, [category]: !prev[category] }));
-  };
 
   const directionKey = useMemo(() => {
     const name = direction.name.toLowerCase();
@@ -154,6 +143,19 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           const pqItem = item as any;
           total++;
           if (pqItem.bannerDirection !== 'NotChecked') checked++;
+        }
+        // Count BIV adhesive sub-fields
+        if (cat === 'biv') {
+          const bivItem = item as any;
+          const BIV_ADHESIVE_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
+          BIV_ADHESIVE_FIELDS.forEach(field => {
+            total++;
+            if (bivItem[field] !== undefined && bivItem[field] !== 'NotChecked') checked++;
+          });
+          if (MULTI_QUAI_STATIONS.includes(station.name)) {
+            total++;
+            if (bivItem.quaiCaisson !== undefined && bivItem.quaiCaisson !== 'NotChecked') checked++;
+          }
         }
       });
     });
@@ -310,6 +312,15 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           (status) => onFieldChange('planQuartier', dir, index, 'bannerDirection', status)
         )}
 
+        {/* Adhésifs IV sur le caisson pour BIV */}
+        {category === 'biv' && <>
+          {renderSubField('Ligne', '6,7 × 2 cm', (item as any).ligneCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'ligneCaisson', status))}
+          {renderSubField('Destination', '15,2 × 2 cm', (item as any).destinationCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'destinationCaisson', status))}
+          {renderSubField('Attente en min', '18,2 × 2 cm', (item as any).attenteMinCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'attenteMinCaisson', status))}
+          {renderSubField('Durée approximative', '22,4 × 1,5 cm', (item as any).dureeApproxCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'dureeApproxCaisson', status))}
+          {MULTI_QUAI_STATIONS.includes(station.name) && renderSubField('Quai (multi-quais)', '6 × 2 cm', (item as any).quaiCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'quaiCaisson', status))}
+        </>}
+
         <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <button
@@ -408,24 +419,18 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         <div className="space-y-6 bg-slate-50 dark:bg-slate-900/30">
           {(Object.keys(CATEGORY_LABELS) as (keyof SignaletiqueData)[]).map(category => (
             <div key={category} className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
-              <button
-                onClick={() => toggleSection(category)}
-                className="w-full flex items-center justify-between p-6 hover:bg-gray-50 dark:hover:bg-slate-700/50 transition-colors border-b border-gray-100 dark:border-slate-700"
-              >
+              <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
                 <div className="flex items-center gap-4">
                   <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
                     {CATEGORY_ICONS[category]}
                   </div>
                   <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>
                 </div>
-                {expandedSections[category] ? <ChevronUp className="w-6 h-6 text-gray-400" /> : <ChevronDown className="w-6 h-6 text-gray-400" />}
-              </button>
+              </div>
 
-              {expandedSections[category] && (
-                <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                  {(signaletique[category]?.[directionKey] ?? []).map((item, idx) => renderItem(category, directionKey, idx, item))}
-                </div>
-              )}
+              <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                {(signaletique[category]?.[directionKey] ?? []).map((item, idx) => renderItem(category, directionKey, idx, item))}
+              </div>
             </div>
           ))}
         </div>
