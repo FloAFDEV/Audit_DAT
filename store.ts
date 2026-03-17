@@ -888,7 +888,7 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const types: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier'];
+                const types: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
                 types.forEach(type => {
                     ['meett', 'pdj'].forEach(dir => {
                         station.signaletique![type][dir as 'meett' | 'pdj'].forEach((eq: any) => {

@@ -122,6 +122,10 @@ export interface PlanQuartierStatus extends EquipmentStatus {
     hap: EquipmentStatusType | 'NotChecked';
 }
 
+export interface HapStatus extends EquipmentStatus {
+    // Fiche horaire (HAP) - présence et état
+}
+
 export interface SignaletiqueData {
     totem: {
         meett: TotemStatus[];
@@ -138,6 +142,10 @@ export interface SignaletiqueData {
     planQuartier: {
         meett: PlanQuartierStatus[];
         pdj: PlanQuartierStatus[];
+    };
+    hap: {
+        meett: HapStatus[];
+        pdj: HapStatus[];
     };
 }
 

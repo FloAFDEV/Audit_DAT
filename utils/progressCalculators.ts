@@ -231,7 +231,8 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
                         ...sig.totem.meett, ...sig.totem.pdj,
                         ...sig.biv.meett, ...sig.biv.pdj,
                         ...sig.planReseau.meett, ...sig.planReseau.pdj,
-                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
+                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj,
+                        ...(sig.hap?.meett ?? []), ...(sig.hap?.pdj ?? [])
                     ];
                     totalApplicableItems += allEquipment.length;
                     totalCheckedItems += allEquipment.filter(e => e.status !== 'NotChecked').length;

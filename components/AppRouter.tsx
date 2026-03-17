@@ -125,6 +125,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onStatusChange={handlers.handleSignaletiqueStatusChange}
             onCommentChange={handlers.handleSignaletiqueCommentChange}
             onPhotoChange={handlers.handleSignaletiquePhotoChange}
+            onFieldChange={handlers.onFieldChange}
             onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
             onReset={handlers.handleResetSignaletiqueRequest}
             onBack={() => handlers.selectModule(null)}
