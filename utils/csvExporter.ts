@@ -518,19 +518,20 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             totem: 'Totem',
                             biv: 'BIV',
                             planReseau: 'Plan Réseau',
-                            planQuartier: 'Plan Quartier'
+                            planQuartier: 'Plan Quartier',
+                            hap: 'HAP (Fiche Horaire)'
                         };
 
                         for (const station of data.stations) {
                             if (!station.signaletique) continue;
                             const sig = station.signaletique;
-                            
-                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier'] as const;
+
+                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'] as const;
                             const directions = ['meett', 'pdj'] as const;
 
                             for (const cat of categories) {
                                 for (const dir of directions) {
-                                    const items = sig[cat][dir];
+                                    const items = sig[cat]?.[dir] ?? [];
                                     items.forEach((item, index) => {
                                         const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`;
                                         rows.push({
@@ -539,7 +540,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             'Direction/Équipement/Accès': dir.toUpperCase(),
                                             'Élément': itemName,
                                             'Statut': statusTranslations[item.status] || item.status,
-                                            'Description Adhésif': item.dimensions || '',
+                                            'Description Adhésif': (item as any).dimensions || '',
                                             'Commentaire': item.comment || '',
                                             'Note Photo': item.photo_note || '',
                                             'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
