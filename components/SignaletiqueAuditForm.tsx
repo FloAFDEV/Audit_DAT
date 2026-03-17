@@ -1,27 +1,29 @@
 import React, { useMemo, useState, useRef } from 'react';
-import { 
-  AuditModule, 
-  Station, 
+import {
+  AuditModule,
+  Station,
   Direction,
-  SignaletiqueData, 
-  EquipmentStatusType, 
-  EquipmentStatus 
+  SignaletiqueData,
+  EquipmentStatusType,
+  EquipmentStatus
 } from '../types';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  AlertTriangle, 
-  Camera, 
-  Trash2, 
-  Edit, 
-  ChevronDown, 
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Camera,
+  Trash2,
+  Edit,
+  ChevronDown,
   ChevronUp,
   Map as MapIcon,
   Navigation,
   Monitor,
   Layout,
   Maximize2,
-  MessageSquare
+  MessageSquare,
+  FileText,
+  Flag
 } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
@@ -34,6 +36,7 @@ interface SignaletiqueAuditFormProps {
   onStatusChange: (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, status: EquipmentStatusType | 'NotChecked') => void;
   onCommentChange: (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, comment: string) => void;
   onPhotoChange: (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, photo_base64: string | null) => void;
+  onFieldChange: (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, field: string, value: any) => void;
   onReset: () => void;
   onStationCommentChange: (comment: string) => void;
   onBack: () => void;
@@ -81,15 +84,20 @@ const CATEGORY_LABELS: Record<keyof SignaletiqueData, string> = {
   totem: 'Totem',
   biv: 'BIV (Borne Info Voyageur)',
   planReseau: 'Plan du Réseau',
-  planQuartier: 'Plan de Quartier'
+  planQuartier: 'Plan de Quartier',
+  hap: 'HAP (Fiche Horaire)'
 };
 
 const CATEGORY_ICONS: Record<keyof SignaletiqueData, React.ReactNode> = {
   totem: <Layout className="w-5 h-5" />,
   biv: <Monitor className="w-5 h-5" />,
   planReseau: <Navigation className="w-5 h-5" />,
-  planQuartier: <MapIcon className="w-5 h-5" />
+  planQuartier: <MapIcon className="w-5 h-5" />,
+  hap: <FileText className="w-5 h-5" />
 };
+
+const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
+const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
 
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   module,
@@ -98,6 +106,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   onStatusChange,
   onCommentChange,
   onPhotoChange,
+  onFieldChange,
   onReset,
   onStationCommentChange,
   onBack
@@ -125,18 +134,26 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
   const directionLabel = direction.name.replace(/^Direction\s/i, '');
 
+  const isTerminus = TERMINUS_STATIONS.includes(station.name);
+
   const progress = useMemo(() => {
     if (!signaletique) return 0;
     let total = 0;
     let checked = 0;
 
-    const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier'];
+    const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
     categories.forEach(cat => {
       const items = signaletique[cat][directionKey];
       items.forEach(item => {
         total++;
         if (item.status !== 'NotChecked') {
           checked++;
+        }
+        // Count planQuartier bandeau sub-field
+        if (cat === 'planQuartier') {
+          const pqItem = item as any;
+          total++;
+          if (pqItem.bannerDirection !== 'NotChecked') checked++;
         }
       });
     });
@@ -207,6 +224,45 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     );
   };
 
+  const renderSubField = (
+    label: string,
+    description: string | null,
+    currentStatus: EquipmentStatusType | 'NotChecked',
+    onChange: (status: EquipmentStatusType | 'NotChecked') => void
+  ) => {
+    const okOpt = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
+    const absentOpt = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
+    const toReplaceOpt = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const subOptions = [okOpt, absentOpt, toReplaceOpt];
+
+    return (
+      <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-slate-700">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <Flag className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-slate-300">{label}</p>
+              {description && (
+                <p className="text-xs text-gray-500 dark:text-slate-400 italic">{description}</p>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {subOptions.map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => onChange(currentStatus === opt.value ? 'NotChecked' : opt.value)}
+                className={`flex items-center px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${currentStatus === opt.value ? opt.activeColorClass : opt.colorClass}`}
+              >
+                {opt.icon}{opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderItem = (category: keyof SignaletiqueData, dir: 'meett' | 'pdj', index: number, item: any) => {
     const baseLabel = CATEGORY_LABELS[category];
     const itemName = `${baseLabel} ${signaletique[category][dir].length > 1 ? `#${index + 1}` : ''}`;
@@ -246,6 +302,14 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           </div>
         </div>
 
+        {/* Sous-champ Bandeau pour Plan de Quartier */}
+        {category === 'planQuartier' && renderSubField(
+          isTerminus ? 'Bandeau Terminus' : 'Bandeau Direction',
+          isTerminus ? TERMINUS_BANDEAU_TEXT : null,
+          item.bannerDirection,
+          (status) => onFieldChange('planQuartier', dir, index, 'bannerDirection', status)
+        )}
+
         <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col gap-4">
           <div className="flex flex-wrap items-center gap-4">
             <button
@@ -263,7 +327,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
                 <Camera className="w-5 h-5" />
               )}
             </button>
-            
+
             {item.photo_base64 && (
               <button
                 onClick={() => onPhotoChange(category, directionKey, index, null)}
@@ -290,9 +354,9 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           {item.photo_base64 && (
             <div className="flex items-start gap-4 w-full">
               <button onClick={() => setViewingPhoto({ item, category, direction: directionKey, index })} className="flex-shrink-0 relative group">
-                <img 
-                  src={item.photo_base64} 
-                  alt="Aperçu" 
+                <img
+                  src={item.photo_base64}
+                  alt="Aperçu"
                   className="w-24 h-24 rounded-md object-cover shadow-sm transition-transform duration-75"
                   style={{ transform: `rotate(${item.photo_rotation || 0}deg)` }}
                 />
