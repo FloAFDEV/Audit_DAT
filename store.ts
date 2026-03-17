@@ -210,18 +210,24 @@ const useAuditStore = create<AppState>((set, get) => {
             if (count > 0) {
                 data = await db.lieux.toArray();
                 
-                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized
+                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
                 let dataChanged = false;
+                const migrateStation = (station: any) => {
+                    if (station.isFuture) return;
+                    if (!station.signaletique) {
+                        station.signaletique = getInitialSignaletiqueData(station.name || '');
+                        dataChanged = true;
+                    } else if (!station.signaletique.hap) {
+                        station.signaletique.hap = getInitialSignaletiqueData(station.name || '').hap;
+                        dataChanged = true;
+                    }
+                };
                 data.forEach(lieu => {
                     lieu.modules.forEach(module => {
-                        if (module.type === AuditModuleType.DAT && module.line === 'TRAM') {
-                            const modeData = module.data as ModeData;
-                            modeData.stations.forEach(station => {
-                                if (!station.isFuture && !station.signaletique) {
-                                    station.signaletique = getInitialSignaletiqueData(station.name || '');
-                                    dataChanged = true;
-                                }
-                            });
+                        const isTramDat = module.type === AuditModuleType.DAT && module.line === 'TRAM';
+                        const isSignaletique = module.type === AuditModuleType.SIGNALETIQUE;
+                        if (isTramDat || isSignaletique) {
+                            (module.data as ModeData).stations.forEach(migrateStation);
                         }
                     });
                 });
