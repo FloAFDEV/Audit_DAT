@@ -14,7 +14,12 @@ const createInitialBivStatus = (count: number): BivStatus[] => {
         status: 'NotChecked' as const,
         comment: '',
         screenFunctioning: 'NotChecked' as const,
-        whiteTextAdhesives: 'NotChecked' as const
+        whiteTextAdhesives: 'NotChecked' as const,
+        ligneCaisson: 'NotChecked' as const,
+        destinationCaisson: 'NotChecked' as const,
+        attenteMinCaisson: 'NotChecked' as const,
+        dureeApproxCaisson: 'NotChecked' as const,
+        quaiCaisson: 'NotChecked' as const
     }));
 };
 

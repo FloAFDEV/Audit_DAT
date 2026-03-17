@@ -221,6 +221,20 @@ const useAuditStore = create<AppState>((set, get) => {
                         station.signaletique.hap = getInitialSignaletiqueData(station.name || '').hap;
                         dataChanged = true;
                     }
+                    // Migrate BIV items to add missing adhesive fields
+                    if (station.signaletique?.biv) {
+                        (['meett', 'pdj'] as const).forEach(dir => {
+                            (station.signaletique!.biv[dir] as any[]).forEach(bivItem => {
+                                let changed = false;
+                                if (bivItem.ligneCaisson === undefined) { bivItem.ligneCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.destinationCaisson === undefined) { bivItem.destinationCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.attenteMinCaisson === undefined) { bivItem.attenteMinCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.dureeApproxCaisson === undefined) { bivItem.dureeApproxCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.quaiCaisson === undefined) { bivItem.quaiCaisson = 'NotChecked'; changed = true; }
+                                if (changed) dataChanged = true;
+                            });
+                        });
+                    }
                 };
                 data.forEach(lieu => {
                     lieu.modules.forEach(module => {

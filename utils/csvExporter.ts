@@ -226,19 +226,20 @@ const escapeCsv = (value: any): string => {
 };
 
 const statusTranslations: { [key: string]: string } = {
-    [AdhesiveStatus.NotChecked]: 'Non contrôlé',
-    [AdhesiveStatus.OK]: 'OK',
-    [AdhesiveStatus.Absent]: 'Absent',
-    [AdhesiveStatus.ToBeReplaced]: 'À remplacer',
-    [AdhesiveStatus.NotApplicable]: 'Non applicable',
-    [FloorAdhesiveStatus.ToPlan]: 'À planifier',
+    // AdhesiveStatus values
+    'NotChecked': 'Non contrôlé',
+    'Absent': 'Absent',
+    'ToBeReplaced': 'À remplacer',
+    'NotApplicable': 'Non applicable',
+    // FloorAdhesiveStatus values
+    'ToPlan': 'À planifier',
+    // EquipmentStatusType values
     'OK': 'OK',
     'DEGRADED': 'Dégradé',
     'HS': 'HS',
     'ABSENT': 'Absent',
     'TO_REPLACE': 'À remplacer',
     'NOT_APPLICABLE': 'Non applicable',
-    'NotChecked': 'Non contrôlé'
 };
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
@@ -518,32 +519,58 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             totem: 'Totem',
                             biv: 'BIV',
                             planReseau: 'Plan Réseau',
-                            planQuartier: 'Plan Quartier'
+                            planQuartier: 'Plan Quartier',
+                            hap: 'HAP (Fiche Horaire)'
                         };
+
+                        const MULTI_QUAI_STATIONS_CSV = ['Arènes', 'Odyssud'];
+                        const BIV_ADHESIVES = [
+                            { field: 'ligneCaisson', label: 'BIV - Ligne caisson', dimensions: '6,7 × 2 cm' },
+                            { field: 'destinationCaisson', label: 'BIV - Destination caisson', dimensions: '15,2 × 2 cm' },
+                            { field: 'attenteMinCaisson', label: 'BIV - Attente en min caisson', dimensions: '18,2 × 2 cm' },
+                            { field: 'dureeApproxCaisson', label: 'BIV - Durée approximative caisson', dimensions: '22,4 × 1,5 cm' },
+                            { field: 'quaiCaisson', label: 'BIV - Quai caisson (multi-quais)', dimensions: '6 × 2 cm', multiQuaiOnly: true },
+                        ];
 
                         for (const station of data.stations) {
                             if (!station.signaletique) continue;
                             const sig = station.signaletique;
-                            
-                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier'] as const;
+
+                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'] as const;
                             const directions = ['meett', 'pdj'] as const;
 
                             for (const cat of categories) {
                                 for (const dir of directions) {
-                                    const items = sig[cat][dir];
+                                    const items = sig[cat]?.[dir] ?? [];
                                     items.forEach((item, index) => {
-                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`;
+                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`.trim();
                                         rows.push({
                                             ...baseRow,
                                             'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
                                             'Direction/Équipement/Accès': dir.toUpperCase(),
                                             'Élément': itemName,
                                             'Statut': statusTranslations[item.status] || item.status,
-                                            'Description Adhésif': item.dimensions || '',
+                                            'Description Adhésif': (item as any).dimensions || '',
                                             'Commentaire': item.comment || '',
                                             'Note Photo': item.photo_note || '',
                                             'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
                                         });
+                                        // Lignes supplémentaires pour les adhésifs BIV
+                                        if (cat === 'biv') {
+                                            BIV_ADHESIVES.forEach(adhesive => {
+                                                if (adhesive.multiQuaiOnly && !MULTI_QUAI_STATIONS_CSV.includes(station.name || '')) return;
+                                                const status = (item as any)[adhesive.field] ?? 'NotChecked';
+                                                rows.push({
+                                                    ...baseRow,
+                                                    'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
+                                                    'Direction/Équipement/Accès': dir.toUpperCase(),
+                                                    'Élément': items.length > 1 ? `${adhesive.label} #${index + 1}` : adhesive.label,
+                                                    'Statut': statusTranslations[status] || status,
+                                                    'Description Adhésif': adhesive.dimensions,
+                                                    'Commentaire': '',
+                                                });
+                                            });
+                                        }
                                     });
                                 }
                             }
