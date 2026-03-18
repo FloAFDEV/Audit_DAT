@@ -342,6 +342,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const modeData = module.data as ModeData;
             if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
                 baseState.selectedStationId = modeData.stations[0].id;
+                // Si la station n'a qu'une seule direction, la sélectionner automatiquement
+                // pour éviter l'étape "Salle des billets" (clic inutile).
+                if (modeData.stations[0].directions.length === 1) {
+                    baseState.selectedDirectionId = modeData.stations[0].directions[0].id;
+                }
             }
         }
 

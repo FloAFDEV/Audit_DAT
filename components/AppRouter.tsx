@@ -249,6 +249,15 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
 
     // DAT List (after selecting a direction)
     if (selectedModule?.type === AuditModuleType.DAT && selectedStation && selectedDirection) {
+        const stationDirections = (selectedModule.data as ModeData)
+            .stations.find(s => s.id === selectedStation.id)?.directions ?? [];
+        const backFromDatList = () => {
+            if (isTramLieu) return handlers.selectModule(null);
+            // Si la station n'a qu'une direction, la sélection de direction était automatique :
+            // revenir directement au sélecteur de module (évite l'écran "Salle des billets" inutile).
+            if (stationDirections.length <= 1) return handlers.selectModule(null);
+            return handlers.selectDirection(null);
+        };
         return <DATList
             module={selectedModule}
             station={selectedStation}
@@ -257,7 +266,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onAddDat={handlers.handleAddDat}
             onRemoveDat={handlers.handleRemoveDat}
             onUpdateDatName={handlers.handleUpdateDatName}
-            onBack={() => isTramLieu ? handlers.selectModule(null) : handlers.selectDirection(null)}
+            onBack={backFromDatList}
         />;
     }
 
