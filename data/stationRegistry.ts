@@ -1,129 +1,77 @@
 /**
- * stationRegistry.ts — v3
+ * stationRegistry.ts — v4
  * ──────────────────────────────────────────────────────────────────────────
- * SOURCE DE VÉRITÉ CENTRALE du réseau Tisséo (audit DAT / Tram / Téléo).
+ * SOURCE DE VÉRITÉ CENTRALE du réseau Tisséo.
  *
- * Changements v3 vs v2 :
- *   • StationDef.isHub?: boolean
- *     Marqueur explicite pour les nœuds d'échange multi-lignes.
- *   • StationDef.adjacentStations?: string[]
- *     Stations suivantes dans le sens de parcours (permet de modéliser
- *     les bifurcations et les terminus).
- *   • BLA : connections réduits à ['SER', 'NAD'] (correspondances T1/AEROPORT),
- *     adjacentStations: ['SDN'] (C → sens Labège), isHub: true.
- *   • SER : adjacentStations: ['GUY', 'BLA'] (bifurcation T1/AEROPORT),
- *     connections: ['BLA'] (accès à la branche AEROPORT).
- *   • adjacentStations ajouté sur toutes les stations T1, LAE et Ligne C.
- *   • getHubs() filtre désormais sur isHub === true.
- *   • assertRegistryIntegrity() inclut la validation des adjacentStations.
+ * CODES SI T1 — HISTORIQUE VALIDÉ (NE JAMAIS MODIFIER) :
+ *   PSM LDD FAC ODY CDP ACO ARO ZTH RAP CCH
+ *   PUR HIP ANC SER GUY PAS REL MRO PTN GNO
+ *   GBR LYC BEA GAS MET
  *
- * TRIGRAMMES T1 — TABLE DE CORRESPONDANCE
- * ────────────────────────────────────────
- *   Codes validés (historique SI) — NE JAMAIS MODIFIER :
- *     PSM LDD FAC MRO CDP GAS ARO ZTH RAP CCH PUR HIP ANC SER
- *     GUY PAS REL PTN GNO GBR LYC BEA MET
- *   Codes provisoires (en attente de validation SI) :
- *     ODY  — Odyssud - Ritouret       (requis pour la chaîne adjacentStations)
- *     ACO  — Aéroconstellation        (requis pour la chaîne adjacentStations)
+ * CORRECTIONS v4 (assignments corrigés vs v3) :
+ *   ODY  ← Avenue de Muret - Marcel Cavaillé  (était MRO en v3)
+ *   ACO  ← Déodat de Séverac                  (était GAS en v3)
+ *   MRO  ← Odyssud - Ritouret                 (était ODY en v3)
+ *   GAS  ← Garossos-Aéroconstellation         (était ACO en v3, nom mis à jour)
+ *
+ * CODES TÉLÉO — provisoires (en attente de validation SI) :
+ *   OLE  Oncopole-Lise Enjalbert
+ *   HRG  Hôpital Rangueil-Louis Lareng
+ *   UPT  Université Paul-Sabatier Téléo  (UPS = Métro B, usage distinct)
+ *
+ * TOPOLOGIE AÉROPORT EXPRESS :
+ *   T1 : … ANC → SER ──[bifurcation]──► BLA → NAD → DAU → ATB
+ *                  └──► GUY → PAS → REL → MRO → … → GAS → MET
+ *
+ * ACTIVATION LIGNES FUTURES :
+ *   ACTIVE_LINES.AEROPORT = true  → antenne T1/Aéroport active
+ *   ACTIVE_LINES.C        = true  → Ligne C active
  */
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TYPES
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Identifiant de toutes les lignes du réseau (existantes et futures). */
 export type NetworkLine = 'A' | 'B' | 'C' | 'T1' | 'AEROPORT' | 'TELEO';
 
-/**
- * Définition riche d'une station, utilisée dans le registre central.
- * Distincte de `Station` (types.ts) qui porte les données d'audit runtime.
- */
 export interface StationDef {
-    /** Identifiant stable — clé primaire en base et dans le store. */
-    id: string;
-
-    /** Nom interne canonique (référence technique). */
-    name: string;
-
+    id:               string;
+    /** Nom interne technique (référence stable). */
+    name:             string;
+    /** Nom affiché aux usagers, si différent du nom interne. */
+    publicName?:      string;
     /**
-     * Nom public affiché aux usagers (si différent du nom interne).
-     * Ex : "Jean Maga" — variante de "Blagnac" en cours de validation officielle.
+     * Trigramme SI officiel (3 lettres majuscules).
+     * Absent uniquement sur les stations dont le code n'est pas encore validé.
+     * ⚠️ NE JAMAIS modifier les codes validés historiques.
      */
-    publicName?: string;
-
-    /**
-     * Trigramme 3 lettres MAJUSCULES — globalement unique dans ALL_STATION_DEFS.
-     * Absent sur quelques stations Téléo (identification par nom).
-     * ⚠️  Ne jamais modifier les codes validés (historique SI).
-     */
-    code?: string;
-
-    /**
-     * Lignes d'appartenance.
-     * Tableau pour les HUBs multi-lignes (ex : BLA → ['T1', 'AEROPORT', 'C']).
-     */
-    lines: NetworkLine[];
-
-    /**
-     * Vrai si la station est un nœud d'échange physique multi-lignes.
-     * Doit être true si lines.length > 1 (cohérence vérifiée par assertRegistryIntegrity).
-     */
-    isHub?: boolean;
-
-    /**
-     * La station est-elle active dans l'application d'audit ?
-     * Piloté via ACTIVE_LINES uniquement — ne jamais modifier côté UI.
-     */
-    isActive: boolean;
-
-    /** Vrai si la station n'est pas encore en service réel. */
-    isFuture: boolean;
-
-    /**
-     * Vrai si la station appartient à une antenne (branche) et non au
-     * tronc principal de sa ligne. Ex : BLA, NAD, DAU, ATB (branche AEROPORT).
-     */
-    isBranch?: boolean;
-
-    /**
-     * Clé de regroupement physique pour les lieux partagés entre lignes.
-     * Ex : "Jean-Jaurès" (Métro A + B), "Arènes" (Métro A + Tram T1).
-     */
-    lieuName?: string;
-
-    /**
-     * Codes des stations où une correspondance inter-lignes est possible.
-     * Signification : "depuis cette station, on peut rejoindre physiquement
-     * une autre ligne via la station dont le code est listé."
-     *
-     * Ex (BLA) : connections: ['SER', 'NAD']
-     *   • SER — point de bifurcation T1 vers la branche AEROPORT
-     *   • NAD — prochaine station sur l'antenne AEROPORT
-     */
-    connections?: string[];
-
-    /**
-     * Codes des stations SUIVANTES dans le sens de parcours principal.
-     * Peut contenir plusieurs codes en cas de bifurcation.
-     *
-     * Ex (SER) : adjacentStations: ['GUY', 'BLA']
-     *   • GUY — tronc T1 principal (vers MEETT)
-     *   • BLA — branche AEROPORT (bifurcation depuis SER)
-     */
+    code?:            string;
+    lines:            NetworkLine[];
+    /** Nœud d'échange multi-lignes. Obligatoire si lines.length > 1. */
+    isHub?:           boolean;
+    isActive:         boolean;
+    isFuture:         boolean;
+    /** Station sur une antenne (branche), pas sur le tronc principal. */
+    isBranch?:        boolean;
+    /** Clé de regroupement physique inter-lignes (pour builder.ts). */
+    lieuName?:        string;
+    /** Codes des correspondances inter-lignes disponibles à cette station. */
+    connections?:     string[];
+    /** Codes des prochaines stations dans le sens de parcours. */
     adjacentStations?: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FEATURE FLAGS — SEUL POINT DE CONTRÔLE DE L'ACTIVATION
+// FEATURE FLAGS
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const ACTIVE_LINES: Record<NetworkLine, boolean> = {
-    A:        true,  // Métro A         — en service, pleinement audité
-    B:        true,  // Métro B         — en service, pleinement audité
-    C:        false, // Ligne C         — future ← passer à true pour activer
-    T1:       true,  // Tram T1         — en service, pleinement audité
-    AEROPORT: false, // Aéroport Express (antenne T1) — future ← passer à true
-    TELEO:    true,  // Téléo           — en service, pleinement audité
+    A:        true,
+    B:        true,
+    C:        false, // ← passer à true pour activer la Ligne C
+    T1:       true,
+    AEROPORT: false, // ← passer à true pour activer l'antenne Aéroport Express
+    TELEO:    true,
 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -131,24 +79,24 @@ export const ACTIVE_LINES: Record<NetworkLine, boolean> = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const REGISTRY_LINE_A: StationDef[] = [
-    { id: 'sta-a-1',  name: 'Basso Cambo',               code: 'MBC', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-2',  name: 'Bellefontaine',              code: 'BEL', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-3',  name: 'Reynerie',                   code: 'REY', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-4',  name: 'Mirail-Université',          code: 'MUN', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-5',  name: 'Bagatelle',                  code: 'BAG', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-6',  name: 'Mermoz',                     code: 'MER', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-7',  name: 'Fontaine-Lestang',           code: 'FLE', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-8',  name: 'Arènes',                     code: 'ARE', lines: ['A'], isActive: true, isFuture: false, lieuName: 'Arènes' },
-    { id: 'sta-a-9',  name: 'Patte d\'Oie',               code: 'POI', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-10', name: 'Saint-Cyprien - République', code: 'SCY', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-11', name: 'Esquirol',                   code: 'ESQ', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-12', name: 'Capitole',                   code: 'CAP', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-13', name: 'Jean-Jaurès',                code: 'JJA', lines: ['A'], isActive: true, isFuture: false, lieuName: 'Jean-Jaurès' },
-    { id: 'sta-a-14', name: 'Marengo-SNCF',               code: 'MAR', lines: ['A'], isActive: true, isFuture: false, lieuName: 'Marengo-SNCF' },
-    { id: 'sta-a-15', name: 'Jolimont',                   code: 'JOL', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-16', name: 'Roseraie',                   code: 'ROS', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-17', name: 'Argoulets',                  code: 'ARG', lines: ['A'], isActive: true, isFuture: false },
-    { id: 'sta-a-18', name: 'Balma-Gramont',              code: 'BGR', lines: ['A'], isActive: true, isFuture: false },
+    { id: 'sta-a-1',  name: 'Basso Cambo',               code: 'MBC', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-2',  name: 'Bellefontaine',              code: 'BEL', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-3',  name: 'Reynerie',                   code: 'REY', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-4',  name: 'Mirail-Université',          code: 'MUN', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-5',  name: 'Bagatelle',                  code: 'BAG', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-6',  name: 'Mermoz',                     code: 'MER', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-7',  name: 'Fontaine-Lestang',           code: 'FLE', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-8',  name: 'Arènes',                     code: 'ARE', lines: ['A'], isActive: true,  isFuture: false, lieuName: 'Arènes' },
+    { id: 'sta-a-9',  name: 'Patte d\'Oie',               code: 'POI', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-10', name: 'Saint-Cyprien - République', code: 'SCY', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-11', name: 'Esquirol',                   code: 'ESQ', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-12', name: 'Capitole',                   code: 'CAP', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-13', name: 'Jean-Jaurès',                code: 'JJA', lines: ['A'], isActive: true,  isFuture: false, lieuName: 'Jean-Jaurès' },
+    { id: 'sta-a-14', name: 'Marengo-SNCF',               code: 'MAR', lines: ['A'], isActive: true,  isFuture: false, lieuName: 'Marengo-SNCF' },
+    { id: 'sta-a-15', name: 'Jolimont',                   code: 'JOL', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-16', name: 'Roseraie',                   code: 'ROS', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-17', name: 'Argoulets',                  code: 'ARG', lines: ['A'], isActive: true,  isFuture: false },
+    { id: 'sta-a-18', name: 'Balma-Gramont',              code: 'BGR', lines: ['A'], isActive: true,  isFuture: false },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -176,9 +124,8 @@ export const REGISTRY_LINE_B: StationDef[] = [
     { id: 'sta-b-18', name: 'Faculté de Pharmacie',         code: 'PHA', lines: ['B'], isActive: true,  isFuture: false },
     { id: 'sta-b-19', name: 'Université Paul Sabatier',     code: 'UPS', lines: ['B'], isActive: true,  isFuture: false, lieuName: 'Université Paul-Sabatier' },
     { id: 'sta-b-20', name: 'Ramonville',                   code: 'RAM', lines: ['B'], isActive: true,  isFuture: false },
-    // ── Futures ───────────────────────────────────────────────────────────────
-    { id: 'sta-b-21', name: 'Parc du Canal',  lines: ['B'], isActive: false, isFuture: true },
-    { id: 'sta-b-22', name: 'Labège Madron',  lines: ['B'], isActive: false, isFuture: true, lieuName: 'Labège Madron' },
+    { id: 'sta-b-21', name: 'Parc du Canal',                lines: ['B'], isActive: false, isFuture: true },
+    { id: 'sta-b-22', name: 'Labège Madron',                lines: ['B'], isActive: false, isFuture: true, lieuName: 'Labège Madron' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,24 +133,21 @@ export const REGISTRY_LINE_B: StationDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Activation : ACTIVE_LINES.C = true.
+ * Chaîne adjacentStations C :
+ *   COG → FLU → SMA → [BLA] → SDN → PJU → FON → LVH → TLA → RAI
+ *       → BON → MAT → FVD → CPA → LIM → ORM → MOG → AEC → LMA → DIA → LAG
  *
- * BLA (Blagnac) est dans REGISTRY_INTERCHANGE_HUBS — nœud commun T1/AEROPORT/C.
- * La chaîne adjacentStations C est : COG→FLU→SMA→[BLA]→SDN→PJU→…→LAG
- *
- * MAT (Matabiau Gare) : nœud stratégique futur (SNCF + autres lignes).
- * connections[] sera enrichi lors de la confirmation du projet d'interconnexion.
+ * MAT (Matabiau) : nœud stratégique futur — connections[] à enrichir.
  */
 export const REGISTRY_LINE_C: StationDef[] = [
     { id: 'sta-c-1',  name: 'Colomiers Gare',               code: 'COG', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['FLU'] },
     { id: 'sta-c-3',  name: 'Fontaine Lumineuse',            code: 'FLU', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['SMA'] },
     { id: 'sta-c-4',  name: 'Saint-Martin-du-Touch',         code: 'SMA', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['BLA'] },
-    // ── BLA (Blagnac / Jean Maga) → voir REGISTRY_INTERCHANGE_HUBS ─────────
-    //    adjacentStations C depuis BLA : ['SDN']
+    // BLA est dans REGISTRY_INTERCHANGE_HUBS — la chaîne C continue à SDN depuis BLA
     { id: 'sta-c-6',  name: 'Sept Deniers – Stade Toulousain', code: 'SDN', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['PJU'] },
     { id: 'sta-c-7',  name: 'Ponts-Jumeaux',                 code: 'PJU', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['FON'] },
     { id: 'sta-c-8',  name: 'Fondeyre',                      code: 'FON', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['LVH'] },
-    { id: 'sta-c-9',  name: 'La Vache',                      code: 'LVH', lines: ['C'], isActive: false, isFuture: true, lieuName: 'La Vache', adjacentStations: ['TLA'] },
+    { id: 'sta-c-9',  name: 'La Vache',                      code: 'LVH', lines: ['C'], isActive: false, isFuture: true, lieuName: 'La Vache',     adjacentStations: ['TLA'] },
     { id: 'sta-c-10', name: 'Lycée Toulouse-Lautrec',        code: 'TLA', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['RAI'] },
     { id: 'sta-c-11', name: 'Raisin',                        code: 'RAI', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['BON'] },
     { id: 'sta-c-12', name: 'Bonnefoy',                      code: 'BON', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['MAT'] },
@@ -211,7 +155,7 @@ export const REGISTRY_LINE_C: StationDef[] = [
         id: 'sta-c-13', name: 'Matabiau Gare', code: 'MAT', lines: ['C'],
         isActive: false, isFuture: true, lieuName: 'Marengo-SNCF',
         adjacentStations: ['FVD'],
-        connections: [], // futur pôle d'échange SNCF — à enrichir lors de la confirmation
+        connections: [], // à enrichir : pôle d'échange SNCF + futures lignes
     },
     { id: 'sta-c-14', name: 'François-Verdier',              code: 'FVD', lines: ['C'], isActive: false, isFuture: true, lieuName: 'François Verdier', adjacentStations: ['CPA'] },
     { id: 'sta-c-15', name: 'Côte Pavée',                    code: 'CPA', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['LIM'] },
@@ -221,7 +165,7 @@ export const REGISTRY_LINE_C: StationDef[] = [
     { id: 'sta-c-19', name: 'Aerospace Campus',              code: 'AEC', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['LMA'] },
     { id: 'sta-c-20', name: 'Labège Madron',                 code: 'LMA', lines: ['C'], isActive: false, isFuture: true, lieuName: 'Labège Madron', adjacentStations: ['DIA'] },
     { id: 'sta-c-21', name: 'Diagora',                       code: 'DIA', lines: ['C'], isActive: false, isFuture: true, adjacentStations: ['LAG'] },
-    { id: 'sta-c-22', name: 'Labège Gare',                   code: 'LAG', lines: ['C'], isActive: false, isFuture: true, adjacentStations: [] /* terminus */ },
+    { id: 'sta-c-22', name: 'Labège Gare',                   code: 'LAG', lines: ['C'], isActive: false, isFuture: true, adjacentStations: [] },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -229,57 +173,76 @@ export const REGISTRY_LINE_C: StationDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * TRIGRAMMES — règles d'attribution :
- *   Validés historique SI (23) :
- *     PSM LDD FAC MRO CDP GAS ARO ZTH RAP CCH PUR HIP ANC SER
- *     GUY PAS REL PTN GNO GBR LYC BEA MET
- *   Provisoires — en attente de validation SI (2) :
- *     ODY  (Odyssud - Ritouret)   — nécessaire pour chaîne adjacentStations
- *     ACO  (Aéroconstellation)    — nécessaire pour chaîne adjacentStations
- *   Codes de lieu partagé (mêmes lieux physiques qu'une autre ligne) :
- *     PSM  ≠  PDJ  (Métro B, même lieuName 'Palais de Justice')
- *     ARO  ≠  ARE  (Métro A, même lieuName 'Arènes')
+ * TABLE DES CODES SI VALIDÉS (v4) :
  *
- * BIFURCATION T1 / AÉROPORT EXPRESS :
- *   … ANC → SER ──► GUY → PAS → REL → … (tronc T1 principal)
- *               └──► BLA → NAD → DAU → ATB (antenne AEROPORT)
+ *  Pos  Code  Station
+ *  ───  ────  ──────────────────────────────────────
+ *   1   PSM   Palais de Justice  (≠ PDJ Métro B, même lieuName)
+ *   2   LDD   Île du Ramier
+ *   3   FAC   Fer à Cheval
+ *   4   ODY   Avenue de Muret - Marcel Cavaillé     ← corrigé v4 (était MRO)
+ *   5   CDP   Croix de Pierre
+ *   6   ACO   Déodat de Séverac                     ← corrigé v4 (était GAS)
+ *   7   ARO   Arènes T1  (≠ ARE Métro A, même lieuName)
+ *   8   ZTH   Zénith
+ *   9   RAP   Cartoucherie
+ *  10   CCH   Casselardit
+ *  11   PUR   Purpan
+ *  12   HIP   Hôpital Purpan
+ *  13   ANC   Ancely
+ *  14   SER   Servanty - Airbus  [BIFURCATION T1/AEROPORT]
+ *  15   GUY   Guyenne - Berry
+ *  16   PAS   Pasteur - Mairie de Blagnac
+ *  17   REL   Place du Relais
+ *  18   MRO   Odyssud - Ritouret                    ← corrigé v4 (était ODY)
+ *  19   PTN   Patinoire - Barradels
+ *  20   GNO   Grand Noble
+ *  21   GBR   Place Georges Brassens
+ *  22   LYC   Andromède - Lycée
+ *  23   BEA   Beauzelle - Aéroscopia
+ *  24   GAS   Garossos-Aéroconstellation            ← corrigé v4 (était ACO, nom mis à jour)
+ *  25   MET   MEETT
+ *
+ * BIFURCATION :
+ *   SER.adjacentStations = ['GUY', 'BLA']
+ *   → GUY : tronc T1 principal (vers MEETT)
+ *   → BLA : antenne Aéroport Express (hub T1 / AEROPORT / C)
  */
 export const REGISTRY_TRAM_T1: StationDef[] = [
-    // ── Sens : Palais de Justice → MEETT ──────────────────────────────────
-    { id: 'sta-t1-1',  name: 'Palais de Justice',               code: 'PSM', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Palais de Justice', adjacentStations: ['LDD'] },
-    { id: 'sta-t1-2',  name: 'Île du Ramier',                   code: 'LDD', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['FAC'] },
-    { id: 'sta-t1-3',  name: 'Fer à Cheval',                    code: 'FAC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MRO'] },
-    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'MRO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CDP'] },
-    { id: 'sta-t1-5',  name: 'Croix de Pierre',                 code: 'CDP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GAS'] },
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',               code: 'GAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
-    { id: 'sta-t1-7',  name: 'Arènes',                          code: 'ARO', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes',           adjacentStations: ['ZTH'] },
-    { id: 'sta-t1-8',  name: 'Zénith',                          code: 'ZTH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
-    { id: 'sta-t1-9',  name: 'Cartoucherie',                    code: 'RAP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
-    { id: 'sta-t1-10', name: 'Casselardit',                     code: 'CCH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
-    { id: 'sta-t1-11', name: 'Purpan',                          code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['HIP'] },
-    { id: 'sta-t1-12', name: 'Hôpital Purpan',                  code: 'HIP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
-    { id: 'sta-t1-13', name: 'Ancely',                          code: 'ANC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['SER'] },
-    // ── Point de bifurcation ──────────────────────────────────────────────
-    // SER → GUY  : tronc T1 principal (sens MEETT)
-    // SER → BLA  : antenne AEROPORT Express
+    { id: 'sta-t1-1',  name: 'Palais de Justice',              code: 'PSM', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Palais de Justice', adjacentStations: ['LDD'] },
+    { id: 'sta-t1-2',  name: 'Île du Ramier',                  code: 'LDD', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['FAC'] },
+    { id: 'sta-t1-3',  name: 'Fer à Cheval',                   code: 'FAC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ODY'] },
+    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'ODY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CDP'] },
+    { id: 'sta-t1-5',  name: 'Croix de Pierre',                code: 'CDP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ACO'] },
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',              code: 'ACO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
+    { id: 'sta-t1-7',  name: 'Arènes',                         code: 'ARO', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes',           adjacentStations: ['ZTH'] },
+    { id: 'sta-t1-8',  name: 'Zénith',                         code: 'ZTH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
+    { id: 'sta-t1-9',  name: 'Cartoucherie',                   code: 'RAP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
+    { id: 'sta-t1-10', name: 'Casselardit',                    code: 'CCH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
+    { id: 'sta-t1-11', name: 'Purpan',                         code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['HIP'] },
+    { id: 'sta-t1-12', name: 'Hôpital Purpan',                 code: 'HIP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
+    { id: 'sta-t1-13', name: 'Ancely',                         code: 'ANC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['SER'] },
+    // ── BIFURCATION ───────────────────────────────────────────────────────────
+    // SER → GUY  : tronc T1 (sens MEETT)
+    // SER → BLA  : antenne Aéroport Express (BLA = HUB T1/AEROPORT/C)
     {
         id: 'sta-t1-14', name: 'Servanty - Airbus',
         code: 'SER', lines: ['T1'], isActive: true, isFuture: false,
-        adjacentStations: ['GUY', 'BLA'], // bifurcation
-        connections:      ['BLA'],        // accès à la branche AEROPORT / HUB BLA
+        adjacentStations: ['GUY', 'BLA'],
+        connections:      ['BLA'],
     },
-    // ── Tronc principal T1 (suite) ────────────────────────────────────────
-    { id: 'sta-t1-15', name: 'Guyenne - Berry',                 code: 'GUY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PAS'] },
-    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',     code: 'PAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['REL'] },
-    { id: 'sta-t1-17', name: 'Place du Relais',                 code: 'REL', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ODY'] },
-    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',              code: 'ODY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PTN'] }, // ODY : provisoire
-    { id: 'sta-t1-19', name: 'Patinoire - Barradels',           code: 'PTN', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GNO'] },
-    { id: 'sta-t1-20', name: 'Grand Noble',                     code: 'GNO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GBR'] },
-    { id: 'sta-t1-21', name: 'Place Georges Brassens',          code: 'GBR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['LYC'] },
-    { id: 'sta-t1-22', name: 'Andromède - Lycée',               code: 'LYC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BEA'] },
-    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',          code: 'BEA', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ACO'] },
-    { id: 'sta-t1-24', name: 'Aéroconstellation',               code: 'ACO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MET'] }, // ACO : provisoire
-    { id: 'sta-t1-25', name: 'MEETT',                           code: 'MET', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: [] /* terminus */ },
+    // ── Tronc T1 principal (suite) ────────────────────────────────────────────
+    { id: 'sta-t1-15', name: 'Guyenne - Berry',                code: 'GUY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PAS'] },
+    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',    code: 'PAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['REL'] },
+    { id: 'sta-t1-17', name: 'Place du Relais',                code: 'REL', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MRO'] },
+    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',             code: 'MRO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PTN'] },
+    { id: 'sta-t1-19', name: 'Patinoire - Barradels',          code: 'PTN', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GNO'] },
+    { id: 'sta-t1-20', name: 'Grand Noble',                    code: 'GNO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GBR'] },
+    { id: 'sta-t1-21', name: 'Place Georges Brassens',         code: 'GBR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['LYC'] },
+    { id: 'sta-t1-22', name: 'Andromède - Lycée',              code: 'LYC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BEA'] },
+    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',         code: 'BEA', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GAS'] },
+    { id: 'sta-t1-24', name: 'Garossos-Aéroconstellation',     code: 'GAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MET'] },
+    { id: 'sta-t1-25', name: 'MEETT',                          code: 'MET', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: [] },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -287,17 +250,15 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Sens logique (depuis la bifurcation) :
- *   SER ──[bifurcation]──► BLA (HUB) → NAD → DAU → ATB
- *
- * Activation : ACTIVE_LINES.AEROPORT = true + logique builder.ts.
+ * Topologie :  SER ──► BLA (HUB) ──► NAD ──► DAU ──► ATB
+ * Activation : ACTIVE_LINES.AEROPORT = true + logique builder.ts
  */
 export const REGISTRY_AEROPORT_EXPRESS: StationDef[] = [
     {
         id: 'sta-aero-nad', name: 'Nadot', code: 'NAD',
         lines: ['AEROPORT'], isActive: false, isFuture: true, isBranch: true,
         adjacentStations: ['DAU'],
-        connections:      ['BLA'], // BLA est le HUB d'interconnexion T1/C accessible depuis NAD
+        connections:      ['BLA'],
     },
     {
         id: 'sta-aero-dau', name: 'Daurat', code: 'DAU',
@@ -307,7 +268,7 @@ export const REGISTRY_AEROPORT_EXPRESS: StationDef[] = [
     {
         id: 'sta-aero-atb', name: 'Aéroport Toulouse Blagnac', code: 'ATB',
         lines: ['AEROPORT'], isActive: false, isFuture: true, isBranch: true,
-        adjacentStations: [], // terminus
+        adjacentStations: [],
     },
 ];
 
@@ -315,10 +276,16 @@ export const REGISTRY_AEROPORT_EXPRESS: StationDef[] = [
 // TÉLÉO — 3 stations en service
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Codes provisoires (en attente de validation SI officielle) :
+ *   OLE  Oncopole-Lise Enjalbert
+ *   HRG  Hôpital Rangueil-Louis Lareng
+ *   UPT  Université Paul-Sabatier Téléo  (UPS est réservé au Métro B)
+ */
 export const REGISTRY_TELEO: StationDef[] = [
-    { id: 'sta-tel-1', name: 'Oncopole-Lise Enjalbert',       lines: ['TELEO'], isActive: true, isFuture: false },
-    { id: 'sta-tel-2', name: 'Hôpital Rangueil-Louis Lareng', lines: ['TELEO'], isActive: true, isFuture: false },
-    { id: 'sta-tel-3', name: 'Université Paul-Sabatier',       lines: ['TELEO'], isActive: true, isFuture: false, lieuName: 'Université Paul-Sabatier' },
+    { id: 'sta-tel-1', name: 'Oncopole-Lise Enjalbert',       code: 'OLE', lines: ['TELEO'], isActive: true, isFuture: false },
+    { id: 'sta-tel-2', name: 'Hôpital Rangueil-Louis Lareng', code: 'HRG', lines: ['TELEO'], isActive: true, isFuture: false },
+    { id: 'sta-tel-3', name: 'Université Paul-Sabatier',       code: 'UPT', lines: ['TELEO'], isActive: true, isFuture: false, lieuName: 'Université Paul-Sabatier' },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -328,22 +295,22 @@ export const REGISTRY_TELEO: StationDef[] = [
 /**
  * BLA — Blagnac / Jean Maga
  * ─────────────────────────
- *   Nœud d'échange entre T1 (branche AEROPORT), AEROPORT Express et Ligne C.
+ *   HUB d'échange entre T1 (antenne AEROPORT depuis SER) / AEROPORT Express / Ligne C.
  *
  *   Topologie :
- *     T1 main ─── SER ──[bifurcation]──► BLA ──► NAD ──► DAU ──► ATB
- *     Ligne C ─── SMA ──────────────────► BLA ──► SDN ──► PJU ──► …
+ *     T1    … ANC → SER ──[bifurcation]──► BLA ──► NAD ──► DAU ──► ATB
+ *     Ligne C         SMA ─────────────────► BLA ──► SDN ──► PJU ──► …
+ *
+ *   adjacentStations: ['NAD', 'SDN']
+ *     • NAD — prochaine station AEROPORT Express
+ *     • SDN — prochaine station Ligne C (sens Labège)
  *
  *   connections: ['SER', 'NAD']
- *     • SER — point de bifurcation T1, accès à la branche AEROPORT depuis le tronc principal
- *     • NAD — prochaine station AEROPORT (correspondance explicitement requise)
+ *     • SER — point de bifurcation T1 / accès à la branche AEROPORT
+ *     • NAD — correspondance directe AEROPORT (confirme le HUB)
  *
- *   adjacentStations: ['SDN']
- *     • SDN — prochaine station sur Ligne C (sens Labège / terminus)
- *     • La direction AEROPORT (vers NAD) est couverte par connections['NAD']
- *
- *   publicName: "Jean Maga" — en cours de validation officielle.
- *   ⚠️  Modifier UNIQUEMENT publicName si le nom change, jamais `name`.
+ *   publicName: "Jean Maga" — nom public en cours de validation.
+ *   ⚠️ Modifier UNIQUEMENT publicName si le nom change, jamais `name`.
  */
 export const REGISTRY_INTERCHANGE_HUBS: StationDef[] = [
     {
@@ -357,10 +324,9 @@ export const REGISTRY_INTERCHANGE_HUBS: StationDef[] = [
         isFuture:         true,
         isBranch:         true,
         connections:      ['SER', 'NAD'],
-        adjacentStations: ['SDN'],
+        adjacentStations: ['NAD', 'SDN'],
     },
-    // ── Futurs HUBs à déclarer ici ─────────────────────────────────────────
-    // Règle : isHub: true OBLIGATOIRE si lines.length > 1
+    // Ajouter ici les futurs HUBs confirmés (isHub: true obligatoire)
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -382,14 +348,8 @@ export const ALL_STATION_DEFS: StationDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Retourne les stations actives (isActive ET au moins une ligne activée dans ACTIVE_LINES).
- *
- * @param line - Filtre optionnel par ligne. Si omis : toutes les lignes actives.
- *
- * @example
- *   getActiveStations()        // tout le réseau actif
- *   getActiveStations('T1')    // Tram T1 uniquement
- *   getActiveStations('C')     // [] tant que ACTIVE_LINES.C = false
+ * Retourne les stations actives (isActive + au moins une ligne activée).
+ * @param line - Filtre optionnel par ligne.
  */
 export function getActiveStations(line?: NetworkLine): StationDef[] {
     return ALL_STATION_DEFS.filter(s => {
@@ -401,69 +361,43 @@ export function getActiveStations(line?: NetworkLine): StationDef[] {
 }
 
 /**
- * Retourne TOUTES les stations d'une ligne (actives, futures, branches, HUBs).
- *
- * @param line - La ligne à interroger.
+ * Retourne TOUTES les stations d'une ligne (actives, futures, branches, hubs).
  */
 export function getStationsByLine(line: NetworkLine): StationDef[] {
     return ALL_STATION_DEFS.filter(s => s.lines.includes(line));
 }
 
 /**
- * Retourne les stations listées dans connections[] d'une station donnée.
- *
- * @param code - Trigramme de la station source.
- * @returns Tableau des StationDef de correspondance (vide si aucune).
- *
- * @example
- *   getStationConnections('BLA')  // → [StationDef(SER), StationDef(NAD)]
- *   getStationConnections('SER')  // → [StationDef(BLA)]
+ * Retourne les stations listées dans connections[] de la station identifiée par code.
+ * @example getStationConnections('BLA') → [StationDef(SER), StationDef(NAD)]
  */
 export function getStationConnections(code: string): StationDef[] {
-    const source = ALL_STATION_DEFS.find(s => s.code === code);
-    if (!source?.connections?.length) return [];
-    return source.connections
+    const src = ALL_STATION_DEFS.find(s => s.code === code);
+    if (!src?.connections?.length) return [];
+    return src.connections
         .map(c => ALL_STATION_DEFS.find(s => s.code === c))
         .filter((s): s is StationDef => s !== undefined);
 }
 
 /**
- * Retourne les stations listées dans adjacentStations[] d'une station donnée.
- *
- * @param code - Trigramme de la station source.
- * @returns Tableau des StationDef suivantes dans le parcours.
- *
- * @example
- *   getAdjacentStations('SER')  // → [StationDef(GUY), StationDef(BLA)]
+ * Retourne les stations suivantes dans le parcours (adjacentStations[]).
+ * @example getAdjacentStations('SER') → [StationDef(GUY), StationDef(BLA)]
  */
 export function getAdjacentStations(code: string): StationDef[] {
-    const source = ALL_STATION_DEFS.find(s => s.code === code);
-    if (!source?.adjacentStations?.length) return [];
-    return source.adjacentStations
+    const src = ALL_STATION_DEFS.find(s => s.code === code);
+    if (!src?.adjacentStations?.length) return [];
+    return src.adjacentStations
         .map(c => ALL_STATION_DEFS.find(s => s.code === c))
         .filter((s): s is StationDef => s !== undefined);
 }
 
-/**
- * Retourne les nœuds d'échange multi-lignes (isHub === true).
- */
+/** Retourne tous les nœuds d'échange multi-lignes (isHub === true). */
 export function getHubs(): StationDef[] {
     return ALL_STATION_DEFS.filter(s => s.isHub === true);
 }
 
 /**
- * Retourne les stations d'antenne actives (isBranch + isActive + ligne activée).
- * Vide tant que ACTIVE_LINES.AEROPORT = false.
- */
-export function getActiveBranchStations(): StationDef[] {
-    return ALL_STATION_DEFS.filter(
-        s => s.isBranch === true && s.isActive && s.lines.some(l => ACTIVE_LINES[l]),
-    );
-}
-
-/**
- * Retourne toutes les stations futures, actives ou non.
- *
+ * Retourne toutes les stations futures.
  * @param line - Filtre optionnel par ligne.
  */
 export function getFutureStations(line?: NetworkLine): StationDef[] {
@@ -476,15 +410,7 @@ export function getFutureStations(line?: NetworkLine): StationDef[] {
 
 /**
  * Recherche une station par son trigramme.
- *
- * @param code                    - Trigramme (ex : 'BGR', 'BLA', 'ATB').
- * @param options.line            - Restreindre aux stations contenant cette ligne.
- * @param options.includeInactive - Inclure les stations dont toutes les lignes
- *                                  sont inactives (par défaut : false).
- *
- * @example
- *   getStationByCode('BLA', { includeInactive: true })  // → StationDef(BLA)
- *   getStationByCode('BLA')                             // → undefined (inactif)
+ * @param options.includeInactive - Inclure les stations inactives (défaut: false).
  */
 export function getStationByCode(
     code: string,
@@ -499,17 +425,70 @@ export function getStationByCode(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// UI — AFFICHAGE AUDIT / FRONT
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Couleurs officielles par ligne (hex). */
+export const LINE_COLORS: Record<NetworkLine, string> = {
+    A:        '#FF0000', // rouge
+    B:        '#005BAC', // bleu
+    C:        '#F07800', // orange  (Ligne C / M3)
+    T1:       '#00843D', // vert
+    AEROPORT: '#007BC0', // bleu ciel  (Aéroport Express)
+    TELEO:    '#8B008B', // violet
+} as const;
+
+/** Statut affiché d'une station pour l'interface d'audit. */
+export type StationStatus = 'active' | 'future' | 'branch' | 'hub';
+
+/** Retourne le statut d'affichage d'une station (priorité : hub > branch > future > active). */
+export function getStationStatus(station: StationDef): StationStatus {
+    if (station.isHub)    return 'hub';
+    if (station.isBranch) return 'branch';
+    if (station.isFuture) return 'future';
+    return 'active';
+}
+
+/** Données d'affichage prêtes à l'emploi pour un composant badge/pastille. */
+export interface StationBadge {
+    code:   string;
+    label:  string;   // nom affiché (publicName ?? name)
+    lines:  NetworkLine[];
+    colors: string[]; // une couleur par ligne
+    status: StationStatus;
+}
+
+/**
+ * Génère les données d'affichage pour une station (pastille + trigramme).
+ * @example
+ *   const badge = getStationBadge(station);
+ *   // badge.code   → 'BLA'
+ *   // badge.label  → 'Jean Maga'
+ *   // badge.colors → ['#00843D', '#007BC0', '#F07800']
+ *   // badge.status → 'hub'
+ */
+export function getStationBadge(station: StationDef): StationBadge {
+    return {
+        code:   station.code ?? station.id,
+        label:  station.publicName ?? station.name,
+        lines:  station.lines,
+        colors: station.lines.map(l => LINE_COLORS[l]),
+        status: getStationStatus(station),
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // ASSERTIONS D'INTÉGRITÉ
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** @throws si un trigramme est dupliqué dans ALL_STATION_DEFS. */
+/** @throws si un trigramme est dupliqué globalement. */
 export function assertNoDuplicateCodes(): void {
     const seen = new Map<string, string>();
     for (const s of ALL_STATION_DEFS) {
         if (!s.code) continue;
         if (seen.has(s.code)) {
             throw new Error(
-                `[stationRegistry] Trigramme dupliqué : "${s.code}" utilisé par ` +
+                `[stationRegistry] Trigramme dupliqué : "${s.code}" — ` +
                 `"${seen.get(s.code)}" ET "${s.name}".`,
             );
         }
@@ -517,13 +496,13 @@ export function assertNoDuplicateCodes(): void {
     }
 }
 
-/** @throws si un identifiant (id) est dupliqué dans ALL_STATION_DEFS. */
+/** @throws si un id est dupliqué. */
 export function assertNoDuplicateIds(): void {
     const seen = new Map<string, string>();
     for (const s of ALL_STATION_DEFS) {
         if (seen.has(s.id)) {
             throw new Error(
-                `[stationRegistry] ID dupliqué : "${s.id}" utilisé par ` +
+                `[stationRegistry] ID dupliqué : "${s.id}" — ` +
                 `"${seen.get(s.id)}" ET "${s.name}".`,
             );
         }
@@ -532,21 +511,18 @@ export function assertNoDuplicateIds(): void {
 }
 
 /**
- * Vérifie que tous les codes référencés dans connections[] ET adjacentStations[]
- * correspondent à des stations existantes dans ALL_STATION_DEFS.
- *
- * @throws si un code référencé est introuvable.
+ * @throws si un code référencé dans connections[] ou adjacentStations[]
+ * est introuvable dans ALL_STATION_DEFS.
  */
 export function assertReferencedCodesExist(): void {
     const allCodes = new Set(ALL_STATION_DEFS.map(s => s.code).filter(Boolean));
-
     for (const s of ALL_STATION_DEFS) {
         const refs = [...(s.connections ?? []), ...(s.adjacentStations ?? [])];
         for (const ref of refs) {
             if (!allCodes.has(ref)) {
                 throw new Error(
                     `[stationRegistry] Code introuvable : "${s.name}" (${s.code ?? s.id}) ` +
-                    `référence "${ref}" (absent de ALL_STATION_DEFS).`,
+                    `→ "${ref}" absent de ALL_STATION_DEFS.`,
                 );
             }
         }
@@ -554,35 +530,28 @@ export function assertReferencedCodesExist(): void {
 }
 
 /**
- * Vérifie la cohérence des HUBs :
- *   isHub: true  ⟹  lines.length > 1
- *   lines.length > 1  ⟹  isHub: true
- *
- * @throws si un HUB n'a qu'une ligne, ou si une station multi-lignes n'est pas marquée HUB.
+ * @throws si isHub et lines.length sont incohérents
+ * (isHub: true ↔ lines.length > 1).
  */
 export function assertHubsConsistency(): void {
     for (const s of ALL_STATION_DEFS) {
         if (s.isHub && s.lines.length <= 1) {
             throw new Error(
-                `[stationRegistry] "${s.name}" est marqué isHub:true mais n'a qu'une ligne : ${s.lines}.`,
+                `[stationRegistry] "${s.name}" : isHub:true mais lines.length=${s.lines.length}.`,
             );
         }
         if (!s.isHub && s.lines.length > 1) {
             throw new Error(
-                `[stationRegistry] "${s.name}" a ${s.lines.length} lignes mais isHub n'est pas true. ` +
-                `Ajouter isHub: true ou déplacer dans REGISTRY_INTERCHANGE_HUBS.`,
+                `[stationRegistry] "${s.name}" : ${s.lines.length} lignes mais isHub manquant. ` +
+                `Ajouter isHub:true ou déplacer dans REGISTRY_INTERCHANGE_HUBS.`,
             );
         }
     }
 }
 
 /**
- * Exécute toutes les assertions d'intégrité.
- * À appeler dans les tests ou au démarrage en environnement de développement.
- *
- * @example
- *   import { assertRegistryIntegrity } from './stationRegistry';
- *   assertRegistryIntegrity();
+ * Exécute toutes les assertions d'intégrité du registre.
+ * Appeler dans les tests ou au démarrage en dev.
  */
 export function assertRegistryIntegrity(): void {
     assertNoDuplicateIds();
