@@ -92,9 +92,9 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-1',  name: 'Palais de Justice',               code: 'PSM', lieuName: 'Palais de Justice' },
     { id: 'sta-t1-2',  name: 'Île du Ramier',                   code: 'LDD' },
     { id: 'sta-t1-3',  name: 'Fer à Cheval',                    code: 'FAC' },
-    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'MRO' },
+    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'ODY' },
     { id: 'sta-t1-5',  name: 'Croix de Pierre',                 code: 'CDP' },
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',               code: 'GAS' },
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',               code: 'ACO' },
     { id: 'sta-t1-7',  name: 'Arènes',                          code: 'ARO', lieuName: 'Arènes' },
     { id: 'sta-t1-8',  name: 'Zénith',                          code: 'ZTH' },
     { id: 'sta-t1-9',  name: 'Cartoucherie',                    code: 'RAP' },
@@ -106,20 +106,20 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-15', name: 'Guyenne - Berry',                 code: 'GUY' },
     { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',     code: 'PAS' },
     { id: 'sta-t1-17', name: 'Place du Relais',                 code: 'REL' },
-    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',              code: 'ODY' },
+    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',              code: 'MRO' },
     { id: 'sta-t1-19', name: 'Patinoire - Barradels',           code: 'PTN' },
     { id: 'sta-t1-20', name: 'Grand Noble',                     code: 'GNO' },
     { id: 'sta-t1-21', name: 'Place Georges Brassens',          code: 'GBR' },
     { id: 'sta-t1-22', name: 'Andromède - Lycée',               code: 'LYC' },
     { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',          code: 'BEA' },
-    { id: 'sta-t1-24', name: 'Aéroconstellation',               code: 'ACO' },
+    { id: 'sta-t1-24', name: 'Garossos-Aéroconstellation',      code: 'GAS' },
     { id: 'sta-t1-25', name: 'MEETT',                           code: 'MET' },
 ];
 
 export const TELEO_STATIONS: Partial<Station>[] = [
-    { id: 'sta-tel-1', name: 'Oncopole-Lise Enjalbert' },
-    { id: 'sta-tel-2', name: 'Hôpital Rangueil-Louis Lareng' },
-    { id: 'sta-tel-3', name: 'Université Paul-Sabatier', lieuName: 'Université Paul-Sabatier' },
+    { id: 'sta-tel-1', name: 'Oncopole-Lise Enjalbert',       code: 'OLE' },
+    { id: 'sta-tel-2', name: 'Hôpital Rangueil-Louis Lareng', code: 'HRG' },
+    { id: 'sta-tel-3', name: 'Université Paul-Sabatier',       code: 'UPT', lieuName: 'Université Paul-Sabatier' },
 ];
 
 /**
