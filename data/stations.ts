@@ -81,20 +81,22 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
 /**
  * Stations Tram T1 — trigrammes SI officiels (v5).
  *
+ * v6 changes vs v5 :
+ *   • ACO = Déodat de Séverac     (était DSV en v5 — code SI officiel confirmé)
+ *   • ARE = Arènes T1             (était ARO en v5 ; = ARE Métro A, même lieuName 'Arènes')
+ *   • ARO = Arènes Romaines       (était ARR en v5)
+ *
  * v5 changes vs v4 :
  *   • MRO = Avenue de Muret – Marcel Cavaillé (était ODY en v4)
  *   • ODY = Odyssud – Ritouret               (était MRO en v4)
  *   • Hôpital Purpan supprimé → remplacé par :
  *       - sta-t1-8  Hippodrome         HIP  (NOUVEAU)
- *       - sta-t1-13 Arènes Romaines    ARR  (NOUVEAU — trigramme SI à confirmer avec Tisséo)
+ *       - sta-t1-13 Arènes Romaines    ARO  (NOUVEAU v5, code validé v6)
  *   • Aéroconstellation renommé (suppression "Garossos-")
- *   ⚠️  GAS conflict : Déodat de Séverac et Aéroconstellation partagent GAS
- *       dans le SI Tisséo — résolu par DSV (provisoire) pour Déodat.
- *       Les deux fichiers (stations.ts + stationRegistry.ts) utilisent DSV.
  *
  * PSM = Palais de Justice T1  (distinct du PDJ Métro B, même lieuName)
- * ARO = Arènes T1             (distinct du ARE Métro A, même lieuName)
- * ARR = Arènes Romaines T1   (trigramme provisoire — à confirmer avec Tisséo)
+ * ARE = Arènes T1             (= ARE Métro A, même lieuName 'Arènes' — même lieu physique)
+ * ARO = Arènes Romaines T1   (code SI officiel v6)
  */
 export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-1',  name: 'Palais de Justice',                  code: 'PSM', lieuName: 'Palais de Justice' },
@@ -102,15 +104,14 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-3',  name: 'Fer à Cheval',                       code: 'FAC' },
     { id: 'sta-t1-4',  name: 'Avenue de Muret – Marcel Cavaillé',  code: 'MRO' },
     { id: 'sta-t1-5',  name: 'Croix de Pierre',                    code: 'CDP' },
-    // ⚠️ Code provisoire DSV — le code SI officiel est GAS (conflit avec Aéroconstellation sta-t1-25)
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',                  code: 'DSV' },
-    { id: 'sta-t1-7',  name: 'Arènes',                             code: 'ARO', lieuName: 'Arènes' },
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',                  code: 'ACO' },
+    { id: 'sta-t1-7',  name: 'Arènes',                             code: 'ARE', lieuName: 'Arènes' },
     { id: 'sta-t1-8',  name: 'Hippodrome',                         code: 'HIP' },
     { id: 'sta-t1-9',  name: 'Zénith',                             code: 'ZTH' },
     { id: 'sta-t1-10', name: 'Cartoucherie',                       code: 'RAP' },
     { id: 'sta-t1-11', name: 'Casselardit',                        code: 'CCH' },
     { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
-    { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARR' },
+    { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
     { id: 'sta-t1-15', name: 'Servanty – Airbus',                  code: 'SER' },
     { id: 'sta-t1-16', name: 'Guyenne – Berry',                    code: 'GUY' },
