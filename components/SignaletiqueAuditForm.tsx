@@ -209,12 +209,12 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     options: { value: EquipmentStatusType; label: string; icon: React.ReactNode; colorClass: string; activeColorClass: string }[]
   ) => {
     return (
-      <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+      <div className="flex items-center gap-2 w-full sm:w-auto">
         {options.map((opt) => (
           <button
             key={opt.value}
             onClick={() => onSelect(currentStatus === opt.value ? 'NotChecked' : opt.value)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
+            className={`flex-1 flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap min-w-0 ${
               currentStatus === opt.value ? opt.activeColorClass : opt.colorClass
             }`}
           >
@@ -249,12 +249,12 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
               )}
             </div>
           </div>
-          <div className="flex items-center gap-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 w-full sm:w-auto">
             {subOptions.map(opt => (
               <button
                 key={opt.value}
                 onClick={() => onChange(currentStatus === opt.value ? 'NotChecked' : opt.value)}
-                className={`flex items-center px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${currentStatus === opt.value ? opt.activeColorClass : opt.colorClass}`}
+                className={`flex-1 flex items-center justify-center px-2.5 py-1 text-xs font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap min-w-0 ${currentStatus === opt.value ? opt.activeColorClass : opt.colorClass}`}
               >
                 {opt.icon}{opt.label}
               </button>
@@ -299,7 +299,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             <p className="text-sm text-gray-500 dark:text-slate-400">Vérification de l'état général</p>
           </div>
 
-          <div className="flex-shrink-0">
+          <div className="w-full sm:w-auto sm:flex-shrink-0">
             {renderStatusButtons(item.status, (status: any) => onStatusChange(category, dir, index, status), options)}
           </div>
         </div>
