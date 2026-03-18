@@ -79,41 +79,52 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
 ];
 
 /**
- * Stations Tram T1 — enrichies avec les trigrammes (v2).
+ * Stations Tram T1 — trigrammes SI officiels (v5).
  *
- * Codes ajoutés sur toutes les stations (auparavant aucun code sur le T1).
- * Le builder.ts utilise toujours station.name pour ses switch — les codes
- * permettent à terme de migrer vers une logique station.code plus robuste.
+ * v5 changes vs v4 :
+ *   • MRO = Avenue de Muret - Marcel Cavaillé (était ODY en v4)
+ *   • ODY = Odyssud - Ritouret               (était MRO en v4)
+ *   • Hôpital Purpan supprimé → remplacé par :
+ *       - sta-t1-8  Hippodrome         HIP  (NOUVEAU)
+ *       - sta-t1-13 Arènes Romaines    ARO2 (NOUVEAU, code provisoire)
+ *   • Aéroconstellation renommé (suppression "Garossos-")
+ *   ⚠️  GAS conflict : Déodat de Séverac et Aéroconstellation partagent GAS
+ *       dans le SI Tisséo. Déodat de Séverac utilise le code provisoire GAS
+ *       ici (builder) ; stationRegistry.ts utilise DSV pour conserver
+ *       l'intégrité de la chaîne adjacentStations.
  *
- * PSM = Palais de Justice T1  (distinct du PDJ Métro B, même lieuName)
- * ARO = Arènes T1             (distinct du ARE Métro A, même lieuName)
+ * PSM  = Palais de Justice T1  (distinct du PDJ Métro B, même lieuName)
+ * ARO  = Arènes T1             (distinct du ARE Métro A, même lieuName)
+ * ARO2 = Arènes Romaines T1   (trigramme provisoire — à confirmer avec Tisséo)
  */
 export const TRAM_STATIONS: Partial<Station>[] = [
-    { id: 'sta-t1-1',  name: 'Palais de Justice',               code: 'PSM', lieuName: 'Palais de Justice' },
-    { id: 'sta-t1-2',  name: 'Île du Ramier',                   code: 'LDD' },
-    { id: 'sta-t1-3',  name: 'Fer à Cheval',                    code: 'FAC' },
-    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'ODY' },
-    { id: 'sta-t1-5',  name: 'Croix de Pierre',                 code: 'CDP' },
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',               code: 'ACO' },
-    { id: 'sta-t1-7',  name: 'Arènes',                          code: 'ARO', lieuName: 'Arènes' },
-    { id: 'sta-t1-8',  name: 'Zénith',                          code: 'ZTH' },
-    { id: 'sta-t1-9',  name: 'Cartoucherie',                    code: 'RAP' },
-    { id: 'sta-t1-10', name: 'Casselardit',                     code: 'CCH' },
-    { id: 'sta-t1-11', name: 'Purpan',                          code: 'PUR' },
-    { id: 'sta-t1-12', name: 'Hôpital Purpan',                  code: 'HIP' },
-    { id: 'sta-t1-13', name: 'Ancely',                          code: 'ANC' },
-    { id: 'sta-t1-14', name: 'Servanty - Airbus',               code: 'SER' },
-    { id: 'sta-t1-15', name: 'Guyenne - Berry',                 code: 'GUY' },
-    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',     code: 'PAS' },
-    { id: 'sta-t1-17', name: 'Place du Relais',                 code: 'REL' },
-    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',              code: 'MRO' },
-    { id: 'sta-t1-19', name: 'Patinoire - Barradels',           code: 'PTN' },
-    { id: 'sta-t1-20', name: 'Grand Noble',                     code: 'GNO' },
-    { id: 'sta-t1-21', name: 'Place Georges Brassens',          code: 'GBR' },
-    { id: 'sta-t1-22', name: 'Andromède - Lycée',               code: 'LYC' },
-    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',          code: 'BEA' },
-    { id: 'sta-t1-24', name: 'Garossos-Aéroconstellation',      code: 'GAS' },
-    { id: 'sta-t1-25', name: 'MEETT',                           code: 'MET' },
+    { id: 'sta-t1-1',  name: 'Palais de Justice',                  code: 'PSM', lieuName: 'Palais de Justice' },
+    { id: 'sta-t1-2',  name: 'Île du Ramier',                      code: 'LDD' },
+    { id: 'sta-t1-3',  name: 'Fer à Cheval',                       code: 'FAC' },
+    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé',  code: 'MRO' },
+    { id: 'sta-t1-5',  name: 'Croix de Pierre',                    code: 'CDP' },
+    // ⚠️ Code SI officiel GAS — conflit avec Aéroconstellation (sta-t1-25) ; DSV utilisé dans stationRegistry.ts
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',                  code: 'GAS' },
+    { id: 'sta-t1-7',  name: 'Arènes',                             code: 'ARO', lieuName: 'Arènes' },
+    { id: 'sta-t1-8',  name: 'Hippodrome',                         code: 'HIP' },
+    { id: 'sta-t1-9',  name: 'Zénith',                             code: 'ZTH' },
+    { id: 'sta-t1-10', name: 'Cartoucherie',                       code: 'RAP' },
+    { id: 'sta-t1-11', name: 'Casselardit',                        code: 'CCH' },
+    { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
+    { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO2' },
+    { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
+    { id: 'sta-t1-15', name: 'Servanty - Airbus',                  code: 'SER' },
+    { id: 'sta-t1-16', name: 'Guyenne - Berry',                    code: 'GUY' },
+    { id: 'sta-t1-17', name: 'Pasteur - Mairie de Blagnac',        code: 'PAS' },
+    { id: 'sta-t1-18', name: 'Place du Relais',                    code: 'REL' },
+    { id: 'sta-t1-19', name: 'Odyssud - Ritouret',                 code: 'ODY' },
+    { id: 'sta-t1-20', name: 'Patinoire - Barradels',              code: 'PTN' },
+    { id: 'sta-t1-21', name: 'Grand Noble',                        code: 'GNO' },
+    { id: 'sta-t1-22', name: 'Place Georges Brassens',             code: 'GBR' },
+    { id: 'sta-t1-23', name: 'Andromède - Lycée',                  code: 'LYC' },
+    { id: 'sta-t1-24', name: 'Beauzelle - Aéroscopia',             code: 'BEA' },
+    { id: 'sta-t1-25', name: 'Aéroconstellation',                  code: 'GAS' },
+    { id: 'sta-t1-26', name: 'MEETT',                              code: 'MET' },
 ];
 
 export const TELEO_STATIONS: Partial<Station>[] = [

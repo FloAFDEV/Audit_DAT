@@ -1,30 +1,36 @@
 /**
- * stationRegistry.ts — v4
+ * stationRegistry.ts — v5
  * ──────────────────────────────────────────────────────────────────────────
  * SOURCE DE VÉRITÉ CENTRALE du réseau Tisséo.
  *
- * CODES SI T1 — HISTORIQUE VALIDÉ (NE JAMAIS MODIFIER) :
- *   PSM LDD FAC ODY CDP ACO ARO ZTH RAP CCH
- *   PUR HIP ANC SER GUY PAS REL MRO PTN GNO
- *   GBR LYC BEA GAS MET
+ * CODES SI T1 — VALIDÉS v5 :
+ *   PSM LDD FAC MRO CDP DSV ARO HIP ZTH RAP
+ *   CCH PUR ARO2 ANC SER GUY PAS REL ODY PTN
+ *   GNO GBR LYC BEA GAS MET
  *
- * CORRECTIONS v4 (assignments corrigés vs v3) :
- *   ODY  ← Avenue de Muret - Marcel Cavaillé  (était MRO en v3)
- *   ACO  ← Déodat de Séverac                  (était GAS en v3)
- *   MRO  ← Odyssud - Ritouret                 (était ODY en v3)
- *   GAS  ← Garossos-Aéroconstellation         (était ACO en v3, nom mis à jour)
+ * AJOUTS v5 (vs v4) :
+ *   HIP   ← Hippodrome               (NOUVELLE station entre Arènes et Zénith)
+ *   ARO2  ← Arènes Romaines          (NOUVELLE station — remplace Hôpital Purpan ; code provisoire)
+ *   DSV   ← Déodat de Séverac        (code provisoire interne ; code SI officiel = GAS,
+ *                                     conflit avec Aéroconstellation — à résoudre avec Tisséo)
+ *
+ * CORRECTIONS v5 (vs v4) :
+ *   MRO   ← Avenue de Muret - MC     (retour code v3 ; était ODY en v4)
+ *   ODY   ← Odyssud - Ritouret       (retour code v3 ; était MRO en v4)
+ *   ACO   ← supprimé (Déodat passe en DSV/provisoire)
+ *   GAS   ← Aéroconstellation        (nom raccourci : était Garossos-Aéroconstellation)
  *
  * CODES TÉLÉO — provisoires (en attente de validation SI) :
  *   OLE  Oncopole-Lise Enjalbert
  *   HRG  Hôpital Rangueil-Louis Lareng
  *   UPT  Université Paul-Sabatier Téléo  (UPS = Métro B, usage distinct)
  *
- * TOPOLOGIE AÉROPORT EXPRESS :
- *   T1 : … ANC → SER ──[bifurcation]──► BLA → NAD → DAU → ATB
- *                  └──► GUY → PAS → REL → MRO → … → GAS → MET
+ * TOPOLOGIE AÉROPORT EXPRESS (LAE) :
+ *   T1 : … ANC → BLA ──[bifurcation]──► NAD → DAU → ATB
+ *                   └──► SER → GUY → PAS → REL → ODY → … → GAS → MET
  *
  * ACTIVATION LIGNES FUTURES :
- *   ACTIVE_LINES.AEROPORT = true  → antenne T1/Aéroport active
+ *   ACTIVE_LINES.AEROPORT = true  → antenne LAE active
  *   ACTIVE_LINES.C        = true  → Ligne C active
  */
 
@@ -169,81 +175,84 @@ export const REGISTRY_LINE_C: StationDef[] = [
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TRAM T1 — 25 stations en service (tronc principal)
+// TRAM T1 — 26 stations en service (tronc principal)
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * TABLE DES CODES SI VALIDÉS (v4) :
+ * TABLE DES CODES SI (v5) :
  *
  *  Pos  Code  Station
  *  ───  ────  ──────────────────────────────────────
  *   1   PSM   Palais de Justice  (≠ PDJ Métro B, même lieuName)
  *   2   LDD   Île du Ramier
  *   3   FAC   Fer à Cheval
- *   4   ODY   Avenue de Muret - Marcel Cavaillé     ← corrigé v4 (était MRO)
+ *   4   MRO   Avenue de Muret - Marcel Cavaillé     ← retour v3 (était ODY en v4)
  *   5   CDP   Croix de Pierre
- *   6   ACO   Déodat de Séverac                     ← corrigé v4 (était GAS)
+ *   6   DSV   Déodat de Séverac                     ← code provisoire interne
+ *                                                      (SI officiel = GAS, conflit pos 25)
  *   7   ARO   Arènes T1  (≠ ARE Métro A, même lieuName)
- *   8   ZTH   Zénith
- *   9   RAP   Cartoucherie
- *  10   CCH   Casselardit
- *  11   PUR   Purpan
- *  12   HIP   Hôpital Purpan
- *  13   ANC   Ancely
- *  14   SER   Servanty - Airbus  [BIFURCATION T1/AEROPORT]
- *  15   GUY   Guyenne - Berry
- *  16   PAS   Pasteur - Mairie de Blagnac
- *  17   REL   Place du Relais
- *  18   MRO   Odyssud - Ritouret                    ← corrigé v4 (était ODY)
- *  19   PTN   Patinoire - Barradels
- *  20   GNO   Grand Noble
- *  21   GBR   Place Georges Brassens
- *  22   LYC   Andromède - Lycée
- *  23   BEA   Beauzelle - Aéroscopia
- *  24   GAS   Garossos-Aéroconstellation            ← corrigé v4 (était ACO, nom mis à jour)
- *  25   MET   MEETT
+ *   8   HIP   Hippodrome                            ← NOUVELLE station v5
+ *   9   ZTH   Zénith
+ *  10   RAP   Cartoucherie
+ *  11   CCH   Casselardit
+ *  12   PUR   Purpan
+ *  13   ARO2  Arènes Romaines                       ← NOUVELLE station v5 (code provisoire)
+ *  14   ANC   Ancely
+ * [BLA]        Blagnac / Jean Maga [BIFURCATION T1/LAE/C] → REGISTRY_INTERCHANGE_HUBS
+ *  15   SER   Servanty - Airbus
+ *  16   GUY   Guyenne - Berry
+ *  17   PAS   Pasteur - Mairie de Blagnac
+ *  18   REL   Place du Relais
+ *  19   ODY   Odyssud - Ritouret                    ← retour v3 (était MRO en v4)
+ *  20   PTN   Patinoire - Barradels
+ *  21   GNO   Grand Noble
+ *  22   GBR   Place Georges Brassens
+ *  23   LYC   Andromède - Lycée
+ *  24   BEA   Beauzelle - Aéroscopia
+ *  25   GAS   Aéroconstellation                     ← nom raccourci (était Garossos-)
+ *  26   MET   MEETT
  *
  * BIFURCATION (depuis BLA, intercalé entre ANC et SER) :
  *   BLA.adjacentStations = ['SER', 'NAD', 'SDN']
  *   → SER : tronc T1 principal (vers MEETT)
- *   → NAD : antenne Aéroport Express
+ *   → NAD : antenne LAE (Aéroport Express)
  *   → SDN : Ligne C (sens Labège)
  */
 export const REGISTRY_TRAM_T1: StationDef[] = [
-    { id: 'sta-t1-1',  name: 'Palais de Justice',              code: 'PSM', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Palais de Justice', adjacentStations: ['LDD'] },
-    { id: 'sta-t1-2',  name: 'Île du Ramier',                  code: 'LDD', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['FAC'] },
-    { id: 'sta-t1-3',  name: 'Fer à Cheval',                   code: 'FAC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ODY'] },
-    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'ODY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CDP'] },
-    { id: 'sta-t1-5',  name: 'Croix de Pierre',                code: 'CDP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ACO'] },
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',              code: 'ACO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
-    { id: 'sta-t1-7',  name: 'Arènes',                         code: 'ARO', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes',           adjacentStations: ['ZTH'] },
-    { id: 'sta-t1-8',  name: 'Zénith',                         code: 'ZTH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
-    { id: 'sta-t1-9',  name: 'Cartoucherie',                   code: 'RAP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
-    { id: 'sta-t1-10', name: 'Casselardit',                    code: 'CCH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
-    { id: 'sta-t1-11', name: 'Purpan',                         code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['HIP'] },
-    { id: 'sta-t1-12', name: 'Hôpital Purpan',                 code: 'HIP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
-    { id: 'sta-t1-13', name: 'Ancely',                         code: 'ANC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BLA'] },
+    { id: 'sta-t1-1',  name: 'Palais de Justice',              code: 'PSM',  lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Palais de Justice', adjacentStations: ['LDD'] },
+    { id: 'sta-t1-2',  name: 'Île du Ramier',                  code: 'LDD',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['FAC'] },
+    { id: 'sta-t1-3',  name: 'Fer à Cheval',                   code: 'FAC',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MRO'] },
+    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'MRO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CDP'] },
+    { id: 'sta-t1-5',  name: 'Croix de Pierre',                code: 'CDP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['DSV'] },
+    // ⚠️ Code provisoire DSV — le code SI officiel est GAS (conflit avec Aéroconstellation pos 25, à résoudre)
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',              code: 'DSV',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
+    { id: 'sta-t1-7',  name: 'Arènes',                         code: 'ARO',  lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes', adjacentStations: ['HIP'] },
+    // ← NOUVELLE station v5
+    { id: 'sta-t1-8',  name: 'Hippodrome',                     code: 'HIP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ZTH'] },
+    { id: 'sta-t1-9',  name: 'Zénith',                         code: 'ZTH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
+    { id: 'sta-t1-10', name: 'Cartoucherie',                   code: 'RAP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
+    { id: 'sta-t1-11', name: 'Casselardit',                    code: 'CCH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
+    { id: 'sta-t1-12', name: 'Purpan',                         code: 'PUR',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO2'] },
+    // ← NOUVELLE station v5 (remplace Hôpital Purpan — code provisoire ARO2, trigramme SI à confirmer)
+    { id: 'sta-t1-13', name: 'Arènes Romaines',                code: 'ARO2', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
+    { id: 'sta-t1-14', name: 'Ancely',                         code: 'ANC',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BLA'] },
     // ── BIFURCATION ───────────────────────────────────────────────────────────
     // BLA → SER  : tronc T1 (sens MEETT)   [BLA est entre ANC et SER]
-    // BLA → NAD  : antenne Aéroport Express
+    // BLA → NAD  : antenne LAE Aéroport Express
     // BLA → SDN  : Ligne C (sens Labège)
-    {
-        id: 'sta-t1-14', name: 'Servanty - Airbus',
-        code: 'SER', lines: ['T1'], isActive: true, isFuture: false,
-        adjacentStations: ['GUY'],
-    },
+    { id: 'sta-t1-15', name: 'Servanty - Airbus',              code: 'SER',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GUY'] },
     // ── Tronc T1 principal (suite) ────────────────────────────────────────────
-    { id: 'sta-t1-15', name: 'Guyenne - Berry',                code: 'GUY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PAS'] },
-    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',    code: 'PAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['REL'] },
-    { id: 'sta-t1-17', name: 'Place du Relais',                code: 'REL', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MRO'] },
-    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',             code: 'MRO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PTN'] },
-    { id: 'sta-t1-19', name: 'Patinoire - Barradels',          code: 'PTN', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GNO'] },
-    { id: 'sta-t1-20', name: 'Grand Noble',                    code: 'GNO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GBR'] },
-    { id: 'sta-t1-21', name: 'Place Georges Brassens',         code: 'GBR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['LYC'] },
-    { id: 'sta-t1-22', name: 'Andromède - Lycée',              code: 'LYC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BEA'] },
-    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',         code: 'BEA', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GAS'] },
-    { id: 'sta-t1-24', name: 'Garossos-Aéroconstellation',     code: 'GAS', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MET'] },
-    { id: 'sta-t1-25', name: 'MEETT',                          code: 'MET', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: [] },
+    { id: 'sta-t1-16', name: 'Guyenne - Berry',                code: 'GUY',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PAS'] },
+    { id: 'sta-t1-17', name: 'Pasteur - Mairie de Blagnac',    code: 'PAS',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['REL'] },
+    { id: 'sta-t1-18', name: 'Place du Relais',                code: 'REL',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ODY'] },
+    { id: 'sta-t1-19', name: 'Odyssud - Ritouret',             code: 'ODY',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PTN'] },
+    { id: 'sta-t1-20', name: 'Patinoire - Barradels',          code: 'PTN',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GNO'] },
+    { id: 'sta-t1-21', name: 'Grand Noble',                    code: 'GNO',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GBR'] },
+    { id: 'sta-t1-22', name: 'Place Georges Brassens',         code: 'GBR',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['LYC'] },
+    { id: 'sta-t1-23', name: 'Andromède - Lycée',              code: 'LYC',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BEA'] },
+    { id: 'sta-t1-24', name: 'Beauzelle - Aéroscopia',         code: 'BEA',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['GAS'] },
+    { id: 'sta-t1-25', name: 'Aéroconstellation',              code: 'GAS',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MET'] },
+    { id: 'sta-t1-26', name: 'MEETT',                          code: 'MET',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: [] },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
