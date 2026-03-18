@@ -81,6 +81,9 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
 /**
  * Stations Tram T1 — trigrammes SI officiels (v5).
  *
+ * v7 changes vs v6 :
+ *   • CCH (Casselardit) SUPPRIMÉ — absent du référentiel SI officiel
+ *
  * v6 changes vs v5 :
  *   • ACO = Déodat de Séverac     (était DSV en v5 — code SI officiel confirmé)
  *   • ARE = Arènes T1             (était ARO en v5 ; = ARE Métro A, même lieuName 'Arènes')
@@ -109,7 +112,6 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-8',  name: 'Hippodrome',                         code: 'HIP' },
     { id: 'sta-t1-9',  name: 'Zénith',                             code: 'ZTH' },
     { id: 'sta-t1-10', name: 'Cartoucherie',                       code: 'RAP' },
-    { id: 'sta-t1-11', name: 'Casselardit',                        code: 'CCH' },
     { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
     { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },

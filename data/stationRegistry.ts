@@ -3,15 +3,14 @@
  * ──────────────────────────────────────────────────────────────────────────
  * SOURCE DE VÉRITÉ CENTRALE du réseau Tisséo.
  *
- * CODES SI T1 — VALIDÉS v6 :
+ * CODES SI T1 — VALIDÉS v7 (ordre officiel SI) :
  *   PSM LDD FAC MRO CDP ACO ARE HIP ZTH RAP
- *   CCH PUR ARO ANC SER GUY PAS REL ODY PTN
+ *   PUR ARO ANC SER GUY PAS REL ODY PTN
  *   GNO GBR LYC BEA GAS MET
  *
- * AJOUTS v5 (vs v4) :
- *   HIP   ← Hippodrome               (NOUVELLE station entre Arènes et Zénith)
- *   ARO   ← Arènes Romaines          (NOUVELLE station — remplace Hôpital Purpan)
- *   ACO   ← Déodat de Séverac        (code SI validé v6)
+ * CORRECTION v7 (vs v6) :
+ *   CCH (Casselardit) SUPPRIMÉ — absent du référentiel SI officiel
+ *   NAD DAU ATB : lines corrigé → ['T1', 'AEROPORT'] (branche T1)
  *
  * CORRECTIONS v6 (vs v5) :
  *   ACO   ← Déodat de Séverac        (était DSV en v5 — code SI officiel confirmé)
@@ -195,11 +194,10 @@ export const REGISTRY_LINE_C: StationDef[] = [
  *   7   ARE   Arènes T1  (= ARE Métro A, même lieuName — même lieu physique)
  *   8   HIP   Hippodrome                            ← NOUVELLE station v5
  *   9   ZTH   Zénith
- *  10   RAP   Cartoucherie
- *  11   CCH   Casselardit
- *  12   PUR   Purpan
- *  13   ARO   Arènes Romaines                       ← NOUVELLE station v5
- *  14   ANC   Ancely
+ *  10   RAP   Cartoucherie                          (SI [60033])
+ *  11   PUR   Purpan                                (SI [60041])
+ *  12   ARO   Arènes Romaines                       (SI [60051]) ← NOUVELLE station v5
+ *  13   ANC   Ancely                                (SI [60061])
  * [BLA]        Blagnac / Jean Maga [BIFURCATION T1/LAE/C] → REGISTRY_INTERCHANGE_HUBS
  *  15   SER   Servanty – Airbus
  *  16   GUY   Guyenne – Berry
@@ -232,8 +230,7 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
     // ← NOUVELLE station v5
     { id: 'sta-t1-8',  name: 'Hippodrome',                     code: 'HIP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ZTH'] },
     { id: 'sta-t1-9',  name: 'Zénith',                         code: 'ZTH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
-    { id: 'sta-t1-10', name: 'Cartoucherie',                   code: 'RAP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
-    { id: 'sta-t1-11', name: 'Casselardit',                    code: 'CCH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
+    { id: 'sta-t1-10', name: 'Cartoucherie',                   code: 'RAP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
     { id: 'sta-t1-12', name: 'Purpan',                           code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
     // ← NOUVELLE station v5 (remplace Hôpital Purpan)
     { id: 'sta-t1-13', name: 'Arènes Romaines',                  code: 'ARO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
@@ -268,18 +265,18 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
 export const REGISTRY_AEROPORT_EXPRESS: StationDef[] = [
     {
         id: 'sta-aero-nad', name: 'Nadot', code: 'NAD',
-        lines: ['AEROPORT'], isActive: false, isFuture: true, isBranch: true,
+        lines: ['T1', 'AEROPORT'], isActive: false, isFuture: true, isBranch: true,
         adjacentStations: ['DAU'],
         connections:      ['BLA'],
     },
     {
         id: 'sta-aero-dau', name: 'Daurat', code: 'DAU',
-        lines: ['AEROPORT'], isActive: false, isFuture: true, isBranch: true,
+        lines: ['T1', 'AEROPORT'], isActive: false, isFuture: true, isBranch: true,
         adjacentStations: ['ATB'],
     },
     {
         id: 'sta-aero-atb', name: 'Aéroport Toulouse Blagnac', code: 'ATB',
-        lines: ['AEROPORT'], isActive: false, isFuture: true, isBranch: true,
+        lines: ['T1', 'AEROPORT'], isActive: false, isFuture: true, isBranch: true,
         adjacentStations: [],
     },
 ];
@@ -554,8 +551,10 @@ export function assertReferencedCodesExist(): void {
 }
 
 /**
- * @throws si isHub et lines.length sont incohérents
- * (isHub: true ↔ lines.length > 1).
+ * @throws si isHub et lines.length sont incohérents.
+ * Règle : isHub:true ↔ lines.length > 1 ET isBranch !== true.
+ * Exception : les stations de branche (isBranch:true) peuvent appartenir à plusieurs lignes
+ * sans être un hub d'échange (ex: NAD/DAU/ATB sur T1+AEROPORT — même service, pas une correspondance).
  */
 export function assertHubsConsistency(): void {
     for (const s of ALL_STATION_DEFS) {
@@ -564,10 +563,11 @@ export function assertHubsConsistency(): void {
                 `[stationRegistry] "${s.name}" : isHub:true mais lines.length=${s.lines.length}.`,
             );
         }
-        if (!s.isHub && s.lines.length > 1) {
+        // isBranch stations are exempt: being on multiple lines is expected for branch stations
+        if (!s.isHub && !s.isBranch && s.lines.length > 1) {
             throw new Error(
                 `[stationRegistry] "${s.name}" : ${s.lines.length} lignes mais isHub manquant. ` +
-                `Ajouter isHub:true ou déplacer dans REGISTRY_INTERCHANGE_HUBS.`,
+                `Ajouter isHub:true ou déplacer dans REGISTRY_INTERCHANGE_HUBS (ou isBranch:true si antenne).`,
             );
         }
     }
