@@ -1,5 +1,6 @@
 
 import { Station } from '../types';
+import { REGISTRY_AEROPORT_EXPRESS, ACTIVE_LINES } from './stationRegistry';
 
 export const LINE_A_STATIONS: Partial<Station>[] = [
     { id: 'sta-a-1', name: 'Basso Cambo', code: 'MBC' },
@@ -104,3 +105,26 @@ export const TELEO_STATIONS: Partial<Station>[] = [
     { id: 'sta-tel-2', name: 'Hôpital Rangueil-Louis Lareng' },
     { id: 'sta-tel-3', name: 'Université Paul-Sabatier', lieuName: 'Université Paul-Sabatier' },
 ];
+
+/**
+ * Stations de l'antenne Aéroport Express (branche du Tram T1).
+ *
+ * Ordre logique depuis le point de bifurcation (Servanty - Airbus) :
+ *   BLA (Blagnac / Jean Maga) → NAD (Nadot) → DAU (Daurat) → ATB (Aéroport)
+ *
+ * Ce tableau est VIDE tant que ACTIVE_LINES.AEROPORT = false.
+ * Pour activer : modifier ACTIVE_LINES dans stationRegistry.ts uniquement.
+ *
+ * Usage dans builder.ts (quand activé) :
+ *   import { AEROPORT_EXPRESS_STATIONS } from './stations';
+ *   // Traiter comme TRAM_STATIONS avec isBranch = true
+ */
+export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPORT
+    ? REGISTRY_AEROPORT_EXPRESS.map(def => ({
+        id:        def.id,
+        name:      def.publicName ?? def.name, // affiche le nom public si disponible
+        code:      def.code,
+        isFuture:  def.isFuture,
+        lieuName:  def.lieuName,
+    }))
+    : [];
