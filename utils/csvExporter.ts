@@ -290,6 +290,116 @@ interface CsvRow {
     'Commentaire': string;
 }
 
+// =================================================================
+// SECTION: TRANSFORMATION / GROUPEMENT DES LIGNES CSV
+// =================================================================
+
+/**
+ * Groupe une liste de CsvRow par station puis par direction.
+ *
+ * Structure retournée :
+ *   stationKey (= "Ligne||Lieu") → directionKey → CsvRow[]
+ *
+ * Les stations et directions conservent l'ordre dans lequel elles
+ * apparaissent dans `rows` (le tri amont doit donc être appliqué avant).
+ * Compatible Excel : chaque ligne de données garde Lieu + Direction répétés,
+ * ce qui permet de filtrer librement dans n'importe quelle colonne.
+ *
+ * @example
+ *   const sorted  = [...rows].sort(comparator);
+ *   const grouped = groupRowsByStationAndDirection(sorted);
+ *   for (const [stationKey, dirMap] of grouped) {
+ *       for (const [dir, items] of dirMap) { ... }
+ *   }
+ */
+export function groupRowsByStationAndDirection(
+    rows: CsvRow[],
+): Map<string, Map<string, CsvRow[]>> {
+    const grouped = new Map<string, Map<string, CsvRow[]>>();
+
+    for (const row of rows) {
+        // Clé de station : inclut la ligne pour traiter les homonymes inter-lignes
+        const stationKey   = `${row.Ligne}||${row.Lieu}`;
+        const directionKey = row['Direction/Équipement/Accès'] || '(Sans direction)';
+
+        if (!grouped.has(stationKey)) {
+            grouped.set(stationKey, new Map());
+        }
+        const stationGroup = grouped.get(stationKey)!;
+
+        if (!stationGroup.has(directionKey)) {
+            stationGroup.set(directionKey, []);
+        }
+        stationGroup.get(directionKey)!.push(row);
+    }
+
+    return grouped;
+}
+
+/**
+ * Aplatit la structure groupée (station → direction → items) en un tableau
+ * de lignes CSV ordonné, avec insertion de lignes de séparation visuelles.
+ *
+ * Résultat pour chaque station :
+ *   [données direction 1 – toutes les lignes]
+ *   [ligne séparatrice entre directions, Lieu répété pour filtre Excel]
+ *   [données direction 2 – toutes les lignes]
+ *   ...
+ *   [ligne vide entre stations]
+ *
+ * Les lignes séparatrices ont :
+ *   • `Lieu`                     = nom de la station  (filtre Excel cohérent)
+ *   • `Ligne`                    = ligne de la station (filtre Excel cohérent)
+ *   • `Type d'Audit`             = "– – –"            (repère visuel neutre)
+ *   • `Direction/Équipement/Accès` = "── <direction> ──" (lisibilité directe)
+ *   • tous les autres champs     = vide
+ */
+function buildGroupedCsvRows(
+    sortedRows: CsvRow[],
+    headerKeys: (keyof CsvRow)[],
+): Partial<CsvRow>[] {
+    const grouped = groupRowsByStationAndDirection(sortedRows);
+    const result: Partial<CsvRow>[] = [];
+
+    const blankRow = headerKeys.reduce(
+        (acc, key) => ({ ...acc, [key]: '' }),
+        {} as Partial<CsvRow>,
+    );
+
+    let firstStation = true;
+
+    for (const [, directionMap] of grouped) {
+        // Ligne vide entre chaque station
+        if (!firstStation) {
+            result.push({ ...blankRow });
+        }
+        firstStation = false;
+
+        let firstDirection = true;
+
+        for (const [directionKey, dirRows] of directionMap) {
+            // Ligne séparatrice entre deux directions d'une même station
+            if (!firstDirection) {
+                const ref = dirRows[0];
+                result.push({
+                    ...blankRow,
+                    'Lieu':                      ref?.Lieu ?? '',
+                    'Ligne':                     ref?.Ligne ?? '',
+                    'Type d\'Audit':             '– – –',
+                    'Direction/Équipement/Accès': `── ${directionKey} ──`,
+                });
+            }
+            firstDirection = false;
+
+            for (const row of dirRows) {
+                result.push(row);
+            }
+        }
+    }
+
+    return result;
+}
+
 // Configuration pour le tri physique des stations
 const STATION_ORDER_MAP = new Map<string, Map<string, number>>();
 
@@ -585,64 +695,65 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
             return { success: true };
         }
 
-        // --- TRI PHYSIQUE ET PAR LIGNE ---
+        // --- TRI : Ligne → Station (physique) → Direction → Élément ---
+        //
+        // L'ajout du niveau "Direction/Équipement/Accès" (étape 4) est le correctif
+        // principal : sans lui, les lignes de directions différentes s'intercalaient
+        // dès qu'elles partageaient le même nom d'Élément (ex: "DAT 01").
         const lineRank = new Map([
             ['A', 1],
             ['B', 2],
             ['C', 3],
             ['TRAM', 4],
             ['TELEO', 5],
-            ['', 99] // Autres / P+R
+            ['', 99], // Autres / P+R
         ]);
 
         rows.sort((a, b) => {
-            // 1. Tri par Ligne (A > B > C > TRAM > TELEO > Autres)
+            // 1. Ligne (A → B → C → TRAM → TELEO → Autres)
             const rankA = lineRank.get(a.Ligne) ?? 99;
             const rankB = lineRank.get(b.Ligne) ?? 99;
-            
-            if (rankA !== rankB) {
-                return rankA - rankB;
-            }
+            if (rankA !== rankB) return rankA - rankB;
 
-            // 2. Tri Physique (Ordre des stations sur la ligne)
-            // Utilisation de STATION_ORDER_MAP générée plus haut
+            // 2. Ordre physique de la station sur sa ligne (via STATION_ORDER_MAP)
             const stationsOnLine = STATION_ORDER_MAP.get(a.Ligne);
             if (stationsOnLine) {
-                const stationIndexA = stationsOnLine.get(a.Lieu) ?? 999;
-                const stationIndexB = stationsOnLine.get(b.Lieu) ?? 999;
-                
-                if (stationIndexA !== stationIndexB) {
-                    return stationIndexA - stationIndexB;
-                }
+                const idxA = stationsOnLine.get(a.Lieu) ?? 999;
+                const idxB = stationsOnLine.get(b.Lieu) ?? 999;
+                if (idxA !== idxB) return idxA - idxB;
             }
 
-            // 3. Fallback : Tri alphabétique sur le Lieu si pas d'ordre physique trouvé
-            const lieuCompare = a.Lieu.localeCompare(b.Lieu);
-            if (lieuCompare !== 0) return lieuCompare;
+            // 3. Fallback alphabétique sur le nom de station
+            const lieuCmp = a.Lieu.localeCompare(b.Lieu, 'fr');
+            if (lieuCmp !== 0) return lieuCmp;
 
-            // 4. Tri par Élément (pour regrouper les équipements identiques)
-            return a['Élément'].localeCompare(b['Élément']);
+            // 4. Direction / Équipement / Accès  ← correctif du regroupement
+            //    Garantit que tous les items d'une direction sont contigus
+            //    avant de comparer les éléments individuels.
+            const dirCmp = (a['Direction/Équipement/Accès'] ?? '').localeCompare(
+                b['Direction/Équipement/Accès'] ?? '',
+                'fr',
+                { sensitivity: 'base' },
+            );
+            if (dirCmp !== 0) return dirCmp;
+
+            // 5. Nom de l'élément (DAT 01, DAT 02, Totem, BIV…)
+            return a['Élément'].localeCompare(b['Élément'], 'fr');
         });
 
         // --- CONSTRUCTION CSV ---
-        const finalCsvRowsForStringify: Partial<CsvRow>[] = [];
-        let lastLigne: string | null = null;
-        
+        // buildGroupedCsvRows insère automatiquement :
+        //   • une ligne vide entre chaque station
+        //   • une ligne séparatrice entre les directions d'une même station
+        // Le Lieu et la Ligne sont répétés sur les séparateurs pour que
+        // les filtres Excel restent cohérents sur toutes les colonnes.
         const headerKeys: (keyof CsvRow)[] = [
-            'Date de l\'export', 'Date de Réalisation', 'Lieu', 'Type d\'Audit', 'Ligne', 'Mode', 
-            'Direction/Équipement/Accès', 'Élément', 'Statut', 'Repère', 'Description Adhésif', 
-            'Localisation Adhésif', 'Photo Jointe', 'Note Photo', 'Commentaire'
+            'Date de l\'export', 'Date de Réalisation', 'Lieu', 'Type d\'Audit', 'Ligne', 'Mode',
+            'Direction/Équipement/Accès', 'Élément', 'Statut', 'Repère', 'Description Adhésif',
+            'Localisation Adhésif', 'Photo Jointe', 'Note Photo', 'Commentaire',
         ];
 
-        const blankRow = headerKeys.reduce((acc, key) => ({ ...acc, [key]: '' }), {});
-
-        for (const row of rows) {
-            if (lastLigne !== null && row.Ligne !== lastLigne) {
-                finalCsvRowsForStringify.push(blankRow);
-            }
-            finalCsvRowsForStringify.push(row);
-            lastLigne = row.Ligne;
-        }
+        const finalCsvRowsForStringify = buildGroupedCsvRows(rows, headerKeys);
 
         const csvContent = [
             '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
