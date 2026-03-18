@@ -11,9 +11,11 @@ interface TramDirectionSelectorProps {
 }
 
 const TramDirectionSelector: React.FC<TramDirectionSelectorProps> = ({ lieu, onSelectStation, onSelectDirection, onBack }) => {
-    // Get the first module to extract station and directions
-    // For Tram, all modules in a lieu share the same station/directions
-    const firstModule = lieu.modules[0];
+    // Get the first TRAM DAT module — not just modules[0], which could be a Métro module
+    // at lieux shared between T1 and Métro (e.g., Palais de Justice, Arènes).
+    const firstModule = lieu.modules.find(m => m.line === 'TRAM' && m.type === AuditModuleType.DAT)
+        ?? lieu.modules.find(m => m.line === 'TRAM')
+        ?? lieu.modules[0];
     const modeData = firstModule.data as ModeData;
     const station = modeData.stations[0];
 
