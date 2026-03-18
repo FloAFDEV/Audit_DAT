@@ -203,10 +203,11 @@ export const REGISTRY_LINE_C: StationDef[] = [
  *  24   GAS   Garossos-Aéroconstellation            ← corrigé v4 (était ACO, nom mis à jour)
  *  25   MET   MEETT
  *
- * BIFURCATION :
- *   SER.adjacentStations = ['GUY', 'BLA']
- *   → GUY : tronc T1 principal (vers MEETT)
- *   → BLA : antenne Aéroport Express (hub T1 / AEROPORT / C)
+ * BIFURCATION (depuis BLA, intercalé entre ANC et SER) :
+ *   BLA.adjacentStations = ['SER', 'NAD', 'SDN']
+ *   → SER : tronc T1 principal (vers MEETT)
+ *   → NAD : antenne Aéroport Express
+ *   → SDN : Ligne C (sens Labège)
  */
 export const REGISTRY_TRAM_T1: StationDef[] = [
     { id: 'sta-t1-1',  name: 'Palais de Justice',              code: 'PSM', lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Palais de Justice', adjacentStations: ['LDD'] },
@@ -221,15 +222,15 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
     { id: 'sta-t1-10', name: 'Casselardit',                    code: 'CCH', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
     { id: 'sta-t1-11', name: 'Purpan',                         code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['HIP'] },
     { id: 'sta-t1-12', name: 'Hôpital Purpan',                 code: 'HIP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
-    { id: 'sta-t1-13', name: 'Ancely',                         code: 'ANC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['SER'] },
+    { id: 'sta-t1-13', name: 'Ancely',                         code: 'ANC', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BLA'] },
     // ── BIFURCATION ───────────────────────────────────────────────────────────
-    // SER → GUY  : tronc T1 (sens MEETT)
-    // SER → BLA  : antenne Aéroport Express (BLA = HUB T1/AEROPORT/C)
+    // BLA → SER  : tronc T1 (sens MEETT)   [BLA est entre ANC et SER]
+    // BLA → NAD  : antenne Aéroport Express
+    // BLA → SDN  : Ligne C (sens Labège)
     {
         id: 'sta-t1-14', name: 'Servanty - Airbus',
         code: 'SER', lines: ['T1'], isActive: true, isFuture: false,
-        adjacentStations: ['GUY', 'BLA'],
-        connections:      ['BLA'],
+        adjacentStations: ['GUY'],
     },
     // ── Tronc T1 principal (suite) ────────────────────────────────────────────
     { id: 'sta-t1-15', name: 'Guyenne - Berry',                code: 'GUY', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PAS'] },
@@ -250,7 +251,7 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Topologie :  SER ──► BLA (HUB) ──► NAD ──► DAU ──► ATB
+ * Topologie :  ANC ──► BLA (HUB) ──► NAD ──► DAU ──► ATB
  * Activation : ACTIVE_LINES.AEROPORT = true + logique builder.ts
  */
 export const REGISTRY_AEROPORT_EXPRESS: StationDef[] = [
@@ -295,19 +296,22 @@ export const REGISTRY_TELEO: StationDef[] = [
 /**
  * BLA — Blagnac / Jean Maga
  * ─────────────────────────
- *   HUB d'échange entre T1 (antenne AEROPORT depuis SER) / AEROPORT Express / Ligne C.
+ *   HUB d'échange sur le tronc T1, entre ANC et SER. Point de bifurcation
+ *   vers l'antenne AEROPORT Express et la Ligne C.
  *
  *   Topologie :
- *     T1    … ANC → SER ──[bifurcation]──► BLA ──► NAD ──► DAU ──► ATB
- *     Ligne C         SMA ─────────────────► BLA ──► SDN ──► PJU ──► …
+ *     T1          … ANC ──► BLA ──► SER ──► GUY ──► … ──► MET
+ *     AEROPORT Express       BLA ──► NAD ──► DAU ──► ATB
+ *     Ligne C        SMA ──► BLA ──► SDN ──► PJU ──► …
  *
- *   adjacentStations: ['NAD', 'SDN']
+ *   adjacentStations: ['SER', 'NAD', 'SDN']
+ *     • SER — suite du tronc T1 principal (vers MEETT)
  *     • NAD — prochaine station AEROPORT Express
  *     • SDN — prochaine station Ligne C (sens Labège)
  *
- *   connections: ['SER', 'NAD']
- *     • SER — point de bifurcation T1 / accès à la branche AEROPORT
- *     • NAD — correspondance directe AEROPORT (confirme le HUB)
+ *   connections: ['NAD', 'SDN']
+ *     • NAD — correspondance AEROPORT Express
+ *     • SDN — correspondance Ligne C
  *
  *   publicName: "Jean Maga" — nom public en cours de validation.
  *   ⚠️ Modifier UNIQUEMENT publicName si le nom change, jamais `name`.
@@ -322,9 +326,9 @@ export const REGISTRY_INTERCHANGE_HUBS: StationDef[] = [
         isHub:            true,
         isActive:         false,
         isFuture:         true,
-        isBranch:         true,
-        connections:      ['SER', 'NAD'],
-        adjacentStations: ['NAD', 'SDN'],
+        isBranch:         false,
+        connections:      ['NAD', 'SDN'],
+        adjacentStations: ['SER', 'NAD', 'SDN'],
     },
     // Ajouter ici les futurs HUBs confirmés (isHub: true obligatoire)
 ];
