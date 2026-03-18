@@ -5,7 +5,7 @@ import {
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './adhesives';
-import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from './stations';
+import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS, AEROPORT_EXPRESS_STATIONS } from './stations';
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
 import { ECA_DEFINITIONS, isPmrEcaType, ECA_DEFINITIONS_JJA_A_TO_B, ECA_DEFINITIONS_JJA_B_TO_A, ECA_DEFINITIONS_JJA_A_HISTORIQUE, ECA_DEFINITIONS_JJA_A_PRINCIPAL } from './eca_data';
@@ -17,7 +17,7 @@ export const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: 
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
 };
 
-const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'TELEO'): Direction[] => {
+const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT'): Direction[] => {
     const stationId = station.id!;
     
     const createDat = (name: string): DAT => ({
@@ -111,6 +111,18 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
         }
     }
     
+    if (line === 'AEROPORT') {
+        switch (station.name) {
+            case 'Aéroport Toulouse Blagnac':
+                return [{ id: `${stationId}-dir-1`, name: 'Direction Palais de Justice', dats: [createDat('01')] }];
+            default: // BLA, NAD, DAU
+                return [
+                    { id: `${stationId}-dir-1`, name: 'Direction Aéroport Toulouse Blagnac', dats: [createDat('01')] },
+                    { id: `${stationId}-dir-2`, name: 'Direction Palais de Justice', dats: [createDat('02')] }
+                ];
+        }
+    }
+
     if (line === 'TELEO') {
         switch (station.name) {
             case 'Oncopole-Lise Enjalbert':
@@ -139,7 +151,7 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
 
 import { getInitialSignaletiqueData } from './signaletique_config';
 
-const createDatModule = (station: Partial<Station>, type: TransportMode, line: MetroLine | 'TRAM' | 'TELEO'): AuditModule => {
+const createDatModule = (station: Partial<Station>, type: TransportMode, line: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT'): AuditModule => {
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
@@ -328,6 +340,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_C_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'C')),
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
+            ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             

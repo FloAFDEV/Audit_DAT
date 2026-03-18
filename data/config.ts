@@ -27,16 +27,21 @@ export const AUDIT_CATEGORIES: AuditCategoryConfig[] = [
         predicate: m => m.line === 'TELEO',
         colors: { primary: '#DC006B', text: 'text-white', badgeBg: '#DC006B', badgeText: 'text-white' }
     },
-    { 
+    {
         key: 'PR', label: 'Parkings Relais', shortLabel: 'P+R',
         predicate: m => m.type === AuditModuleType.PR,
-        colors: { 
+        colors: {
             primary: '#dcfce7', // green-100
-            text: 'text-green-900', 
+            text: 'text-green-900',
             badgeBg: '#dcfce7', // green-100
             badgeText: 'text-green-900',
             hoverPrimary: '#16a34a', // green-600
         }
+    },
+    {
+        key: 'AEROPORT', label: 'Ligne Aéroport Express', shortLabel: 'LAE',
+        predicate: m => m.line === 'AEROPORT',
+        colors: { primary: '#0284c7', text: 'text-white', badgeBg: '#0284c7', badgeText: 'text-white' } // sky-600
     },
 ];
 

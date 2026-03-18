@@ -48,7 +48,7 @@ export enum EcaEquipmentType {
     PMRVantauxReversible = "PMR à vantaux réversible",
 }
 
-export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR';
+export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'AEROPORT';
 
 // =================================================================
 // DATA STRUCTURES
@@ -251,7 +251,7 @@ export interface ModeData {
     id: string;
     name: string;
     type: TransportMode;
-    line: MetroLine | 'TRAM' | 'TELEO';
+    line: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT';
     stations: Station[];
 }
 
@@ -261,7 +261,7 @@ export interface AuditModule {
     name: string;
     data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
     isFuture?: boolean;
-    line?: MetroLine | 'TRAM' | 'TELEO' | '';
+    line?: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT' | '';
 }
 
 export interface Lieu {
