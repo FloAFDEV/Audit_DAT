@@ -3,21 +3,24 @@
  * ──────────────────────────────────────────────────────────────────────────
  * SOURCE DE VÉRITÉ CENTRALE du réseau Tisséo.
  *
- * CODES SI T1 — VALIDÉS v5 :
- *   PSM LDD FAC MRO CDP DSV ARO HIP ZTH RAP
- *   CCH PUR ARR ANC SER GUY PAS REL ODY PTN
+ * CODES SI T1 — VALIDÉS v6 :
+ *   PSM LDD FAC MRO CDP ACO ARE HIP ZTH RAP
+ *   CCH PUR ARO ANC SER GUY PAS REL ODY PTN
  *   GNO GBR LYC BEA GAS MET
  *
  * AJOUTS v5 (vs v4) :
  *   HIP   ← Hippodrome               (NOUVELLE station entre Arènes et Zénith)
- *   ARR   ← Arènes Romaines          (NOUVELLE station — remplace Hôpital Purpan)
- *   DSV   ← Déodat de Séverac        (code provisoire interne ; code SI officiel = GAS,
- *                                     conflit avec Aéroconstellation — à résoudre avec Tisséo)
+ *   ARO   ← Arènes Romaines          (NOUVELLE station — remplace Hôpital Purpan)
+ *   ACO   ← Déodat de Séverac        (code SI validé v6)
+ *
+ * CORRECTIONS v6 (vs v5) :
+ *   ACO   ← Déodat de Séverac        (était DSV en v5 — code SI officiel confirmé)
+ *   ARE   ← Arènes T1                (était ARO en v5 ; partage lieuName avec Métro A ARE)
+ *   ARO   ← Arènes Romaines          (était ARR en v5)
  *
  * CORRECTIONS v5 (vs v4) :
  *   MRO   ← Avenue de Muret - MC     (retour code v3 ; était ODY en v4)
  *   ODY   ← Odyssud - Ritouret       (retour code v3 ; était MRO en v4)
- *   ACO   ← supprimé (Déodat passe en DSV/provisoire)
  *   GAS   ← Aéroconstellation        (nom raccourci : était Garossos-Aéroconstellation)
  *
  * CODES TÉLÉO — provisoires (en attente de validation SI) :
@@ -26,8 +29,8 @@
  *   UPT  Université Paul-Sabatier Téléo  (UPS = Métro B, usage distinct)
  *
  * TOPOLOGIE AÉROPORT EXPRESS (LAE) :
- *   T1 : … ANC → BLA ──[bifurcation]──► NAD → DAU → ATB
- *                   └──► SER → GUY → PAS → REL → ODY → … → GAS → MET
+ *   T1 : … CDP → ACO → ARE → HIP → … → ANC → BLA ──[bifurcation]──► NAD → DAU → ATB
+ *                                                         └──► SER → GUY → PAS → REL → ODY → … → GAS → MET
  *
  * ACTIVATION LIGNES FUTURES :
  *   ACTIVE_LINES.AEROPORT = true  → antenne LAE active
@@ -188,15 +191,14 @@ export const REGISTRY_LINE_C: StationDef[] = [
  *   3   FAC   Fer à Cheval
  *   4   MRO   Avenue de Muret – Marcel Cavaillé     ← retour v3 (était ODY en v4)
  *   5   CDP   Croix de Pierre
- *   6   DSV   Déodat de Séverac                     ← code provisoire interne
- *                                                      (SI officiel = GAS, conflit pos 25)
- *   7   ARO   Arènes T1  (≠ ARE Métro A, même lieuName)
+ *   6   ACO   Déodat de Séverac                     ← code SI officiel validé v6
+ *   7   ARE   Arènes T1  (= ARE Métro A, même lieuName — même lieu physique)
  *   8   HIP   Hippodrome                            ← NOUVELLE station v5
  *   9   ZTH   Zénith
  *  10   RAP   Cartoucherie
  *  11   CCH   Casselardit
  *  12   PUR   Purpan
- *  13   ARR   Arènes Romaines                       ← NOUVELLE station v5
+ *  13   ARO   Arènes Romaines                       ← NOUVELLE station v5
  *  14   ANC   Ancely
  * [BLA]        Blagnac / Jean Maga [BIFURCATION T1/LAE/C] → REGISTRY_INTERCHANGE_HUBS
  *  15   SER   Servanty – Airbus
@@ -223,18 +225,18 @@ export const REGISTRY_TRAM_T1: StationDef[] = [
     { id: 'sta-t1-2',  name: 'Île du Ramier',                  code: 'LDD',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['FAC'] },
     { id: 'sta-t1-3',  name: 'Fer à Cheval',                   code: 'FAC',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['MRO'] },
     { id: 'sta-t1-4',  name: 'Avenue de Muret – Marcel Cavaillé', code: 'MRO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CDP'] },
-    { id: 'sta-t1-5',  name: 'Croix de Pierre',                  code: 'CDP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['DSV'] },
-    // ⚠️ Code provisoire DSV — le code SI officiel est GAS (conflit avec Aéroconstellation pos 25, à résoudre avec Tisséo)
-    { id: 'sta-t1-6',  name: 'Déodat de Séverac',                code: 'DSV', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
-    { id: 'sta-t1-7',  name: 'Arènes',                         code: 'ARO',  lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes', adjacentStations: ['HIP'] },
+    { id: 'sta-t1-5',  name: 'Croix de Pierre',                  code: 'CDP', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ACO'] },
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',                code: 'ACO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARE'] },
+    // ARE partagé avec Métro A sta-a-8 (même lieu physique — voir assertNoDuplicateCodes pour exception lieuName)
+    { id: 'sta-t1-7',  name: 'Arènes',                         code: 'ARE',  lines: ['T1'], isActive: true, isFuture: false, lieuName: 'Arènes', adjacentStations: ['HIP'] },
     // ← NOUVELLE station v5
     { id: 'sta-t1-8',  name: 'Hippodrome',                     code: 'HIP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ZTH'] },
     { id: 'sta-t1-9',  name: 'Zénith',                         code: 'ZTH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['RAP'] },
     { id: 'sta-t1-10', name: 'Cartoucherie',                   code: 'RAP',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['CCH'] },
     { id: 'sta-t1-11', name: 'Casselardit',                    code: 'CCH',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['PUR'] },
-    { id: 'sta-t1-12', name: 'Purpan',                           code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARR'] },
-    // ← NOUVELLE station v5 (remplace Hôpital Purpan — trigramme SI à confirmer avec Tisséo)
-    { id: 'sta-t1-13', name: 'Arènes Romaines',                  code: 'ARR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
+    { id: 'sta-t1-12', name: 'Purpan',                           code: 'PUR', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ARO'] },
+    // ← NOUVELLE station v5 (remplace Hôpital Purpan)
+    { id: 'sta-t1-13', name: 'Arènes Romaines',                  code: 'ARO', lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['ANC'] },
     { id: 'sta-t1-14', name: 'Ancely',                         code: 'ANC',  lines: ['T1'], isActive: true, isFuture: false, adjacentStations: ['BLA'] },
     // ── BIFURCATION ───────────────────────────────────────────────────────────
     // BLA → SER  : tronc T1 (sens MEETT)   [BLA est entre ANC et SER]
@@ -494,18 +496,27 @@ export function getStationBadge(station: StationDef): StationBadge {
 // ASSERTIONS D'INTÉGRITÉ
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** @throws si un trigramme est dupliqué globalement. */
+/**
+ * @throws si un trigramme est dupliqué globalement.
+ * Exception : deux stations peuvent partager le même code si elles ont le même lieuName
+ * (même lieu physique sur deux lignes différentes, ex: Arènes T1 et Métro A, code ARE).
+ */
 export function assertNoDuplicateCodes(): void {
-    const seen = new Map<string, string>();
+    // seen: code → { name, lieuName }
+    const seen = new Map<string, { name: string; lieuName?: string }>();
     for (const s of ALL_STATION_DEFS) {
         if (!s.code) continue;
         if (seen.has(s.code)) {
+            const prev = seen.get(s.code)!;
+            // Allow shared code only if both stations share the same non-empty lieuName
+            if (s.lieuName && prev.lieuName && s.lieuName === prev.lieuName) continue;
             throw new Error(
                 `[stationRegistry] Trigramme dupliqué : "${s.code}" — ` +
-                `"${seen.get(s.code)}" ET "${s.name}".`,
+                `"${prev.name}" ET "${s.name}". ` +
+                `(Pour autoriser un partage de code, les deux stations doivent avoir le même lieuName.)`,
             );
         }
-        seen.set(s.code, s.name);
+        seen.set(s.code, { name: s.name, lieuName: s.lieuName });
     }
 }
 

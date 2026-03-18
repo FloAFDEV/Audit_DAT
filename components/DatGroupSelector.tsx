@@ -1,6 +1,6 @@
 
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft, Layout } from 'lucide-react';
 import { LineIcon } from './LineIcon';
@@ -41,6 +41,14 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
     const modeData = module.data as ModeData;
     const stations = modeData.stations;
     const isTram = module.line === 'TRAM';
+
+    // Auto-navigate to direction when station has exactly one direction
+    // (avoids unnecessary "Salle des billets" intermediate screen)
+    useEffect(() => {
+        if (station && station.directions.length === 1) {
+            onSelectDirection(station.directions[0].id);
+        }
+    }, [station?.id]);
 
     const handleBack = () => {
         const moduleData = module.data as ModeData;
