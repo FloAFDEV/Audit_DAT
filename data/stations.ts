@@ -1,6 +1,10 @@
 
 import { Station } from '../types';
-import { REGISTRY_AEROPORT_EXPRESS, ACTIVE_LINES } from './stationRegistry';
+import {
+    REGISTRY_AEROPORT_EXPRESS,
+    REGISTRY_INTERCHANGE_HUBS,
+    ACTIVE_LINES,
+} from './stationRegistry';
 
 export const LINE_A_STATIONS: Partial<Station>[] = [
     { id: 'sta-a-1', name: 'Basso Cambo', code: 'MBC' },
@@ -52,6 +56,8 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
+    // sta-c-5 (BLA / Blagnac) est inclus via LINE_C_STATIONS pour le builder
+    // mais son rôle de HUB multi-lignes est géré dans stationRegistry.ts.
     { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true },
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
@@ -63,7 +69,7 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-13', name: 'Matabiau Gare', code: 'MAT', isFuture: true, lieuName: 'Marengo-SNCF' },
     { id: 'sta-c-14', name: 'François-Verdier', code: 'FVD', isFuture: true, lieuName: 'François Verdier' },
     { id: 'sta-c-15', name: 'Côte Pavée', code: 'CPA', isFuture: true },
-    { id: 'sta-c-16', name: 'Limayrac – Cité de l’Espace', code: 'LIM', isFuture: true },
+    { id: 'sta-c-16', name: 'Limayrac – Cité de l\u2019Espace', code: 'LIM', isFuture: true },
     { id: 'sta-c-17', name: 'Ormeau', code: 'ORM', isFuture: true },
     { id: 'sta-c-18', name: 'Montaudran Gare', code: 'MOG', isFuture: true },
     { id: 'sta-c-19', name: 'Aerospace Campus', code: 'AEC', isFuture: true },
@@ -72,32 +78,42 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-22', name: 'Labège Gare', code: 'LAG', isFuture: true },
 ];
 
+/**
+ * Stations Tram T1 — enrichies avec les trigrammes (v2).
+ *
+ * Codes ajoutés sur toutes les stations (auparavant aucun code sur le T1).
+ * Le builder.ts utilise toujours station.name pour ses switch — les codes
+ * permettent à terme de migrer vers une logique station.code plus robuste.
+ *
+ * PSM = Palais de Justice T1  (distinct du PDJ Métro B, même lieuName)
+ * ARO = Arènes T1             (distinct du ARE Métro A, même lieuName)
+ */
 export const TRAM_STATIONS: Partial<Station>[] = [
-    { id: 'sta-t1-1', name: 'Palais de Justice', lieuName: 'Palais de Justice' },
-    { id: 'sta-t1-2', name: 'Île du Ramier' },
-    { id: 'sta-t1-3', name: 'Fer à Cheval' },
-    { id: 'sta-t1-4', name: 'Avenue de Muret - Marcel Cavaillé' },
-    { id: 'sta-t1-5', name: 'Croix de Pierre' },
-    { id: 'sta-t1-6', name: 'Déodat de Séverac' },
-    { id: 'sta-t1-7', name: 'Arènes', lieuName: 'Arènes' },
-    { id: 'sta-t1-8', name: 'Zénith' },
-    { id: 'sta-t1-9', name: 'Cartoucherie' },
-    { id: 'sta-t1-10', name: 'Casselardit' },
-    { id: 'sta-t1-11', name: 'Purpan' },
-    { id: 'sta-t1-12', name: 'Hôpital Purpan' },
-    { id: 'sta-t1-13', name: 'Ancely' },
-    { id: 'sta-t1-14', name: 'Servanty - Airbus' },
-    { id: 'sta-t1-15', name: 'Guyenne - Berry' },
-    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac' },
-    { id: 'sta-t1-17', name: 'Place du Relais' },
-    { id: 'sta-t1-18', name: 'Odyssud - Ritouret' },
-    { id: 'sta-t1-19', name: 'Patinoire - Barradels' },
-    { id: 'sta-t1-20', name: 'Grand Noble' },
-    { id: 'sta-t1-21', name: 'Place Georges Brassens' },
-    { id: 'sta-t1-22', name: 'Andromède - Lycée' },
-    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia' },
-    { id: 'sta-t1-24', name: 'Aéroconstellation' },
-    { id: 'sta-t1-25', name: 'MEETT' },
+    { id: 'sta-t1-1',  name: 'Palais de Justice',               code: 'PSM', lieuName: 'Palais de Justice' },
+    { id: 'sta-t1-2',  name: 'Île du Ramier',                   code: 'LDD' },
+    { id: 'sta-t1-3',  name: 'Fer à Cheval',                    code: 'FAC' },
+    { id: 'sta-t1-4',  name: 'Avenue de Muret - Marcel Cavaillé', code: 'MRO' },
+    { id: 'sta-t1-5',  name: 'Croix de Pierre',                 code: 'CDP' },
+    { id: 'sta-t1-6',  name: 'Déodat de Séverac',               code: 'GAS' },
+    { id: 'sta-t1-7',  name: 'Arènes',                          code: 'ARO', lieuName: 'Arènes' },
+    { id: 'sta-t1-8',  name: 'Zénith',                          code: 'ZTH' },
+    { id: 'sta-t1-9',  name: 'Cartoucherie',                    code: 'RAP' },
+    { id: 'sta-t1-10', name: 'Casselardit',                     code: 'CCH' },
+    { id: 'sta-t1-11', name: 'Purpan',                          code: 'PUR' },
+    { id: 'sta-t1-12', name: 'Hôpital Purpan',                  code: 'HIP' },
+    { id: 'sta-t1-13', name: 'Ancely',                          code: 'ANC' },
+    { id: 'sta-t1-14', name: 'Servanty - Airbus',               code: 'SER' },
+    { id: 'sta-t1-15', name: 'Guyenne - Berry',                 code: 'GUY' },
+    { id: 'sta-t1-16', name: 'Pasteur - Mairie de Blagnac',     code: 'PAS' },
+    { id: 'sta-t1-17', name: 'Place du Relais',                 code: 'REL' },
+    { id: 'sta-t1-18', name: 'Odyssud - Ritouret',              code: 'ODY' },
+    { id: 'sta-t1-19', name: 'Patinoire - Barradels',           code: 'PTN' },
+    { id: 'sta-t1-20', name: 'Grand Noble',                     code: 'GNO' },
+    { id: 'sta-t1-21', name: 'Place Georges Brassens',          code: 'GBR' },
+    { id: 'sta-t1-22', name: 'Andromède - Lycée',               code: 'LYC' },
+    { id: 'sta-t1-23', name: 'Beauzelle - Aéroscopia',          code: 'BEA' },
+    { id: 'sta-t1-24', name: 'Aéroconstellation',               code: 'ACO' },
+    { id: 'sta-t1-25', name: 'MEETT',                           code: 'MET' },
 ];
 
 export const TELEO_STATIONS: Partial<Station>[] = [
@@ -107,10 +123,11 @@ export const TELEO_STATIONS: Partial<Station>[] = [
 ];
 
 /**
- * Stations de l'antenne Aéroport Express (branche du Tram T1).
+ * Stations de l'antenne Aéroport Express pour le builder.ts.
  *
- * Ordre logique depuis le point de bifurcation (Servanty - Airbus) :
- *   BLA (Blagnac / Jean Maga) → NAD (Nadot) → DAU (Daurat) → ATB (Aéroport)
+ * Contient :
+ *   • BLA (Blagnac / Jean Maga) — extrait depuis REGISTRY_INTERCHANGE_HUBS
+ *   • NAD, DAU, ATB             — extraits depuis REGISTRY_AEROPORT_EXPRESS
  *
  * Ce tableau est VIDE tant que ACTIVE_LINES.AEROPORT = false.
  * Pour activer : modifier ACTIVE_LINES dans stationRegistry.ts uniquement.
@@ -120,11 +137,24 @@ export const TELEO_STATIONS: Partial<Station>[] = [
  *   // Traiter comme TRAM_STATIONS avec isBranch = true
  */
 export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPORT
-    ? REGISTRY_AEROPORT_EXPRESS.map(def => ({
-        id:        def.id,
-        name:      def.publicName ?? def.name, // affiche le nom public si disponible
-        code:      def.code,
-        isFuture:  def.isFuture,
-        lieuName:  def.lieuName,
-    }))
+    ? [
+        // BLA — HUB multi-lignes (T1 + AEROPORT + C)
+        ...REGISTRY_INTERCHANGE_HUBS
+            .filter(def => def.lines.includes('AEROPORT'))
+            .map(def => ({
+                id:       def.id,
+                name:     def.publicName ?? def.name,
+                code:     def.code,
+                isFuture: def.isFuture,
+                lieuName: def.lieuName,
+            })),
+        // NAD, DAU, ATB — stations propres à l'antenne
+        ...REGISTRY_AEROPORT_EXPRESS.map(def => ({
+            id:       def.id,
+            name:     def.publicName ?? def.name,
+            code:     def.code,
+            isFuture: def.isFuture,
+            lieuName: def.lieuName,
+        })),
+    ]
     : [];
