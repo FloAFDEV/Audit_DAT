@@ -56,9 +56,10 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
-    // BLA (Blagnac / Jean Maga) — hub multi-lignes T1 + C + LAE.
-    // lieuName: 'Jean Maga' → fusionne avec sta-t1-27 et sta-hub-bla dans lieuxMap.
-    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Jean Maga', lines: ['T1', 'C', 'LAE'] },
+    // ── HUB MULTI-LIGNES ─────────────────────────────────────────────────────────
+    // Blagnac (BLA) : bifurcation T1 → LAE + Ligne C. Même lieuName que TRAM_STATIONS
+    // et AEROPORT_EXPRESS_STATIONS → une seule carte dans l'UI, aucun doublon.
+    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Blagnac', lines: ['T1', 'C', 'LAE'] },
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
     { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },
@@ -116,11 +117,10 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
     // ── HUB MULTI-LIGNES ─────────────────────────────────────────────────────────
-    // Blagnac / Jean Maga (BLA) : point de bifurcation T1 → LAE + Ligne C.
-    // Inséré ici pour que le tri physique (TRAM filter) le place entre ANC et SER.
-    // Ce même hub apparaît aussi dans LINE_C_STATIONS et AEROPORT_EXPRESS_STATIONS
-    // avec son propre id → pas de doublon de module, fusion par lieuName: 'Jean Maga'.
-    { id: 'sta-t1-27', name: 'Jean Maga', code: 'BLA', lieuName: 'Jean Maga', isFuture: true, lines: ['T1', 'C', 'LAE'] },
+    // Blagnac (BLA) : bifurcation T1 → LAE + Ligne C. Inséré entre ANC et SER
+    // pour le tri physique (filtre TRAM). Même lieuName 'Blagnac' que LINE_C_STATIONS
+    // et AEROPORT_EXPRESS_STATIONS → fusion en une seule carte UI, sans doublon.
+    { id: 'sta-t1-27', name: 'Blagnac', code: 'BLA', lieuName: 'Blagnac', isFuture: true, lines: ['T1', 'C', 'LAE'] },
     { id: 'sta-t1-15', name: 'Servanty – Airbus',                  code: 'SER' },
     { id: 'sta-t1-16', name: 'Guyenne – Berry',                    code: 'GUY' },
     { id: 'sta-t1-17', name: 'Pasteur – Mairie de Blagnac',        code: 'PAS' },
@@ -145,7 +145,7 @@ export const TELEO_STATIONS: Partial<Station>[] = [
  * Stations de l'antenne Aéroport Express pour le builder.ts.
  *
  * Contient :
- *   • BLA (Blagnac / Jean Maga) — extrait depuis REGISTRY_INTERCHANGE_HUBS
+ *   • BLA (Blagnac) — hub multi-lignes extrait depuis REGISTRY_INTERCHANGE_HUBS
  *   • NAD, DAU, ATB             — extraits depuis REGISTRY_AEROPORT_EXPRESS
  *
  * Ce tableau est VIDE tant que ACTIVE_LINES.AEROPORT = false.
@@ -162,10 +162,10 @@ export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPO
             .filter(def => def.lines.includes('AEROPORT'))
             .map(def => ({
                 id:       def.id,
-                name:     def.publicName ?? def.name,
+                name:     def.name,        // 'Blagnac' — identique T1 + C pour fusion lieuName
                 code:     def.code,
                 isFuture: def.isFuture,
-                lieuName: def.lieuName,
+                lieuName: def.lieuName,    // 'Blagnac' (défini dans REGISTRY_INTERCHANGE_HUBS)
                 lines:    ['T1', 'C', 'LAE'] as string[],
             })),
         // NAD, DAU, ATB — stations propres à l'antenne

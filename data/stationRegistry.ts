@@ -321,20 +321,21 @@ export const REGISTRY_TELEO: StationDef[] = [
  *     • NAD — correspondance AEROPORT Express
  *     • SDN — correspondance Ligne C
  *
- *   publicName: "Jean Maga" — nom public en cours de validation.
- *   ⚠️ Modifier UNIQUEMENT publicName si le nom change, jamais `name`.
+ *   Nom affiché : "Blagnac" (publicName 'Jean Maga' retiré — nom officiel = Blagnac).
+ *   ⚠️ Modifier UNIQUEMENT `name` si le nom officiel change.
  */
 export const REGISTRY_INTERCHANGE_HUBS: StationDef[] = [
     {
         id:               'sta-hub-bla',
         name:             'Blagnac',
-        publicName:       'Jean Maga',
         code:             'BLA',
         lines:            ['T1', 'AEROPORT', 'C'],
         isHub:            true,
         isActive:         false,
         isFuture:         true,
         isBranch:         false,
+        /** Clé de fusion inter-tableaux (TRAM_STATIONS, LINE_C_STATIONS, AEROPORT_EXPRESS_STATIONS). */
+        lieuName:         'Blagnac',
         connections:      ['NAD', 'SDN'],
         adjacentStations: ['SER', 'NAD', 'SDN'],
     },
@@ -475,7 +476,7 @@ export interface StationBadge {
  * @example
  *   const badge = getStationBadge(station);
  *   // badge.code   → 'BLA'
- *   // badge.label  → 'Jean Maga'
+ *   // badge.label  → 'Blagnac'
  *   // badge.colors → ['#00843D', '#007BC0', '#F07800']
  *   // badge.status → 'hub'
  */
