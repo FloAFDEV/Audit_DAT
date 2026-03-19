@@ -137,6 +137,41 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-24', name: 'Aéroconstellation', code: 'GAS' },
 ];
 
+export const TELEO_STATIONS: StationDef[] = [
+    {
+        id: 'sta-t-1',
+        name: 'Oncopole-Lise Enjalbert',
+        code: 'OLE',
+        lines: ['TELEO'],
+        isHub: false,
+        isActive: true,
+        isFuture: false,
+        connections: [],
+        adjacentStations: ['sta-t-2'],
+    },
+    {
+        id: 'sta-t-2',
+        name: 'Hôpital Rangueil-Louis Lareng',
+        code: 'HRL',
+        lines: ['TELEO'],
+        isHub: false,
+        isActive: true,
+        isFuture: false,
+        connections: [],
+        adjacentStations: ['sta-t-1', 'sta-t-3'],
+    },
+    {
+        id: 'sta-t-3',
+        name: 'Université Paul-Sabatier',
+        code: 'UPS',
+        lines: ['TELEO'],
+        isHub: false,
+        isActive: false,
+        isFuture: true,
+        connections: [],
+        adjacentStations: ['sta-t-2'],
+    },
+];
 /* =========================
    AEROPORT EXPRESS (LAE)
 ========================= */
