@@ -115,53 +115,54 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const currentUploadRef = useRef<{ category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number } | null>(null);
   const [viewingPhoto, setViewingPhoto] = useState<{ item: EquipmentStatus, category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number } | null>(null);
 
-  const directionKey = useMemo(() => {
+  const isTerminus = TERMINUS_STATIONS.includes(station.name);
+
+  // Show BOTH directions in the same form to match the global progress calculation.
+  // The selected direction (from TramDirectionSelector) is shown first, the other second.
+  const primaryDirKey = useMemo((): 'meett' | 'pdj' => {
     const name = direction.name.toLowerCase();
     if (name.includes('meett') || name.includes('aéroport')) return 'meett';
     return 'pdj';
   }, [direction.name]);
 
-  const directionLabel = direction.name.replace(/^Direction\s/i, '');
+  const DIRECTION_LABELS: Record<'meett' | 'pdj', string> = {
+    meett: 'MEETT / Aéroport',
+    pdj: 'Palais de Justice',
+  };
 
-  const isTerminus = TERMINUS_STATIONS.includes(station.name);
-
+  // Progress counts BOTH directions — mirrors getModuleProgressCounts(SIGNALETIQUE) exactly.
   const progress = useMemo(() => {
     if (!signaletique) return 0;
     let total = 0;
     let checked = 0;
-
+    const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
     const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
-    categories.forEach(cat => {
-      const items = signaletique[cat]?.[directionKey] ?? [];
-      items.forEach(item => {
-        total++;
-        if (item.status !== 'NotChecked') {
-          checked++;
-        }
-        // Count planQuartier bandeau sub-field
-        if (cat === 'planQuartier') {
-          const pqItem = item as any;
+    const dirs = ['meett', 'pdj'] as const;
+    for (const dir of dirs) {
+      for (const cat of categories) {
+        const items: any[] = signaletique[cat]?.[dir] ?? [];
+        for (const item of items) {
           total++;
-          if (pqItem.bannerDirection !== 'NotChecked') checked++;
-        }
-        // Count BIV adhesive sub-fields
-        if (cat === 'biv') {
-          const bivItem = item as any;
-          const BIV_ADHESIVE_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
-          BIV_ADHESIVE_FIELDS.forEach(field => {
+          if (item.status !== 'NotChecked') checked++;
+          if (cat === 'planQuartier') {
             total++;
-            if (bivItem[field] !== undefined && bivItem[field] !== 'NotChecked') checked++;
-          });
-          if (MULTI_QUAI_STATIONS.includes(station.name)) {
-            total++;
-            if (bivItem.quaiCaisson !== undefined && bivItem.quaiCaisson !== 'NotChecked') checked++;
+            if (item.bannerDirection !== undefined && item.bannerDirection !== 'NotChecked') checked++;
+          }
+          if (cat === 'biv') {
+            for (const field of BIV_CAISSON_FIELDS) {
+              total++;
+              if (item[field] !== undefined && item[field] !== 'NotChecked') checked++;
+            }
+            if (MULTI_QUAI_STATIONS.includes(station.name)) {
+              total++;
+              if (item.quaiCaisson !== undefined && item.quaiCaisson !== 'NotChecked') checked++;
+            }
           }
         }
-      });
-    });
-
+      }
+    }
     return total === 0 ? 100 : (checked / total) * 100;
-  }, [signaletique, directionKey]);
+  }, [signaletique, station.name]);
 
   const handlePhotoUploadClick = (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number) => {
     currentUploadRef.current = { category, direction, index };
@@ -341,7 +342,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
             {item.photo_base64 && (
               <button
-                onClick={() => onPhotoChange(category, directionKey, index, null)}
+                onClick={() => onPhotoChange(category, dir, index, null)}
                 className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
                 aria-label="Supprimer la photo"
                 title="Supprimer la photo"
@@ -355,7 +356,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
               <input
                 type="text"
                 value={item.comment || ''}
-                onChange={(e) => onCommentChange(category, directionKey, index, e.target.value)}
+                onChange={(e) => onCommentChange(category, dir, index, e.target.value)}
                 placeholder="Observation..."
                 className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 dark:text-slate-300 transition-all"
               />
@@ -364,7 +365,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
           {item.photo_base64 && (
             <div className="flex items-start gap-4 w-full">
-              <button onClick={() => setViewingPhoto({ item, category, direction: directionKey, index })} className="flex-shrink-0 relative group">
+              <button onClick={() => setViewingPhoto({ item, category, direction: dir, index })} className="flex-shrink-0 relative group">
                 <img
                   src={item.photo_base64}
                   alt="Aperçu"
@@ -405,31 +406,46 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         title="Équipements Station"
         subtitle={
           <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">Direction :</span> {directionLabel}
+            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">Audit complet (2 directions)</span>
           </p>
         }
         progress={progress}
         onBack={onBack}
         onReset={onReset}
         resetConfirmTitle="Réinitialiser les Équipements"
-        resetConfirmMessage={`Êtes-vous sûr de vouloir réinitialiser tout l'audit Équipements Station pour la station ${station.name} (${directionLabel}) ?`}
+        resetConfirmMessage={`Êtes-vous sûr de vouloir réinitialiser tout l'audit Équipements Station pour la station ${station.name} ?`}
         comment={station.comment}
         onCommentChange={onStationCommentChange}
       >
-        <div className="space-y-6 bg-slate-50 dark:bg-slate-900/30">
-          {(Object.keys(CATEGORY_LABELS) as (keyof SignaletiqueData)[]).map(category => (
-            <div key={category} className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
-              <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
-                    {CATEGORY_ICONS[category]}
-                  </div>
-                  <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>
-                </div>
+        <div className="space-y-8 bg-slate-50 dark:bg-slate-900/30">
+          {([primaryDirKey, primaryDirKey === 'meett' ? 'pdj' : 'meett'] as const).map(dirKey => (
+            <div key={dirKey}>
+              {/* Direction header */}
+              <div className="px-4 pt-4 pb-2 flex items-center gap-2">
+                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                  dirKey === 'meett'
+                    ? 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300'
+                    : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300'
+                }`}>
+                  Direction {DIRECTION_LABELS[dirKey]}
+                </span>
               </div>
-
-              <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                {(signaletique[category]?.[directionKey] ?? []).map((item, idx) => renderItem(category, directionKey, idx, item))}
+              <div className="space-y-6">
+                {(Object.keys(CATEGORY_LABELS) as (keyof SignaletiqueData)[]).map(category => (
+                  <div key={category} className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
+                    <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
+                      <div className="flex items-center gap-4">
+                        <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                          {CATEGORY_ICONS[category]}
+                        </div>
+                        <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>
+                      </div>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-slate-700">
+                      {(signaletique[category]?.[dirKey] ?? []).map((item, idx) => renderItem(category, dirKey, idx, item))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ))}

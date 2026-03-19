@@ -248,13 +248,19 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // DAT List (after selecting a direction)
-    if (selectedModule?.type === AuditModuleType.DAT && selectedStation && selectedDirection) {
-        const stationDirections = (selectedModule.data as ModeData)
-            .stations.find(s => s.id === selectedStation.id)?.directions ?? [];
+    // Guard: ensure selectedStation + selectedDirection actually belong to this module
+    // (at shared TRAM+Métro lieux, TramDirectionSelector sets TRAM ids that don't match a Métro module)
+    const datStationInModule = selectedModule?.type === AuditModuleType.DAT && selectedStation
+        ? (selectedModule.data as ModeData).stations.find(s => s.id === selectedStation.id) ?? null
+        : null;
+    const datDirectionInModule = datStationInModule && selectedDirection
+        ? datStationInModule.directions.find(d => d.id === selectedDirection.id) ?? null
+        : null;
+
+    if (selectedModule?.type === AuditModuleType.DAT && datStationInModule && datDirectionInModule) {
+        const stationDirections = datStationInModule.directions;
         const backFromDatList = () => {
             if (isTramLieu) return handlers.selectModule(null);
-            // Si la station n'a qu'une direction, la sélection de direction était automatique :
-            // revenir directement au sélecteur de module (évite l'écran "Salle des billets" inutile).
             if (stationDirections.length <= 1) return handlers.selectModule(null);
             return handlers.selectDirection(null);
         };
@@ -315,12 +321,15 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    // DAT Station/Direction Selector (if DAT selected and no direction yet)
-    // This part might be redundant for Tram now, but good for Metro
-    if (selectedModule.type === AuditModuleType.DAT && !selectedDirection) {
-         return <DatGroupSelector
+    // DAT Station/Direction Selector:
+    // - if no direction yet, OR
+    // - if direction/station are set but don't belong to this module (shared TRAM+Métro lieux)
+    if (selectedModule.type === AuditModuleType.DAT && (!datDirectionInModule || !datStationInModule)) {
+        // When navigating from a different module at a shared lieu, reset station+direction first
+        const stationForSelector = datStationInModule ? selectedStation : null;
+        return <DatGroupSelector
             module={selectedModule}
-            station={selectedStation}
+            station={stationForSelector}
             onSelectStation={handlers.selectStation}
             onSelectDirection={handlers.selectDirection}
             onBack={() => handlers.selectModule(null)}
