@@ -117,8 +117,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
   const isTerminus = TERMINUS_STATIONS.includes(station.name);
 
-  // Show BOTH directions in the same form to match the global progress calculation.
-  // The selected direction (from TramDirectionSelector) is shown first, the other second.
+  // Afficher UNIQUEMENT la direction sélectionnée (choisie via TramDirectionSelector).
+  // La direction est fixée en amont du formulaire — conformément au flux UX T1 + LAE.
   const primaryDirKey = useMemo((): 'meett' | 'pdj' => {
     const name = direction.name.toLowerCase();
     if (name.includes('meett') || name.includes('aéroport')) return 'meett';
@@ -130,14 +130,14 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     pdj: 'Palais de Justice',
   };
 
-  // Progress counts BOTH directions — mirrors getModuleProgressCounts(SIGNALETIQUE) exactly.
+  // Progress ne compte que la direction sélectionnée (flux UX : une direction à la fois).
   const progress = useMemo(() => {
     if (!signaletique) return 0;
     let total = 0;
     let checked = 0;
     const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
     const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
-    const dirs = ['meett', 'pdj'] as const;
+    const dirs = [primaryDirKey] as const;
     for (const dir of dirs) {
       for (const cat of categories) {
         const items: any[] = signaletique[cat]?.[dir] ?? [];
@@ -162,7 +162,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       }
     }
     return total === 0 ? 100 : (checked / total) * 100;
-  }, [signaletique, station.name]);
+  }, [signaletique, station.name, primaryDirKey]);
 
   const handlePhotoUploadClick = (category: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number) => {
     currentUploadRef.current = { category, direction, index };
@@ -406,7 +406,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         title="Équipements Station"
         subtitle={
           <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">Audit complet (2 directions)</span>
+            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">{DIRECTION_LABELS[primaryDirKey]}</span>
           </p>
         }
         progress={progress}
@@ -418,7 +418,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         onCommentChange={onStationCommentChange}
       >
         <div className="space-y-8 bg-slate-50 dark:bg-slate-900/30">
-          {([primaryDirKey, primaryDirKey === 'meett' ? 'pdj' : 'meett'] as const).map(dirKey => (
+          {([primaryDirKey] as const).map(dirKey => (
             <div key={dirKey}>
               {/* Direction header */}
               <div className="px-4 pt-4 pb-2 flex items-center gap-2">

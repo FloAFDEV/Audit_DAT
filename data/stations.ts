@@ -56,10 +56,9 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
-    // sta-c-5 (BLA / Blagnac) est inclus via LINE_C_STATIONS pour le builder.
-    // lieuName: 'Jean Maga' → fusionne avec le hub AEROPORT BLA dans lieuxMap,
-    // afin que le badge Ligne C soit visible sur la card du hub BLA.
-    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Jean Maga' },
+    // BLA (Blagnac / Jean Maga) — hub multi-lignes T1 + C + LAE.
+    // lieuName: 'Jean Maga' → fusionne avec sta-t1-27 et sta-hub-bla dans lieuxMap.
+    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Jean Maga', lines: ['T1', 'C', 'LAE'] },
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
     { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },
@@ -116,6 +115,12 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
     { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
+    // ── HUB MULTI-LIGNES ─────────────────────────────────────────────────────────
+    // Blagnac / Jean Maga (BLA) : point de bifurcation T1 → LAE + Ligne C.
+    // Inséré ici pour que le tri physique (TRAM filter) le place entre ANC et SER.
+    // Ce même hub apparaît aussi dans LINE_C_STATIONS et AEROPORT_EXPRESS_STATIONS
+    // avec son propre id → pas de doublon de module, fusion par lieuName: 'Jean Maga'.
+    { id: 'sta-t1-27', name: 'Jean Maga', code: 'BLA', lieuName: 'Jean Maga', isFuture: true, lines: ['T1', 'C', 'LAE'] },
     { id: 'sta-t1-15', name: 'Servanty – Airbus',                  code: 'SER' },
     { id: 'sta-t1-16', name: 'Guyenne – Berry',                    code: 'GUY' },
     { id: 'sta-t1-17', name: 'Pasteur – Mairie de Blagnac',        code: 'PAS' },
@@ -161,6 +166,7 @@ export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPO
                 code:     def.code,
                 isFuture: def.isFuture,
                 lieuName: def.lieuName,
+                lines:    ['T1', 'C', 'LAE'] as string[],
             })),
         // NAD, DAU, ATB — stations propres à l'antenne
         ...REGISTRY_AEROPORT_EXPRESS.map(def => ({

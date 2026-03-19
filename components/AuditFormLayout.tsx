@@ -43,8 +43,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const isComplete = Math.round(progress) === 100;
-    const isInProgress = progress > 0 && !isComplete;
-    const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+    const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
 
     return (
         <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
