@@ -209,9 +209,23 @@ const useAuditStore = create<AppState>((set, get) => {
             let data: Lieu[] = [];
             if (count > 0) {
                 data = await db.lieux.toArray();
-                
-                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
+
+                // DATA MIGRATION v8: Ajouter les lieux LAE (Aéroport Express) si absents.
+                // ACTIVE_LINES.AEROPORT était false avant v8 → aucun module AEROPORT en base.
+                // On génère les données fraîches et on n'extrait que les lieux AEROPORT.
                 let dataChanged = false;
+                const hasAeroportModules = data.some(l => l.modules.some(m => m.line === 'AEROPORT'));
+                if (!hasAeroportModules) {
+                    const freshData = await generateInitialLieuxDataAsync();
+                    const aeroportLieux = freshData
+                        .filter(l => l.modules.some(m => m.line === 'AEROPORT'))
+                        .map(l => ({ ...l, modules: l.modules.filter(m => m.line === 'AEROPORT') }));
+                    data.push(...aeroportLieux);
+                    dataChanged = true;
+                }
+
+                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
+
                 const migrateStation = (station: any) => {
                     if (station.isFuture) return;
                     if (!station.signaletique) {
