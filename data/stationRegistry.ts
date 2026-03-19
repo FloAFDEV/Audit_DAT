@@ -78,7 +78,7 @@ export const ACTIVE_LINES: Record<NetworkLine, boolean> = {
     B:        true,
     C:        false, // ← passer à true pour activer la Ligne C
     T1:       true,
-    AEROPORT: false, // ← passer à true pour activer l'antenne Aéroport Express
+    AEROPORT: true,  // ← antenne Aéroport Express activée (v8)
     TELEO:    true,
 } as const;
 
