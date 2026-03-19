@@ -111,7 +111,8 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
-    const isTramLieu = selectedLieu?.modules.some(m => m.line === 'TRAM') ?? false;
+    // TRAM lieux = T1 stations + LAE (AEROPORT) branch — both use TramDirectionSelector flow
+    const isTramLieu = selectedLieu?.modules.some(m => m.line === 'TRAM' || m.line === 'AEROPORT') ?? false;
 
     if (isStatsViewActive) {
         return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;

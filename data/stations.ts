@@ -56,9 +56,10 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
-    // sta-c-5 (BLA / Blagnac) est inclus via LINE_C_STATIONS pour le builder
-    // mais son rôle de HUB multi-lignes est géré dans stationRegistry.ts.
-    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true },
+    // sta-c-5 (BLA / Blagnac) est inclus via LINE_C_STATIONS pour le builder.
+    // lieuName: 'Jean Maga' → fusionne avec le hub AEROPORT BLA dans lieuxMap,
+    // afin que le badge Ligne C soit visible sur la card du hub BLA.
+    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Jean Maga' },
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
     { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },

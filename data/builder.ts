@@ -139,7 +139,8 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        directions: station.isFuture ? [] : createDatDirectionsAndDatsForStation(station, line),
+        // AEROPORT stations are isFuture:true but still need auditable directions (planning phase).
+        directions: (station.isFuture && line !== 'AEROPORT') ? [] : createDatDirectionsAndDatsForStation(station, line),
         signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
     };
 
@@ -163,7 +164,7 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     };
 };
 
-const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM'): AuditModule => {
+const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AEROPORT'): AuditModule => {
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
@@ -325,6 +326,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
+            ...AEROPORT_EXPRESS_STATIONS.map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
