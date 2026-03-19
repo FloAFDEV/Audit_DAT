@@ -333,8 +333,9 @@ export const REGISTRY_INTERCHANGE_HUBS: StationDef[] = [
         isHub:            true,
         isActive:         false,
         isFuture:         true,
-        isBranch:         false,
-        /** Clé de fusion inter-tableaux (TRAM_STATIONS, LINE_C_STATIONS, AEROPORT_EXPRESS_STATIONS). */
+        /** true : BLA est le point de départ de la branche LAE (aussi sur le tronc T1 et la Ligne C). */
+        isBranch:         true,
+        /** Clé de fusion inter-tableaux (AEROPORT_EXPRESS_STATIONS). */
         lieuName:         'Blagnac',
         connections:      ['NAD', 'SDN'],
         adjacentStations: ['SER', 'NAD', 'SDN'],

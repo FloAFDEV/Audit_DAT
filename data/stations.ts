@@ -56,10 +56,11 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
-    // ── HUB MULTI-LIGNES ─────────────────────────────────────────────────────────
-    // Blagnac (BLA) : bifurcation T1 → LAE + Ligne C. Même lieuName que TRAM_STATIONS
-    // et AEROPORT_EXPRESS_STATIONS → une seule carte dans l'UI, aucun doublon.
-    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Blagnac', lines: ['T1', 'C', 'LAE'] },
+    // ── HUB BLA ──────────────────────────────────────────────────────────────────
+    // Blagnac est défini UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS (sta-hub-bla).
+    // Il apparaît dans AEROPORT_EXPRESS_STATIONS via le mapping du hub.
+    // Pas de doublon ici : la Ligne C référence BLA topologiquement (adjacentStations)
+    // mais ne crée pas de module séparé.
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
     { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },
@@ -116,11 +117,10 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
     { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
-    // ── HUB MULTI-LIGNES ─────────────────────────────────────────────────────────
-    // Blagnac (BLA) : bifurcation T1 → LAE + Ligne C. Inséré entre ANC et SER
-    // pour le tri physique (filtre TRAM). Même lieuName 'Blagnac' que LINE_C_STATIONS
-    // et AEROPORT_EXPRESS_STATIONS → fusion en une seule carte UI, sans doublon.
-    { id: 'sta-t1-27', name: 'Blagnac', code: 'BLA', lieuName: 'Blagnac', isFuture: true, lines: ['T1', 'C', 'LAE'] },
+    // ── BIFURCATION BLA (HUB) ────────────────────────────────────────────────────
+    // Blagnac est modélisé UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS (sta-hub-bla)
+    // et apparaît dans AEROPORT_EXPRESS_STATIONS. Il n'est PAS dupliqué ici pour T1.
+    // Tri physique AEROPORT : BLA → NAD → DAU → ATB (lineStationsMap[AEROPORT]).
     { id: 'sta-t1-15', name: 'Servanty – Airbus',                  code: 'SER' },
     { id: 'sta-t1-16', name: 'Guyenne – Berry',                    code: 'GUY' },
     { id: 'sta-t1-17', name: 'Pasteur – Mairie de Blagnac',        code: 'PAS' },

@@ -224,6 +224,22 @@ const useAuditStore = create<AppState>((set, get) => {
                     dataChanged = true;
                 }
 
+                // DATA MIGRATION v9: Supprimer les modules TRAM BLA orphelins (sta-t1-27 / sta-sig-t1-27).
+                // Ces modules ont été créés lorsque BLA était dupliqué dans TRAM_STATIONS.
+                // Désormais BLA est modélisé UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS,
+                // traité via AEROPORT_EXPRESS_STATIONS. Les modules TRAM BLA sont devenus orphelins
+                // et doivent être retirés pour éviter les doublons dans la carte "Blagnac".
+                const ORPHAN_MODULE_IDS = new Set(['module-dat-sta-t1-27', 'module-sig-sta-t1-27']);
+                data = data.map(lieu => {
+                    const before = lieu.modules.length;
+                    const filtered = lieu.modules.filter(m => !ORPHAN_MODULE_IDS.has(m.id));
+                    if (filtered.length !== before) {
+                        dataChanged = true;
+                        return { ...lieu, modules: filtered };
+                    }
+                    return lieu;
+                }).filter(lieu => lieu.modules.length > 0);
+
                 // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
 
                 const migrateStation = (station: any) => {
