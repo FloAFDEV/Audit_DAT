@@ -160,6 +160,8 @@ export interface Station {
     name: string;
     code?: string;
     isFuture?: boolean;
+    /** Lignes desservant cette station (métadonnée multi-ligne pour les hubs). */
+    lines?: string[];
     directions: Direction[];
     lieuName?: string;
     signaletique?: SignaletiqueData;

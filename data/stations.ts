@@ -56,10 +56,11 @@ export const LINE_C_STATIONS: Partial<Station>[] = [
     { id: 'sta-c-1', name: 'Colomiers Gare', code: 'COG', isFuture: true },
     { id: 'sta-c-3', name: 'Fontaine Lumineuse', code: 'FLU', isFuture: true },
     { id: 'sta-c-4', name: 'Saint-Martin-du-Touch', code: 'SMA', isFuture: true },
-    // sta-c-5 (BLA / Blagnac) est inclus via LINE_C_STATIONS pour le builder.
-    // lieuName: 'Jean Maga' → fusionne avec le hub AEROPORT BLA dans lieuxMap,
-    // afin que le badge Ligne C soit visible sur la card du hub BLA.
-    { id: 'sta-c-5', name: 'Blagnac', code: 'BLA', isFuture: true, lieuName: 'Jean Maga' },
+    // ── HUB BLA ──────────────────────────────────────────────────────────────────
+    // Blagnac est défini UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS (sta-hub-bla).
+    // Il apparaît dans AEROPORT_EXPRESS_STATIONS via le mapping du hub.
+    // Pas de doublon ici : la Ligne C référence BLA topologiquement (adjacentStations)
+    // mais ne crée pas de module séparé.
     { id: 'sta-c-6', name: 'Sept Deniers – Stade Toulousain', code: 'SDN', isFuture: true },
     { id: 'sta-c-7', name: 'Ponts-Jumeaux', code: 'PJU', isFuture: true },
     { id: 'sta-c-8', name: 'Fondeyre', code: 'FON', isFuture: true },
@@ -116,6 +117,10 @@ export const TRAM_STATIONS: Partial<Station>[] = [
     { id: 'sta-t1-12', name: 'Purpan',                             code: 'PUR' },
     { id: 'sta-t1-13', name: 'Arènes Romaines',                    code: 'ARO' },
     { id: 'sta-t1-14', name: 'Ancely',                             code: 'ANC' },
+    // ── BIFURCATION BLA (HUB) ────────────────────────────────────────────────────
+    // Blagnac est modélisé UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS (sta-hub-bla)
+    // et apparaît dans AEROPORT_EXPRESS_STATIONS. Il n'est PAS dupliqué ici pour T1.
+    // Tri physique AEROPORT : BLA → NAD → DAU → ATB (lineStationsMap[AEROPORT]).
     { id: 'sta-t1-15', name: 'Servanty – Airbus',                  code: 'SER' },
     { id: 'sta-t1-16', name: 'Guyenne – Berry',                    code: 'GUY' },
     { id: 'sta-t1-17', name: 'Pasteur – Mairie de Blagnac',        code: 'PAS' },
@@ -140,7 +145,7 @@ export const TELEO_STATIONS: Partial<Station>[] = [
  * Stations de l'antenne Aéroport Express pour le builder.ts.
  *
  * Contient :
- *   • BLA (Blagnac / Jean Maga) — extrait depuis REGISTRY_INTERCHANGE_HUBS
+ *   • BLA (Blagnac) — hub multi-lignes extrait depuis REGISTRY_INTERCHANGE_HUBS
  *   • NAD, DAU, ATB             — extraits depuis REGISTRY_AEROPORT_EXPRESS
  *
  * Ce tableau est VIDE tant que ACTIVE_LINES.AEROPORT = false.
@@ -157,10 +162,11 @@ export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPO
             .filter(def => def.lines.includes('AEROPORT'))
             .map(def => ({
                 id:       def.id,
-                name:     def.publicName ?? def.name,
+                name:     def.name,        // 'Blagnac' — identique T1 + C pour fusion lieuName
                 code:     def.code,
                 isFuture: def.isFuture,
-                lieuName: def.lieuName,
+                lieuName: def.lieuName,    // 'Blagnac' (défini dans REGISTRY_INTERCHANGE_HUBS)
+                lines:    ['T1', 'C', 'LAE'] as string[],
             })),
         // NAD, DAU, ATB — stations propres à l'antenne
         ...REGISTRY_AEROPORT_EXPRESS.map(def => ({
