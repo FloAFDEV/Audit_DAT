@@ -8,8 +8,8 @@ export const db = new Dexie('TisseoAuditDB') as Dexie & {
     history: EntityTable<HistoryEntry, 'id'>;
 };
 
-// V5 Update: Force refresh to correctly group Signaletique modules
-db.version(5).stores({
+// V10 Update: Force refresh to include Line C and updated registry data
+db.version(10).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {

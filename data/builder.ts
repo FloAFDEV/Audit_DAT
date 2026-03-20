@@ -27,7 +27,12 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
         comment: ''
     });
 
-    if (line === 'A' || line === 'B') {
+    if (line === 'A' || line === 'B' || line === 'C') {
+        // Default for future Line C stations
+        if (line === 'C') {
+            return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+        }
+
         switch (station.code) {
             // Ligne A
             case 'MBC': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
@@ -125,7 +130,6 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     let dir2Name = 'Direction B';
     if (line === 'A') { dir1Name = 'Direction Balma-Gramont'; dir2Name = 'Direction Basso Cambo'; }
     if (line === 'B') { dir1Name = 'Direction Borderouge'; dir2Name = 'Direction Ramonville'; }
-    if (line === 'C') { dir1Name = 'Direction Colomiers Gare'; dir2Name = 'Direction Labège Gare'; }
 
     return [
         { id: `${stationId}-dir-1`, name: dir1Name, dats: [createDat('01'), createDat('02')] },
@@ -139,8 +143,8 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        // AEROPORT stations are isFuture:true but still need auditable directions (planning phase).
-        directions: (station.isFuture && line !== 'AEROPORT') ? [] : createDatDirectionsAndDatsForStation(station, line),
+        // AEROPORT and Line C stations are isFuture:true but still need auditable directions (planning phase).
+        directions: (station.isFuture && line !== 'AEROPORT' && line !== 'C') ? [] : createDatDirectionsAndDatsForStation(station, line),
         signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
     };
 
@@ -230,7 +234,7 @@ const createEcaModule = (
     isFuture: boolean,
     ecaTemplates: Omit<ECA, 'id' | 'adhesives' | 'comment'>[]
 ): AuditModule => {
-    const ecas: ECA[] = isFuture ? [] : ecaTemplates.map((template, index) => {
+    const ecas: ECA[] = (isFuture && line !== 'C') ? [] : ecaTemplates.map((template, index) => {
         const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
 
         // Apply pre-configuration for PMR pictograms
@@ -342,17 +346,35 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_C_STATIONS.map(s => createEcaModule(
                  'ECA (Valideurs)', s.name!, s.code!, 'C', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
             )),
+
+            // Blagnac Hub: Metro audits are applicable to all its lines (T1, LAE, C)
+            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createEcaModule(
+                'ECA (Valideurs)', s.name!, s.code!, 'TRAM', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+            )),
+            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createEcaModule(
+                'ECA (Valideurs)', s.name!, s.code!, 'AEROPORT', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
+            )),
             
             ...LINE_A_STATIONS.map(s => createCognitivePictogramModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createCognitivePictogramModule(s, 'B')),
+            ...LINE_C_STATIONS.map(s => createCognitivePictogramModule(s, 'C')),
+            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createCognitivePictogramModule(s, 'TRAM')),
+            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createCognitivePictogramModule(s, 'AEROPORT')),
         ];
 
         // NEW: Dynamically create PMR Floor Adhesive modules based on ECA definitions
-        const allStationsForPmr = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS];
+        const allStationsForPmr = [
+            ...LINE_A_STATIONS, 
+            ...LINE_B_STATIONS, 
+            ...LINE_C_STATIONS,
+            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla'),
+            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla')
+        ];
     
         for (const station of allStationsForPmr) {
-            if (station.isFuture || !station.code || station.code === 'JJA' || station.code === 'JJB') {
-                continue; // Skip future, no code, or Jean Jaurès (handled as a special case)
+            // Allow Line C stations even if isFuture
+            if ((station.isFuture && station.id?.indexOf('sta-c-') === -1 && station.id !== 'sta-hub-bla') || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+                continue; // Skip future (except Line C and Blagnac Hub), no code, or Jean Jaurès
             }
         
             const ecaTemplates = ECA_DEFINITIONS[station.code] ?? ECA_DEFINITIONS['DEFAULT'];
@@ -370,7 +392,24 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
         
             const line = station.id?.startsWith('sta-a-') ? 'A' : 
                          station.id?.startsWith('sta-b-') ? 'B' : 
-                         station.id?.startsWith('sta-c-') ? 'C' : undefined;
+                         station.id?.startsWith('sta-c-') ? 'C' : 
+                         station.id === 'sta-hub-bla' ? (station.lines?.includes('T1') ? 'TRAM' : 'AEROPORT') : undefined;
+            
+            // Special handling for Blagnac Hub to ensure it gets modules for all its lines
+            if (station.id === 'sta-hub-bla') {
+                // We need to push for each line it belongs to
+                const hubLines: (MetroLine | 'TRAM' | 'AEROPORT')[] = ['TRAM', 'AEROPORT', 'C'];
+                hubLines.forEach(l => {
+                    if (pmrAccessPoints.size === 1) {
+                        modules.push(createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol', station, l as any));
+                    } else {
+                        pmrAccessPoints.forEach(accessPoint => {
+                            modules.push(createSpecificPmrFloorAdhesiveModule(`Adhésifs PMR au Sol (${accessPoint})`, station, l as any));
+                        });
+                    }
+                });
+                continue;
+            }
         
             if (!line) continue;
         
@@ -391,6 +430,15 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
 
         const lieuxMap = new Map<string, Lieu>();
 
+        const ALL_STATIONS = [
+            ...LINE_A_STATIONS, 
+            ...LINE_B_STATIONS, 
+            ...LINE_C_STATIONS, 
+            ...TRAM_STATIONS, 
+            ...TELEO_STATIONS, 
+            ...AEROPORT_EXPRESS_STATIONS
+        ];
+
         const getLieuName = (module: AuditModule): string => {
             if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
                 const station = (module.data as ModeData).stations[0];
@@ -401,17 +449,17 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             }
             if (module.type === AuditModuleType.ECA) {
                 const stationName = (module.data as EcaData).stationName;
-                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS].find(s => s.name === stationName);
+                const station = ALL_STATIONS.find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
                 const stationName = (module.data as PMRFloorAdhesiveData).stationName;
-                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS].find(s => s.name === stationName);
+                const station = ALL_STATIONS.find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
                 const stationName = (module.data as CognitivePictogramData).stationName;
-                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS].find(s => s.name === stationName);
+                const station = ALL_STATIONS.find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             return module.name;

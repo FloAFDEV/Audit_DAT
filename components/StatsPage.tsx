@@ -285,7 +285,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
       return lieux.filter(l => 
           l.name.toLowerCase().includes(lowerQuery) ||
           // On peut aussi chercher par code station si besoin
-          l.modules.some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations[0]?.code?.toLowerCase().includes(lowerQuery))
+          l.modules.some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations?.[0]?.code?.toLowerCase().includes(lowerQuery))
       );
   }, [lieux, filterQuery]);
 

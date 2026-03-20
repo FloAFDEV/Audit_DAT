@@ -95,7 +95,12 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                 <div className="flex items-center gap-3">
                     <LineIcon module={module} size="md" />
                     <div>
-                        <p className="text-sm text-gray-500 dark:text-slate-400">{station.name}</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-sm text-gray-500 dark:text-slate-400">{station.name}</p>
+                            <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                {station.code}
+                            </span>
+                        </div>
                          <div className="flex items-center gap-2">
                             <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{direction.name}</h2>
                         </div>

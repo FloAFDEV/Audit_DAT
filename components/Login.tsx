@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useTransform } from "framer-motion";
+import { motion, useMotionValue, useTransform } from "motion/react";
 import { Logo } from "./Logo";
 
 interface LoginProps {

@@ -224,41 +224,17 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
         case AuditModuleType.SIGNALETIQUE: {
             const stations = (module.data as ModeData).stations ?? [];
             if (stations.length > 0) hasAuditableContent = true;
-            const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
-            const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
             for (const station of stations) {
                 if (station.signaletique) {
                     const sig = station.signaletique;
-                    const isMultiQuai = MULTI_QUAI_STATIONS.includes(station.name);
-                    // Process all directions (meett + pdj) for each category
-                    const dirs = ['meett', 'pdj'] as const;
-                    const categories = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'] as const;
-                    for (const cat of categories) {
-                        for (const dir of dirs) {
-                            const items: any[] = (sig[cat] as any)?.[dir] ?? [];
-                            for (const item of items) {
-                                // Top-level status
-                                totalApplicableItems++;
-                                if (item.status !== 'NotChecked') totalCheckedItems++;
-                                // planQuartier: bandeau sub-field
-                                if (cat === 'planQuartier') {
-                                    totalApplicableItems++;
-                                    if (item.bannerDirection !== undefined && item.bannerDirection !== 'NotChecked') totalCheckedItems++;
-                                }
-                                // biv: caisson adhesive sub-fields
-                                if (cat === 'biv') {
-                                    for (const field of BIV_CAISSON_FIELDS) {
-                                        totalApplicableItems++;
-                                        if (item[field] !== undefined && item[field] !== 'NotChecked') totalCheckedItems++;
-                                    }
-                                    if (isMultiQuai) {
-                                        totalApplicableItems++;
-                                        if (item.quaiCaisson !== undefined && item.quaiCaisson !== 'NotChecked') totalCheckedItems++;
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    const allEquipment = [
+                        ...sig.totem.meett, ...sig.totem.pdj,
+                        ...sig.biv.meett, ...sig.biv.pdj,
+                        ...sig.planReseau.meett, ...sig.planReseau.pdj,
+                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
+                    ];
+                    totalApplicableItems += allEquipment.length;
+                    totalCheckedItems += allEquipment.filter(e => e.status !== 'NotChecked').length;
                 }
             }
             break;

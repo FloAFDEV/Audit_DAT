@@ -41,6 +41,7 @@ export const useStats = (lieux: Lieu[]) => {
         let pmrFloorAdhesiveCount = 0;
         let pmrFloorAdhesiveCountA = 0;
         let pmrFloorAdhesiveCountB = 0;
+        let signaletiqueCount = 0;
         const prCount = PR_DATA.length;
 
         const stationCountA = LINE_A_STATIONS.filter(s => !s.isFuture).length;
@@ -92,6 +93,9 @@ export const useStats = (lieux: Lieu[]) => {
                             pmrFloorAdhesiveCountB++;
                         }
                         break;
+                    case AuditModuleType.SIGNALETIQUE:
+                        signaletiqueCount++;
+                        break;
                 }
             }
         }
@@ -101,6 +105,7 @@ export const useStats = (lieux: Lieu[]) => {
             ecaCount, ecaPmrCount,
             cogPictoCount, cogPictoCountA, cogPictoCountB,
             pmrFloorAdhesiveCount, pmrFloorAdhesiveCountA, pmrFloorAdhesiveCountB,
+            signaletiqueCount,
             stationCountTotal, stationCountA, stationCountB,
             stationCountC, stationCountTram, stationCountTeleo
         };

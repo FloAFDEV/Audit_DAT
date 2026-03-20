@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Lieu, AuditModule, AuditModuleType } from '../types';
+import { Lieu, AuditModule, AuditModuleType, ModeData } from '../types';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges, FormattedCorrespondence } from './Icons';
 import { getModuleProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
 import useAuditStore from '../store';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface ModuleSelectorProps {
   lieu: Lieu;
@@ -14,10 +15,16 @@ interface ModuleSelectorProps {
 }
 
 const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, onBack }) => {
-    const { activeAuditFilters } = useAuditStore();
+    const { activeAuditFilters, activeFilter } = useAuditStore();
     
     const sortedModules = useMemo(() => {
         let modulesToDisplay = [...lieu.modules];
+
+        // Apply transport line filter (Tram, Line C, etc.)
+        const activeFilterDef = AUDIT_CATEGORIES.find(f => f.key === activeFilter);
+        if (activeFilterDef) {
+            modulesToDisplay = modulesToDisplay.filter(module => activeFilterDef.predicate(module));
+        }
 
         // Apply audit type filter (the sub-filters) if any are active
         if (activeAuditFilters.length > 0) {
@@ -101,8 +108,15 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                         <ModuleIcon type={module.type} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">
-                                            <FormattedCorrespondence text={module.name} />
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">
+                                                <FormattedCorrespondence text={module.name} />
+                                            </div>
+                                            {module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE ? (
+                                                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                                    {(module.data as ModeData).stations?.[0]?.code}
+                                                </span>
+                                            ) : null}
                                         </div>
                                         <p className={`text-sm font-semibold ${statusColor}`}>
                                             {statusText}

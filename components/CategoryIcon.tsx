@@ -45,7 +45,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
     if (!categoryConfig) { // For "Tout le réseau"
         return (
             <div 
-                className={`flex-shrink-0 flex items-center justify-center rounded-md bg-sky-500 text-white ${sizeClasses}`}
+                className={`flex-shrink-0 flex items-center justify-center rounded-full bg-sky-500 text-white ${sizeClasses}`}
                 title="Tout le réseau"
             >
                 <Globe className={size === 'md' ? 'w-4 h-4' : 'w-3 h-3'} />
@@ -73,7 +73,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         }
     };
 
-    const commonClasses = `flex-shrink-0 flex items-center justify-center rounded-sm font-bold shadow-sm transition-opacity ${sizing} ${colors.badgeText}`;
+    const commonClasses = `flex-shrink-0 flex items-center justify-center rounded-full font-bold shadow-sm transition-opacity ${sizing} ${colors.badgeText}`;
 
     if (asDiv) {
         return (

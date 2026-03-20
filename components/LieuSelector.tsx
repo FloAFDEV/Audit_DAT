@@ -24,7 +24,7 @@ type ResetTarget = { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any };
 const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu, onClick }) => {
     const stationCodes = useMemo(() => lieu.modules
         .filter(m => m.type === AuditModuleType.DAT)
-        .map(m => (m.data as ModeData).stations[0].code)
+        .map(m => (m.data as ModeData).stations?.[0]?.code)
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index), [lieu]);
 
@@ -33,14 +33,16 @@ const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu,
             className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
             onClick={onClick}
         >
-            <div className="flex items-center gap-x-2">
+            <div className="flex items-center gap-x-3">
                 <LieuBadges lieu={lieu} />
-                <span className="block truncate">{lieu.name}</span>
-                {stationCodes.length > 0 && (
-                    <span className="flex-shrink-0 bg-slate-200 text-slate-800 text-xs font-mono font-bold px-1.5 py-0.5 rounded dark:bg-slate-700 dark:text-slate-300">
-                        {stationCodes.join(' / ')}
-                    </span>
-                )}
+                <div className="flex flex-col min-w-0">
+                    <span className="block truncate font-medium">{lieu.name}</span>
+                    {stationCodes.length > 0 && (
+                        <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase">
+                            {stationCodes.join(' / ')}
+                        </span>
+                    )}
+                </div>
             </div>
         </li>
     );
@@ -250,7 +252,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                         <button type="button" className="relative w-full cursor-default rounded-md bg-white dark:bg-slate-800 py-2 pl-3 pr-10 text-left text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm sm:leading-6" onClick={() => setIsMobileMenuOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={isMobileMenuOpen}>
                              <span className="flex items-center justify-between w-full">
                                 <span className="flex items-center">
-                                    <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" />
+                                    <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" asDiv />
                                     <span className="ml-3 block truncate">{activeCategoryConfig?.label ?? 'Tout le réseau'}</span>
                                 </span>
                                 <ProgressBadge progress={getCategoryProgress(lieux, activeFilter, activeAuditFilters)} isActive={true} />
@@ -263,7 +265,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                 <li className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange('ALL'); setIsMobileMenuOpen(false); }}>
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center">
-                                            <CategoryIcon size="sm" />
+                                            <CategoryIcon size="sm" asDiv />
                                             <span className="ml-3 block truncate">Tout le réseau</span>
                                         </div>
                                         <ProgressBadge progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)} isActive={activeFilter === 'ALL'} />
@@ -274,7 +276,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                     <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
                                         <div className="flex items-center justify-between w-full">
                                             <div className="flex items-center">
-                                                <CategoryIcon categoryConfig={cat} size="sm" />
+                                                <CategoryIcon categoryConfig={cat} size="sm" asDiv />
                                                 <span className="ml-3 block truncate">{cat.label}</span>
                                             </div>
                                             <ProgressBadge progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)} isActive={activeFilter === cat.key} />
