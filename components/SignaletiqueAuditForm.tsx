@@ -216,7 +216,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           <button
             key={opt.value}
             onClick={() => onSelect(currentStatus === opt.value ? 'NotChecked' : opt.value)}
-            className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
+            className={`flex-1 sm:flex-initial flex items-center justify-center px-3 py-1.5 text-sm font-normal rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
               currentStatus === opt.value ? opt.activeColorClass : opt.colorClass
             }`}
           >
@@ -247,7 +247,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
     const renderSubQuestion = (label: string, field: string, currentVal: any) => (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-2">
-        <span className="text-sm font-medium text-gray-700 dark:text-slate-300">{label}</span>
+        <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{label}</span>
         {renderStatusButtons(
           currentVal, 
           (val) => onFieldChange(category, dir, index, field, val),
@@ -261,16 +261,16 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
-               <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">
+               <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                 {itemName}
               </h3>
               {item.dimensions && (
-                <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
+                <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-[10px] font-medium text-slate-500 dark:text-slate-400 rounded uppercase tracking-wider">
                   {item.dimensions}
                 </span>
               )}
             </div>
-            <p className="text-sm text-gray-500 dark:text-slate-400">État général de l'équipement</p>
+            <p className="text-sm font-light text-slate-500 dark:text-slate-400">État général de l'équipement</p>
           </div>
 
           <div className="flex-shrink-0">
@@ -387,8 +387,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         module={module}
         title="Équipements Station"
         subtitle={
-          <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">Direction :</span> {directionLabel}
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-light">
+            <span className="font-normal text-slate-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-normal text-slate-800 dark:text-slate-200">Direction :</span> {directionLabel}
           </p>
         }
         progress={progress}

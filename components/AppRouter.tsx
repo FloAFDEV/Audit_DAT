@@ -261,56 +261,12 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    const isTramLieu = selectedLieu?.modules.some(m => m.line === 'TRAM');
-
-    // Auto-select station for TRAM if not set
-    useEffect(() => {
-        if (isTramLieu && !selectedStation && selectedLieu) {
-            const moduleWithStations = selectedLieu.modules.find(m => m.type === AuditModuleType.DAT || m.type === AuditModuleType.SIGNALETIQUE);
-            if (moduleWithStations) {
-                const station = (moduleWithStations.data as ModeData).stations?.[0];
-                if (station) {
-                    handlers.selectStation(station.id);
-                }
-            }
-        }
-    }, [isTramLieu, selectedStation, selectedLieu, handlers.selectStation]);
-
-    // Direction Selector for TRAM (after selecting a lieu, before selecting a module)
-    // EXCEPTION: Blagnac hub allows selecting the module first to choose between T1/LAE/C
-    if (isTramLieu && !selectedDirection && selectedLieu?.id !== 'lieu-blagnac') {
-        // Find a module that has directions to show them (usually DAT or SIGNALETIQUE)
-        const moduleWithDirections = selectedLieu?.modules.find(m => m.type === AuditModuleType.DAT || m.type === AuditModuleType.SIGNALETIQUE);
-        if (moduleWithDirections) {
-             const modeData = moduleWithDirections.data as ModeData;
-             const station = selectedStation || modeData.stations?.[0];
-
-             if (!station) return null;
-
-             return <DatGroupSelector
-                module={moduleWithDirections}
-                station={station}
-                onSelectStation={handlers.selectStation}
-                onSelectDirection={handlers.selectDirection}
-                onBack={() => handlers.selectLieu(null)}
-                hideProgress
-                title="Choisir la direction de l'audit"
-            />;
-        }
-    }
-
-    // Module Selector (after selecting a lieu and direction if TRAM)
+    // Module Selector (after selecting a lieu)
     if (!selectedModule) {
         return <ModuleSelector 
             lieu={selectedLieu!} 
             onSelectModule={handlers.selectModule} 
-            onBack={() => {
-                if (isTramLieu && selectedLieu?.id !== 'lieu-blagnac') {
-                    handlers.selectDirection(null);
-                } else {
-                    handlers.selectLieu(null);
-                }
-            }} 
+            onBack={() => handlers.selectLieu(null)} 
         />;
     }
 

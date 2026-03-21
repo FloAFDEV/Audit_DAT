@@ -81,9 +81,9 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     <div>
                         <div className="flex items-center gap-3">
                             <LieuBadges lieu={lieu} />
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{lieu.name}</h2>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{lieu.name}</h2>
                         </div>
-                        <p className="text-gray-500 dark:text-slate-400 mt-1">Sélectionner un module à auditer</p>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1 font-light">Sélectionner un module à auditer</p>
                     </div>
                 </div>
             </div>
@@ -109,16 +109,16 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
-                                            <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">
+                                            <div className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">
                                                 <FormattedCorrespondence text={module.name} />
                                             </div>
                                             {module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE ? (
-                                                <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                                                     {(module.data as ModeData).stations?.[0]?.code}
                                                 </span>
                                             ) : null}
                                         </div>
-                                        <p className={`text-sm font-semibold ${statusColor}`}>
+                                        <p className={`text-sm font-normal ${statusColor}`}>
                                             {statusText}
                                         </p>
                                     </div>
@@ -130,10 +130,10 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                             {!module.isFuture && (
                                 <div className="mt-4">
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className={`text-xs font-medium ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                        <span className={`text-xs font-normal ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
                                             {label}
                                         </span>
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(percentage)}%</span>
+                                        <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(percentage)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                                         <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>

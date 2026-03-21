@@ -165,9 +165,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-3 px-1 text-sm transition-colors duration-75 flex items-center gap-2';
-        if (activeFilter === catKey) return `${baseClasses} font-semibold`;
-        return `${baseClasses} border-transparent text-gray-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)]`;
+        const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide';
+        if (activeFilter === catKey) return `${baseClasses} font-medium`;
+        return `${baseClasses} border-transparent text-slate-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)] font-normal`;
     };
 
     const handleConfirmReset = () => {
@@ -211,17 +211,17 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     return (
         <div>
             <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="application/json" className="hidden" />
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-10">
+                <div className="flex items-center gap-4">
                     <Logo className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
-                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
+                    <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
                 </div>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
                     <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Afficher les statistiques" title="Afficher les statistiques">
                         <BarChart3 className="w-5 h-5" />
                     </button>
                     <ThemeSelector />
-                    <button onClick={onRequestLogout} className="flex-shrink-0 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors" aria-label="Se déconnecter">
+                    <button onClick={onRequestLogout} className="flex-shrink-0 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-normal text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors" aria-label="Se déconnecter">
                         <LogOut className="w-5 h-5" />
                         <span className="hidden md:inline">Déconnexion</span>
                     </button>
@@ -231,7 +231,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             <div className="mb-6">
                 <div className="hidden sm:block">
                     <div className="border-b border-gray-200 dark:border-slate-700">
-                        <nav className="-mb-px flex flex-wrap gap-x-6" aria-label="Tabs">
+                        <nav className="-mb-px flex flex-wrap gap-x-8" aria-label="Tabs">
                             {/* FIX: Cast to `unknown` to allow custom CSS properties, resolving a TypeScript error where '--hover-color' was not recognized on the CSSProperties type. */}
                             <button onClick={() => onFilterChange('ALL')} className={getTabButtonClass('ALL')} style={{ ...getTabButtonStyle('ALL'), '--hover-color': getCategoryHoverColor('ALL') } as unknown as React.CSSProperties}>
                                 Tout le réseau
@@ -324,7 +324,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     {showInverter && (
                         <button 
                             onClick={toggleOrderReversed} 
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-normal text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
                             title="Inverser l'ordre des stations"
                         >
                             <ArrowUpDown className="h-5 w-5" />
@@ -353,9 +353,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             </div>
 
             {orderedLieuxForDisplay.length === 0 ? (
-                 <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
-                    <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun lieu</h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>
+                 <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+                    <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun lieu</h3>
+                    <p className="mt-1 text-sm font-light text-slate-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

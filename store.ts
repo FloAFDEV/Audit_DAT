@@ -196,6 +196,9 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
+            const DATA_VERSION = 'v10.1'; // Increment this to force a data refresh
+            const storedVersion = localStorage.getItem('tisseo-audit-data-version');
+            
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
             const isAuthenticated = storedAuth === 'true';
 
@@ -204,6 +207,14 @@ const useAuditStore = create<AppState>((set, get) => {
             applyTheme(initialTheme);
             
             set({ isAuthenticated, theme: initialTheme });
+
+            // If version mismatch, clear the database to force a refresh with new builder logic
+            if (storedVersion !== DATA_VERSION) {
+                console.log(`Data version mismatch (${storedVersion} vs ${DATA_VERSION}). Clearing database...`);
+                await db.lieux.clear();
+                await db.history.clear();
+                localStorage.setItem('tisseo-audit-data-version', DATA_VERSION);
+            }
 
             const count = await db.lieux.count();
             let data: Lieu[] = [];
@@ -324,10 +335,16 @@ const useAuditStore = create<AppState>((set, get) => {
             isSignaletiqueActive: false,
         };
 
-        if (module?.type === AuditModuleType.DAT) {
+        if (module?.type === AuditModuleType.DAT || module?.type === AuditModuleType.SIGNALETIQUE) {
             const modeData = module.data as ModeData;
             if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
-                baseState.selectedStationId = modeData.stations[0].id;
+                const station = modeData.stations[0];
+                baseState.selectedStationId = station.id;
+                
+                // Auto-select direction if there's only one
+                if (station.directions.length === 1) {
+                    baseState.selectedDirectionId = station.directions[0].id;
+                }
             }
         } else if (module?.type === AuditModuleType.PR) {
             const prData = module.data as Pr;

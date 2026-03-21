@@ -211,18 +211,18 @@ const App: React.FC = () => {
                     />
                 </Suspense>
             </div>
-      <footer className="text-center py-6 text-gray-800 dark:text-slate-400 text-xs">
-<p>
-  AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
-  <a
-    href="mailto:florent.perez@tisseo.fr"
-    className="text-blue-500 hover:underline"
-  >
-    Contact
-  </a>{" "}
-  | 72 76
-</p>
-</footer>
+      <footer className="text-center py-8 text-slate-500 dark:text-slate-400 text-[10px] font-light tracking-wider uppercase">
+        <p>
+          AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
+          <a
+            href="mailto:florent.perez@tisseo.fr"
+            className="text-indigo-500 hover:underline font-normal"
+          >
+            Contact
+          </a>{" "}
+          | 72 76
+        </p>
+      </footer>
              <ConfirmationModal
                 isOpen={isLogoutModalOpen}
                 onClose={() => setIsLogoutModalOpen(false)}

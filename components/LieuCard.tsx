@@ -39,20 +39,20 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                  <div className="flex items-center gap-x-3 flex-wrap min-w-0">
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <div className="flex flex-col min-w-0">
-                        <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
+                        <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
                         {stationCodes.length > 0 && (
-                            <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                            <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 {stationCodes.join(' / ')}
                             </span>
                         )}
                     </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
+                <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
             </div>
             <div className="mt-auto pt-4">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Progression</span>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Progression</span>
+                    <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-slate-700">
                     <div className={`${progressBarColor} h-1.5 rounded-full`} style={{ width: `${progress}%` }}></div>

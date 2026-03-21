@@ -28,14 +28,14 @@ const DirectionName: React.FC<{ name: string }> = ({ name }) => {
         const textPart = name.replace(lineFragment, '').trim();
 
         return (
-            <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+            <div className="flex items-center gap-2 text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                 <span className="truncate">{textPart}</span>
                 {config && <CategoryIcon categoryConfig={config} size="sm" asDiv />}
             </div>
         );
     }
 
-    return <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{name}</p>;
+    return <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{name}</p>;
 };
 
 
@@ -72,8 +72,8 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                     <div className="flex items-center gap-3">
                         <LineIcon module={module} size="md" />
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{station.name}</h2>
-                            <p className="text-gray-500 dark:text-slate-400">Sélectionner une direction</p>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{station.name}</h2>
+                            <p className="text-slate-500 dark:text-slate-400 font-light">Sélectionner une direction</p>
                         </div>
                     </div>
                 </div>
@@ -134,8 +134,8 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                 <div className="flex items-center gap-3">
                     <LineIcon module={module} size="md" />
                     <div>
-                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{module.name} - {modeData.name}</h2>
-                        <p className="text-gray-500 dark:text-slate-400">Sélectionner une station</p>
+                        <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{module.name} - {modeData.name}</h2>
+                        <p className="text-slate-500 dark:text-slate-400 font-light">Sélectionner une station</p>
                     </div>
                 </div>
             </div>
@@ -153,8 +153,8 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                     <MapPin className="w-6 h-6 text-gray-600 dark:text-slate-300" />
                                 </div>
                                 <div>
-                                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{s.name}</p>
-                                    {s.isFuture && <p className="text-sm text-gray-500 dark:text-slate-400">Bientôt disponible</p>}
+                                    <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">{s.name}</p>
+                                    {s.isFuture && <p className="text-sm font-light text-slate-500 dark:text-slate-400">Bientôt disponible</p>}
                                 </div>
                             </div>
                             {!s.isFuture && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
