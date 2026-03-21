@@ -55,7 +55,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
     }
 
     const { shortLabel, colors } = categoryConfig;
-    const isLongLabel = shortLabel.length >= 3;
+    const isLongLabel = (shortLabel?.length || 0) >= 3;
 
     const sizing = size === 'md'
         ? (isLongLabel ? `h-7 px-2 ${textSize}` : `${sizeClasses} ${textSize}`)

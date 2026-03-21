@@ -22,7 +22,7 @@ type ResetTarget = { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any };
 
 // New sub-component to render search results with station codes
 const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu, onClick }) => {
-    const stationCodes = useMemo(() => lieu.modules
+    const stationCodes = useMemo(() => (lieu?.modules || [])
         .filter(m => m.type === AuditModuleType.DAT)
         .map(m => (m.data as ModeData).stations?.[0]?.code)
         .filter((code): code is string => !!code)
@@ -37,7 +37,7 @@ const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu,
                 <LieuBadges lieu={lieu} />
                 <div className="flex flex-col min-w-0">
                     <span className="block truncate font-medium">{lieu.name}</span>
-                    {stationCodes.length > 0 && (
+                    {(stationCodes?.length || 0) > 0 && (
                         <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400 uppercase">
                             {stationCodes.join(' / ')}
                         </span>
@@ -302,19 +302,19 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base" autoComplete="off" />
                     {isDropdownOpen && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
-                            {searchResults.inCategory.length === 0 && searchResults.others.length === 0 && searchQuery.trim() && (
+                            {(!searchResults?.inCategory || searchResults.inCategory.length === 0) && (!searchResults?.others || searchResults.others.length === 0) && searchQuery.trim() && (
                                 <li className="relative select-none py-2 px-4 text-gray-500">Aucun résultat trouvé.</li>
                             )}
-                            {searchResults.inCategory.map(lieu => (
+                            {(searchResults?.inCategory || []).map(lieu => (
                                 <SearchResultItem key={lieu.id} lieu={lieu} onClick={() => handleSelectLieuFromDropdown(lieu)} />
                             ))}
-                            {searchResults.others.length > 0 && (
+                            {(searchResults?.others || []).length > 0 && (
                                 <li className="relative py-2">
                                     <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-gray-300 dark:border-slate-600" /></div>
                                     <div className="relative flex justify-center"><span className="bg-white dark:bg-slate-800 px-3 text-sm font-medium text-gray-500 dark:text-slate-400">Résultats dans d'autres catégories</span></div>
                                 </li>
                             )}
-                            {searchResults.others.map(lieu => (
+                            {(searchResults?.others || []).map(lieu => (
                                 <SearchResultItem key={lieu.id} lieu={lieu} onClick={() => handleSelectLieuFromDropdown(lieu)} />
                             ))}
                         </ul>
@@ -352,7 +352,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
             </div>
 
-            {orderedLieuxForDisplay.length === 0 ? (
+            {(!orderedLieuxForDisplay || orderedLieuxForDisplay.length === 0) ? (
                  <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                     <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun lieu</h3>
                     <p className="mt-1 text-sm font-light text-slate-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>

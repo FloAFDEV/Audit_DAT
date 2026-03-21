@@ -35,8 +35,8 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
 
             switch (module.type) {
                 case AuditModuleType.DAT:
-                    (module.data as ModeData).stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
-                        Object.entries(dat.adhesives).forEach(([adhesiveId, status]) => {
+                    ((module.data as ModeData).stations || []).forEach(s => (s.directions || []).forEach(d => (d.dats || []).forEach(dat => {
+                        Object.entries(dat.adhesives || {}).forEach(([adhesiveId, status]) => {
                             const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
                             if (!adhesive) return;
 
@@ -55,9 +55,9 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     })));
                     break;
                 case AuditModuleType.PR:
-                    (module.data as Pr).zones.forEach(z => z.equipments.forEach(eq => {
+                    ((module.data as Pr).zones || []).forEach(z => (z.equipments || []).forEach(eq => {
                         const allPrAdhesives = getPrAdhesives(eq.type);
-                        Object.entries(eq.adhesives).forEach(([adhesiveId, status]) => {
+                        Object.entries(eq.adhesives || {}).forEach(([adhesiveId, status]) => {
                             const adhesive = allPrAdhesives.find(a => a.id === adhesiveId);
                             if (!adhesive) return;
 
@@ -76,9 +76,9 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     }));
                     break;
                 case AuditModuleType.ECA:
-                    (module.data as EcaData).ecas.forEach(eca => {
+                    ((module.data as EcaData).ecas || []).forEach(eca => {
                         const allEcaAdhesives = getEcaAdhesives(eca.type);
-                        Object.entries(eca.adhesives).forEach(([adhesiveId, status]) => {
+                        Object.entries(eca.adhesives || {}).forEach(([adhesiveId, status]) => {
                             const adhesive = allEcaAdhesives.find(a => a.id === adhesiveId);
                             if (!adhesive) return;
 
@@ -103,7 +103,7 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                         pmrContext = contextMatch[1];
                     }
 
-                    (module.data as PMRFloorAdhesiveData).adhesives.forEach(ad => {
+                    ((module.data as PMRFloorAdhesiveData).adhesives || []).forEach(ad => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Adhésif au sol",
@@ -116,7 +116,7 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     });
                     break;
                 case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                        (module.data as CognitivePictogramData).pictograms.forEach(p => {
+                        ((module.data as CognitivePictogramData).pictograms || []).forEach(p => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Pictogramme cognitif",

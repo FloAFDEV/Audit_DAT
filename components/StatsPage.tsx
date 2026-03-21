@@ -161,7 +161,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
         }
     };
 
-    if (history.length === 0) {
+    if (!history || history.length === 0) {
         return (
             <div className="text-center py-12 text-gray-500 dark:text-slate-400">
                 <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -270,22 +270,24 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
   // Filtrer les lieux disponibles pour le calcul des stats
   const filteredLieux = useMemo(() => {
+      if (!lieux) return [];
       if (selectedLieuId) {
           return lieux.filter(l => l.id === selectedLieuId);
       }
       return lieux;
   }, [lieux, selectedLieuId]);
 
-  const selectedLieuObject = useMemo(() => lieux.find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
+  const selectedLieuObject = useMemo(() => (lieux || []).find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
 
   // Filtrer la liste des options du dropdown
   const filterOptions = useMemo(() => {
+      if (!lieux) return [];
       if (!filterQuery) return lieux;
       const lowerQuery = filterQuery.toLowerCase();
       return lieux.filter(l => 
           l.name.toLowerCase().includes(lowerQuery) ||
           // On peut aussi chercher par code station si besoin
-          l.modules.some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations?.[0]?.code?.toLowerCase().includes(lowerQuery))
+          (l.modules || []).some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations?.[0]?.code?.toLowerCase().includes(lowerQuery))
       );
   }, [lieux, filterQuery]);
 
@@ -295,7 +297,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
-  const filteredInventory = adhesiveInventory.filter(item =>
+  const filteredInventory = (adhesiveInventory || []).filter(item =>
     (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.auditType || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.repere || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -642,7 +644,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         </tr>
                         ))}
                         
-                        {filteredInventory.length === 0 && (
+                        {(!filteredInventory || filteredInventory.length === 0) && (
                         <tr>
                             <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
                         </tr>

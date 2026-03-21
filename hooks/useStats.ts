@@ -56,7 +56,8 @@ export const useStats = (lieux: Lieu[]) => {
                 if (module.isFuture) continue;
                 switch (module.type) {
                     case AuditModuleType.DAT:
-                        const datsInModule = (module.data as ModeData).stations.reduce((sum, s) => sum + s.directions.reduce((dSum, d) => dSum + d.dats.length, 0), 0);
+                        const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) => 
+                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
                         datCount += datsInModule;
                         if (module.line === 'A') datCountA += datsInModule;
                         else if (module.line === 'B') datCountB += datsInModule;
@@ -73,7 +74,7 @@ export const useStats = (lieux: Lieu[]) => {
                         }
                         break;
                     case AuditModuleType.ECA:
-                        const ecas = (module.data as EcaData).ecas;
+                        const ecas = (module.data as EcaData).ecas || [];
                         ecaCount += ecas.length;
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
@@ -123,8 +124,9 @@ export const useStats = (lieux: Lieu[]) => {
             for (const module of lieu.modules) {
                 if (module.type === AuditModuleType.ECA && !module.isFuture) {
                     const data = module.data as EcaData;
-                    const count = data.ecas.length;
-                    const pmrInModule = data.ecas.filter(e => isPmrEcaType(e.type)).length;
+                    const ecas = data.ecas || [];
+                    const count = ecas.length;
+                    const pmrInModule = ecas.filter(e => isPmrEcaType(e.type)).length;
                     
                     if (module.line === 'A') {
                         byLine.A.total += count;
@@ -171,43 +173,55 @@ export const useStats = (lieux: Lieu[]) => {
             });
         };
         
-        processAdhesiveList(ADHESIVES, auditModules.find(c=>c.type === AuditModuleType.DAT)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.BE), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.BS), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.CA), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        
-        Object.values(EcaEquipmentType).forEach(type => {
-            processAdhesiveList(getEcaAdhesives(type), auditModules.find(c=>c.type === AuditModuleType.ECA)!.shortLabel);
-        });
-        
-        const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE)!;
-        const allPmrMaterials = getAllPmrMaterials();
-        allPmrMaterials.forEach(material => {
-            const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
-            inventoryMap.set(id, {
-                id: id,
-                auditType: pmrModule.shortLabel,
-                repere: '-',
-                name: "Adhésif de signalisation au sol",
-                dimensions: "920x370mm",
-                material: material,
-            });
-        });
+        const datConfig = auditModules.find(c=>c.type === AuditModuleType.DAT);
+        if (datConfig) processAdhesiveList(ADHESIVES, datConfig.shortLabel);
 
-        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS)!;
-        const allCogPictoDims = new Set<string>();
-        Object.values(COGNITIVE_PICTOGRAM_DIMENSIONS).forEach(dim => {
-            if(typeof dim === 'string') allCogPictoDims.add(dim);
-            else if(typeof dim === 'object' && dim !== null) {
-                Object.values(dim).forEach(d => allCogPictoDims.add(d));
-            }
-        });
-        allCogPictoDims.forEach(dims => {
-            inventoryMap.set(`cog-picto-${dims}`, {
-                id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
-                dimensions: dims, material: 'Vinyle + Plastification'
+        const prConfig = auditModules.find(c=>c.type === AuditModuleType.PR);
+        if (prConfig) {
+            processAdhesiveList(getPrAdhesives(EquipmentType.BE), prConfig.shortLabel);
+            processAdhesiveList(getPrAdhesives(EquipmentType.BS), prConfig.shortLabel);
+            processAdhesiveList(getPrAdhesives(EquipmentType.CA), prConfig.shortLabel);
+        }
+        
+        const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
+        if (ecaConfig) {
+            Object.values(EcaEquipmentType).forEach(type => {
+                processAdhesiveList(getEcaAdhesives(type), ecaConfig.shortLabel);
             });
-        });
+        }
+        
+        const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
+        if (pmrModule) {
+            const allPmrMaterials = getAllPmrMaterials();
+            allPmrMaterials.forEach(material => {
+                const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                inventoryMap.set(id, {
+                    id: id,
+                    auditType: pmrModule.shortLabel,
+                    repere: '-',
+                    name: "Adhésif de signalisation au sol",
+                    dimensions: "920x370mm",
+                    material: material,
+                });
+            });
+        }
+
+        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS);
+        if (cogPictoModule) {
+            const allCogPictoDims = new Set<string>();
+            Object.values(COGNITIVE_PICTOGRAM_DIMENSIONS).forEach(dim => {
+                if(typeof dim === 'string') allCogPictoDims.add(dim);
+                else if(typeof dim === 'object' && dim !== null) {
+                    Object.values(dim).forEach(d => allCogPictoDims.add(d));
+                }
+            });
+            allCogPictoDims.forEach(dims => {
+                inventoryMap.set(`cog-picto-${dims}`, {
+                    id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
+                    dimensions: dims, material: 'Vinyle + Plastification'
+                });
+            });
+        }
         
         return Array.from(inventoryMap.values()).sort((a, b) => {
             const typeCompare = a.auditType.localeCompare(b.auditType);

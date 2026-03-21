@@ -18,7 +18,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
     const progress = getLieuProgress(lieu, activeAuditFilters);
     const cardBgClass = 'bg-white dark:bg-slate-800';
     
-    const stationCodes = lieu.modules
+    const stationCodes = (lieu?.modules || [])
         .filter(m => m.type === AuditModuleType.DAT)
         .map(m => (m.data as ModeData).stations?.[0]?.code)
         .filter((code): code is string => !!code)
@@ -40,7 +40,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <div className="flex flex-col min-w-0">
                         <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
-                        {stationCodes.length > 0 && (
+                        {(stationCodes?.length || 0) > 0 && (
                             <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 {stationCodes.join(' / ')}
                             </span>

@@ -116,7 +116,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </button>
         </div>
         
-        {direction.dats.length === 0 ? (
+        {(!direction || !direction.dats || direction.dats.length === 0) ? (
             <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                 <Ticket className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
                 <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun DAT</h3>

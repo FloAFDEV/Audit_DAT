@@ -145,7 +145,7 @@ const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AER
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        directions: [],
+        directions: createDatDirectionsAndDatsForStation(station, line),
         signaletique: getInitialSignaletiqueData(station.name!)
     };
 

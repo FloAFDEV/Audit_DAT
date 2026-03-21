@@ -137,7 +137,12 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
     const categories: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier'];
     categories.forEach(cat => {
-      const items = signaletique[cat][directionKey];
+      const catData = signaletique[cat];
+      if (!catData || typeof catData === 'string') return;
+      
+      const items = (catData as any)[directionKey];
+      if (!Array.isArray(items)) return;
+
       items.forEach(item => {
         // Main status
         total++;
@@ -229,8 +234,14 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   };
 
   const renderItem = (category: keyof SignaletiqueData, dir: 'meett' | 'pdj', index: number, item: any) => {
+    const catData = signaletique[category];
+    if (!catData || typeof catData === 'string') return null;
+    
+    const items = (catData as any)[dir];
+    if (!Array.isArray(items)) return null;
+
     const baseLabel = CATEGORY_LABELS[category];
-    const itemName = `${baseLabel} ${signaletique[category][dir].length > 1 ? `#${index + 1}` : ''}`;
+    const itemName = `${baseLabel} ${items.length > 1 ? `#${index + 1}` : ''}`;
 
     const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
     const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
@@ -417,7 +428,9 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
               {expandedSections[category] && (
                 <div className="divide-y divide-gray-100 dark:divide-slate-700">
-                  {signaletique[category][directionKey].map((item, idx) => renderItem(category, directionKey, idx, item))}
+                  {Array.isArray((signaletique[category] as any)?.[directionKey]) && 
+                    ((signaletique[category] as any)[directionKey] as any[]).map((item, idx) => renderItem(category, directionKey, idx, item))
+                  }
                 </div>
               )}
             </div>

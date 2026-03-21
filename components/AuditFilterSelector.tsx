@@ -26,7 +26,7 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
         setActiveAuditFilters(newFilters);
     };
 
-    if (availableAuditTypes.length <= 1) {
+    if (!availableAuditTypes || availableAuditTypes.length <= 1) {
         return null; // Don't show filters if there's only one or zero types of audit
     }
 

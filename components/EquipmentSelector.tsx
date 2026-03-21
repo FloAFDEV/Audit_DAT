@@ -12,6 +12,7 @@ interface EquipmentSelectorProps {
 }
 
 const getEquipmentProgress = (equipment: Equipment): number => {
+    if (!equipment || !equipment.adhesives) return 0;
     const statuses = Object.values(equipment.adhesives);
     if (statuses.length === 0) return 0;
     const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
@@ -51,7 +52,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                 </div>
             </div>
 
-            {zone.equipments.length === 0 ? (
+            {(!zone || !zone.equipments || zone.equipments.length === 0) ? (
                  <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <Ticket className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun équipement</h3>

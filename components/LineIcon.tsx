@@ -11,8 +11,8 @@ interface LineIconProps {
 export const LineIcon: React.FC<LineIconProps> = ({ module, size = 'md' }) => {
     const category = getModuleLineConfig(module);
 
-    if (category) {
-        const isLongLabel = category.shortLabel.length >= 3;
+    if (category && category.shortLabel) {
+        const isLongLabel = (category.shortLabel?.length || 0) >= 3;
 
         // For long labels, use padding instead of a fixed width to avoid text overflow.
         // For short labels, maintain the square aspect ratio.
