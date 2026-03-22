@@ -28,6 +28,8 @@ export const useStats = (lieux: Lieu[]) => {
         let datCount = 0;
         let datCountA = 0;
         let datCountB = 0;
+        let datCountC = 0;
+        let datCountAero = 0;
         let datCountTram = 0;
         let datCountTeleo = 0;
         let beCount = 0;
@@ -38,22 +40,31 @@ export const useStats = (lieux: Lieu[]) => {
         let cogPictoCount = 0;
         let cogPictoCountA = 0;
         let cogPictoCountB = 0;
+        let cogPictoCountC = 0;
+        let cogPictoCountAero = 0;
         let pmrFloorAdhesiveCount = 0;
         let pmrFloorAdhesiveCountA = 0;
         let pmrFloorAdhesiveCountB = 0;
+        let pmrFloorAdhesiveCountC = 0;
+        let pmrFloorAdhesiveCountAero = 0;
         let signaletiqueCount = 0;
+        let signaletiqueCountTram = 0;
+        let signaletiqueCountAero = 0;
         const prCount = PR_DATA.length;
 
         const stationCountA = LINE_A_STATIONS.filter(s => !s.isFuture).length;
         const stationCountB = LINE_B_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountC = LINE_C_STATIONS.filter(s => !s.isFuture).length;
+        const stationCountC = LINE_C_STATIONS.length; // Count all for C as it's future but we audit it
+        const stationCountAero = (TRAM_STATIONS.filter(s => s.lines.includes('AEROPORT')).length || 0);
         const stationCountTram = TRAM_STATIONS.filter(s => !s.isFuture).length;
         const stationCountTeleo = TELEO_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountTotal = stationCountA + stationCountB + stationCountC + stationCountTram + stationCountTeleo;
+        const stationCountTotal = stationCountA + stationCountB + stationCountC + stationCountAero + stationCountTram + stationCountTeleo;
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.isFuture) continue;
+                // For C and AEROPORT, we want to see stats even if isFuture is true
+                if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
+                
                 switch (module.type) {
                     case AuditModuleType.DAT:
                         const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) => 
@@ -61,6 +72,8 @@ export const useStats = (lieux: Lieu[]) => {
                         datCount += datsInModule;
                         if (module.line === 'A') datCountA += datsInModule;
                         else if (module.line === 'B') datCountB += datsInModule;
+                        else if (module.line === 'C') datCountC += datsInModule;
+                        else if (module.line === 'AEROPORT') datCountAero += datsInModule;
                         else if (module.line === 'TRAM') datCountTram += datsInModule;
                         else if (module.line === 'TELEO') datCountTeleo += datsInModule;
                         break;
@@ -84,6 +97,10 @@ export const useStats = (lieux: Lieu[]) => {
                             cogPictoCountA++;
                         } else if (module.line === 'B') {
                             cogPictoCountB++;
+                        } else if (module.line === 'C') {
+                            cogPictoCountC++;
+                        } else if (module.line === 'AEROPORT') {
+                            cogPictoCountAero++;
                         }
                         break;
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
@@ -92,23 +109,29 @@ export const useStats = (lieux: Lieu[]) => {
                             pmrFloorAdhesiveCountA++;
                         } else if (module.line === 'B') {
                             pmrFloorAdhesiveCountB++;
+                        } else if (module.line === 'C') {
+                            pmrFloorAdhesiveCountC++;
+                        } else if (module.line === 'AEROPORT') {
+                            pmrFloorAdhesiveCountAero++;
                         }
                         break;
                     case AuditModuleType.SIGNALETIQUE:
                         signaletiqueCount++;
+                        if (module.line === 'TRAM') signaletiqueCountTram++;
+                        else if (module.line === 'AEROPORT') signaletiqueCountAero++;
                         break;
                 }
             }
         }
         return { 
-            datCount, datCountA, datCountB, datCountTram, datCountTeleo,
+            datCount, datCountA, datCountB, datCountC, datCountAero, datCountTram, datCountTeleo,
             beCount, bsCount, caCount, prCount,
             ecaCount, ecaPmrCount,
-            cogPictoCount, cogPictoCountA, cogPictoCountB,
-            pmrFloorAdhesiveCount, pmrFloorAdhesiveCountA, pmrFloorAdhesiveCountB,
-            signaletiqueCount,
+            cogPictoCount, cogPictoCountA, cogPictoCountB, cogPictoCountC, cogPictoCountAero,
+            pmrFloorAdhesiveCount, pmrFloorAdhesiveCountA, pmrFloorAdhesiveCountB, pmrFloorAdhesiveCountC, pmrFloorAdhesiveCountAero,
+            signaletiqueCount, signaletiqueCountTram, signaletiqueCountAero,
             stationCountTotal, stationCountA, stationCountB,
-            stationCountC, stationCountTram, stationCountTeleo
+            stationCountC, stationCountAero, stationCountTram, stationCountTeleo
         };
     }, [lieux]);
 
@@ -117,12 +140,13 @@ export const useStats = (lieux: Lieu[]) => {
             A: { total: 0, pmr: 0 },
             B: { total: 0, pmr: 0 },
             C: { total: 0, pmr: 0 },
+            AEROPORT: { total: 0, pmr: 0 },
             total: 0
         };
         
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.type === AuditModuleType.ECA && !module.isFuture) {
+                if (module.type === AuditModuleType.ECA && (!module.isFuture || module.line === 'C' || module.line === 'AEROPORT')) {
                     const data = module.data as EcaData;
                     const ecas = data.ecas || [];
                     const count = ecas.length;
@@ -137,11 +161,14 @@ export const useStats = (lieux: Lieu[]) => {
                     } else if (module.line === 'C') {
                         byLine.C.total += count;
                         byLine.C.pmr += pmrInModule;
+                    } else if (module.line === 'AEROPORT') {
+                        byLine.AEROPORT.total += count;
+                        byLine.AEROPORT.pmr += pmrInModule;
                     }
                 }
             }
         }
-        byLine.total = byLine.A.total + byLine.B.total + byLine.C.total;
+        byLine.total = byLine.A.total + byLine.B.total + byLine.C.total + byLine.AEROPORT.total;
         
         return { byLine };
     }, [lieux]);

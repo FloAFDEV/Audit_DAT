@@ -132,7 +132,7 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     }
 
     return {
-        id: `module-dat-${station.id}`,
+        id: `module-dat-${line}-${station.id}`,
         type: AuditModuleType.DAT,
         name: moduleName,
         data: modeData,
@@ -141,7 +141,7 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     };
 };
 
-const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AEROPORT'): AuditModule => {
+const createSignaletiqueModule = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'AEROPORT' | 'TELEO'): AuditModule => {
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
@@ -155,7 +155,7 @@ const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AER
     };
 
     return {
-        id: `module-sig-${station.id}`,
+        id: `module-sig-${line}-${station.id}`,
         type: AuditModuleType.SIGNALETIQUE,
         name: 'Équipements Station',
         data: modeData,
@@ -207,7 +207,7 @@ const createEcaModule = (
     isFuture: boolean,
     ecaTemplates: Omit<ECA, 'id' | 'adhesives' | 'comment'>[]
 ): AuditModule => {
-    const ecas: ECA[] = (isFuture && line !== 'C') ? [] : ecaTemplates.map((template, index) => {
+    const ecas: ECA[] = (isFuture && line !== 'C' && line !== 'AEROPORT') ? [] : ecaTemplates.map((template, index) => {
         const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
 
         // Apply pre-configuration for PMR pictograms
@@ -285,7 +285,7 @@ const createCognitivePictogramModule = (station: Partial<Station>, line: MetroLi
     };
 
     return {
-        id: `module-cog-picto-${station.id}`,
+        id: `module-cog-picto-${line}-${station.id}`,
         type: AuditModuleType.COGNITIVE_PICTOGRAMS,
         name: 'Pictogrammes Cognitifs',
         data: data,
@@ -298,13 +298,17 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
     return new Promise(resolve => {
         const modules: AuditModule[] = [
             ...LINE_A_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'A')),
+            ...LINE_A_STATIONS.map(s => createSignaletiqueModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'B')),
+            ...LINE_B_STATIONS.map(s => createSignaletiqueModule(s, 'B')),
             ...LINE_C_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'C')),
+            ...LINE_C_STATIONS.map(s => createSignaletiqueModule(s, 'C')),
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
+            ...TELEO_STATIONS.map(s => createSignaletiqueModule(s, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
             // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA') et Ligne B ('JJB')
@@ -341,13 +345,14 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_B_STATIONS, 
             ...LINE_C_STATIONS,
             ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla'),
-            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla')
+            ...AEROPORT_EXPRESS_STATIONS
         ];
     
         for (const station of allStationsForPmr) {
-            // Allow Line C stations even if isFuture
-            if ((station.isFuture && station.id?.indexOf('sta-c-') === -1 && station.id !== 'sta-hub-bla') || !station.code || station.code === 'JJA' || station.code === 'JJB') {
-                continue; // Skip future (except Line C and Blagnac Hub), no code, or Jean Jaurès
+            // Allow Line C and AEROPORT stations even if isFuture
+            const isAuditableFuture = station.isFuture && (station.id?.indexOf('sta-c-') !== -1 || station.id?.indexOf('sta-aero-') !== -1 || station.id === 'sta-hub-bla');
+            if ((station.isFuture && !isAuditableFuture) || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+                continue; // Skip future (except auditable ones), no code, or Jean Jaurès
             }
         
             const ecaTemplates = ECA_DEFINITIONS[station.code] ?? ECA_DEFINITIONS['DEFAULT'];

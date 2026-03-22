@@ -274,7 +274,14 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
 
     // DAT Station/Direction Selector (if DAT selected and no direction yet)
     if (selectedModule.type === AuditModuleType.DAT && !selectedDirection) {
-         return <DatGroupSelector
+        // Auto-select station if missing (DAT modules are 1:1 with stations)
+        if (!selectedStation && (selectedModule.data as ModeData).stations.length === 1) {
+            const onlyStation = (selectedModule.data as ModeData).stations[0];
+            handlers.selectStation(onlyStation.id);
+            return null;
+        }
+
+        return <DatGroupSelector
             module={selectedModule}
             station={selectedStation}
             onSelectStation={handlers.selectStation}
@@ -285,6 +292,13 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
 
     // Signaletique Direction Selector (if no direction yet)
     if (selectedModule.type === AuditModuleType.SIGNALETIQUE && !selectedDirection) {
+        // Auto-select station if missing (Signaletique modules are 1:1 with stations)
+        if (!selectedStation && (selectedModule.data as ModeData).stations.length === 1) {
+            const onlyStation = (selectedModule.data as ModeData).stations[0];
+            handlers.selectStation(onlyStation.id);
+            return null;
+        }
+
         return <DatGroupSelector
             module={selectedModule}
             station={selectedStation}
@@ -300,8 +314,17 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
 
     // Signaletique Audit Form
     if (selectedModule?.type === AuditModuleType.SIGNALETIQUE) {
-        const station = (selectedModule.data as ModeData).stations?.[0];
-        if (!station) return null;
+        const modeData = selectedModule.data as ModeData;
+        const station = modeData.stations?.[0];
+        if (!station) {
+            console.error("No station found for Signaletique module:", selectedModule.id);
+            return (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                    <p className="text-red-500 mb-4 font-medium">Erreur : Données de station manquantes pour ce module.</p>
+                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Retour</button>
+                </div>
+            );
+        }
         return <SignaletiqueAuditForm
             module={selectedModule}
             station={station}

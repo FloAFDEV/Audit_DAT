@@ -196,7 +196,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
-            const DATA_VERSION = 'v10.1'; // Increment this to force a data refresh
+            const DATA_VERSION = 'v11.0'; // Increment this to force a data refresh
             const storedVersion = localStorage.getItem('tisseo-audit-data-version');
             
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
@@ -221,26 +221,19 @@ const useAuditStore = create<AppState>((set, get) => {
             if (count > 0) {
                 data = await db.lieux.toArray();
                 
-                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized
+                // DATA MIGRATION: Ensure stations have signaletique data initialized correctly
                 let dataChanged = false;
                 data.forEach(lieu => {
                     lieu.modules.forEach(module => {
-                        if (module.line === 'TRAM') {
-                            if (module.type === AuditModuleType.DAT) {
-                                const modeData = module.data as ModeData;
+                        if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
+                            const modeData = module.data as ModeData;
+                            if (modeData && modeData.stations) {
                                 modeData.stations.forEach(station => {
                                     if (!station.isFuture && !station.signaletique) {
                                         station.signaletique = getInitialSignaletiqueData(station.name || '');
                                         dataChanged = true;
                                     }
                                 });
-                            } else if (module.type === AuditModuleType.SIGNALETIQUE) {
-                                const sigData = module.data as SignaletiqueData;
-                                if (!sigData.totem) {
-                                    // Re-initialize from station name (lieu name usually)
-                                    module.data = getInitialSignaletiqueData(lieu.name);
-                                    dataChanged = true;
-                                }
                             }
                         }
                     });
@@ -337,7 +330,8 @@ const useAuditStore = create<AppState>((set, get) => {
 
         if (module?.type === AuditModuleType.DAT || module?.type === AuditModuleType.SIGNALETIQUE) {
             const modeData = module.data as ModeData;
-            if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
+            const isAuditableFuture = modeData.stations[0]?.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+            if (modeData.stations.length === 1 && (!modeData.stations[0].isFuture || isAuditableFuture)) {
                 const station = modeData.stations[0];
                 baseState.selectedStationId = station.id;
                 
@@ -361,7 +355,7 @@ const useAuditStore = create<AppState>((set, get) => {
         const lieu = lieux.find(l => l.id === selectedLieuId);
         const module = lieu?.modules.find(m => m.id === selectedModuleId);
 
-        if (module?.type === AuditModuleType.DAT) {
+        if (module?.type === AuditModuleType.DAT || module?.type === AuditModuleType.SIGNALETIQUE) {
              const modeData = module.data as ModeData;
              const station = modeData.stations.find(s => s.id === stationId);
              if (station?.directions.length === 1) {

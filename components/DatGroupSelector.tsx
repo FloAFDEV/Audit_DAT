@@ -145,19 +145,19 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                         key={s.id}
                         onClick={() => onSelectStation(s.id)}
                         className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
-                        disabled={s.isFuture}
+                        disabled={s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT'}
                     >
-                         <div className={`flex items-center justify-between ${s.isFuture ? 'opacity-50' : ''}`}>
+                         <div className={`flex items-center justify-between ${s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT' ? 'opacity-50' : ''}`}>
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
                                     <MapPin className="w-6 h-6 text-gray-600 dark:text-slate-300" />
                                 </div>
                                 <div>
                                     <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">{s.name}</p>
-                                    {s.isFuture && <p className="text-sm font-light text-slate-500 dark:text-slate-400">Bientôt disponible</p>}
+                                    {s.isFuture && <p className="text-sm font-light text-slate-500 dark:text-slate-400">{module.line === 'C' || module.line === 'AEROPORT' ? 'Audit prévisionnel' : 'Bientôt disponible'}</p>}
                                 </div>
                             </div>
-                            {!s.isFuture && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
+                            {!(s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
                         </div>
                     </button>
                 ))}

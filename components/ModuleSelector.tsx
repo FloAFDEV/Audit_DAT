@@ -93,12 +93,15 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     const { percentage, label, statusText, statusColor, isComplete } = getModuleProgress(module);
                     const isInProgress = percentage > 0 && !isComplete;
                     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                    
+                    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+                    const isDisabled = module.isFuture && !isAuditableFuture;
 
                     return (
                         <button
                             key={module.id}
                             onClick={() => onSelectModule(module.id)}
-                            disabled={module.isFuture}
+                            disabled={isDisabled}
                             className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 dark:disabled:hover:ring-slate-700/50"
                         >
                             <div className="flex items-center justify-between">
@@ -123,11 +126,11 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                         </p>
                                     </div>
                                 </div>
-                                {!module.isFuture && (
+                                {!isDisabled && (
                                     <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2" />
                                 )}
                             </div>
-                            {!module.isFuture && (
+                            {!isDisabled && (
                                 <div className="mt-4">
                                     <div className="flex justify-between items-center mb-1">
                                         <span className={`text-xs font-normal ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
