@@ -32,7 +32,7 @@ export const PR_ADHESIVES_BE: PrAdhesive[] = [
 ];
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
     { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
-    { id: 'adbs5', name: 'Repère 5 - Ticket rechargeable', description: 'Adhésif « adhesif-ticket-rechargeable-p+r-borne-sortie_80x120mm_2025-02-07 » // 10,9x14,9cm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf', isDisabled: true },
+    { id: 'adbs5', name: 'Repère 5 - Adhésif borne sortie "Bulle"', description: 'Adhésif borne sortie "Bulle" // 99x115mm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
     { id: 'adbs11', name: 'Repère 11 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-sortie_A3_ »// 32,8x45,1cm', location: 'Sur le latéral de la borne en sorite de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BS/ref-adbs11.pdf' }
 ];
 export const PR_ADHESIVES_CA: PrAdhesive[] = [

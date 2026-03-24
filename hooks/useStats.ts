@@ -174,10 +174,14 @@ export const useStats = (lieux: Lieu[]) => {
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
-        // Filter out future modules before passing to generator for live stats
+        // Filter out future modules before passing to generator for live stats,
+        // but keep auditable future modules (Line C and AEROPORT).
         const activeLieux = lieux.map(lieu => ({
             ...lieu,
-            modules: lieu.modules.filter(m => !m.isFuture)
+            modules: lieu.modules.filter(m => {
+                const isAuditableFuture = m.isFuture && (m.line === 'C' || m.line === 'AEROPORT');
+                return !m.isFuture || isAuditableFuture;
+            })
         }));
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);

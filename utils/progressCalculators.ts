@@ -147,7 +147,8 @@ export const getPrZoneProgress = (zone: PrZone): number => {
  * This ensures all progress calculations are consistent.
  */
 const getModuleProgressCounts = (module: AuditModule): { applicable: number; checked: number; hasContent: boolean } => {
-    if (module.isFuture) return { applicable: 0, checked: 0, hasContent: false };
+    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+    if (module.isFuture && !isAuditableFuture) return { applicable: 0, checked: 0, hasContent: false };
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
@@ -271,7 +272,8 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
  * REFACTORED: Now uses the centralized getModuleProgressCounts.
  */
 export function getModuleProgress(module: AuditModule) {
-    if (module.isFuture) {
+    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+    if (module.isFuture && !isAuditableFuture) {
         return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
 
@@ -301,8 +303,8 @@ export function getModuleProgress(module: AuditModule) {
         statusText = 'Audit en cours';
         statusColor = 'text-amber-600 dark:text-amber-400';
     } else {
-        label = 'Progression';
-        statusText = 'En attente de contrôle';
+        label = isAuditableFuture ? 'Audit prévisionnel' : 'Progression';
+        statusText = isAuditableFuture ? 'Audit prévisionnel' : 'En attente de contrôle';
         statusColor = 'text-gray-500 dark:text-slate-400';
     }
     
@@ -325,7 +327,8 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
     let hasAnyContent = false;
 
     for (const module of modulesToConsider) {
-        if (module.isFuture) continue;
+        const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+        if (module.isFuture && !isAuditableFuture) continue;
         hasAnyNonFutureModule = true;
 
         const counts = getModuleProgressCounts(module);
@@ -365,7 +368,8 @@ export const getCategoryProgress = (
             : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
 
         for (const module of modulesToProcess) {
-            if (module.isFuture) continue;
+            const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+            if (module.isFuture && !isAuditableFuture) continue;
             
             const counts = getModuleProgressCounts(module);
             totalApplicableItems += counts.applicable;
