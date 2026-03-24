@@ -227,14 +227,38 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             for (const station of stations) {
                 if (station.signaletique) {
                     const sig = station.signaletique;
-                    const allEquipment = [
-                        ...sig.totem.meett, ...sig.totem.pdj,
-                        ...sig.biv.meett, ...sig.biv.pdj,
-                        ...sig.planReseau.meett, ...sig.planReseau.pdj,
-                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
-                    ];
-                    totalApplicableItems += allEquipment.length;
-                    totalCheckedItems += allEquipment.filter(e => e.status !== 'NotChecked').length;
+                    
+                    const processItems = (items: any[], type: 'totem' | 'biv' | 'planReseau' | 'planQuartier') => {
+                        for (const item of items) {
+                            // Main status (hidden for BIV)
+                            if (type !== 'biv') {
+                                totalApplicableItems++;
+                                if (item.status !== 'NotChecked') totalCheckedItems++;
+                            }
+                            
+                            // Sub-questions
+                            if (type === 'biv') {
+                                totalApplicableItems += 2;
+                                if (item.screenFunctioning !== 'NotChecked') totalCheckedItems++;
+                                if (item.whiteTextAdhesives !== 'NotChecked') totalCheckedItems++;
+                            } else if (type === 'planReseau') {
+                                totalApplicableItems += 2;
+                                if (item.bannerStationName !== 'NotChecked') totalCheckedItems++;
+                                if (item.hap !== 'NotChecked') totalCheckedItems++;
+                            } else if (type === 'planQuartier') {
+                                totalApplicableItems += 4;
+                                if (item.bannerDirection !== 'NotChecked') totalCheckedItems++;
+                                if (item.relayInfo !== 'NotChecked') totalCheckedItems++;
+                                if (item.terminusCase !== 'NotChecked') totalCheckedItems++;
+                                if (item.hap !== 'NotChecked') totalCheckedItems++;
+                            }
+                        }
+                    };
+
+                    processItems([...sig.totem.meett, ...sig.totem.pdj], 'totem');
+                    processItems([...sig.biv.meett, ...sig.biv.pdj], 'biv');
+                    processItems([...sig.planReseau.meett, ...sig.planReseau.pdj], 'planReseau');
+                    processItems([...sig.planQuartier.meett, ...sig.planQuartier.pdj], 'planQuartier');
                 }
             }
             break;
@@ -254,13 +278,15 @@ export function getModuleProgress(module: AuditModule) {
     const { applicable, checked, hasContent } = getModuleProgressCounts(module);
 
     let percentage = 0;
+    let isComplete = false;
+
     if (applicable > 0) {
         percentage = (checked / applicable) * 100;
+        isComplete = checked === applicable;
     } else if (hasContent) {
         percentage = 100;
+        isComplete = true;
     }
-    
-    const isComplete = Math.round(percentage) === 100;
     
     let label: string;
     let statusText: string;

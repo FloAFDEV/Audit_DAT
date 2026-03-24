@@ -3,6 +3,8 @@ import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../t
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
 import { LieuBadges } from './Icons';
 
+import { getPrAdhesives } from '../data/adhesives';
+
 interface EquipmentSelectorProps {
   lieu: Lieu;
   prData: Pr;
@@ -13,10 +15,18 @@ interface EquipmentSelectorProps {
 
 const getEquipmentProgress = (equipment: Equipment): number => {
     if (!equipment || !equipment.adhesives) return 0;
-    const statuses = Object.values(equipment.adhesives);
-    if (statuses.length === 0) return 0;
-    const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
-    return (checked / statuses.length) * 100;
+    
+    const adhesiveDefinitions = getPrAdhesives(equipment.type);
+    const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
+    
+    if (activeAdhesives.length === 0) return 100;
+
+    const checkedCount = Object.entries(equipment.adhesives)
+        .filter(([id, status]) => 
+            activeAdhesives.some(ad => ad.id === id) && status !== AdhesiveStatus.NotChecked
+        ).length;
+
+    return (checkedCount / activeAdhesives.length) * 100;
 };
 
 const getEquipmentIcon = (type: EquipmentType) => {

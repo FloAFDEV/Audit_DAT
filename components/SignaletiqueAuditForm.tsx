@@ -144,9 +144,11 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       if (!Array.isArray(items)) return;
 
       items.forEach(item => {
-        // Main status
-        total++;
-        if (item.status !== 'NotChecked') checked++;
+        // Main status (hidden for BIV)
+        if (cat !== 'biv') {
+          total++;
+          if (item.status !== 'NotChecked') checked++;
+        }
 
         // Sub-questions
         if (cat === 'biv') {

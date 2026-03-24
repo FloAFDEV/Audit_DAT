@@ -118,7 +118,6 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
         id: station.id!, name: station.name!,
         // AEROPORT and Line C stations are isFuture:true but still need auditable directions (planning phase).
         directions: (station.isFuture && line !== 'AEROPORT' && line !== 'C') ? [] : createDatDirectionsAndDatsForStation(station, line),
-        signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
     };
 
     const modeData: ModeData = {
@@ -298,17 +297,13 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
     return new Promise(resolve => {
         const modules: AuditModule[] = [
             ...LINE_A_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'A')),
-            ...LINE_A_STATIONS.map(s => createSignaletiqueModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'B')),
-            ...LINE_B_STATIONS.map(s => createSignaletiqueModule(s, 'B')),
             ...LINE_C_STATIONS.map(s => createDatModule(s, TransportMode.METRO, 'C')),
-            ...LINE_C_STATIONS.map(s => createSignaletiqueModule(s, 'C')),
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
-            ...TELEO_STATIONS.map(s => createSignaletiqueModule(s, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
             // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA') et Ligne B ('JJB')
