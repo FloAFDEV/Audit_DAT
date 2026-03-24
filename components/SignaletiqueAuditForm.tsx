@@ -247,7 +247,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
     const hsOption = { value: EquipmentStatusType.HS, label: 'HS', icon: <XCircle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
     const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
 
     let options = [okOption, absentOption, toReplaceOption];
     if (category === 'totem') {
@@ -281,11 +281,13 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
                 </span>
               )}
             </div>
-            <p className="text-sm font-light text-slate-500 dark:text-slate-400">État général de l'équipement</p>
+            {category !== 'biv' && (
+              <p className="text-sm font-light text-slate-500 dark:text-slate-400">État général de l'équipement</p>
+            )}
           </div>
 
           <div className="flex-shrink-0">
-            {renderStatusButtons(item.status, (status: any) => onStatusChange(category, dir, index, status), options)}
+            {category !== 'biv' && renderStatusButtons(item.status, (status: any) => onStatusChange(category, dir, index, status), options)}
           </div>
         </div>
 

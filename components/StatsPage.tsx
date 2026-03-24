@@ -82,7 +82,7 @@ const StatRow: React.FC<{
   } else {
     // Styles pour les alertes et sous-éléments
     badgeClass = highlight === 'danger' ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 font-semibold px-2 py-0.5 rounded' :
-                 highlight === 'warning' ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded' :
                  highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
                  isSubItem 
                     ? 'font-medium text-slate-800 dark:text-slate-200' 
@@ -207,7 +207,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                                 <div className="flex-shrink-0">
                                     <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
                                         entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                                        entry.score >= 50 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                                        entry.score >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' :
                                         entry.score > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                                         'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400' // Style neutre pour 0%
                                     }`}>
@@ -612,9 +612,9 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div className="text-2xl font-bold text-red-600 dark:text-red-400">{maintenanceSummary.absent.count}</div>
                             <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
                         </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 text-center">
-                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{maintenanceSummary.toBeReplaced.count}</div>
-                            <div className="text-xs font-semibold text-orange-800 dark:text-orange-300 uppercase mt-1">À remplacer</div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-center">
+                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{maintenanceSummary.toBeReplaced.count}</div>
+                            <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase mt-1">À remplacer</div>
                         </div>
                     </div>
                     </div>
