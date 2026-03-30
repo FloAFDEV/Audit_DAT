@@ -1,6 +1,6 @@
 
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft, Layout } from 'lucide-react';
 import { LineIcon } from './LineIcon';
@@ -14,6 +14,8 @@ interface DatGroupSelectorProps {
   onSelectStation: (stationId: string | null) => void;
   onSelectDirection: (directionId: string) => void;
   onBack: () => void;
+  title?: string;
+  hideProgress?: boolean;
 }
 
 const DirectionName: React.FC<{ name: string }> = ({ name }) => {
@@ -26,29 +28,21 @@ const DirectionName: React.FC<{ name: string }> = ({ name }) => {
         const textPart = name.replace(lineFragment, '').trim();
 
         return (
-            <div className="flex items-center gap-2 text-lg font-semibold text-gray-900 dark:text-slate-100">
+            <div className="flex items-center gap-2 text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                 <span className="truncate">{textPart}</span>
                 {config && <CategoryIcon categoryConfig={config} size="sm" asDiv />}
             </div>
         );
     }
 
-    return <p className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{name}</p>;
+    return <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{name}</p>;
 };
 
 
-const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, onSelectStation, onSelectDirection, onBack }) => {
+const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, onSelectStation, onSelectDirection, onBack, title, hideProgress }) => {
     const modeData = module.data as ModeData;
     const stations = modeData.stations;
     const isTram = module.line === 'TRAM';
-
-    // Auto-navigate to direction when station has exactly one direction
-    // (avoids unnecessary "Salle des billets" intermediate screen)
-    useEffect(() => {
-        if (station && station.directions.length === 1) {
-            onSelectDirection(station.directions[0].id);
-        }
-    }, [station?.id]);
 
     const handleBack = () => {
         const moduleData = module.data as ModeData;
@@ -78,15 +72,15 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                     <div className="flex items-center gap-3">
                         <LineIcon module={module} size="md" />
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{station.name}</h2>
-                            <p className="text-gray-500 dark:text-slate-400">Sélectionner une direction</p>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{station.name}</h2>
+                            <p className="text-slate-500 dark:text-slate-400 font-light">Sélectionner une direction</p>
                         </div>
                     </div>
                 </div>
 
                 <div className="space-y-6">
                     <section>
-                        <h3 className="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3 ml-1">Audit DAT</h3>
+                        {title && <h3 className="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3 ml-1">{title}</h3>}
                         <div className="space-y-4">
                             {station.directions.map(direction => {
                                 const progress = getDirectionProgress(direction);
@@ -106,19 +100,21 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                             </div>
                                             <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2 flex-shrink-0" />
                                         </div>
-                                        <div className="mt-4">
-                                            <div className="flex justify-between items-center mb-1">
-                                                <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
-                                                    {progress.isComplete ? 'Terminé' : 'Progression'}
-                                                </span>
-                                                <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
-                                                    {progress.completedCount} / {progress.totalCount} DATs
-                                                </span>
+                                        {!hideProgress && (
+                                            <div className="mt-4">
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <span className={`text-xs font-medium ${progress.isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                                        {progress.isComplete ? 'Terminé' : 'Progression'}
+                                                    </span>
+                                                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">
+                                                        {progress.completedCount} / {progress.totalCount} DATs
+                                                    </span>
+                                                </div>
+                                                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                                    <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
+                                                </div>
                                             </div>
-                                            <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                                <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
-                                            </div>
-                                        </div>
+                                        )}
                                     </button>
                                 );
                             })}
@@ -138,8 +134,8 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                 <div className="flex items-center gap-3">
                     <LineIcon module={module} size="md" />
                     <div>
-                        <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{module.name} - {modeData.name}</h2>
-                        <p className="text-gray-500 dark:text-slate-400">Sélectionner une station</p>
+                        <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{module.name} - {modeData.name}</h2>
+                        <p className="text-slate-500 dark:text-slate-400 font-light">Sélectionner une station</p>
                     </div>
                 </div>
             </div>
@@ -149,19 +145,19 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                         key={s.id}
                         onClick={() => onSelectStation(s.id)}
                         className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
-                        disabled={s.isFuture}
+                        disabled={s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT'}
                     >
-                         <div className={`flex items-center justify-between ${s.isFuture ? 'opacity-50' : ''}`}>
+                         <div className={`flex items-center justify-between ${s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT' ? 'opacity-50' : ''}`}>
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
                                     <MapPin className="w-6 h-6 text-gray-600 dark:text-slate-300" />
                                 </div>
                                 <div>
-                                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{s.name}</p>
-                                    {s.isFuture && <p className="text-sm text-gray-500 dark:text-slate-400">Bientôt disponible</p>}
+                                    <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">{s.name}</p>
+                                    {s.isFuture && <p className="text-sm font-light text-slate-500 dark:text-slate-400">{module.line === 'C' || module.line === 'AEROPORT' ? 'Audit prévisionnel' : 'Bientôt disponible'}</p>}
                                 </div>
                             </div>
-                            {!s.isFuture && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
+                            {!(s.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') && <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />}
                         </div>
                     </button>
                 ))}

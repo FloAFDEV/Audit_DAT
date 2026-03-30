@@ -1,11 +1,12 @@
 import React, { useMemo } from 'react';
-import { Lieu, AuditModule, AuditModuleType } from '../types';
+import { Lieu, AuditModule, AuditModuleType, ModeData } from '../types';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges, FormattedCorrespondence } from './Icons';
 import { getModuleProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
 import useAuditStore from '../store';
+import { AUDIT_CATEGORIES } from '../data/config';
 
 interface ModuleSelectorProps {
   lieu: Lieu;
@@ -14,10 +15,16 @@ interface ModuleSelectorProps {
 }
 
 const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, onBack }) => {
-    const { activeAuditFilters } = useAuditStore();
+    const { activeAuditFilters, activeFilter } = useAuditStore();
     
     const sortedModules = useMemo(() => {
         let modulesToDisplay = [...lieu.modules];
+
+        // Apply transport line filter (Tram, Line C, etc.)
+        const activeFilterDef = AUDIT_CATEGORIES.find(f => f.key === activeFilter);
+        if (activeFilterDef) {
+            modulesToDisplay = modulesToDisplay.filter(module => activeFilterDef.predicate(module));
+        }
 
         // Apply audit type filter (the sub-filters) if any are active
         if (activeAuditFilters.length > 0) {
@@ -74,9 +81,9 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     <div>
                         <div className="flex items-center gap-3">
                             <LieuBadges lieu={lieu} />
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{lieu.name}</h2>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{lieu.name}</h2>
                         </div>
-                        <p className="text-gray-500 dark:text-slate-400 mt-1">Sélectionner un module à auditer</p>
+                        <p className="text-slate-500 dark:text-slate-400 mt-1 font-light">Sélectionner un module à auditer</p>
                     </div>
                 </div>
             </div>
@@ -86,12 +93,15 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     const { percentage, label, statusText, statusColor, isComplete } = getModuleProgress(module);
                     const isInProgress = percentage > 0 && !isComplete;
                     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                    
+                    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
+                    const isDisabled = module.isFuture && !isAuditableFuture;
 
                     return (
                         <button
                             key={module.id}
                             onClick={() => onSelectModule(module.id)}
-                            disabled={module.isFuture}
+                            disabled={isDisabled}
                             className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-lg dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 dark:disabled:hover:ring-slate-700/50"
                         >
                             <div className="flex items-center justify-between">
@@ -101,25 +111,32 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                         <ModuleIcon type={module.type} />
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <div className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">
-                                            <FormattedCorrespondence text={module.name} />
+                                        <div className="flex items-center gap-2">
+                                            <div className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">
+                                                <FormattedCorrespondence text={module.name} />
+                                            </div>
+                                            {module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE ? (
+                                                <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                                    {(module.data as ModeData).stations?.[0]?.code}
+                                                </span>
+                                            ) : null}
                                         </div>
-                                        <p className={`text-sm font-semibold ${statusColor}`}>
+                                        <p className={`text-sm font-normal ${statusColor}`}>
                                             {statusText}
                                         </p>
                                     </div>
                                 </div>
-                                {!module.isFuture && (
+                                {!isDisabled && (
                                     <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2" />
                                 )}
                             </div>
-                            {!module.isFuture && (
+                            {!isDisabled && (
                                 <div className="mt-4">
                                     <div className="flex justify-between items-center mb-1">
-                                        <span className={`text-xs font-medium ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'}`}>
+                                        <span className={`text-xs font-normal ${isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-slate-500 dark:text-slate-400'}`}>
                                             {label}
                                         </span>
-                                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(percentage)}%</span>
+                                        <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(percentage)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                                         <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>

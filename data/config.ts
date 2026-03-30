@@ -15,33 +15,33 @@ export const AUDIT_CATEGORIES: AuditCategoryConfig[] = [
     { 
         key: 'METRO_C', label: 'Métro C', shortLabel: 'C',
         predicate: m => m.line === 'C',
-        colors: { primary: '#33A02C', text: 'text-white', badgeBg: '#33A02C', badgeText: 'text-white' }
+        colors: { primary: '#36a028', text: 'text-white', badgeBg: '#36a028', badgeText: 'text-white' }
     },
     { 
-        key: 'TRAM', label: 'Tram', shortLabel: 'T1',
+        key: 'TRAM', label: 'Tram T1', shortLabel: 'T1',
         predicate: m => m.line === 'TRAM',
-        colors: { primary: '#0369a1', text: 'text-white', badgeBg: '#0369a1', badgeText: 'text-white' } // sky-700
+        colors: { primary: '#014687', text: 'text-white', badgeBg: '#014687', badgeText: 'text-white' }
+    },
+    { 
+        key: 'LAE', label: 'Aéroport Express', shortLabel: 'LAE',
+        predicate: m => m.line === 'AEROPORT',
+        colors: { primary: '#00A3E0', text: 'text-white', badgeBg: '#00A3E0', badgeText: 'text-white' }
     },
     { 
         key: 'TELEO', label: 'Téléo', shortLabel: 'Téléo',
         predicate: m => m.line === 'TELEO',
         colors: { primary: '#DC006B', text: 'text-white', badgeBg: '#DC006B', badgeText: 'text-white' }
     },
-    {
+    { 
         key: 'PR', label: 'Parkings Relais', shortLabel: 'P+R',
         predicate: m => m.type === AuditModuleType.PR,
-        colors: {
+        colors: { 
             primary: '#dcfce7', // green-100
-            text: 'text-green-900',
+            text: 'text-green-900', 
             badgeBg: '#dcfce7', // green-100
             badgeText: 'text-green-900',
             hoverPrimary: '#16a34a', // green-600
         }
-    },
-    {
-        key: 'AEROPORT', label: 'Ligne Aéroport Express', shortLabel: 'LAE',
-        predicate: m => m.line === 'AEROPORT',
-        colors: { primary: '#0284c7', text: 'text-white', badgeBg: '#0284c7', badgeText: 'text-white' } // sky-600
     },
 ];
 

@@ -101,7 +101,14 @@ const App: React.FC = () => {
     const selectedStation = useMemo(() => {
         if (!selectedLieu || !store.selectedStationId) return null;
         
-        // Find the station in any module that has stations (DAT or SIGNALETIQUE)
+        // Prioritize the station from the currently selected module if it's a DAT or SIGNALETIQUE module
+        if (selectedModule?.type === AuditModuleType.DAT || selectedModule?.type === AuditModuleType.SIGNALETIQUE) {
+            const modeData = selectedModule.data as ModeData;
+            const station = modeData.stations.find((s: Station) => s.id === store.selectedStationId);
+            if (station) return station;
+        }
+
+        // Fallback: Find the station in any module that has stations (DAT or SIGNALETIQUE)
         for (const module of selectedLieu.modules) {
             if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
                 const modeData = module.data as ModeData;
@@ -110,7 +117,7 @@ const App: React.FC = () => {
             }
         }
         return null;
-    }, [selectedLieu, store.selectedStationId]);
+    }, [selectedLieu, selectedModule, store.selectedStationId]);
 
     const selectedDirection = useMemo(() => {
         if (!selectedStation || !store.selectedDirectionId) return null;
@@ -160,11 +167,7 @@ const App: React.FC = () => {
                         onNavigate={store.navigate}
                     />
                 </div>
-                 <Suspense fallback={
-                    <div className="flex items-center justify-center py-16" aria-label="Chargement…" role="status">
-                        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500" />
-                    </div>
-                }>
+                 <Suspense fallback={<Loader />}>
                     <AppRouter
                         isStatsViewActive={store.isStatsViewActive}
                         isSignaletiqueActive={store.isSignaletiqueActive}
@@ -187,6 +190,10 @@ const App: React.FC = () => {
                         handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
                         handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
                         handleResetSignaletiqueRequest={() => handlers.handleResetSignaletiqueRequest(selectedStation)}
+                        handleSignaletiqueStatusChange={handlers.handleSignaletiqueStatusChange}
+                        handleSignaletiqueCommentChange={handlers.handleSignaletiqueCommentChange}
+                        handleSignaletiquePhotoChange={handlers.handleSignaletiquePhotoChange}
+                        handleSignaletiqueStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
                         onPhotoNoteChange={handlers.handleSignaletiquePhotoNoteChange}
                         onPhotoRotationChange={handlers.handleSignaletiquePhotoRotationChange}
                         onFieldChange={handlers.handleSignaletiqueFieldChange}
@@ -204,18 +211,18 @@ const App: React.FC = () => {
                     />
                 </Suspense>
             </div>
-      <footer className="text-center py-6 text-gray-800 dark:text-slate-400 text-xs">
-<p>
-  AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
-  <a
-    href="mailto:florent.perez@tisseo.fr"
-    className="text-blue-500 hover:underline"
-  >
-    Contact
-  </a>{" "}
-  | 72 76
-</p>
-</footer>
+      <footer className="text-center py-8 text-slate-500 dark:text-slate-400 text-[10px] font-light tracking-wider uppercase">
+        <p>
+          AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
+          <a
+            href="mailto:florent.perez@tisseo.fr"
+            className="text-indigo-500 hover:underline font-normal"
+          >
+            Contact
+          </a>{" "}
+          | 72 76
+        </p>
+      </footer>
              <ConfirmationModal
                 isOpen={isLogoutModalOpen}
                 onClose={() => setIsLogoutModalOpen(false)}

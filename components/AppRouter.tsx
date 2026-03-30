@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React, { lazy, useEffect } from 'react';
 import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone } from '../types';
 import LieuSelector from './LieuSelector';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
@@ -6,7 +6,6 @@ import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
 // Dynamically import components for code splitting
 const ModuleSelector = lazy(() => import('./ModuleSelector'));
 const DatGroupSelector = lazy(() => import('./DatGroupSelector'));
-const TramDirectionSelector = lazy(() => import('./TramDirectionSelector'));
 const SignaletiqueAuditForm = lazy(() => import('./SignaletiqueAuditForm'));
 const DATList = lazy(() => import('./DATList'));
 const AdhesiveAuditForm = lazy(() => import('./AdhesiveAuditForm'));
@@ -111,28 +110,8 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
-    // TRAM lieux = T1 stations + LAE (AEROPORT) branch — both use TramDirectionSelector flow
-    const isTramLieu = selectedLieu?.modules.some(m => m.line === 'TRAM' || m.line === 'AEROPORT') ?? false;
-
     if (isStatsViewActive) {
         return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;
-    }
-
-    // Signaletique Audit Form
-    if (selectedModule?.type === AuditModuleType.SIGNALETIQUE && selectedDirection) {
-        const station = (selectedModule.data as ModeData).stations[0];
-        return <SignaletiqueAuditForm
-            module={selectedModule}
-            station={station}
-            direction={selectedDirection}
-            onStatusChange={handlers.handleSignaletiqueStatusChange}
-            onCommentChange={handlers.handleSignaletiqueCommentChange}
-            onPhotoChange={handlers.handleSignaletiquePhotoChange}
-            onFieldChange={handlers.onFieldChange}
-            onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
-            onReset={handlers.handleResetSignaletiqueRequest}
-            onBack={() => handlers.selectModule(null)}
-        />;
     }
 
     // --- DEEPEST LEVEL: AUDIT FORMS ---
@@ -249,22 +228,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     }
 
     // DAT List (after selecting a direction)
-    // Guard: ensure selectedStation + selectedDirection actually belong to this module
-    // (at shared TRAM+Métro lieux, TramDirectionSelector sets TRAM ids that don't match a Métro module)
-    const datStationInModule = selectedModule?.type === AuditModuleType.DAT && selectedStation
-        ? (selectedModule.data as ModeData).stations.find(s => s.id === selectedStation.id) ?? null
-        : null;
-    const datDirectionInModule = datStationInModule && selectedDirection
-        ? datStationInModule.directions.find(d => d.id === selectedDirection.id) ?? null
-        : null;
-
-    if (selectedModule?.type === AuditModuleType.DAT && datStationInModule && datDirectionInModule) {
-        const stationDirections = datStationInModule.directions;
-        const backFromDatList = () => {
-            if (isTramLieu) return handlers.selectModule(null);
-            if (stationDirections.length <= 1) return handlers.selectModule(null);
-            return handlers.selectDirection(null);
-        };
+    if (selectedModule?.type === AuditModuleType.DAT && selectedStation && selectedDirection) {
         return <DATList
             module={selectedModule}
             station={selectedStation}
@@ -273,7 +237,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onAddDat={handlers.handleAddDat}
             onRemoveDat={handlers.handleRemoveDat}
             onUpdateDatName={handlers.handleUpdateDatName}
-            onBack={backFromDatList}
+            onBack={() => handlers.selectModule(null)}
         />;
     }
 
@@ -297,43 +261,84 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    // Tram Direction Selector (after selecting a lieu, before module)
-    if (isTramLieu && !selectedDirection) {
-        return <TramDirectionSelector
-            lieu={selectedLieu}
-            onSelectStation={handlers.selectStation}
-            onSelectDirection={handlers.selectDirection}
-            onBack={() => handlers.selectLieu(null)}
-        />;
-    }
-
-    // Module Selector (after selecting a lieu and direction if tram)
+    // Module Selector (after selecting a lieu)
     if (!selectedModule) {
         return <ModuleSelector 
-            lieu={selectedLieu} 
+            lieu={selectedLieu!} 
             onSelectModule={handlers.selectModule} 
-            onBack={() => {
-                if (isTramLieu) {
-                    handlers.selectDirection(null);
-                } else {
-                    handlers.selectLieu(null);
-                }
-            }} 
+            onBack={() => handlers.selectLieu(null)} 
         />;
     }
 
-    // DAT Station/Direction Selector:
-    // - if no direction yet, OR
-    // - if direction/station are set but don't belong to this module (shared TRAM+Métro lieux)
-    if (selectedModule.type === AuditModuleType.DAT && (!datDirectionInModule || !datStationInModule)) {
-        // When navigating from a different module at a shared lieu, reset station+direction first
-        const stationForSelector = datStationInModule ? selectedStation : null;
+    // --- DIRECTION SELECTION FOR MODULES ---
+
+    // DAT Station/Direction Selector (if DAT selected and no direction yet)
+    if (selectedModule.type === AuditModuleType.DAT && !selectedDirection) {
+        // Auto-select station if missing (DAT modules are 1:1 with stations)
+        if (!selectedStation && (selectedModule.data as ModeData).stations.length === 1) {
+            const onlyStation = (selectedModule.data as ModeData).stations[0];
+            handlers.selectStation(onlyStation.id);
+            return null;
+        }
+
         return <DatGroupSelector
             module={selectedModule}
-            station={stationForSelector}
+            station={selectedStation}
             onSelectStation={handlers.selectStation}
             onSelectDirection={handlers.selectDirection}
             onBack={() => handlers.selectModule(null)}
+        />;
+    }
+
+    // Signaletique Direction Selector (if no direction yet)
+    if (selectedModule.type === AuditModuleType.SIGNALETIQUE && !selectedDirection) {
+        // Auto-select station if missing (Signaletique modules are 1:1 with stations)
+        if (!selectedStation && (selectedModule.data as ModeData).stations.length === 1) {
+            const onlyStation = (selectedModule.data as ModeData).stations[0];
+            handlers.selectStation(onlyStation.id);
+            return null;
+        }
+
+        return <DatGroupSelector
+            module={selectedModule}
+            station={selectedStation}
+            onSelectStation={handlers.selectStation}
+            onSelectDirection={handlers.selectDirection}
+            onBack={() => handlers.selectModule(null)}
+            title="Choisir la direction de l'audit"
+            hideProgress
+        />;
+    }
+
+    // --- FINAL AUDIT FORMS ---
+
+    // Signaletique Audit Form
+    if (selectedModule?.type === AuditModuleType.SIGNALETIQUE) {
+        const modeData = selectedModule.data as ModeData;
+        const station = modeData.stations?.[0];
+        if (!station) {
+            console.error("No station found for Signaletique module:", selectedModule.id);
+            return (
+                <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                    <p className="text-red-500 mb-4 font-medium">Erreur : Données de station manquantes pour ce module.</p>
+                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Retour</button>
+                </div>
+            );
+        }
+        return <SignaletiqueAuditForm
+            module={selectedModule}
+            station={station}
+            direction={selectedDirection}
+            onSelectDirection={handlers.selectDirection}
+            onStatusChange={handlers.handleSignaletiqueStatusChange}
+            onFieldChange={handlers.onFieldChange}
+            onCommentChange={handlers.handleSignaletiqueCommentChange}
+            onPhotoChange={handlers.handleSignaletiquePhotoChange}
+            onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
+            onReset={handlers.handleResetSignaletiqueRequest}
+            onBack={() => {
+                handlers.selectModule(null);
+            }}
         />;
     }
 

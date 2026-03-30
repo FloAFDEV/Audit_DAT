@@ -33,8 +33,8 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
       customIcon={<DatIcon dat={dat} size="md" />}
       title={`Audit pour ${dat.name}`}
       subtitle={
-        <p className="text-gray-600 dark:text-slate-400 text-sm">
-          <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Direction :</span> {directionName}
+        <p className="text-slate-500 dark:text-slate-400 text-sm font-light">
+          <span className="font-normal text-slate-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-normal text-slate-800 dark:text-slate-200">Direction :</span> {directionName}
         </p>
       }
       progress={progress}
@@ -62,17 +62,17 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                  <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                     {adhesive.name}
                     {dimensions && (
-                        <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
-                            // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
+                        <span className="text-base font-normal text-slate-400 dark:text-slate-500 ml-2">
+                            // <span className="font-medium text-slate-600 dark:text-slate-400">{dimensions}</span>
                         </span>
                     )}
                   </h3>
                   {location && (
-                    <div className="flex items-start text-sm text-gray-500 dark:text-slate-400 mt-2">
-                        <MapPin className="w-4 h-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
+                    <div className="flex items-start text-sm font-light text-slate-500 dark:text-slate-400 mt-2">
+                        <MapPin className="w-4 h-4 mr-2 mt-0.5 text-slate-400 flex-shrink-0" />
                         <span>{location}</span>
                     </div>
                   )}
@@ -80,7 +80,7 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
                 <div className="flex-shrink-0 flex items-center flex-wrap justify-start sm:justify-end gap-3">
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
-                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
+                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-normal rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
                       currentStatus === AdhesiveStatus.OK
                         ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
                         : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -91,7 +91,7 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
                   </button>
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
-                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
+                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-normal rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
                       currentStatus === AdhesiveStatus.Absent
                         ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
                         : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -102,10 +102,10 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
                   </button>
                   <button
                     onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
-                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
+                    className={`flex items-center justify-center px-3 py-1.5 text-sm font-normal rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap ${
                       currentStatus === AdhesiveStatus.ToBeReplaced
-                        ? 'bg-orange-500 text-white shadow-sm'
-                        : 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                        ? 'bg-amber-500 text-white shadow-sm'
+                        : 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                     }`}
                   >
                     <AlertTriangle className="w-5 h-5 mr-2" />

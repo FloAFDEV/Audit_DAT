@@ -28,6 +28,8 @@ export const useStats = (lieux: Lieu[]) => {
         let datCount = 0;
         let datCountA = 0;
         let datCountB = 0;
+        let datCountC = 0;
+        let datCountAero = 0;
         let datCountTram = 0;
         let datCountTeleo = 0;
         let beCount = 0;
@@ -38,27 +40,40 @@ export const useStats = (lieux: Lieu[]) => {
         let cogPictoCount = 0;
         let cogPictoCountA = 0;
         let cogPictoCountB = 0;
+        let cogPictoCountC = 0;
+        let cogPictoCountAero = 0;
         let pmrFloorAdhesiveCount = 0;
         let pmrFloorAdhesiveCountA = 0;
         let pmrFloorAdhesiveCountB = 0;
+        let pmrFloorAdhesiveCountC = 0;
+        let pmrFloorAdhesiveCountAero = 0;
+        let signaletiqueCount = 0;
+        let signaletiqueCountTram = 0;
+        let signaletiqueCountAero = 0;
         const prCount = PR_DATA.length;
 
         const stationCountA = LINE_A_STATIONS.filter(s => !s.isFuture).length;
         const stationCountB = LINE_B_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountC = LINE_C_STATIONS.filter(s => !s.isFuture).length;
+        const stationCountC = LINE_C_STATIONS.length; // Count all for C as it's future but we audit it
+        const stationCountAero = (TRAM_STATIONS.filter(s => s.lines.includes('AEROPORT')).length || 0);
         const stationCountTram = TRAM_STATIONS.filter(s => !s.isFuture).length;
         const stationCountTeleo = TELEO_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountTotal = stationCountA + stationCountB + stationCountC + stationCountTram + stationCountTeleo;
+        const stationCountTotal = stationCountA + stationCountB + stationCountC + stationCountAero + stationCountTram + stationCountTeleo;
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.isFuture) continue;
+                // For C and AEROPORT, we want to see stats even if isFuture is true
+                if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
+                
                 switch (module.type) {
                     case AuditModuleType.DAT:
-                        const datsInModule = (module.data as ModeData).stations.reduce((sum, s) => sum + s.directions.reduce((dSum, d) => dSum + d.dats.length, 0), 0);
+                        const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) => 
+                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
                         datCount += datsInModule;
                         if (module.line === 'A') datCountA += datsInModule;
                         else if (module.line === 'B') datCountB += datsInModule;
+                        else if (module.line === 'C') datCountC += datsInModule;
+                        else if (module.line === 'AEROPORT') datCountAero += datsInModule;
                         else if (module.line === 'TRAM') datCountTram += datsInModule;
                         else if (module.line === 'TELEO') datCountTeleo += datsInModule;
                         break;
@@ -72,7 +87,7 @@ export const useStats = (lieux: Lieu[]) => {
                         }
                         break;
                     case AuditModuleType.ECA:
-                        const ecas = (module.data as EcaData).ecas;
+                        const ecas = (module.data as EcaData).ecas || [];
                         ecaCount += ecas.length;
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
@@ -82,6 +97,10 @@ export const useStats = (lieux: Lieu[]) => {
                             cogPictoCountA++;
                         } else if (module.line === 'B') {
                             cogPictoCountB++;
+                        } else if (module.line === 'C') {
+                            cogPictoCountC++;
+                        } else if (module.line === 'AEROPORT') {
+                            cogPictoCountAero++;
                         }
                         break;
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
@@ -90,19 +109,29 @@ export const useStats = (lieux: Lieu[]) => {
                             pmrFloorAdhesiveCountA++;
                         } else if (module.line === 'B') {
                             pmrFloorAdhesiveCountB++;
+                        } else if (module.line === 'C') {
+                            pmrFloorAdhesiveCountC++;
+                        } else if (module.line === 'AEROPORT') {
+                            pmrFloorAdhesiveCountAero++;
                         }
+                        break;
+                    case AuditModuleType.SIGNALETIQUE:
+                        signaletiqueCount++;
+                        if (module.line === 'TRAM') signaletiqueCountTram++;
+                        else if (module.line === 'AEROPORT') signaletiqueCountAero++;
                         break;
                 }
             }
         }
         return { 
-            datCount, datCountA, datCountB, datCountTram, datCountTeleo,
+            datCount, datCountA, datCountB, datCountC, datCountAero, datCountTram, datCountTeleo,
             beCount, bsCount, caCount, prCount,
             ecaCount, ecaPmrCount,
-            cogPictoCount, cogPictoCountA, cogPictoCountB,
-            pmrFloorAdhesiveCount, pmrFloorAdhesiveCountA, pmrFloorAdhesiveCountB,
+            cogPictoCount, cogPictoCountA, cogPictoCountB, cogPictoCountC, cogPictoCountAero,
+            pmrFloorAdhesiveCount, pmrFloorAdhesiveCountA, pmrFloorAdhesiveCountB, pmrFloorAdhesiveCountC, pmrFloorAdhesiveCountAero,
+            signaletiqueCount, signaletiqueCountTram, signaletiqueCountAero,
             stationCountTotal, stationCountA, stationCountB,
-            stationCountC, stationCountTram, stationCountTeleo
+            stationCountC, stationCountAero, stationCountTram, stationCountTeleo
         };
     }, [lieux]);
 
@@ -111,15 +140,17 @@ export const useStats = (lieux: Lieu[]) => {
             A: { total: 0, pmr: 0 },
             B: { total: 0, pmr: 0 },
             C: { total: 0, pmr: 0 },
+            AEROPORT: { total: 0, pmr: 0 },
             total: 0
         };
         
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.type === AuditModuleType.ECA && !module.isFuture) {
+                if (module.type === AuditModuleType.ECA && (!module.isFuture || module.line === 'C' || module.line === 'AEROPORT')) {
                     const data = module.data as EcaData;
-                    const count = data.ecas.length;
-                    const pmrInModule = data.ecas.filter(e => isPmrEcaType(e.type)).length;
+                    const ecas = data.ecas || [];
+                    const count = ecas.length;
+                    const pmrInModule = ecas.filter(e => isPmrEcaType(e.type)).length;
                     
                     if (module.line === 'A') {
                         byLine.A.total += count;
@@ -130,20 +161,27 @@ export const useStats = (lieux: Lieu[]) => {
                     } else if (module.line === 'C') {
                         byLine.C.total += count;
                         byLine.C.pmr += pmrInModule;
+                    } else if (module.line === 'AEROPORT') {
+                        byLine.AEROPORT.total += count;
+                        byLine.AEROPORT.pmr += pmrInModule;
                     }
                 }
             }
         }
-        byLine.total = byLine.A.total + byLine.B.total + byLine.C.total;
+        byLine.total = byLine.A.total + byLine.B.total + byLine.C.total + byLine.AEROPORT.total;
         
         return { byLine };
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
-        // Filter out future modules before passing to generator for live stats
+        // Filter out future modules before passing to generator for live stats,
+        // but keep auditable future modules (Line C and AEROPORT).
         const activeLieux = lieux.map(lieu => ({
             ...lieu,
-            modules: lieu.modules.filter(m => !m.isFuture)
+            modules: lieu.modules.filter(m => {
+                const isAuditableFuture = m.isFuture && (m.line === 'C' || m.line === 'AEROPORT');
+                return !m.isFuture || isAuditableFuture;
+            })
         }));
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
@@ -166,43 +204,55 @@ export const useStats = (lieux: Lieu[]) => {
             });
         };
         
-        processAdhesiveList(ADHESIVES, auditModules.find(c=>c.type === AuditModuleType.DAT)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.BE), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.BS), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        processAdhesiveList(getPrAdhesives(EquipmentType.CA), auditModules.find(c=>c.type === AuditModuleType.PR)!.shortLabel);
-        
-        Object.values(EcaEquipmentType).forEach(type => {
-            processAdhesiveList(getEcaAdhesives(type), auditModules.find(c=>c.type === AuditModuleType.ECA)!.shortLabel);
-        });
-        
-        const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE)!;
-        const allPmrMaterials = getAllPmrMaterials();
-        allPmrMaterials.forEach(material => {
-            const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
-            inventoryMap.set(id, {
-                id: id,
-                auditType: pmrModule.shortLabel,
-                repere: '-',
-                name: "Adhésif de signalisation au sol",
-                dimensions: "920x370mm",
-                material: material,
-            });
-        });
+        const datConfig = auditModules.find(c=>c.type === AuditModuleType.DAT);
+        if (datConfig) processAdhesiveList(ADHESIVES, datConfig.shortLabel);
 
-        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS)!;
-        const allCogPictoDims = new Set<string>();
-        Object.values(COGNITIVE_PICTOGRAM_DIMENSIONS).forEach(dim => {
-            if(typeof dim === 'string') allCogPictoDims.add(dim);
-            else if(typeof dim === 'object' && dim !== null) {
-                Object.values(dim).forEach(d => allCogPictoDims.add(d));
-            }
-        });
-        allCogPictoDims.forEach(dims => {
-            inventoryMap.set(`cog-picto-${dims}`, {
-                id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
-                dimensions: dims, material: 'Vinyle + Plastification'
+        const prConfig = auditModules.find(c=>c.type === AuditModuleType.PR);
+        if (prConfig) {
+            processAdhesiveList(getPrAdhesives(EquipmentType.BE), prConfig.shortLabel);
+            processAdhesiveList(getPrAdhesives(EquipmentType.BS), prConfig.shortLabel);
+            processAdhesiveList(getPrAdhesives(EquipmentType.CA), prConfig.shortLabel);
+        }
+        
+        const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
+        if (ecaConfig) {
+            Object.values(EcaEquipmentType).forEach(type => {
+                processAdhesiveList(getEcaAdhesives(type), ecaConfig.shortLabel);
             });
-        });
+        }
+        
+        const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
+        if (pmrModule) {
+            const allPmrMaterials = getAllPmrMaterials();
+            allPmrMaterials.forEach(material => {
+                const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                inventoryMap.set(id, {
+                    id: id,
+                    auditType: pmrModule.shortLabel,
+                    repere: '-',
+                    name: "Adhésif de signalisation au sol",
+                    dimensions: "920x370mm",
+                    material: material,
+                });
+            });
+        }
+
+        const cogPictoModule = auditModules.find(c=>c.type === AuditModuleType.COGNITIVE_PICTOGRAMS);
+        if (cogPictoModule) {
+            const allCogPictoDims = new Set<string>();
+            Object.values(COGNITIVE_PICTOGRAM_DIMENSIONS).forEach(dim => {
+                if(typeof dim === 'string') allCogPictoDims.add(dim);
+                else if(typeof dim === 'object' && dim !== null) {
+                    Object.values(dim).forEach(d => allCogPictoDims.add(d));
+                }
+            });
+            allCogPictoDims.forEach(dims => {
+                inventoryMap.set(`cog-picto-${dims}`, {
+                    id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
+                    dimensions: dims, material: 'Vinyle + Plastification'
+                });
+            });
+        }
         
         return Array.from(inventoryMap.values()).sort((a, b) => {
             const typeCompare = a.auditType.localeCompare(b.auditType);

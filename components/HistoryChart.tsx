@@ -30,9 +30,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-export const HistoryChart: React.FC<HistoryChartProps> = ({ data }) => {
+export const HistoryChart: React.FC<HistoryChartProps> = ({ data = [] }) => {
   // Chart needs chronological order (Oldest -> Newest)
-  const chartData = [...data].reverse().map(entry => {
+  const chartData = [...(data || [])].reverse().map(entry => {
       const date = new Date(entry.date);
       return {
           ...entry,

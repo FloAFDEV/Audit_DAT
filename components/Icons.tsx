@@ -39,9 +39,9 @@ export const FormattedCorrespondence: React.FC<{ text: string, className?: strin
                         return (
                              <span key={index} className="inline-flex items-center gap-1.5 align-middle">
                                 Liaison&nbsp;
-                                <CategoryIcon categoryConfig={fromConfig} size="sm" />
+                                <CategoryIcon categoryConfig={fromConfig} size="sm" asDiv />
                                 <span className="text-slate-600 dark:text-slate-300 font-normal">&rarr;</span>
-                                <CategoryIcon categoryConfig={toConfig} size="sm" />
+                                <CategoryIcon categoryConfig={toConfig} size="sm" asDiv />
                             </span>
                         );
                     }

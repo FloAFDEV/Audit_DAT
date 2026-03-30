@@ -76,7 +76,7 @@ export interface StationDef {
 export const ACTIVE_LINES: Record<NetworkLine, boolean> = {
     A:        true,
     B:        true,
-    C:        false, // ← passer à true pour activer la Ligne C
+    C:        true, // ← Ligne C activée
     T1:       true,
     AEROPORT: true,  // ← antenne Aéroport Express activée (v8)
     TELEO:    true,
@@ -446,9 +446,9 @@ export function getStationByCode(
 export const LINE_COLORS: Record<NetworkLine, string> = {
     A:        '#FF0000', // rouge
     B:        '#005BAC', // bleu
-    C:        '#F07800', // orange  (Ligne C / M3)
-    T1:       '#00843D', // vert
-    AEROPORT: '#007BC0', // bleu ciel  (Aéroport Express)
+    C:        '#36a028', // vert (Ligne C / M3)
+    T1:       '#014687', // bleu foncé
+    AEROPORT: '#00A3E0', // bleu ciel  (Aéroport Express)
     TELEO:    '#8B008B', // violet
 } as const;
 

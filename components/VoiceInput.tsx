@@ -44,7 +44,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ value, onChange, placeholder, r
             recognition.onresult = (event: any) => {
                 let finalTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
+                    if (event.results[i] && event.results[i][0] && event.results[i].isFinal) {
                         finalTranscript += event.results[i][0].transcript;
                     }
                 }

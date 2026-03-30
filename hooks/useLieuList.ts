@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Lieu, AuditModuleType, AuditCategory, ModeData, Station } from '../types';
 import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
-import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS, AEROPORT_EXPRESS_STATIONS } from '../data/stations';
+import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 
 interface UseLieuListProps {
     lieux: Lieu[];
@@ -18,7 +18,6 @@ const lineStationsMap: { [key in AuditCategory]?: Partial<Station>[] } = {
     METRO_C: LINE_C_STATIONS,
     TRAM: TRAM_STATIONS,
     TELEO: TELEO_STATIONS,
-    AEROPORT: AEROPORT_EXPRESS_STATIONS, // tri physique BLA → NAD → DAU → ATB
 };
 
 const AUDIT_TYPE_ORDER = AUDIT_MODULES_CONFIG.map(config => config.type);
@@ -36,7 +35,8 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
 
         for (const lieu of lieuxForCategory) {
             for (const module of lieu.modules) {
-                if (!module.isFuture) {
+                // Include modules if they are not future, OR if they are part of Line C
+                if (!module.isFuture || activeFilter === 'METRO_C') {
                     types.add(module.type);
                 }
             }

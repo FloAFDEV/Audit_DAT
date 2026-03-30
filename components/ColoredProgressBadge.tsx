@@ -20,7 +20,7 @@ export const ColoredProgressBadge: React.FC<ColoredProgressBadgeProps> = ({ prog
     }
 
     return (
-        <span className="px-2 py-0.5 text-xs font-bold rounded-full transition-colors bg-slate-200 dark:bg-slate-600">
+        <span className="px-2 py-0.5 text-xs font-bold rounded-[6px] ring-1 ring-black/5 transition-colors bg-slate-200 dark:bg-slate-600">
             <span className={textColorClass}>
                 {roundedProgress}%
             </span>

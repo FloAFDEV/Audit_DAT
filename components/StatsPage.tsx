@@ -1,6 +1,6 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive, X, Filter } from 'lucide-react';
+import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive, X, Filter, Layout } from 'lucide-react';
 import { Lieu, MaintenanceItem, HistoryEntry, AuditModule, ModeData, AuditModuleType } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
@@ -82,7 +82,7 @@ const StatRow: React.FC<{
   } else {
     // Styles pour les alertes et sous-éléments
     badgeClass = highlight === 'danger' ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 font-semibold px-2 py-0.5 rounded' :
-                 highlight === 'warning' ? 'bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded' :
                  highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
                  isSubItem 
                     ? 'font-medium text-slate-800 dark:text-slate-200' 
@@ -161,7 +161,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
         }
     };
 
-    if (history.length === 0) {
+    if (!history || history.length === 0) {
         return (
             <div className="text-center py-12 text-gray-500 dark:text-slate-400">
                 <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -207,7 +207,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                                 <div className="flex-shrink-0">
                                     <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
                                         entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
-                                        entry.score >= 50 ? 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300' :
+                                        entry.score >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' :
                                         entry.score > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
                                         'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400' // Style neutre pour 0%
                                     }`}>
@@ -270,22 +270,24 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
   // Filtrer les lieux disponibles pour le calcul des stats
   const filteredLieux = useMemo(() => {
+      if (!lieux) return [];
       if (selectedLieuId) {
           return lieux.filter(l => l.id === selectedLieuId);
       }
       return lieux;
   }, [lieux, selectedLieuId]);
 
-  const selectedLieuObject = useMemo(() => lieux.find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
+  const selectedLieuObject = useMemo(() => (lieux || []).find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
 
   // Filtrer la liste des options du dropdown
   const filterOptions = useMemo(() => {
+      if (!lieux) return [];
       if (!filterQuery) return lieux;
       const lowerQuery = filterQuery.toLowerCase();
       return lieux.filter(l => 
           l.name.toLowerCase().includes(lowerQuery) ||
           // On peut aussi chercher par code station si besoin
-          l.modules.some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations[0]?.code?.toLowerCase().includes(lowerQuery))
+          (l.modules || []).some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations?.[0]?.code?.toLowerCase().includes(lowerQuery))
       );
   }, [lieux, filterQuery]);
 
@@ -295,7 +297,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
-  const filteredInventory = adhesiveInventory.filter(item =>
+  const filteredInventory = (adhesiveInventory || []).filter(item =>
     (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.auditType || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (item.repere || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -310,6 +312,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const tramConfig = categoryMap['TRAM'];
   const teleoConfig = categoryMap['TELEO'];
   const lineCConfig = categoryMap['METRO_C'];
+  const laeConfig = categoryMap['LAE'];
 
   const handleViewSnapshot = (entry: HistoryEntry) => {
       try {
@@ -475,6 +478,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                                     <>
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.datCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.datCountAero} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
                                     </>
@@ -494,6 +499,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                                     <>
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={<>{ecaBreakdown.byLine.A.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.A.pmr} PMR)</span></>} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={<>{ecaBreakdown.byLine.B.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.B.pmr} PMR)</span></>} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={<>{ecaBreakdown.byLine.C.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.C.pmr} PMR)</span></>} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={<>{ecaBreakdown.byLine.AEROPORT.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.AEROPORT.pmr} PMR)</span></>} isSubItem />
                                     </>
                                 )}
                             </div>
@@ -531,7 +538,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div className="space-y-1 mt-1">
                                 <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
                                 <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C (Projet)</span>} value={globalCounts.stationCountC} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
                                 <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
                                 <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
                             </div>
@@ -549,6 +557,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                                 <div className="space-y-1 mt-1">
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
                                 </div>
                             )}
                             </div>
@@ -558,6 +568,17 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                                 <div className="space-y-1 mt-1">
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
+                                </div>
+                            )}
+                            </div>
+                            <div>
+                            <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} />
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
                                 </div>
                             )}
                             </div>
@@ -591,9 +612,9 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <div className="text-2xl font-bold text-red-600 dark:text-red-400">{maintenanceSummary.absent.count}</div>
                             <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
                         </div>
-                        <div className="bg-orange-50 dark:bg-orange-900/20 p-3 rounded-lg border border-orange-100 dark:border-orange-900/30 text-center">
-                            <div className="text-2xl font-bold text-orange-600 dark:text-orange-400">{maintenanceSummary.toBeReplaced.count}</div>
-                            <div className="text-xs font-semibold text-orange-800 dark:text-orange-300 uppercase mt-1">À remplacer</div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-center">
+                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{maintenanceSummary.toBeReplaced.count}</div>
+                            <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase mt-1">À remplacer</div>
                         </div>
                     </div>
                     </div>
@@ -642,7 +663,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         </tr>
                         ))}
                         
-                        {filteredInventory.length === 0 && (
+                        {(!filteredInventory || filteredInventory.length === 0) && (
                         <tr>
                             <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
                         </tr>

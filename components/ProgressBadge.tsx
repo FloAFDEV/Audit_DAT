@@ -11,7 +11,7 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({ progress, isActive
     const roundedProgress = Math.round(progress);
     const isComplete = roundedProgress === 100;
 
-    const baseClasses = 'px-2 py-0.5 text-xs font-bold rounded-full transition-colors';
+    const baseClasses = 'px-2 py-0.5 text-xs font-bold rounded-[6px] ring-1 ring-black/5 transition-colors';
 
     let backgroundClass = '';
     let textColorClass = '';

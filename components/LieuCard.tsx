@@ -18,9 +18,9 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
     const progress = getLieuProgress(lieu, activeAuditFilters);
     const cardBgClass = 'bg-white dark:bg-slate-800';
     
-    const stationCodes = lieu.modules
+    const stationCodes = (lieu?.modules || [])
         .filter(m => m.type === AuditModuleType.DAT)
-        .map(m => (m.data as ModeData).stations[0].code)
+        .map(m => (m.data as ModeData).stations?.[0]?.code)
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index);
 
@@ -36,21 +36,23 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
             className={`${cardBgClass} p-4 rounded-lg shadow hover:shadow-lg transition-all duration-75 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 cursor-pointer`}
         >
             <div className="flex justify-between items-center">
-                 <div className="flex items-center gap-x-2 flex-wrap min-w-0">
+                 <div className="flex items-center gap-x-3 flex-wrap min-w-0">
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
-                    <h3 className="text-lg font-bold text-gray-800 dark:text-slate-100 truncate">{lieu.name}</h3>
-                     {stationCodes.length > 0 && (
-                        <span className="flex-shrink-0 bg-slate-200 text-slate-800 text-xs font-mono font-bold px-2 py-1 rounded dark:bg-slate-700 dark:text-slate-300">
-                            {stationCodes.join(' / ')}
-                        </span>
-                    )}
+                    <div className="flex flex-col min-w-0">
+                        <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
+                        {(stationCodes?.length || 0) > 0 && (
+                            <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                {stationCodes.join(' / ')}
+                            </span>
+                        )}
+                    </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
+                <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
             </div>
             <div className="mt-auto pt-4">
                 <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Progression</span>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Progression</span>
+                    <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-slate-700">
                     <div className={`${progressBarColor} h-1.5 rounded-full`} style={{ width: `${progress}%` }}></div>

@@ -201,7 +201,7 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                                             Absent
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/50 dark:text-orange-300 uppercase tracking-wide">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 uppercase tracking-wide">
                                                             À remplacer
                                                         </span>
                                                     )}

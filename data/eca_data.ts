@@ -427,6 +427,14 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 10', accessPoint: 'Accès Bus', type: EcaEquipmentType.TripodeEntree, number: 10 },
         { name: 'Valideur 11', accessPoint: 'Accès Bus', type: EcaEquipmentType.TripodeEntree, number: 11 },
     ],
+    'BLA': [
+        { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
+        { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 2 },
+        { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
+        { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
+        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
+    ],
     
     // Default fallback configuration
     'DEFAULT': [

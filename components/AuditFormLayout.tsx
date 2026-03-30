@@ -43,7 +43,8 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
     const isComplete = Math.round(progress) === 100;
-    const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
+    const isInProgress = progress > 0 && !isComplete;
+    const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
 
     return (
         <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
@@ -60,7 +61,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         <div className="flex items-center gap-4 flex-1 min-w-0">
                             {customIcon ?? <ModuleIcon type={module.type} className="w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
                             <div className="flex-1 min-w-0">
-                                <h2 className="text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
+                                <h2 className="text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{title}</h2>
                                 <div className="flex items-center gap-3 mt-1">
                                     <LineIcon module={module} size="sm" />
                                     {subtitle}
@@ -80,8 +81,8 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                 </div>
                 <div className="mt-4 pl-0 sm:pl-[72px]"> {/* Aligned with title content */}
                     <div className="flex justify-between items-center mb-1">
-                        <span className="text-sm font-medium text-gray-500 dark:text-slate-400">Progression</span>
-                        <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                        <span className="text-sm font-normal text-slate-500 dark:text-slate-400">Progression</span>
+                        <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                         <div className={`${progressBarColor} h-2 rounded-full transition-all duration-75`} style={{ width: `${progress}%` }}></div>
@@ -92,8 +93,8 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
             {children}
 
             <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 mb-2">Commentaires</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
+                <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 mb-2">Commentaires</h3>
+                <p className="text-sm font-light text-slate-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
                 <VoiceInput
                     value={comment || ''}
                     onChange={onCommentChange}

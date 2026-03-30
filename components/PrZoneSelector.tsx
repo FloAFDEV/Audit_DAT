@@ -32,7 +32,7 @@ const getZoneIcon = (zone: PrZone) => {
 
   if (name.includes('sud'))
     return (
-      <div className="p-3 bg-orange-100 text-orange-600 dark:bg-orange-900/40 dark:text-orange-300 rounded-lg">
+      <div className="p-3 bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300 rounded-lg">
         <Navigation2 {...iconProps} style={{ transform: 'rotate(180deg)' }} />
       </div>
     );

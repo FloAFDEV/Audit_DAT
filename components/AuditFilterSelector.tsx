@@ -26,7 +26,7 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
         setActiveAuditFilters(newFilters);
     };
 
-    if (availableAuditTypes.length <= 1) {
+    if (!availableAuditTypes || availableAuditTypes.length <= 1) {
         return null; // Don't show filters if there's only one or zero types of audit
     }
 
@@ -41,9 +41,9 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
                         <button
                             key={type}
                             onClick={() => handleToggleFilter(type)}
-                            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 active:scale-95 ${
+                            className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-[10px] transition-all duration-200 active:scale-95 ring-1 ring-black/5 ${
                                 isActive
-                                ? 'bg-teal-600 text-white shadow-md'
+                                ? 'bg-teal-600 text-white shadow-md ring-teal-700/20'
                                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
                             }`}
                         >
