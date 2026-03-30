@@ -27,8 +27,19 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
         comment: ''
     });
 
-    if (line === 'A' || line === 'B' || line === 'C') {
+    if (line === 'A' || line === 'B') {
         switch (station.code) {
+            // Ligne A
+            case 'MBC': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'BEL': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'REY': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'MUN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'BAG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'MER': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'FLE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'ARE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'POI': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'SCY': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
             case 'ESQ': return [
                 { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('01'), createDat('02'), createDat('03')] },
                 { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('04')] }
@@ -37,33 +48,39 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
                 { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('01'), createDat('02'), createDat('03'), createDat('05')] },
                 { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('04')] }
             ];
+            case 'JJA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'MAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03'), createDat('04')] }];
             case 'JOL': return [
                 { id: `${stationId}-dir-1`, name: 'Direction HAUT (PRI)', dats: [createDat('01'), createDat('02')] },
                 { id: `${stationId}-dir-2`, name: 'Direction BAS (ASC)', dats: [createDat('03'), createDat('04')] }
             ];
+            case 'ROS': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'ARG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'BGR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+
+            // Ligne B
+            case 'BOR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'TCO': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'LVA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'BPA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'MIN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'CAN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'CCA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'JAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'JJB': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'FVE': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'CAR': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'PDJ': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'SMI': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'EMP': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'SAG': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'SAO': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'RAN': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02')] }];
+            case 'PHA': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
+            case 'UPS': return [{ id: `${stationId}-dir-1`, name: 'Salle des billets', dats: [createDat('01'), createDat('02'), createDat('03')] }];
             case 'RAM': return [
                 { id: `${stationId}-dir-1`, name: 'Direction SQUARE (SQU)', dats: [createDat('01'), createDat('02')] },
                 { id: `${stationId}-dir-2`, name: 'Direction côté BUS', dats: [createDat('03'), createDat('04')] }
-            ];
-        }
-
-        // Default directions for Metro lines
-        if (line === 'A') {
-            return [
-                { id: `${stationId}-dir-1`, name: 'Direction Balma-Gramont', dats: [createDat('01'), createDat('02')] },
-                { id: `${stationId}-dir-2`, name: 'Direction Basso Cambo', dats: [createDat('03'), createDat('04')] }
-            ];
-        }
-        if (line === 'B') {
-            return [
-                { id: `${stationId}-dir-1`, name: 'Direction Borderouge', dats: [createDat('01'), createDat('02')] },
-                { id: `${stationId}-dir-2`, name: 'Direction Ramonville', dats: [createDat('03'), createDat('04')] }
-            ];
-        }
-        if (line === 'C') {
-            return [
-                { id: `${stationId}-dir-1`, name: 'Direction Colomiers Gare', dats: [createDat('01'), createDat('02')] },
-                { id: `${stationId}-dir-2`, name: 'Direction Labège Gare', dats: [createDat('03'), createDat('04')] }
             ];
         }
     }
@@ -104,9 +121,15 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
         }
     }
 
+    let dir1Name = 'Direction A';
+    let dir2Name = 'Direction B';
+    if (line === 'A') { dir1Name = 'Direction Balma-Gramont'; dir2Name = 'Direction Basso Cambo'; }
+    if (line === 'B') { dir1Name = 'Direction Borderouge'; dir2Name = 'Direction Ramonville'; }
+    if (line === 'C') { dir1Name = 'Direction Colomiers Gare'; dir2Name = 'Direction Labège Gare'; }
+
     return [
-        { id: `${stationId}-dir-1`, name: 'Direction A', dats: [createDat('01'), createDat('02')] },
-        { id: `${stationId}-dir-2`, name: 'Direction B', dats: [createDat('03'), createDat('04')] }
+        { id: `${stationId}-dir-1`, name: dir1Name, dats: [createDat('01'), createDat('02')] },
+        { id: `${stationId}-dir-2`, name: dir2Name, dats: [createDat('03'), createDat('04')] }
     ];
 };
 
@@ -116,8 +139,9 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        // AEROPORT and Line C stations are isFuture:true but still need auditable directions (planning phase).
-        directions: (station.isFuture && line !== 'AEROPORT' && line !== 'C') ? [] : createDatDirectionsAndDatsForStation(station, line),
+        // AEROPORT stations are isFuture:true but still need auditable directions (planning phase).
+        directions: (station.isFuture && line !== 'AEROPORT') ? [] : createDatDirectionsAndDatsForStation(station, line),
+        signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
     };
 
     const modeData: ModeData = {
@@ -131,20 +155,27 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
     }
 
     return {
-        id: `module-dat-${line}-${station.id}`,
+        id: `module-dat-${station.id}`,
         type: AuditModuleType.DAT,
         name: moduleName,
         data: modeData,
-        isFuture: station.isFuture,
+        // Les modules DAT AEROPORT sont auditables même en phase de planification :
+        // la même exception s'applique ici (cohérence avec la logique des directions ci-dessus).
+        isFuture: station.isFuture && line !== 'AEROPORT',
         line: line,
     };
 };
 
-const createSignaletiqueModule = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'AEROPORT' | 'TELEO'): AuditModule => {
+const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AEROPORT'): AuditModule => {
+    // Populate endpoint directions so SignaletiqueAuditForm can display meaningful labels
+    // (endpointLabel1/endpointLabel2). Only name/id are needed — strip DAT data.
+    const rawDirs = createDatDirectionsAndDatsForStation(station, line);
+    const directions: Direction[] = rawDirs.map(d => ({ id: d.id, name: d.name, dats: [] }));
+
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        directions: createDatDirectionsAndDatsForStation(station, line),
+        directions,
         signaletique: getInitialSignaletiqueData(station.name!)
     };
 
@@ -154,11 +185,13 @@ const createSignaletiqueModule = (station: Partial<Station>, line: MetroLine | '
     };
 
     return {
-        id: `module-sig-${line}-${station.id}`,
+        id: `module-sig-${station.id}`,
         type: AuditModuleType.SIGNALETIQUE,
         name: 'Équipements Station',
         data: modeData,
-        isFuture: !!station.isFuture,
+        // AEROPORT stations are marked isFuture in the registry (planning phase) but must
+        // remain auditable — same exception as createDatModule (line !== 'AEROPORT').
+        isFuture: !!station.isFuture && line !== 'AEROPORT',
         line: line,
     };
 };
@@ -206,7 +239,7 @@ const createEcaModule = (
     isFuture: boolean,
     ecaTemplates: Omit<ECA, 'id' | 'adhesives' | 'comment'>[]
 ): AuditModule => {
-    const ecas: ECA[] = (isFuture && line !== 'C' && line !== 'AEROPORT') ? [] : ecaTemplates.map((template, index) => {
+    const ecas: ECA[] = isFuture ? [] : ecaTemplates.map((template, index) => {
         const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
 
         // Apply pre-configuration for PMR pictograms
@@ -284,7 +317,7 @@ const createCognitivePictogramModule = (station: Partial<Station>, line: MetroLi
     };
 
     return {
-        id: `module-cog-picto-${line}-${station.id}`,
+        id: `module-cog-picto-${station.id}`,
         type: AuditModuleType.COGNITIVE_PICTOGRAMS,
         name: 'Pictogrammes Cognitifs',
         data: data,
@@ -318,36 +351,17 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...LINE_C_STATIONS.map(s => createEcaModule(
                  'ECA (Valideurs)', s.name!, s.code!, 'C', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
             )),
-
-            // Blagnac Hub: Metro audits are applicable to all its lines (T1, LAE, C)
-            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createEcaModule(
-                'ECA (Valideurs)', s.name!, s.code!, 'TRAM', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
-            )),
-            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createEcaModule(
-                'ECA (Valideurs)', s.name!, s.code!, 'AEROPORT', !!s.isFuture, ECA_DEFINITIONS[s.code!] ?? ECA_DEFINITIONS['DEFAULT']
-            )),
             
             ...LINE_A_STATIONS.map(s => createCognitivePictogramModule(s, 'A')),
             ...LINE_B_STATIONS.map(s => createCognitivePictogramModule(s, 'B')),
-            ...LINE_C_STATIONS.map(s => createCognitivePictogramModule(s, 'C')),
-            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createCognitivePictogramModule(s, 'TRAM')),
-            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id === 'sta-hub-bla').map(s => createCognitivePictogramModule(s, 'AEROPORT')),
         ];
 
         // NEW: Dynamically create PMR Floor Adhesive modules based on ECA definitions
-        const allStationsForPmr = [
-            ...LINE_A_STATIONS, 
-            ...LINE_B_STATIONS, 
-            ...LINE_C_STATIONS,
-            ...TRAM_STATIONS.filter(s => s.id === 'sta-hub-bla'),
-            ...AEROPORT_EXPRESS_STATIONS
-        ];
+        const allStationsForPmr = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS];
     
         for (const station of allStationsForPmr) {
-            // Allow Line C and AEROPORT stations even if isFuture
-            const isAuditableFuture = station.isFuture && (station.id?.indexOf('sta-c-') !== -1 || station.id?.indexOf('sta-aero-') !== -1 || station.id === 'sta-hub-bla');
-            if ((station.isFuture && !isAuditableFuture) || !station.code || station.code === 'JJA' || station.code === 'JJB') {
-                continue; // Skip future (except auditable ones), no code, or Jean Jaurès
+            if (station.isFuture || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+                continue; // Skip future, no code, or Jean Jaurès (handled as a special case)
             }
         
             const ecaTemplates = ECA_DEFINITIONS[station.code] ?? ECA_DEFINITIONS['DEFAULT'];
@@ -365,24 +379,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
         
             const line = station.id?.startsWith('sta-a-') ? 'A' : 
                          station.id?.startsWith('sta-b-') ? 'B' : 
-                         station.id?.startsWith('sta-c-') ? 'C' : 
-                         station.id === 'sta-hub-bla' ? (station.lines?.includes('T1') ? 'TRAM' : 'AEROPORT') : undefined;
-            
-            // Special handling for Blagnac Hub to ensure it gets modules for all its lines
-            if (station.id === 'sta-hub-bla') {
-                // We need to push for each line it belongs to
-                const hubLines: (MetroLine | 'TRAM' | 'AEROPORT')[] = ['TRAM', 'AEROPORT', 'C'];
-                hubLines.forEach(l => {
-                    if (pmrAccessPoints.size === 1) {
-                        modules.push(createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol', station, l as any));
-                    } else {
-                        pmrAccessPoints.forEach(accessPoint => {
-                            modules.push(createSpecificPmrFloorAdhesiveModule(`Adhésifs PMR au Sol (${accessPoint})`, station, l as any));
-                        });
-                    }
-                });
-                continue;
-            }
+                         station.id?.startsWith('sta-c-') ? 'C' : undefined;
         
             if (!line) continue;
         
@@ -403,15 +400,6 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
 
         const lieuxMap = new Map<string, Lieu>();
 
-        const ALL_STATIONS = [
-            ...LINE_A_STATIONS, 
-            ...LINE_B_STATIONS, 
-            ...LINE_C_STATIONS, 
-            ...TRAM_STATIONS, 
-            ...TELEO_STATIONS, 
-            ...AEROPORT_EXPRESS_STATIONS
-        ];
-
         const getLieuName = (module: AuditModule): string => {
             if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
                 const station = (module.data as ModeData).stations[0];
@@ -422,17 +410,17 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             }
             if (module.type === AuditModuleType.ECA) {
                 const stationName = (module.data as EcaData).stationName;
-                const station = ALL_STATIONS.find(s => s.name === stationName);
+                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS].find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
                 const stationName = (module.data as PMRFloorAdhesiveData).stationName;
-                const station = ALL_STATIONS.find(s => s.name === stationName);
+                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS].find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
                 const stationName = (module.data as CognitivePictogramData).stationName;
-                const station = ALL_STATIONS.find(s => s.name === stationName);
+                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS].find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             return module.name;

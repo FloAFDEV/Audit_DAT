@@ -125,9 +125,12 @@ interface SyncMenuProps {
     onImportJson: () => void;
     onResetRequest: (target: { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any }) => void;
     isModalOpen: boolean;
+    lastBackupDate: string | null;
+    onDownloadLastBackup: () => void;
+    onRestoreFromLastBackup: () => void;
 }
 
-export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, onResetRequest, isModalOpen }) => {
+export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, onResetRequest, isModalOpen, lastBackupDate, onDownloadLastBackup, onRestoreFromLastBackup }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
@@ -188,6 +191,22 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                             <button onClick={() => { onImportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Upload className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Restaurer une sauvegarde (.json)</span>
                             </button>
+                            {lastBackupDate && (
+                                <>
+                                    <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay(false) }} />
+                                    <div className="px-4 py-1 menu-item-animate" style={{ animationDelay: getDelay() }}>
+                                        <p className="text-xs text-gray-400 dark:text-slate-500">
+                                            Dernier backup auto : {new Date(lastBackupDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                        </p>
+                                    </div>
+                                    <button onClick={() => { onDownloadLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                        <Download className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /><span>Télécharger le backup auto (.json)</span>
+                                    </button>
+                                    <button onClick={() => { onRestoreFromLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                        <Upload className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /><span>Restaurer depuis le backup auto</span>
+                                    </button>
+                                </>
+                            )}
                             <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
                             <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
                                 <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4" /><span>Zone de Danger – Actions irréversibles</span></div>

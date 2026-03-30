@@ -147,8 +147,7 @@ export const getPrZoneProgress = (zone: PrZone): number => {
  * This ensures all progress calculations are consistent.
  */
 const getModuleProgressCounts = (module: AuditModule): { applicable: number; checked: number; hasContent: boolean } => {
-    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-    if (module.isFuture && !isAuditableFuture) return { applicable: 0, checked: 0, hasContent: false };
+    if (module.isFuture) return { applicable: 0, checked: 0, hasContent: false };
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
@@ -225,41 +224,59 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
         case AuditModuleType.SIGNALETIQUE: {
             const stations = (module.data as ModeData).stations ?? [];
             if (stations.length > 0) hasAuditableContent = true;
+            const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
+            const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
             for (const station of stations) {
                 if (station.signaletique) {
                     const sig = station.signaletique;
-                    
-                    const processItems = (items: any[], type: 'totem' | 'biv' | 'planReseau' | 'planQuartier') => {
-                        for (const item of items) {
-                            // Main status (hidden for BIV)
-                            if (type !== 'biv') {
+                    const isMultiQuai = MULTI_QUAI_STATIONS.includes(station.name);
+
+                    // totem — single objects per physical endpoint (direction1 / direction2)
+                    (['direction1', 'direction2'] as const).forEach(dir => {
+                        const item = sig.totem?.[dir];
+                        if (item) {
+                            totalApplicableItems++;
+                            if (item.status !== 'NotChecked') totalCheckedItems++;
+                        }
+                    });
+
+                    // bandeauStation — status + directionContent + stationNameContent per endpoint
+                    (['direction1', 'direction2'] as const).forEach(dir => {
+                        const item = (sig as any).bandeauStation?.[dir];
+                        if (item) {
+                            totalApplicableItems += 3;
+                            if (item.status !== 'NotChecked') totalCheckedItems++;
+                            if (item.directionContent !== undefined && item.directionContent !== 'NotChecked') totalCheckedItems++;
+                            if (item.stationNameContent !== undefined && item.stationNameContent !== 'NotChecked') totalCheckedItems++;
+                        }
+                    });
+
+                    // biv, planReseau, planQuartier, hap — arrays per meett / pdj direction
+                    const dirs = ['meett', 'pdj'] as const;
+                    const arrayCategories = ['biv', 'planReseau', 'planQuartier', 'hap'] as const;
+                    for (const cat of arrayCategories) {
+                        for (const dir of dirs) {
+                            const items: any[] = (sig[cat] as any)?.[dir] ?? [];
+                            for (const item of items) {
                                 totalApplicableItems++;
                                 if (item.status !== 'NotChecked') totalCheckedItems++;
-                            }
-                            
-                            // Sub-questions
-                            if (type === 'biv') {
-                                totalApplicableItems += 2;
-                                if (item.screenFunctioning !== 'NotChecked') totalCheckedItems++;
-                                if (item.whiteTextAdhesives !== 'NotChecked') totalCheckedItems++;
-                            } else if (type === 'planReseau') {
-                                totalApplicableItems += 2;
-                                if (item.bannerStationName !== 'NotChecked') totalCheckedItems++;
-                                if (item.hap !== 'NotChecked') totalCheckedItems++;
-                            } else if (type === 'planQuartier') {
-                                totalApplicableItems += 4;
-                                if (item.bannerDirection !== 'NotChecked') totalCheckedItems++;
-                                if (item.relayInfo !== 'NotChecked') totalCheckedItems++;
-                                if (item.terminusCase !== 'NotChecked') totalCheckedItems++;
-                                if (item.hap !== 'NotChecked') totalCheckedItems++;
+                                if (cat === 'planQuartier') {
+                                    totalApplicableItems++;
+                                    if (item.bannerDirection !== undefined && item.bannerDirection !== 'NotChecked') totalCheckedItems++;
+                                }
+                                if (cat === 'biv') {
+                                    for (const field of BIV_CAISSON_FIELDS) {
+                                        totalApplicableItems++;
+                                        if (item[field] !== undefined && item[field] !== 'NotChecked') totalCheckedItems++;
+                                    }
+                                    if (isMultiQuai) {
+                                        totalApplicableItems++;
+                                        if (item.quaiCaisson !== undefined && item.quaiCaisson !== 'NotChecked') totalCheckedItems++;
+                                    }
+                                }
                             }
                         }
-                    };
-
-                    processItems([...sig.totem.meett, ...sig.totem.pdj], 'totem');
-                    processItems([...sig.biv.meett, ...sig.biv.pdj], 'biv');
-                    processItems([...sig.planReseau.meett, ...sig.planReseau.pdj], 'planReseau');
-                    processItems([...sig.planQuartier.meett, ...sig.planQuartier.pdj], 'planQuartier');
+                    }
                 }
             }
             break;
@@ -272,23 +289,20 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
  * REFACTORED: Now uses the centralized getModuleProgressCounts.
  */
 export function getModuleProgress(module: AuditModule) {
-    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-    if (module.isFuture && !isAuditableFuture) {
+    if (module.isFuture) {
         return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
 
     const { applicable, checked, hasContent } = getModuleProgressCounts(module);
 
     let percentage = 0;
-    let isComplete = false;
-
     if (applicable > 0) {
         percentage = (checked / applicable) * 100;
-        isComplete = checked === applicable;
     } else if (hasContent) {
         percentage = 100;
-        isComplete = true;
     }
+    
+    const isComplete = Math.round(percentage) === 100;
     
     let label: string;
     let statusText: string;
@@ -303,8 +317,8 @@ export function getModuleProgress(module: AuditModule) {
         statusText = 'Audit en cours';
         statusColor = 'text-amber-600 dark:text-amber-400';
     } else {
-        label = isAuditableFuture ? 'Audit prévisionnel' : 'Progression';
-        statusText = isAuditableFuture ? 'Audit prévisionnel' : 'En attente de contrôle';
+        label = 'Progression';
+        statusText = 'En attente de contrôle';
         statusColor = 'text-gray-500 dark:text-slate-400';
     }
     
@@ -327,8 +341,7 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
     let hasAnyContent = false;
 
     for (const module of modulesToConsider) {
-        const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-        if (module.isFuture && !isAuditableFuture) continue;
+        if (module.isFuture) continue;
         hasAnyNonFutureModule = true;
 
         const counts = getModuleProgressCounts(module);
@@ -368,8 +381,7 @@ export const getCategoryProgress = (
             : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
 
         for (const module of modulesToProcess) {
-            const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-            if (module.isFuture && !isAuditableFuture) continue;
+            if (module.isFuture) continue;
             
             const counts = getModuleProgressCounts(module);
             totalApplicableItems += counts.applicable;

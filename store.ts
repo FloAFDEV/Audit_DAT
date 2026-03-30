@@ -103,12 +103,12 @@ interface AppState {
     handleUpdateCognitivePictogramAccessPointName: (pictogramId: string, newName: string) => Promise<void>;
     
     // Signaletique Actions
-    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
-    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, comment: string) => Promise<void>;
-    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, field: string, value: any) => Promise<void>;
-    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, photo_base64: string | null) => Promise<void>;
-    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, note: string) => Promise<void>;
-    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, rotation: number) => Promise<void>;
+    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
+    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, comment: string) => Promise<void>;
+    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, field: string, value: any) => Promise<void>;
+    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, photo_base64: string | null) => Promise<void>;
+    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, note: string) => Promise<void>;
+    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, rotation: number) => Promise<void>;
     handleResetSignaletique: () => Promise<void>;
     handleSignaletiqueStationCommentChange: (comment: string) => Promise<void>;
     setIsSignaletiqueActive: (isActive: boolean) => void;
@@ -122,6 +122,8 @@ interface AppState {
     handleImportJsonData: (jsonString: string) => Promise<void>;
     hardResetApplication: () => Promise<void>;
 }
+
+export const DATA_VERSION = 'v13.0';
 
 const useAuditStore = create<AppState>((set, get) => {
     /**
@@ -153,6 +155,53 @@ const useAuditStore = create<AppState>((set, get) => {
         } else {
             document.documentElement.classList.remove('dark');
         }
+    };
+
+    // ---------------------------------------------------------------
+    // BACKUP HELPERS
+    // ---------------------------------------------------------------
+
+    /** Déclenche le téléchargement d'un fichier JSON dans le navigateur. */
+    const _triggerJsonDownload = (data: object, filename: string) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    /**
+     * Sauvegarde automatique de toutes les données dans localStorage avant
+     * toute opération destructive (reset / hard-reset).
+     * Si localStorage est plein, déclenche un téléchargement automatique du fichier JSON.
+     * @returns la clé localStorage utilisée pour le backup, ou '' si download forcé.
+     */
+    const _backupBeforeReset = async (scope: string): Promise<string> => {
+        const allLieux = await db.lieux.toArray();
+        const now = new Date().toISOString();
+        const backup = {
+            exportDate: now,
+            scope,
+            // Clé 'data' volontairement identique au format d'import JSON existant
+            // pour permettre la restauration via "Restaurer une sauvegarde (.json)".
+            data: allLieux,
+        };
+        const json = JSON.stringify(backup);
+        const backupKey = `tisseo-audit-backup-${Date.now()}`;
+        try {
+            localStorage.setItem(backupKey, json);
+            localStorage.setItem('tisseo-audit-last-backup-key', backupKey);
+            localStorage.setItem('tisseo-audit-last-backup-date', now);
+        } catch {
+            // localStorage plein (quota dépassé) → téléchargement automatique du fichier.
+            _triggerJsonDownload(backup, `backup-audit-${scope}-${Date.now()}.json`);
+            // Met quand même à jour la date pour que l'UI affiche l'heure du dernier backup.
+            try { localStorage.setItem('tisseo-audit-last-backup-date', now); } catch { /* ignore */ }
+            return '';
+        }
+        return backupKey;
     };
 
     // HISTORY HELPERS (INTERNAL)
@@ -196,9 +245,6 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
-            const DATA_VERSION = 'v11.0'; // Increment this to force a data refresh
-            const storedVersion = localStorage.getItem('tisseo-audit-data-version');
-            
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
             const isAuthenticated = storedAuth === 'true';
 
@@ -208,33 +254,124 @@ const useAuditStore = create<AppState>((set, get) => {
             
             set({ isAuthenticated, theme: initialTheme });
 
-            // If version mismatch, clear the database to force a refresh with new builder logic
-            if (storedVersion !== DATA_VERSION) {
-                console.log(`Data version mismatch (${storedVersion} vs ${DATA_VERSION}). Clearing database...`);
-                await db.lieux.clear();
-                await db.history.clear();
-                localStorage.setItem('tisseo-audit-data-version', DATA_VERSION);
-            }
-
             const count = await db.lieux.count();
             let data: Lieu[] = [];
             if (count > 0) {
                 data = await db.lieux.toArray();
-                
-                // DATA MIGRATION: Ensure stations have signaletique data initialized correctly
+
+                // DATA MIGRATION v8: Ajouter les lieux LAE (Aéroport Express) si absents.
+                // ACTIVE_LINES.AEROPORT était false avant v8 → aucun module AEROPORT en base.
+                // On génère les données fraîches et on n'extrait que les lieux AEROPORT.
                 let dataChanged = false;
+                const hasAeroportModules = data.some(l => l.modules.some(m => m.line === 'AEROPORT'));
+                if (!hasAeroportModules) {
+                    const freshData = await generateInitialLieuxDataAsync();
+                    const aeroportLieux = freshData
+                        .filter(l => l.modules.some(m => m.line === 'AEROPORT'))
+                        .map(l => ({ ...l, modules: l.modules.filter(m => m.line === 'AEROPORT') }));
+                    data.push(...aeroportLieux);
+                    dataChanged = true;
+                }
+
+                // DATA MIGRATION v9: Supprimer les modules TRAM BLA orphelins (sta-t1-27 / sta-sig-t1-27).
+                // Ces modules ont été créés lorsque BLA était dupliqué dans TRAM_STATIONS.
+                // Désormais BLA est modélisé UNE SEULE FOIS dans REGISTRY_INTERCHANGE_HUBS,
+                // traité via AEROPORT_EXPRESS_STATIONS. Les modules TRAM BLA sont devenus orphelins
+                // et doivent être retirés pour éviter les doublons dans la carte "Blagnac".
+                const ORPHAN_MODULE_IDS = new Set(['module-dat-sta-t1-27', 'module-sig-sta-t1-27']);
+                data = data.map(lieu => {
+                    const before = lieu.modules.length;
+                    const filtered = lieu.modules.filter(m => !ORPHAN_MODULE_IDS.has(m.id));
+                    if (filtered.length !== before) {
+                        dataChanged = true;
+                        return { ...lieu, modules: filtered };
+                    }
+                    return lieu;
+                }).filter(lieu => lieu.modules.length > 0);
+
+                // DATA MIGRATION v10: Corriger le flag isFuture sur les modules DAT AEROPORT.
+                // Avec l'ancien code, createDatModule héritait station.isFuture = true pour BLA,
+                // ce qui désactivait le bouton dans ModuleSelector (disabled={module.isFuture}).
+                // Désormais les modules DAT AEROPORT sont toujours actifs (isFuture: false)
+                // même si la station hub est marquée future dans le registre.
+                data = data.map(lieu => {
+                    let changed = false;
+                    const fixedModules = lieu.modules.map(m => {
+                        if (m.type === AuditModuleType.DAT && m.line === 'AEROPORT' && m.isFuture) {
+                            changed = true;
+                            return { ...m, isFuture: false };
+                        }
+                        return m;
+                    });
+                    if (changed) {
+                        dataChanged = true;
+                        return { ...lieu, modules: fixedModules };
+                    }
+                    return lieu;
+                });
+
+                // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
+
+                const migrateStation = (station: any) => {
+                    if (station.isFuture) return;
+                    if (!station.signaletique) {
+                        station.signaletique = getInitialSignaletiqueData(station.name || '');
+                        dataChanged = true;
+                        return;
+                    }
+                    const sig = station.signaletique;
+
+                    // Ensure hap exists
+                    if (!sig.hap) {
+                        sig.hap = getInitialSignaletiqueData(station.name || '').hap;
+                        dataChanged = true;
+                    }
+
+                    // Migrate totem: old { meett: [], pdj: [] } → new { direction1: {}, direction2: {} }
+                    if (sig.totem && !sig.totem.direction1) {
+                        const d1 = sig.totem.meett?.[0] ?? { status: 'NotChecked', comment: '', dimensions: '61,6 x 91,6 cm' };
+                        const d2 = sig.totem.pdj?.[0] ?? { status: 'NotChecked', comment: '', dimensions: '61,6 x 91,6 cm' };
+                        sig.totem = { direction1: d1, direction2: d2 };
+                        dataChanged = true;
+                    }
+
+                    // Initialize bandeauStation if missing
+                    if (!sig.bandeauStation) {
+                        sig.bandeauStation = getInitialSignaletiqueData(station.name || '').bandeauStation;
+                        dataChanged = true;
+                    }
+
+                    // Remove terminusCase/relayInfo from planQuartier items
+                    if (sig.planQuartier) {
+                        (['meett', 'pdj'] as const).forEach(dir => {
+                            (sig.planQuartier[dir] as any[] ?? []).forEach((item: any) => {
+                                if (item.terminusCase !== undefined) { delete item.terminusCase; dataChanged = true; }
+                                if (item.relayInfo !== undefined) { delete item.relayInfo; dataChanged = true; }
+                            });
+                        });
+                    }
+
+                    // Migrate BIV items to add missing adhesive fields
+                    if (sig.biv) {
+                        (['meett', 'pdj'] as const).forEach(dir => {
+                            (sig.biv[dir] as any[]).forEach((bivItem: any) => {
+                                let changed = false;
+                                if (bivItem.ligneCaisson === undefined) { bivItem.ligneCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.destinationCaisson === undefined) { bivItem.destinationCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.attenteMinCaisson === undefined) { bivItem.attenteMinCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.dureeApproxCaisson === undefined) { bivItem.dureeApproxCaisson = 'NotChecked'; changed = true; }
+                                if (bivItem.quaiCaisson === undefined) { bivItem.quaiCaisson = 'NotChecked'; changed = true; }
+                                if (changed) dataChanged = true;
+                            });
+                        });
+                    }
+                };
                 data.forEach(lieu => {
                     lieu.modules.forEach(module => {
-                        if (module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE) {
-                            const modeData = module.data as ModeData;
-                            if (modeData && modeData.stations) {
-                                modeData.stations.forEach(station => {
-                                    if (!station.isFuture && !station.signaletique) {
-                                        station.signaletique = getInitialSignaletiqueData(station.name || '');
-                                        dataChanged = true;
-                                    }
-                                });
-                            }
+                        const isTramDat = module.type === AuditModuleType.DAT && module.line === 'TRAM';
+                        const isSignaletique = module.type === AuditModuleType.SIGNALETIQUE;
+                        if (isTramDat || isSignaletique) {
+                            (module.data as ModeData).stations.forEach(migrateStation);
                         }
                     });
                 });
@@ -313,14 +450,19 @@ const useAuditStore = create<AppState>((set, get) => {
     }),
 
     selectModule: (moduleId) => {
-        const { lieux, selectedLieuId } = get();
+        const { lieux, selectedLieuId, selectedStationId, selectedDirectionId } = get();
         const lieu = lieux.find(l => l.id === selectedLieuId);
+        // Pour les lieux tram/AEROPORT, la direction est choisie AVANT le module (via TramDirectionSelector).
+        // Il faut donc préserver station et direction lors de la sélection du module.
+        // BLA (Blagnac) n'a que des modules AEROPORT — sans ce OR, isTramLieu serait false
+        // et station+direction seraient réinitialisés → boucle infinie sur TramDirectionSelector.
+        const isTramLieu = lieu?.modules.some(m => m.line === 'TRAM' || m.line === 'AEROPORT');
         const module = lieu?.modules.find(m => m.id === moduleId);
-        
+
         const baseState = {
             selectedModuleId: moduleId,
-            selectedStationId: null,
-            selectedDirectionId: null,
+            selectedStationId: isTramLieu ? selectedStationId : null,
+            selectedDirectionId: isTramLieu ? selectedDirectionId : null,
             selectedDatId: null,
             selectedPrZoneId: null,
             selectedEquipmentId: null,
@@ -328,19 +470,16 @@ const useAuditStore = create<AppState>((set, get) => {
             isSignaletiqueActive: false,
         };
 
-        if (module?.type === AuditModuleType.DAT || module?.type === AuditModuleType.SIGNALETIQUE) {
+        if (!isTramLieu && module?.type === AuditModuleType.DAT) {
             const modeData = module.data as ModeData;
-            const isAuditableFuture = modeData.stations[0]?.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-            if (modeData.stations.length === 1 && (!modeData.stations[0].isFuture || isAuditableFuture)) {
-                const station = modeData.stations[0];
-                baseState.selectedStationId = station.id;
-                
-                // Auto-select direction if there's only one
-                if (station.directions.length === 1) {
-                    baseState.selectedDirectionId = station.directions[0].id;
-                }
+            if (modeData.stations.length === 1 && !modeData.stations[0].isFuture) {
+                baseState.selectedStationId = modeData.stations[0].id;
+                // La direction sera sélectionnée automatiquement par DatGroupSelector
+                // via useEffect quand la station n'a qu'une seule direction.
             }
-        } else if (module?.type === AuditModuleType.PR) {
+        }
+
+        if (module?.type === AuditModuleType.PR) {
             const prData = module.data as Pr;
             if (prData.zones.length === 1) {
                 baseState.selectedPrZoneId = prData.zones[0].id;
@@ -355,7 +494,7 @@ const useAuditStore = create<AppState>((set, get) => {
         const lieu = lieux.find(l => l.id === selectedLieuId);
         const module = lieu?.modules.find(m => m.id === selectedModuleId);
 
-        if (module?.type === AuditModuleType.DAT || module?.type === AuditModuleType.SIGNALETIQUE) {
+        if (module?.type === AuditModuleType.DAT) {
              const modeData = module.data as ModeData;
              const station = modeData.stations.find(s => s.id === stationId);
              if (station?.directions.length === 1) {
@@ -802,38 +941,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.status = status;
-                    
-                    // Update completion date
-                    const sig = station.signaletique;
-                    const allEquipment = [
-                        ...sig.totem.meett, ...sig.totem.pdj,
-                        ...sig.biv.meett, ...sig.biv.pdj,
-                        ...sig.planReseau.meett, ...sig.planReseau.pdj,
-                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
-                    ];
-                    
-                    // For completion, we check if ALL fields are filled
-                    const isComplete = allEquipment.every(e => {
-                        if (e.status === 'NotChecked') return false;
-                        
-                        // Check sub-fields if they exist
-                        if ('screenFunctioning' in e && e.screenFunctioning === 'NotChecked') return false;
-                        if ('whiteTextAdhesives' in e && e.whiteTextAdhesives === 'NotChecked') return false;
-                        if ('bannerStationName' in e && e.bannerStationName === 'NotChecked') return false;
-                        if ('bannerDirection' in e && e.bannerDirection === 'NotChecked') return false;
-                        if ('relayInfo' in e && e.relayInfo === 'NotChecked') return false;
-                        if ('terminusCase' in e && e.terminusCase === 'NotChecked') return false;
-                        if ('hap' in e && e.hap === 'NotChecked') return false;
-                        
-                        return true;
-                    });
-                    
-                    if (isComplete && !sig.completionDate) sig.completionDate = new Date().toISOString();
-                    else if (!isComplete && sig.completionDate) delete sig.completionDate;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.status = status;
             }
         });
     },
@@ -844,10 +956,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.comment = comment;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.comment = comment;
             }
         });
     },
@@ -858,38 +971,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    (equipment as any)[field] = value;
-                    
-                    // Update completion date
-                    const sig = station.signaletique;
-                    const allEquipment = [
-                        ...sig.totem.meett, ...sig.totem.pdj,
-                        ...sig.biv.meett, ...sig.biv.pdj,
-                        ...sig.planReseau.meett, ...sig.planReseau.pdj,
-                        ...sig.planQuartier.meett, ...sig.planQuartier.pdj
-                    ];
-                    
-                    // For completion, we check if ALL fields are filled
-                    const isComplete = allEquipment.every(e => {
-                        if (e.status === 'NotChecked') return false;
-                        
-                        // Check sub-fields if they exist
-                        if ('screenFunctioning' in e && e.screenFunctioning === 'NotChecked') return false;
-                        if ('whiteTextAdhesives' in e && e.whiteTextAdhesives === 'NotChecked') return false;
-                        if ('bannerStationName' in e && e.bannerStationName === 'NotChecked') return false;
-                        if ('bannerDirection' in e && e.bannerDirection === 'NotChecked') return false;
-                        if ('relayInfo' in e && e.relayInfo === 'NotChecked') return false;
-                        if ('terminusCase' in e && e.terminusCase === 'NotChecked') return false;
-                        if ('hap' in e && e.hap === 'NotChecked') return false;
-                        
-                        return true;
-                    });
-                    
-                    if (isComplete && !sig.completionDate) sig.completionDate = new Date().toISOString();
-                    else if (!isComplete && sig.completionDate) delete sig.completionDate;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) (equipment as any)[field] = value;
             }
         });
     },
@@ -900,7 +986,10 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
                 if (equipment) {
                     if (photo_base64) {
                         equipment.photo_base64 = photo_base64;
@@ -920,10 +1009,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.photo_note = note;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.photo_note = note;
             }
         });
     },
@@ -934,10 +1024,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.photo_rotation = rotation;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.photo_rotation = rotation;
             }
         });
     },
@@ -959,34 +1050,53 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const types: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier'];
-                types.forEach(type => {
-                    ['meett', 'pdj'].forEach(dir => {
-                        station.signaletique![type][dir as 'meett' | 'pdj'].forEach((eq: any) => {
-                            eq.status = 'NotChecked';
-                            eq.comment = '';
-                            delete eq.photo_base64;
-                            delete eq.photo_note;
-                            delete eq.photo_rotation;
-                            
-                            // Reset specific fields
+                const sig = station.signaletique!;
+                const resetBase = (eq: any) => {
+                    eq.status = 'NotChecked';
+                    eq.comment = '';
+                    delete eq.photo_base64;
+                    delete eq.photo_note;
+                    delete eq.photo_rotation;
+                };
+
+                // totem — single objects per direction
+                (['direction1', 'direction2'] as const).forEach(dir => {
+                    resetBase(sig.totem[dir]);
+                });
+
+                // bandeauStation — single objects per direction with sub-fields
+                (['direction1', 'direction2'] as const).forEach(dir => {
+                    const eq = sig.bandeauStation[dir];
+                    resetBase(eq);
+                    eq.directionContent = 'NotChecked';
+                    eq.stationNameContent = 'NotChecked';
+                });
+
+                // array-based categories
+                (['biv', 'planReseau', 'planQuartier', 'hap'] as const).forEach(type => {
+                    (['meett', 'pdj'] as const).forEach(dir => {
+                        sig[type][dir].forEach((eq: any) => {
+                            resetBase(eq);
                             if (type === 'biv') {
                                 eq.screenFunctioning = 'NotChecked';
                                 eq.whiteTextAdhesives = 'NotChecked';
+                                eq.ligneCaisson = 'NotChecked';
+                                eq.destinationCaisson = 'NotChecked';
+                                eq.attenteMinCaisson = 'NotChecked';
+                                eq.dureeApproxCaisson = 'NotChecked';
+                                eq.quaiCaisson = 'NotChecked';
                             } else if (type === 'planReseau') {
                                 eq.bannerStationName = 'NotChecked';
                                 eq.hap = 'NotChecked';
                             } else if (type === 'planQuartier') {
                                 eq.bannerDirection = 'NotChecked';
-                                eq.relayInfo = 'NotChecked';
-                                eq.terminusCase = 'NotChecked';
                                 eq.hap = 'NotChecked';
                             }
                         });
                     });
                 });
+
                 station.comment = '';
-                delete station.signaletique.completionDate;
             }
         });
     },
@@ -1077,6 +1187,8 @@ const useAuditStore = create<AppState>((set, get) => {
     
     hardResetApplication: async () => {
         try {
+            // Sauvegarde automatique avant suppression totale de la base.
+            await _backupBeforeReset('hard-reset');
             await db.delete();
             window.location.reload();
         } catch (error) {
@@ -1090,12 +1202,14 @@ const useAuditStore = create<AppState>((set, get) => {
             // SNAPSHOT GLOBAL HISTORY
             const currentLieux = get().lieux;
             await saveHistoryEntry(
-                `Historique Complet Réseau`, 
-                'GLOBAL', 
-                currentLieux, 
+                `Historique Complet Réseau`,
+                'GLOBAL',
+                currentLieux,
                 undefined
             );
 
+            // Sauvegarde automatique avant effacement.
+            await _backupBeforeReset('reset-all');
             await db.lieux.clear();
             const initialData = await generateInitialLieuxDataAsync();
             await db.lieux.bulkPut(initialData);
@@ -1119,7 +1233,9 @@ const useAuditStore = create<AppState>((set, get) => {
             }
             const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
             if (!validateImportedData(dataToValidate)) throw new Error("Données invalides.");
-            
+
+            // Sauvegarde automatique des données actuelles avant remplacement par l'import.
+            await _backupBeforeReset('pre-import');
             await db.lieux.clear();
             await db.lieux.bulkPut(dataToValidate);
             set({

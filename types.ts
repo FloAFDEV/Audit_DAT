@@ -14,7 +14,7 @@ export enum TransportMode {
     TELEO = 'TELEO',
 }
 
-export type MetroLine = 'A' | 'B' | 'C' | 'TRAM' | 'AEROPORT' | 'TELEO';
+export type MetroLine = 'A' | 'B' | 'C';
 
 export enum AdhesiveStatus {
     NotChecked = 'NotChecked',
@@ -48,7 +48,7 @@ export enum EcaEquipmentType {
     PMRVantauxReversible = "PMR à vantaux réversible",
 }
 
-export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'LAE' | 'TELEO' | 'PR';
+export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'AEROPORT';
 
 // =================================================================
 // DATA STRUCTURES
@@ -106,6 +106,12 @@ export interface TotemStatus extends EquipmentStatus {
 export interface BivStatus extends EquipmentStatus {
     screenFunctioning: EquipmentStatusType | 'NotChecked';
     whiteTextAdhesives: EquipmentStatusType | 'NotChecked';
+    // Adhésifs IV sur le caisson
+    ligneCaisson: EquipmentStatusType | 'NotChecked';        // 6,7x2cm
+    destinationCaisson: EquipmentStatusType | 'NotChecked';  // 15,2x2cm
+    attenteMinCaisson: EquipmentStatusType | 'NotChecked';   // 18,2x2cm
+    dureeApproxCaisson: EquipmentStatusType | 'NotChecked';  // 22,4x1,5cm
+    quaiCaisson: EquipmentStatusType | 'NotChecked';         // 6x2cm - multi-quais seulement (Arènes, Odyssud)
 }
 
 export interface PlanReseauStatus extends EquipmentStatus {
@@ -117,16 +123,23 @@ export interface PlanReseauStatus extends EquipmentStatus {
 export interface PlanQuartierStatus extends EquipmentStatus {
     dimensions?: string; // "80 x 100 cm"
     bannerDirection: EquipmentStatusType | 'NotChecked';
-    relayInfo: EquipmentStatusType | 'NotChecked';
-    terminusCase: EquipmentStatusType | 'NotChecked';
     hap: EquipmentStatusType | 'NotChecked';
 }
 
+export interface HapStatus extends EquipmentStatus {
+    // Fiche horaire (HAP) - présence et état
+}
+
+export interface BandeauStationStatus extends EquipmentStatus {
+    readonly dimensions: '80x29 cm';
+    directionContent: EquipmentStatusType | 'NotChecked';
+    stationNameContent: EquipmentStatusType | 'NotChecked';
+}
+
 export interface SignaletiqueData {
-    completionDate?: string;
     totem: {
-        meett: TotemStatus[];
-        pdj: TotemStatus[];
+        direction1: TotemStatus;
+        direction2: TotemStatus;
     };
     biv: {
         meett: BivStatus[];
@@ -140,6 +153,14 @@ export interface SignaletiqueData {
         meett: PlanQuartierStatus[];
         pdj: PlanQuartierStatus[];
     };
+    hap: {
+        meett: HapStatus[];
+        pdj: HapStatus[];
+    };
+    bandeauStation: {
+        direction1: BandeauStationStatus;
+        direction2: BandeauStationStatus;
+    };
 }
 
 export interface Station {
@@ -147,11 +168,12 @@ export interface Station {
     name: string;
     code?: string;
     isFuture?: boolean;
-    isBranch?: boolean;
+    /** Lignes desservant cette station (métadonnée multi-ligne pour les hubs). */
     lines?: string[];
     directions: Direction[];
     lieuName?: string;
     signaletique?: SignaletiqueData;
+    signaletiqueCompletionDate?: string;
     comment?: string;
 }
 
@@ -247,7 +269,7 @@ export interface AuditModule {
     id: string;
     type: AuditModuleType;
     name: string;
-    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData | SignaletiqueData;
+    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
     isFuture?: boolean;
     line?: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT' | '';
 }
