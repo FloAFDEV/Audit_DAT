@@ -155,6 +155,53 @@ const useAuditStore = create<AppState>((set, get) => {
         }
     };
 
+    // ---------------------------------------------------------------
+    // BACKUP HELPERS
+    // ---------------------------------------------------------------
+
+    /** Déclenche le téléchargement d'un fichier JSON dans le navigateur. */
+    const _triggerJsonDownload = (data: object, filename: string) => {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    /**
+     * Sauvegarde automatique de toutes les données dans localStorage avant
+     * toute opération destructive (reset / hard-reset).
+     * Si localStorage est plein, déclenche un téléchargement automatique du fichier JSON.
+     * @returns la clé localStorage utilisée pour le backup, ou '' si download forcé.
+     */
+    const _backupBeforeReset = async (scope: string): Promise<string> => {
+        const allLieux = await db.lieux.toArray();
+        const now = new Date().toISOString();
+        const backup = {
+            exportDate: now,
+            scope,
+            // Clé 'data' volontairement identique au format d'import JSON existant
+            // pour permettre la restauration via "Restaurer une sauvegarde (.json)".
+            data: allLieux,
+        };
+        const json = JSON.stringify(backup);
+        const backupKey = `tisseo-audit-backup-${Date.now()}`;
+        try {
+            localStorage.setItem(backupKey, json);
+            localStorage.setItem('tisseo-audit-last-backup-key', backupKey);
+            localStorage.setItem('tisseo-audit-last-backup-date', now);
+        } catch {
+            // localStorage plein (quota dépassé) → téléchargement automatique du fichier.
+            _triggerJsonDownload(backup, `backup-audit-${scope}-${Date.now()}.json`);
+            // Met quand même à jour la date pour que l'UI affiche l'heure du dernier backup.
+            try { localStorage.setItem('tisseo-audit-last-backup-date', now); } catch { /* ignore */ }
+            return '';
+        }
+        return backupKey;
+    };
+
     // HISTORY HELPERS (INTERNAL)
     const saveHistoryEntry = async (title: string, type: 'GLOBAL' | 'CATEGORY' | 'MODULE_TYPE' | 'SINGLE_AUDIT', data: any, categoryKey?: string) => {
         const score = calculateComplianceScore(data, type);
@@ -239,6 +286,27 @@ const useAuditStore = create<AppState>((set, get) => {
                     }
                     return lieu;
                 }).filter(lieu => lieu.modules.length > 0);
+
+                // DATA MIGRATION v10: Corriger le flag isFuture sur les modules DAT AEROPORT.
+                // Avec l'ancien code, createDatModule héritait station.isFuture = true pour BLA,
+                // ce qui désactivait le bouton dans ModuleSelector (disabled={module.isFuture}).
+                // Désormais les modules DAT AEROPORT sont toujours actifs (isFuture: false)
+                // même si la station hub est marquée future dans le registre.
+                data = data.map(lieu => {
+                    let changed = false;
+                    const fixedModules = lieu.modules.map(m => {
+                        if (m.type === AuditModuleType.DAT && m.line === 'AEROPORT' && m.isFuture) {
+                            changed = true;
+                            return { ...m, isFuture: false };
+                        }
+                        return m;
+                    });
+                    if (changed) {
+                        dataChanged = true;
+                        return { ...lieu, modules: fixedModules };
+                    }
+                    return lieu;
+                });
 
                 // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
 
@@ -352,9 +420,11 @@ const useAuditStore = create<AppState>((set, get) => {
     selectModule: (moduleId) => {
         const { lieux, selectedLieuId, selectedStationId, selectedDirectionId } = get();
         const lieu = lieux.find(l => l.id === selectedLieuId);
-        // Pour les lieux tram, la direction est choisie AVANT le module (via TramDirectionSelector).
+        // Pour les lieux tram/AEROPORT, la direction est choisie AVANT le module (via TramDirectionSelector).
         // Il faut donc préserver station et direction lors de la sélection du module.
-        const isTramLieu = lieu?.modules.some(m => m.line === 'TRAM');
+        // BLA (Blagnac) n'a que des modules AEROPORT — sans ce OR, isTramLieu serait false
+        // et station+direction seraient réinitialisés → boucle infinie sur TramDirectionSelector.
+        const isTramLieu = lieu?.modules.some(m => m.line === 'TRAM' || m.line === 'AEROPORT');
         const module = lieu?.modules.find(m => m.id === moduleId);
 
         const baseState = {
@@ -1057,6 +1127,8 @@ const useAuditStore = create<AppState>((set, get) => {
     
     hardResetApplication: async () => {
         try {
+            // Sauvegarde automatique avant suppression totale de la base.
+            await _backupBeforeReset('hard-reset');
             await db.delete();
             window.location.reload();
         } catch (error) {
@@ -1070,12 +1142,14 @@ const useAuditStore = create<AppState>((set, get) => {
             // SNAPSHOT GLOBAL HISTORY
             const currentLieux = get().lieux;
             await saveHistoryEntry(
-                `Historique Complet Réseau`, 
-                'GLOBAL', 
-                currentLieux, 
+                `Historique Complet Réseau`,
+                'GLOBAL',
+                currentLieux,
                 undefined
             );
 
+            // Sauvegarde automatique avant effacement.
+            await _backupBeforeReset('reset-all');
             await db.lieux.clear();
             const initialData = await generateInitialLieuxDataAsync();
             await db.lieux.bulkPut(initialData);
@@ -1099,7 +1173,9 @@ const useAuditStore = create<AppState>((set, get) => {
             }
             const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
             if (!validateImportedData(dataToValidate)) throw new Error("Données invalides.");
-            
+
+            // Sauvegarde automatique des données actuelles avant remplacement par l'import.
+            await _backupBeforeReset('pre-import');
             await db.lieux.clear();
             await db.lieux.bulkPut(dataToValidate);
             set({

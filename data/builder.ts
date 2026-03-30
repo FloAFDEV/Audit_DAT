@@ -159,7 +159,9 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
         type: AuditModuleType.DAT,
         name: moduleName,
         data: modeData,
-        isFuture: station.isFuture,
+        // Les modules DAT AEROPORT sont auditables même en phase de planification :
+        // la même exception s'applique ici (cohérence avec la logique des directions ci-dessus).
+        isFuture: station.isFuture && line !== 'AEROPORT',
         line: line,
     };
 };

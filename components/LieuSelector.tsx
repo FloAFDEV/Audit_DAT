@@ -80,6 +80,47 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importFileContent, setImportFileContent] = useState<string | null>(null);
 
+    // ── Backup auto ──────────────────────────────────────────────────────────
+    const [lastBackupDate, setLastBackupDate] = useState<string | null>(() => {
+        try { return localStorage.getItem('tisseo-audit-last-backup-date'); } catch { return null; }
+    });
+
+    // Rafraîchit la date du dernier backup quand elle change (ex. après un reset).
+    useEffect(() => {
+        const onStorage = (e: StorageEvent) => {
+            if (e.key === 'tisseo-audit-last-backup-date') setLastBackupDate(e.newValue);
+        };
+        window.addEventListener('storage', onStorage);
+        return () => window.removeEventListener('storage', onStorage);
+    }, []);
+
+    const handleDownloadLastBackup = () => {
+        try {
+            const key = localStorage.getItem('tisseo-audit-last-backup-key');
+            if (!key) { toast.error("Aucun backup automatique disponible."); return; }
+            const json = localStorage.getItem(key);
+            if (!json) { toast.error("Le backup est introuvable ou a été supprimé."); return; }
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup-audit-auto-${new Date().toISOString().slice(0, 10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch { toast.error("Erreur lors du téléchargement du backup."); }
+    };
+
+    const handleRestoreFromLastBackup = () => {
+        try {
+            const key = localStorage.getItem('tisseo-audit-last-backup-key');
+            if (!key) { toast.error("Aucun backup automatique disponible."); return; }
+            const json = localStorage.getItem(key);
+            if (!json) { toast.error("Le backup est introuvable ou a été supprimé."); return; }
+            onImportJson(json);
+            setLastBackupDate(localStorage.getItem('tisseo-audit-last-backup-date'));
+        } catch { toast.error("Erreur lors de la restauration du backup."); }
+    };
+
     const getSortOrderKey = (filter: AuditCategory | 'ALL') => `tisseo-audit-sort-order-${filter}`;
 
     useEffect(() => {
@@ -140,6 +181,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const handleConfirmImport = () => {
         if (importFileContent) onImportJson(importFileContent);
         setImportFileContent(null);
+        setTimeout(() => {
+            try { setLastBackupDate(localStorage.getItem('tisseo-audit-last-backup-date')); } catch { /* ignore */ }
+        }, 500);
     };
 
     // FIX: Defined handleResetRequest to set the state for the confirmation modal.
@@ -175,6 +219,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             else if (resetTarget.type === 'MODULE_TYPE') onResetByModuleType(resetTarget.value);
         }
         setResetTarget(null);
+        // Met à jour la date du backup après un reset (le backup vient d'être créé dans le store).
+        setTimeout(() => {
+            try { setLastBackupDate(localStorage.getItem('tisseo-audit-last-backup-date')); } catch { /* ignore */ }
+        }, 500);
     };
 
     const resetModalProps = useMemo(() => {
@@ -345,6 +393,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                             onImportJson={handleImportClick}
                             onResetRequest={handleResetRequest}
                             isModalOpen={!!resetTarget || !!importFileContent}
+                            lastBackupDate={lastBackupDate}
+                            onDownloadLastBackup={handleDownloadLastBackup}
+                            onRestoreFromLastBackup={handleRestoreFromLastBackup}
                         />
                     </div>
                 </div>
