@@ -167,10 +167,15 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
 };
 
 const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AEROPORT'): AuditModule => {
+    // Populate endpoint directions so SignaletiqueAuditForm can display meaningful labels
+    // (endpointLabel1/endpointLabel2). Only name/id are needed — strip DAT data.
+    const rawDirs = createDatDirectionsAndDatsForStation(station, line);
+    const directions: Direction[] = rawDirs.map(d => ({ id: d.id, name: d.name, dats: [] }));
+
     const fullStation: Station = {
         ...station,
         id: station.id!, name: station.name!,
-        directions: [],
+        directions,
         signaletique: getInitialSignaletiqueData(station.name!)
     };
 
@@ -184,7 +189,9 @@ const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AER
         type: AuditModuleType.SIGNALETIQUE,
         name: 'Équipements Station',
         data: modeData,
-        isFuture: !!station.isFuture,
+        // AEROPORT stations are marked isFuture in the registry (planning phase) but must
+        // remain auditable — same exception as createDatModule (line !== 'AEROPORT').
+        isFuture: !!station.isFuture && line !== 'AEROPORT',
         line: line,
     };
 };

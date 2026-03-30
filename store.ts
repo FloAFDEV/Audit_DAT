@@ -123,7 +123,7 @@ interface AppState {
     hardResetApplication: () => Promise<void>;
 }
 
-export const DATA_VERSION = 'v12.0';
+export const DATA_VERSION = 'v13.0';
 
 const useAuditStore = create<AppState>((set, get) => {
     /**

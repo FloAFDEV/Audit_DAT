@@ -81,3 +81,51 @@ db.version(7).stores({
         return tx.table('lieux').bulkPut(lieux);
     });
 });
+
+// V8: activer les modules SIGNALETIQUE AEROPORT (isFuture était propagé depuis le registre).
+//     Ajoute aussi les directions manquantes sur toutes les stations SIGNALETIQUE (TRAM + AEROPORT)
+//     afin d'afficher les labels corrects d'extrémité dans SignaletiqueAuditForm.
+db.version(8).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').toArray().then((lieux: any[]) => {
+        const TRAM_DIRS = [
+            { id: 'dir-sig-tram-1', name: 'Direction MEETT / Aéroport', dats: [] },
+            { id: 'dir-sig-tram-2', name: 'Direction Palais de Justice', dats: [] },
+        ];
+        const AEROPORT_DEFAULT_DIRS = [
+            { id: 'dir-sig-aero-1', name: 'Direction Aéroport Toulouse Blagnac', dats: [] },
+            { id: 'dir-sig-aero-2', name: 'Direction Palais de Justice', dats: [] },
+        ];
+        const ATB_DIRS = [
+            { id: 'dir-sig-atb-1', name: 'Direction Palais de Justice', dats: [] },
+        ];
+
+        lieux.forEach((lieu: any) => {
+            lieu.modules.forEach((module: any) => {
+                if (module.type !== 'SIGNALETIQUE') return;
+
+                // AEROPORT modules: activer (isFuture: true → false)
+                if (module.line === 'AEROPORT') {
+                    module.isFuture = false;
+                }
+
+                // Ajouter les directions manquantes (toutes versions)
+                const station = module.data?.stations?.[0];
+                if (station && (!station.directions || station.directions.length === 0)) {
+                    if (module.line === 'AEROPORT') {
+                        station.directions = station.name === 'Aéroport Toulouse Blagnac'
+                            ? ATB_DIRS
+                            : AEROPORT_DEFAULT_DIRS;
+                    } else {
+                        // TRAM
+                        station.directions = TRAM_DIRS;
+                    }
+                }
+            });
+        });
+
+        return tx.table('lieux').bulkPut(lieux);
+    });
+});

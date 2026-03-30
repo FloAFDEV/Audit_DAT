@@ -230,22 +230,40 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
                 if (station.signaletique) {
                     const sig = station.signaletique;
                     const isMultiQuai = MULTI_QUAI_STATIONS.includes(station.name);
-                    // Process all directions (meett + pdj) for each category
+
+                    // totem — single objects per physical endpoint (direction1 / direction2)
+                    (['direction1', 'direction2'] as const).forEach(dir => {
+                        const item = sig.totem?.[dir];
+                        if (item) {
+                            totalApplicableItems++;
+                            if (item.status !== 'NotChecked') totalCheckedItems++;
+                        }
+                    });
+
+                    // bandeauStation — status + directionContent + stationNameContent per endpoint
+                    (['direction1', 'direction2'] as const).forEach(dir => {
+                        const item = (sig as any).bandeauStation?.[dir];
+                        if (item) {
+                            totalApplicableItems += 3;
+                            if (item.status !== 'NotChecked') totalCheckedItems++;
+                            if (item.directionContent !== undefined && item.directionContent !== 'NotChecked') totalCheckedItems++;
+                            if (item.stationNameContent !== undefined && item.stationNameContent !== 'NotChecked') totalCheckedItems++;
+                        }
+                    });
+
+                    // biv, planReseau, planQuartier, hap — arrays per meett / pdj direction
                     const dirs = ['meett', 'pdj'] as const;
-                    const categories = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'] as const;
-                    for (const cat of categories) {
+                    const arrayCategories = ['biv', 'planReseau', 'planQuartier', 'hap'] as const;
+                    for (const cat of arrayCategories) {
                         for (const dir of dirs) {
                             const items: any[] = (sig[cat] as any)?.[dir] ?? [];
                             for (const item of items) {
-                                // Top-level status
                                 totalApplicableItems++;
                                 if (item.status !== 'NotChecked') totalCheckedItems++;
-                                // planQuartier: bandeau sub-field
                                 if (cat === 'planQuartier') {
                                     totalApplicableItems++;
                                     if (item.bannerDirection !== undefined && item.bannerDirection !== 'NotChecked') totalCheckedItems++;
                                 }
-                                // biv: caisson adhesive sub-fields
                                 if (cat === 'biv') {
                                     for (const field of BIV_CAISSON_FIELDS) {
                                         totalApplicableItems++;
