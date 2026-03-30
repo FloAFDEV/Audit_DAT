@@ -123,8 +123,6 @@ export interface PlanReseauStatus extends EquipmentStatus {
 export interface PlanQuartierStatus extends EquipmentStatus {
     dimensions?: string; // "80 x 100 cm"
     bannerDirection: EquipmentStatusType | 'NotChecked';
-    relayInfo: EquipmentStatusType | 'NotChecked';
-    terminusCase: EquipmentStatusType | 'NotChecked';
     hap: EquipmentStatusType | 'NotChecked';
 }
 
@@ -132,10 +130,16 @@ export interface HapStatus extends EquipmentStatus {
     // Fiche horaire (HAP) - présence et état
 }
 
+export interface BandeauStationStatus extends EquipmentStatus {
+    readonly dimensions: '80x29 cm';
+    directionContent: EquipmentStatusType | 'NotChecked';
+    stationNameContent: EquipmentStatusType | 'NotChecked';
+}
+
 export interface SignaletiqueData {
     totem: {
-        meett: TotemStatus[];
-        pdj: TotemStatus[];
+        direction1: TotemStatus;
+        direction2: TotemStatus;
     };
     biv: {
         meett: BivStatus[];
@@ -152,6 +156,10 @@ export interface SignaletiqueData {
     hap: {
         meett: HapStatus[];
         pdj: HapStatus[];
+    };
+    bandeauStation: {
+        direction1: BandeauStationStatus;
+        direction2: BandeauStationStatus;
     };
 }
 

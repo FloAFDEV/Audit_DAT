@@ -625,14 +625,6 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.SIGNALETIQUE: {
                         const data = module.data as ModeData;
-                        const CATEGORY_LABELS: Record<string, string> = {
-                            totem: 'Totem',
-                            biv: 'BIV',
-                            planReseau: 'Plan Réseau',
-                            planQuartier: 'Plan Quartier',
-                            hap: 'HAP (Fiche Horaire)'
-                        };
-
                         const MULTI_QUAI_STATIONS_CSV = ['Arènes', 'Odyssud'];
                         const BIV_ADHESIVES = [
                             { field: 'ligneCaisson', label: 'BIV - Ligne caisson', dimensions: '6,7 × 2 cm' },
@@ -645,18 +637,40 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         for (const station of data.stations) {
                             if (!station.signaletique) continue;
                             const sig = station.signaletique;
+                            const completionDate = formatCompletionDate(station.signaletiqueCompletionDate);
 
-                            const categories = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'] as const;
-                            const directions = ['meett', 'pdj'] as const;
+                            // Totem — objets uniques par extrémité (direction1 / direction2)
+                            (['direction1', 'direction2'] as const).forEach(dir => {
+                                const item = sig.totem?.[dir];
+                                if (!item) return;
+                                rows.push({
+                                    ...baseRow,
+                                    'Date de Réalisation': completionDate,
+                                    'Direction/Équipement/Accès': dir,
+                                    'Élément': 'Totem',
+                                    'Statut': statusTranslations[item.status] || item.status,
+                                    'Description Adhésif': (item as any).dimensions || '',
+                                    'Commentaire': item.comment || '',
+                                    'Note Photo': item.photo_note || '',
+                                    'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
+                                });
+                            });
 
-                            for (const cat of categories) {
-                                for (const dir of directions) {
+                            // BIV, Plan Réseau, Plan Quartier, HAP — tableaux par direction meett/pdj
+                            const ARRAY_CAT_LABELS: Record<string, string> = {
+                                biv: 'BIV',
+                                planReseau: 'Plan Réseau',
+                                planQuartier: 'Plan Quartier',
+                                hap: 'HAP (Fiche Horaire)'
+                            };
+                            (['biv', 'planReseau', 'planQuartier', 'hap'] as const).forEach(cat => {
+                                (['meett', 'pdj'] as const).forEach(dir => {
                                     const items = sig[cat]?.[dir] ?? [];
                                     items.forEach((item, index) => {
-                                        const itemName = `${CATEGORY_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`.trim();
+                                        const itemName = `${ARRAY_CAT_LABELS[cat]} ${items.length > 1 ? `#${index + 1}` : ''}`.trim();
                                         rows.push({
                                             ...baseRow,
-                                            'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
+                                            'Date de Réalisation': completionDate,
                                             'Direction/Équipement/Accès': dir.toUpperCase(),
                                             'Élément': itemName,
                                             'Statut': statusTranslations[item.status] || item.status,
@@ -665,14 +679,13 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             'Note Photo': item.photo_note || '',
                                             'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
                                         });
-                                        // Lignes supplémentaires pour les adhésifs BIV
                                         if (cat === 'biv') {
                                             BIV_ADHESIVES.forEach(adhesive => {
                                                 if (adhesive.multiQuaiOnly && !MULTI_QUAI_STATIONS_CSV.includes(station.name || '')) return;
                                                 const status = (item as any)[adhesive.field] ?? 'NotChecked';
                                                 rows.push({
                                                     ...baseRow,
-                                                    'Date de Réalisation': formatCompletionDate(station.signaletiqueCompletionDate),
+                                                    'Date de Réalisation': completionDate,
                                                     'Direction/Équipement/Accès': dir.toUpperCase(),
                                                     'Élément': items.length > 1 ? `${adhesive.label} #${index + 1}` : adhesive.label,
                                                     'Statut': statusTranslations[status] || status,
@@ -682,8 +695,45 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             });
                                         }
                                     });
-                                }
-                            }
+                                });
+                            });
+
+                            // Bandeau Station — objets uniques par extrémité avec sous-champs
+                            (['direction1', 'direction2'] as const).forEach(dir => {
+                                const item = sig.bandeauStation?.[dir];
+                                if (!item) return;
+                                rows.push({
+                                    ...baseRow,
+                                    'Date de Réalisation': completionDate,
+                                    'Direction/Équipement/Accès': dir,
+                                    'Élément': 'Bandeau Station',
+                                    'Statut': statusTranslations[item.status] || item.status,
+                                    'Description Adhésif': item.dimensions || '',
+                                    'Commentaire': item.comment || '',
+                                    'Note Photo': item.photo_note || '',
+                                    'Photo Jointe': item.photo_base64 ? 'Oui' : 'Non'
+                                });
+                                const dirContentStatus = item.directionContent ?? 'NotChecked';
+                                rows.push({
+                                    ...baseRow,
+                                    'Date de Réalisation': completionDate,
+                                    'Direction/Équipement/Accès': dir,
+                                    'Élément': 'Bandeau Station - Contenu direction',
+                                    'Statut': statusTranslations[dirContentStatus] || dirContentStatus,
+                                    'Description Adhésif': '',
+                                    'Commentaire': '',
+                                });
+                                const stationNameStatus = item.stationNameContent ?? 'NotChecked';
+                                rows.push({
+                                    ...baseRow,
+                                    'Date de Réalisation': completionDate,
+                                    'Direction/Équipement/Accès': dir,
+                                    'Élément': 'Bandeau Station - Nom de la station',
+                                    'Statut': statusTranslations[stationNameStatus] || stationNameStatus,
+                                    'Description Adhésif': '',
+                                    'Commentaire': '',
+                                });
+                            });
                         }
                         break;
                     }

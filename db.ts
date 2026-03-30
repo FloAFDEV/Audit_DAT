@@ -28,3 +28,56 @@ db.version(6).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 });
+
+// V7: refonte de la structure Signalétique.
+//   - totem : { meett: TotemStatus[], pdj: TotemStatus[] } → { direction1: TotemStatus, direction2: TotemStatus }
+//   - bandeauStation (nouveau) : { direction1: BandeauStationStatus, direction2: BandeauStationStatus }
+//   - planQuartier : suppression des champs terminusCase et relayInfo
+db.version(7).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').toArray().then(lieux => {
+        const TOTEM_BLANK = () => ({ status: 'NotChecked', comment: '', dimensions: '61,6 x 91,6 cm' });
+        const BANDEAU_BLANK = () => ({ status: 'NotChecked', comment: '', dimensions: '80x29 cm', directionContent: 'NotChecked', stationNameContent: 'NotChecked' });
+
+        const migrateStation = (station: any) => {
+            if (!station.signaletique) return;
+            const sig = station.signaletique;
+
+            // Migrate totem arrays → single objects
+            if (sig.totem && !sig.totem.direction1) {
+                const d1 = sig.totem.meett?.[0] ?? TOTEM_BLANK();
+                const d2 = sig.totem.pdj?.[0] ?? TOTEM_BLANK();
+                sig.totem = { direction1: d1, direction2: d2 };
+            }
+
+            // Initialize bandeauStation
+            if (!sig.bandeauStation) {
+                sig.bandeauStation = { direction1: BANDEAU_BLANK(), direction2: BANDEAU_BLANK() };
+            }
+
+            // Remove terminusCase / relayInfo from planQuartier items
+            if (sig.planQuartier) {
+                ['meett', 'pdj'].forEach(dir => {
+                    (sig.planQuartier[dir] ?? []).forEach((item: any) => {
+                        delete item.terminusCase;
+                        delete item.relayInfo;
+                    });
+                });
+            }
+        };
+
+        lieux.forEach(lieu => {
+            lieu.modules.forEach((module: any) => {
+                const isSignaletique = module.type === 'SIGNALETIQUE';
+                const isTramDat = module.type === 'DAT' && module.line === 'TRAM';
+                if (isSignaletique || isTramDat) {
+                    module.data?.stations?.forEach(migrateStation);
+                }
+            });
+        });
+
+        return tx.table('lieux').bulkPut(lieux);
+    });
+});

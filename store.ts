@@ -103,12 +103,12 @@ interface AppState {
     handleUpdateCognitivePictogramAccessPointName: (pictogramId: string, newName: string) => Promise<void>;
     
     // Signaletique Actions
-    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
-    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, comment: string) => Promise<void>;
-    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, field: string, value: any) => Promise<void>;
-    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, photo_base64: string | null) => Promise<void>;
-    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, note: string) => Promise<void>;
-    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj', index: number, rotation: number) => Promise<void>;
+    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
+    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, comment: string) => Promise<void>;
+    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, field: string, value: any) => Promise<void>;
+    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, photo_base64: string | null) => Promise<void>;
+    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, note: string) => Promise<void>;
+    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, rotation: number) => Promise<void>;
     handleResetSignaletique: () => Promise<void>;
     handleSignaletiqueStationCommentChange: (comment: string) => Promise<void>;
     setIsSignaletiqueActive: (isActive: boolean) => void;
@@ -122,6 +122,8 @@ interface AppState {
     handleImportJsonData: (jsonString: string) => Promise<void>;
     hardResetApplication: () => Promise<void>;
 }
+
+export const DATA_VERSION = 'v12.0';
 
 const useAuditStore = create<AppState>((set, get) => {
     /**
@@ -315,14 +317,44 @@ const useAuditStore = create<AppState>((set, get) => {
                     if (!station.signaletique) {
                         station.signaletique = getInitialSignaletiqueData(station.name || '');
                         dataChanged = true;
-                    } else if (!station.signaletique.hap) {
-                        station.signaletique.hap = getInitialSignaletiqueData(station.name || '').hap;
+                        return;
+                    }
+                    const sig = station.signaletique;
+
+                    // Ensure hap exists
+                    if (!sig.hap) {
+                        sig.hap = getInitialSignaletiqueData(station.name || '').hap;
                         dataChanged = true;
                     }
-                    // Migrate BIV items to add missing adhesive fields
-                    if (station.signaletique?.biv) {
+
+                    // Migrate totem: old { meett: [], pdj: [] } → new { direction1: {}, direction2: {} }
+                    if (sig.totem && !sig.totem.direction1) {
+                        const d1 = sig.totem.meett?.[0] ?? { status: 'NotChecked', comment: '', dimensions: '61,6 x 91,6 cm' };
+                        const d2 = sig.totem.pdj?.[0] ?? { status: 'NotChecked', comment: '', dimensions: '61,6 x 91,6 cm' };
+                        sig.totem = { direction1: d1, direction2: d2 };
+                        dataChanged = true;
+                    }
+
+                    // Initialize bandeauStation if missing
+                    if (!sig.bandeauStation) {
+                        sig.bandeauStation = getInitialSignaletiqueData(station.name || '').bandeauStation;
+                        dataChanged = true;
+                    }
+
+                    // Remove terminusCase/relayInfo from planQuartier items
+                    if (sig.planQuartier) {
                         (['meett', 'pdj'] as const).forEach(dir => {
-                            (station.signaletique!.biv[dir] as any[]).forEach(bivItem => {
+                            (sig.planQuartier[dir] as any[] ?? []).forEach((item: any) => {
+                                if (item.terminusCase !== undefined) { delete item.terminusCase; dataChanged = true; }
+                                if (item.relayInfo !== undefined) { delete item.relayInfo; dataChanged = true; }
+                            });
+                        });
+                    }
+
+                    // Migrate BIV items to add missing adhesive fields
+                    if (sig.biv) {
+                        (['meett', 'pdj'] as const).forEach(dir => {
+                            (sig.biv[dir] as any[]).forEach((bivItem: any) => {
                                 let changed = false;
                                 if (bivItem.ligneCaisson === undefined) { bivItem.ligneCaisson = 'NotChecked'; changed = true; }
                                 if (bivItem.destinationCaisson === undefined) { bivItem.destinationCaisson = 'NotChecked'; changed = true; }
@@ -909,10 +941,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.status = status;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.status = status;
             }
         });
     },
@@ -923,10 +956,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.comment = comment;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.comment = comment;
             }
         });
     },
@@ -937,10 +971,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    (equipment as any)[field] = value;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) (equipment as any)[field] = value;
             }
         });
     },
@@ -951,7 +986,10 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
                 if (equipment) {
                     if (photo_base64) {
                         equipment.photo_base64 = photo_base64;
@@ -971,10 +1009,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.photo_note = note;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.photo_note = note;
             }
         });
     },
@@ -985,10 +1024,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const equipment = station.signaletique[equipmentType][direction][index];
-                if (equipment) {
-                    equipment.photo_rotation = rotation;
-                }
+                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+                const equipment = isSingle
+                    ? (station.signaletique[equipmentType] as any)[direction]
+                    : (station.signaletique[equipmentType] as any)[direction][index];
+                if (equipment) equipment.photo_rotation = rotation;
             }
         });
     },
@@ -1010,32 +1050,52 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
             if (station?.signaletique) {
-                const types: (keyof SignaletiqueData)[] = ['totem', 'biv', 'planReseau', 'planQuartier', 'hap'];
-                types.forEach(type => {
-                    ['meett', 'pdj'].forEach(dir => {
-                        station.signaletique![type][dir as 'meett' | 'pdj'].forEach((eq: any) => {
-                            eq.status = 'NotChecked';
-                            eq.comment = '';
-                            delete eq.photo_base64;
-                            delete eq.photo_note;
-                            delete eq.photo_rotation;
-                            
-                            // Reset specific fields
+                const sig = station.signaletique!;
+                const resetBase = (eq: any) => {
+                    eq.status = 'NotChecked';
+                    eq.comment = '';
+                    delete eq.photo_base64;
+                    delete eq.photo_note;
+                    delete eq.photo_rotation;
+                };
+
+                // totem — single objects per direction
+                (['direction1', 'direction2'] as const).forEach(dir => {
+                    resetBase(sig.totem[dir]);
+                });
+
+                // bandeauStation — single objects per direction with sub-fields
+                (['direction1', 'direction2'] as const).forEach(dir => {
+                    const eq = sig.bandeauStation[dir];
+                    resetBase(eq);
+                    eq.directionContent = 'NotChecked';
+                    eq.stationNameContent = 'NotChecked';
+                });
+
+                // array-based categories
+                (['biv', 'planReseau', 'planQuartier', 'hap'] as const).forEach(type => {
+                    (['meett', 'pdj'] as const).forEach(dir => {
+                        sig[type][dir].forEach((eq: any) => {
+                            resetBase(eq);
                             if (type === 'biv') {
                                 eq.screenFunctioning = 'NotChecked';
                                 eq.whiteTextAdhesives = 'NotChecked';
+                                eq.ligneCaisson = 'NotChecked';
+                                eq.destinationCaisson = 'NotChecked';
+                                eq.attenteMinCaisson = 'NotChecked';
+                                eq.dureeApproxCaisson = 'NotChecked';
+                                eq.quaiCaisson = 'NotChecked';
                             } else if (type === 'planReseau') {
                                 eq.bannerStationName = 'NotChecked';
                                 eq.hap = 'NotChecked';
                             } else if (type === 'planQuartier') {
                                 eq.bannerDirection = 'NotChecked';
-                                eq.relayInfo = 'NotChecked';
-                                eq.terminusCase = 'NotChecked';
                                 eq.hap = 'NotChecked';
                             }
                         });
                     });
                 });
+
                 station.comment = '';
             }
         });

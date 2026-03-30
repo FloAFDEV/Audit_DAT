@@ -1,13 +1,19 @@
 
-import { SignaletiqueData, EquipmentStatus, EquipmentStatusType, TotemStatus, BivStatus, PlanReseauStatus, PlanQuartierStatus, HapStatus } from '../types';
+import { SignaletiqueData, EquipmentStatus, EquipmentStatusType, TotemStatus, BivStatus, PlanReseauStatus, PlanQuartierStatus, HapStatus, BandeauStationStatus } from '../types';
 
-const createInitialTotemStatus = (count: number): TotemStatus[] => {
-    return Array.from({ length: count }, () => ({
-        status: 'NotChecked' as const,
-        comment: '',
-        dimensions: '61,6 x 91,6 cm'
-    }));
-};
+const createTotemStatus = (): TotemStatus => ({
+    status: 'NotChecked' as const,
+    comment: '',
+    dimensions: '61,6 x 91,6 cm'
+});
+
+const createBandeauStationStatus = (): BandeauStationStatus => ({
+    status: 'NotChecked' as const,
+    comment: '',
+    dimensions: '80x29 cm',
+    directionContent: 'NotChecked' as const,
+    stationNameContent: 'NotChecked' as const
+});
 
 const createInitialBivStatus = (count: number): BivStatus[] => {
     return Array.from({ length: count }, () => ({
@@ -39,8 +45,6 @@ const createInitialPlanQuartierStatus = (count: number): PlanQuartierStatus[] =>
         comment: '',
         dimensions: '80 x 100 cm',
         bannerDirection: 'NotChecked' as const,
-        relayInfo: 'NotChecked' as const,
-        terminusCase: 'NotChecked' as const,
         hap: 'NotChecked' as const
     }));
 };
@@ -63,8 +67,6 @@ const HAP_COUNTS: Record<string, { meett: number; pdj: number }> = {
 
 export const getInitialSignaletiqueData = (stationName: string): SignaletiqueData => {
     // Default counts
-    let totemMeett = 2;
-    let totemPdj = 2;
     let bivMeett = 1;
     let bivPdj = 1;
     let planReseauMeett = 1;
@@ -83,8 +85,8 @@ export const getInitialSignaletiqueData = (stationName: string): SignaletiqueDat
 
     return {
         totem: {
-            meett: createInitialTotemStatus(totemMeett),
-            pdj: createInitialTotemStatus(totemPdj)
+            direction1: createTotemStatus(),
+            direction2: createTotemStatus()
         },
         biv: {
             meett: createInitialBivStatus(bivMeett),
@@ -101,6 +103,10 @@ export const getInitialSignaletiqueData = (stationName: string): SignaletiqueDat
         hap: {
             meett: createInitialHapStatus(hapCountsMeett),
             pdj: createInitialHapStatus(hapCountsPdj)
+        },
+        bandeauStation: {
+            direction1: createBandeauStationStatus(),
+            direction2: createBandeauStationStatus()
         }
     };
 };
