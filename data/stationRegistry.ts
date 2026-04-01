@@ -132,7 +132,7 @@ export const REGISTRY_LINE_B: StationDef[] = [
     { id: 'sta-b-18', name: 'Faculté de Pharmacie',         code: 'PHA', lines: ['B'], isActive: true,  isFuture: false },
     { id: 'sta-b-19', name: 'Université Paul Sabatier',     code: 'UPS', lines: ['B'], isActive: true,  isFuture: false, lieuName: 'Université Paul-Sabatier' },
     { id: 'sta-b-20', name: 'Ramonville',                   code: 'RAM', lines: ['B'], isActive: true,  isFuture: false },
-    { id: 'sta-b-21', name: 'Parc du Canal',                lines: ['B'], isActive: false, isFuture: true },
+    { id: 'sta-b-21', name: 'Parc du Canal',                code: 'PTC', lines: ['B'], isActive: false, isFuture: true },
     { id: 'sta-b-22', name: 'Labège Madron',                lines: ['B'], isActive: false, isFuture: true, lieuName: 'Labège Madron' },
 ];
 

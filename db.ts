@@ -85,6 +85,8 @@ db.version(7).stores({
 // V8: activer les modules SIGNALETIQUE AEROPORT (isFuture était propagé depuis le registre).
 //     Ajoute aussi les directions manquantes sur toutes les stations SIGNALETIQUE (TRAM + AEROPORT)
 //     afin d'afficher les labels corrects d'extrémité dans SignaletiqueAuditForm.
+//     ⚠ Les noms de direction LAE de cette version étaient incorrects ("Direction Palais de Justice").
+//       Corrigés en V9.
 db.version(8).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
@@ -126,6 +128,45 @@ db.version(8).stores({
             });
         });
 
+        return tx.table('lieux').bulkPut(lieux);
+    });
+});
+
+// V9: correction des directions LAE (AEROPORT).
+//   - Blagnac est le terminus LAE côté ville → 1 seule direction "Direction Aéroport Toulouse Blagnac"
+//   - ATB est le terminus LAE côté aéroport → direction renommée en "Direction Blagnac"
+//   - NAD/DAU (intermédiaires) → direction 2 renommée "Direction Blagnac" (était "Direction Palais de Justice")
+db.version(9).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').toArray().then((lieux: any[]) => {
+        lieux.forEach((lieu: any) => {
+            lieu.modules.forEach((module: any) => {
+                if (module.type !== 'SIGNALETIQUE' || module.line !== 'AEROPORT') return;
+                const station = module.data?.stations?.[0];
+                if (!station) return;
+
+                if (station.name === 'Blagnac' || station.name === 'Blagnac-Jean Maga') {
+                    // Terminus : 1 seule direction (normalise aussi l'ancien nom Jean Maga)
+                    station.name = 'Blagnac';
+                    station.directions = [
+                        { id: 'dir-sig-bla-1', name: 'Direction Aéroport Toulouse Blagnac', dats: [] },
+                    ];
+                } else if (station.name === 'Aéroport Toulouse Blagnac') {
+                    // Terminus : direction vers Blagnac
+                    station.directions = [
+                        { id: 'dir-sig-atb-1', name: 'Direction Blagnac', dats: [] },
+                    ];
+                } else {
+                    // NAD / DAU intermédiaires
+                    station.directions = [
+                        { id: `${station.id}-dir-1`, name: 'Direction Aéroport Toulouse Blagnac', dats: [] },
+                        { id: `${station.id}-dir-2`, name: 'Direction Blagnac', dats: [] },
+                    ];
+                }
+            });
+        });
         return tx.table('lieux').bulkPut(lieux);
     });
 });

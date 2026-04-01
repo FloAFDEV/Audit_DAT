@@ -94,8 +94,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     const isInProgress = percentage > 0 && !isComplete;
                     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
                     
-                    const isAuditableFuture = module.isFuture && (module.line === 'C' || module.line === 'AEROPORT');
-                    const isDisabled = module.isFuture && !isAuditableFuture;
+                    const isDisabled = false;
 
                     return (
                         <button
