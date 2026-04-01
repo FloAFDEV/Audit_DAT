@@ -148,21 +148,21 @@ db.version(9).stores({
                 if (!station) return;
 
                 if (station.name === 'Blagnac' || station.name === 'Blagnac-Jean Maga') {
-                    // Terminus : 1 seule direction — renommer aussi la station
-                    station.name = 'Blagnac-Jean Maga';
+                    // Terminus : 1 seule direction (normalise aussi l'ancien nom Jean Maga)
+                    station.name = 'Blagnac';
                     station.directions = [
                         { id: 'dir-sig-bla-1', name: 'Direction Aéroport Toulouse Blagnac', dats: [] },
                     ];
                 } else if (station.name === 'Aéroport Toulouse Blagnac') {
-                    // Terminus : direction vers Blagnac-Jean Maga
+                    // Terminus : direction vers Blagnac
                     station.directions = [
-                        { id: 'dir-sig-atb-1', name: 'Direction Blagnac-Jean Maga', dats: [] },
+                        { id: 'dir-sig-atb-1', name: 'Direction Blagnac', dats: [] },
                     ];
                 } else {
                     // NAD / DAU intermédiaires
                     station.directions = [
                         { id: `${station.id}-dir-1`, name: 'Direction Aéroport Toulouse Blagnac', dats: [] },
-                        { id: `${station.id}-dir-2`, name: 'Direction Blagnac-Jean Maga', dats: [] },
+                        { id: `${station.id}-dir-2`, name: 'Direction Blagnac', dats: [] },
                     ];
                 }
             });

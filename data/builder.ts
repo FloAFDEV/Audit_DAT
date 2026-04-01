@@ -97,14 +97,14 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     
     if (line === 'AEROPORT') {
         switch (station.name) {
-            case 'Blagnac-Jean Maga': // terminus LAE côté ville
+            case 'Blagnac': // terminus LAE côté ville
                 return [{ id: `${stationId}-dir-1`, name: 'Direction Aéroport Toulouse Blagnac', dats: [createDat('01')] }];
             case 'Aéroport Toulouse Blagnac': // terminus LAE côté aéroport
-                return [{ id: `${stationId}-dir-1`, name: 'Direction Blagnac-Jean Maga', dats: [createDat('01')] }];
+                return [{ id: `${stationId}-dir-1`, name: 'Direction Blagnac', dats: [createDat('01')] }];
             default: // NAD, DAU — stations intermédiaires
                 return [
                     { id: `${stationId}-dir-1`, name: 'Direction Aéroport Toulouse Blagnac', dats: [createDat('01')] },
-                    { id: `${stationId}-dir-2`, name: 'Direction Blagnac-Jean Maga', dats: [createDat('02')] }
+                    { id: `${stationId}-dir-2`, name: 'Direction Blagnac', dats: [createDat('02')] }
                 ];
         }
     }

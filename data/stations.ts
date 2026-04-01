@@ -78,10 +78,7 @@ export const TELEO_STATIONS: Partial<Station>[] = REGISTRY_TELEO.map(mapDefToSta
 /* =========================
    AEROPORT EXPRESS (LAE)
 ========================= */
-// Sur la LAE, la station Blagnac s'appelle officiellement "Blagnac-Jean Maga"
-const LAE_TERMINUS_BLAGNAC: Partial<Station> = { ...HUB_BLAGNAC, name: 'Blagnac-Jean Maga' };
-
 export const AEROPORT_EXPRESS_STATIONS: Partial<Station>[] = ACTIVE_LINES.AEROPORT
-    ? [LAE_TERMINUS_BLAGNAC, ...REGISTRY_AEROPORT_EXPRESS.map(mapDefToStation)]
+    ? [HUB_BLAGNAC, ...REGISTRY_AEROPORT_EXPRESS.map(mapDefToStation)]
     : [];
 
