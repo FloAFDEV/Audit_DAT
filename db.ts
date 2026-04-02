@@ -1,5 +1,6 @@
 
 import Dexie, { type EntityTable } from 'dexie';
+import { v4 as uuidv4 } from 'uuid';
 import { Lieu, HistoryEntry } from './types';
 
 // FIX: Switched from a subclassing pattern to a typed Dexie instance.
@@ -171,19 +172,37 @@ db.version(9).stores({
     });
 });
 
-// V10: supprimer isFuture sur les stations B ext. (Parc du Canal, Labège Madron)
-//      → DAT, ECA, PMR et Picto. Cognitifs ouverts comme les autres stations Ligne B.
+// V10: supprimer isFuture sur les stations B ext. (Parc du Canal sta-b-21, Labège Madron sta-b-22)
+//      → DAT, ECA, PMR et Picto. Cognitifs ouverts, identiques aux autres stations Ligne B.
+//      Pour les DAT : initialise les directions (Borderouge / Ramonville) avec 4 DATs et adhésifs.
 db.version(10).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
     return tx.table('lieux').toArray().then((lieux: any[]) => {
         const B_EXT_IDS = ['sta-b-21', 'sta-b-22'];
+        const DAT_ADHESIVE_IDS = ['ad1','ad2','ad3','ad4','ad5','ad6','ad7','ad8','ad9','ad10','ad11','ad12'];
+        const mkAdhesives = () => DAT_ADHESIVE_IDS.reduce((acc: any, id) => ({ ...acc, [id]: 'NotChecked' }), {});
+        const mkDat = (name: string) => ({ id: uuidv4(), name, adhesives: mkAdhesives(), comment: '' });
+        const mkBDirs = (stationId: string) => [
+            { id: `${stationId}-dir-1`, name: 'Direction Borderouge', dats: [mkDat('DAT 01'), mkDat('DAT 02')] },
+            { id: `${stationId}-dir-2`, name: 'Direction Ramonville', dats: [mkDat('DAT 03'), mkDat('DAT 04')] },
+        ];
+
         lieux.forEach((lieu: any) => {
             lieu.modules.forEach((module: any) => {
-                if (module.line === 'B' && module.isFuture) {
-                    const matchesExt = B_EXT_IDS.some(id => module.id?.includes(id));
-                    if (matchesExt) module.isFuture = false;
+                if (module.line !== 'B') return;
+                const matchesExt = B_EXT_IDS.some(id => module.id?.includes(id));
+                if (!matchesExt) return;
+
+                module.isFuture = false;
+
+                // DAT : ajouter les directions si vides
+                if (module.type === 'DAT') {
+                    const station = module.data?.stations?.[0];
+                    if (station && (!station.directions || station.directions.length === 0)) {
+                        station.directions = mkBDirs(station.id ?? module.id);
+                    }
                 }
             });
         });
