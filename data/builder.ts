@@ -337,7 +337,8 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
-            ...AEROPORT_EXPRESS_STATIONS.map(s => createSignaletiqueModule(s, 'AEROPORT')),
+            // Blagnac (hub T1/LAE) : SIGNALETIQUE déjà couvert par le module T1 (même équipement physique)
+            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id !== 'sta-hub-bla').map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
