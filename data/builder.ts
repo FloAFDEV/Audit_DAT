@@ -337,7 +337,8 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...TRAM_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'TRAM')),
             ...TRAM_STATIONS.map(s => createSignaletiqueModule(s, 'TRAM')),
             ...AEROPORT_EXPRESS_STATIONS.map(s => createDatModule(s, TransportMode.TRAM, 'AEROPORT')),
-            ...AEROPORT_EXPRESS_STATIONS.map(s => createSignaletiqueModule(s, 'AEROPORT')),
+            // Blagnac (hub T1/LAE) : SIGNALETIQUE déjà couvert par le module T1 (même équipement physique)
+            ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id !== 'sta-hub-bla').map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
             
@@ -362,7 +363,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
         const allStationsForPmr = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS];
     
         for (const station of allStationsForPmr) {
-            if (station.isFuture || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+            if (station.isFuture || station.code === 'JJA' || station.code === 'JJB') {
                 continue; // Skip future, no code, or Jean Jaurès (handled as a special case)
             }
         

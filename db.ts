@@ -170,3 +170,23 @@ db.version(9).stores({
         return tx.table('lieux').bulkPut(lieux);
     });
 });
+
+// V10: supprimer isFuture sur les stations B ext. (Parc du Canal, Labège Madron)
+//      → DAT, ECA, PMR et Picto. Cognitifs ouverts comme les autres stations Ligne B.
+db.version(10).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').toArray().then((lieux: any[]) => {
+        const B_EXT_IDS = ['sta-b-21', 'sta-b-22'];
+        lieux.forEach((lieu: any) => {
+            lieu.modules.forEach((module: any) => {
+                if (module.line === 'B' && module.isFuture) {
+                    const matchesExt = B_EXT_IDS.some(id => module.id?.includes(id));
+                    if (matchesExt) module.isFuture = false;
+                }
+            });
+        });
+        return tx.table('lieux').bulkPut(lieux);
+    });
+});
