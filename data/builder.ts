@@ -363,7 +363,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
         const allStationsForPmr = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS];
     
         for (const station of allStationsForPmr) {
-            if (station.isFuture || !station.code || station.code === 'JJA' || station.code === 'JJB') {
+            if (station.isFuture || station.code === 'JJA' || station.code === 'JJB') {
                 continue; // Skip future, no code, or Jean Jaurès (handled as a special case)
             }
         
