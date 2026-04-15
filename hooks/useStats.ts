@@ -1,7 +1,7 @@
 
 import { useMemo } from 'react';
-import { 
-    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem
+import {
+    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
@@ -91,18 +91,15 @@ export const useStats = (lieux: Lieu[]) => {
                         ecaCount += ecas.length;
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
-                    case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                        cogPictoCount++;
-                        if (module.line === 'A') {
-                            cogPictoCountA++;
-                        } else if (module.line === 'B') {
-                            cogPictoCountB++;
-                        } else if (module.line === 'C') {
-                            cogPictoCountC++;
-                        } else if (module.line === 'AEROPORT') {
-                            cogPictoCountAero++;
-                        }
+                    case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+                        const pictoCount = ((module.data as CognitivePictogramData).pictograms ?? []).length;
+                        cogPictoCount += pictoCount;
+                        if (module.line === 'A') cogPictoCountA += pictoCount;
+                        else if (module.line === 'B') cogPictoCountB += pictoCount;
+                        else if (module.line === 'C') cogPictoCountC += pictoCount;
+                        else if (module.line === 'AEROPORT') cogPictoCountAero += pictoCount;
                         break;
+                    }
                     case AuditModuleType.PMR_FLOOR_ADHESIVE:
                         pmrFloorAdhesiveCount++;
                         if (module.line === 'A') {
