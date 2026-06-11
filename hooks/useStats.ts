@@ -140,7 +140,17 @@ export const useStats = (lieux: Lieu[]) => {
             AEROPORT: { total: 0, pmr: 0 },
             total: 0
         };
-        
+        const byType: Record<string, number> = {
+            [EcaEquipmentType.TripodeEntree]: 0,
+            [EcaEquipmentType.TripodeSortie]: 0,
+            [EcaEquipmentType.VantauxEntree]: 0,
+            [EcaEquipmentType.VantauxSortie]: 0,
+            [EcaEquipmentType.VantauxReversible]: 0,
+            [EcaEquipmentType.PMRBras]: 0,
+            [EcaEquipmentType.PMRVantaux]: 0,
+            [EcaEquipmentType.PMRVantauxReversible]: 0,
+        };
+
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
                 if (module.type === AuditModuleType.ECA && (!module.isFuture || module.line === 'C' || module.line === 'AEROPORT')) {
@@ -148,7 +158,7 @@ export const useStats = (lieux: Lieu[]) => {
                     const ecas = data.ecas || [];
                     const count = ecas.length;
                     const pmrInModule = ecas.filter(e => isPmrEcaType(e.type)).length;
-                    
+
                     if (module.line === 'A') {
                         byLine.A.total += count;
                         byLine.A.pmr += pmrInModule;
@@ -162,12 +172,16 @@ export const useStats = (lieux: Lieu[]) => {
                         byLine.AEROPORT.total += count;
                         byLine.AEROPORT.pmr += pmrInModule;
                     }
+
+                    for (const eca of ecas) {
+                        if (eca.type in byType) byType[eca.type]++;
+                    }
                 }
             }
         }
         byLine.total = byLine.A.total + byLine.B.total + byLine.C.total + byLine.AEROPORT.total;
-        
-        return { byLine };
+
+        return { byLine, byType };
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
@@ -257,6 +271,27 @@ export const useStats = (lieux: Lieu[]) => {
             });
         }
 
+        const signConfig = auditModules.find(c => c.type === AuditModuleType.SIGNALETIQUE);
+        if (signConfig) {
+            const signItems = [
+                { id: 'sign-totem',         name: 'Totem',                    dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
+                { id: 'sign-biv',           name: 'BIV (écran dynamique)',     dimensions: 'Variable',        material: 'Écran dynamique' },
+                { id: 'sign-plan-reseau',   name: 'Plan du réseau',            dimensions: '80 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-quartier', name: 'Plan de quartier',          dimensions: '80 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-hap',           name: 'HAP (fiche horaire)',        dimensions: 'Variable',        material: 'Papier' },
+                { id: 'sign-bandeau',       name: 'Bandeau de station',        dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
+            ];
+            signItems.forEach(item => {
+                if (!inventoryMap.has(item.id)) {
+                    inventoryMap.set(item.id, {
+                        id: item.id, auditType: signConfig.shortLabel,
+                        repere: '-', name: item.name,
+                        dimensions: item.dimensions, material: item.material, quantity: 0,
+                    });
+                }
+            });
+        }
+
         // --- Compute quantities from lieux ---
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
@@ -292,6 +327,19 @@ export const useStats = (lieux: Lieu[]) => {
                     for (const picto of ((module.data as CognitivePictogramData).pictograms || [])) {
                         const dim = getCognitivePictogramDimension(picto);
                         addQty(`cog-picto-${dim}`, 1);
+                    }
+                }
+
+                if (module.type === AuditModuleType.SIGNALETIQUE) {
+                    for (const station of (module.data as ModeData).stations) {
+                        const sig = station.signaletique;
+                        if (!sig) continue;
+                        addQty('sign-totem', 2); // direction1 + direction2
+                        addQty('sign-biv', (sig.biv?.meett?.length || 0) + (sig.biv?.pdj?.length || 0));
+                        addQty('sign-plan-reseau', (sig.planReseau?.meett?.length || 0) + (sig.planReseau?.pdj?.length || 0));
+                        addQty('sign-plan-quartier', (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
+                        addQty('sign-hap', (sig.hap?.meett?.length || 0) + (sig.hap?.pdj?.length || 0));
+                        addQty('sign-bandeau', 2); // direction1 + direction2
                     }
                 }
             }
