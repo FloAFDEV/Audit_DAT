@@ -27,19 +27,19 @@ export const ADHESIVES: Adhesive[] = [
 export const PR_ADHESIVES_BE: PrAdhesive[] = [
     { id: 'adbe1', name: 'Repère 1 - "cible" Information P+R', description: 'Adhésif « P+r-rustine-entree_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur entrée)', referentiel: '//serveur/docs/PNR/BE/ref-adbe1.pdf' },
     { id: 'adbe2', name: 'Repère 2 - Information Ticket', description: 'Adhésif « P+r-rustine-ticket-P+r_2025-02-12 » // 9x5cm', location: 'Au dessus du distributeur de ticket parking, centré sur celui-ci', referentiel: '//serveur/docs/PNR/BE/ref-adbe2.pdf' },
-    { id: 'adbe3', name: 'Repère 3 - Tarifs', description: 'Adhésif « Tarifs » sur borne d’entrée // 10x20cm', location: 'A droite de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BE/ref-adbe3.pdf' },
+    { id: ‘adbe3’, name: ‘Repère 3 - Tarifs + coordonnées’, description: ‘Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée ET sortie // 34x8cm’, location: ‘Sur la casquette supérieure de la borne’, referentiel: ‘//serveur/docs/PNR/BE/ref-adbe3.pdf’ },
     { id: 'adbe10', name: 'Repère 10 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-entree-A3_ » // 32,8x45,1cm', location: 'Sur le latéral de la borne en entrée de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BE/ref-adbe10.pdf' }
 ];
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
     { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
-    { id: 'adbs5', name: 'Repère 5 - Adhésif borne sortie "Bulle"', description: 'Adhésif borne sortie "Bulle" // 99x115mm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
+    { id: ‘adbs5’, name: ‘Repère 5 - Adhésif borne sortie "Bulle"’, description: ‘Adhésif borne sortie "Bulle" uniquement sur borne sortie // 99x115mm’, location: ‘A gauche de la borne, entre l’écran principal et le distributeur de ticket parking’, referentiel: ‘//serveur/docs/PNR/BS/ref-adbs5.pdf’ },
     { id: 'adbs11', name: 'Repère 11 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-sortie_A3_ »// 32,8x45,1cm', location: 'Sur le latéral de la borne en sorite de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BS/ref-adbs11.pdf' }
 ];
 export const PR_ADHESIVES_CA: PrAdhesive[] = [
     { id: 'adca6', name: 'Repère 6 - Information caisse', description: 'Adhésif « caisse-P+r-gauche-rustine _ 2025-02-05 » // 10,5x12,9cm', location: 'Sous l’écran de la caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca6.pdf' },
     { id: 'adca7', name: 'Repère 7 - Récupération ticket', description: 'Adhésif « caisse-P+r-gauche-rustine-ticket-P+r_ 2025-02-14 » // 8,2x5,5cm', location: 'En bas à droite au niveau du distributeur de ticket suite à un paiement via caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca7.pdf' },
     { id: 'adca8', name: 'Repère 8 - Ticket rechargeable', description: 'Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 » // 14,9x10,9cm', location: 'En bas a gauche à l’opposé du n°7', referentiel: '//serveur/docs/PNR/CA/ref-adca8.pdf', isDisabled: true },
-    { id: 'adca9', name: 'Repère 9 - Adhésif « Tarifs + coordonnées Parc Relais »', description: 'Adhésif « Tarifs + coordonnées Parc Relais » sur caisse automatique // 10x20cm', location: 'Sur la partie droite de la caisse auto, orientée vers l’usager', referentiel: '//serveur/docs/PNR/CA/ref-adca9.pdf' },
+    { id: ‘adca9’, name: ‘Repère 9 - Adhésif « Tarifs + coordonnées Parc Relais »’, description: ‘Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée // 34x8cm’, location: ‘En haut de la caisse auto, au dessus de l’écran principal’, referentiel: ‘//serveur/docs/PNR/CA/ref-adca9.pdf’ },
     { id: 'adca12', name: 'Plan de quartier', description: 'Fiche plan de quartier au format 78x120cm', location: 'Sur la vitre latérale de la caisse auto, côté extérieur, visible par les usagers', referentiel: '' },
     { id: 'adca13', name: 'Dos gris verso', description: 'Dos gris au format 78x120cm', location: 'Placé au verso de la fiche "Plan de quartier"', referentiel: '' }
 ];
