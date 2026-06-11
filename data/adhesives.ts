@@ -32,7 +32,7 @@ export const PR_ADHESIVES_BE: PrAdhesive[] = [
 ];
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
     { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
-    { id: ‘adbs5’, name: ‘Repère 5 - Adhésif borne sortie "Bulle"’, description: ‘Adhésif borne sortie "Bulle" uniquement sur borne sortie // 99x115mm’, location: ‘A gauche de la borne, entre l’écran principal et le distributeur de ticket parking’, referentiel: ‘//serveur/docs/PNR/BS/ref-adbs5.pdf’ },
+    { id: 'adbs5', name: 'Repère 5 - Adhésif borne sortie "Bulle"', description: 'Adhésif borne sortie "Bulle" uniquement sur borne sortie // 99x115mm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
     { id: 'adbs11', name: 'Repère 11 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-sortie_A3_ »// 32,8x45,1cm', location: 'Sur le latéral de la borne en sorite de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BS/ref-adbs11.pdf' }
 ];
 export const PR_ADHESIVES_CA: PrAdhesive[] = [
@@ -60,14 +60,14 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
 const ECA_IDENTIFIANT_ADHESIVE: Adhesive = { 
     id: 'eca-11', 
     name: 'Repère 11 - Adhésif identifiant (N° ECA)', 
-    description: 'Adhésif identifiant unique de l\'équipement | Sur le capot supérieur ou latéral, visible par le personnel.', 
+    description: 'Adhésif identifiant unique de l\’équipement | Sur le capot supérieur ou latéral, visible par le personnel.', 
     referentiel: '' 
 };
 
 const ECA_ADHESIVES_ENTREE: Adhesive[] = [
     { id: 'eca-1', name: 'Repère 1 - Adhesif valideur-billetique-metro-cible', description: '59x59mm | Sur le support de validation. A la pose laisser la diode visible pour diagnostic.', referentiel: '' },
     { id: 'eca-2', name: 'Repère 2 - Adhesif gris valideur-billetique-metro-pastel', description: '164x170mm | Autour du support de validation, format carré.', referentiel: '' },
-    { id: 'eca-3', name: 'Repère 3 - Adhesif valideur-openpayment-metro', description: '183x183mm | Sous la vitre en tête haute de l\'ECA, vitrophanie.', referentiel: '' },
+    { id: 'eca-3', name: 'Repère 3 - Adhesif valideur-openpayment-metro', description: '183x183mm | Sous la vitre en tête haute de l\’ECA, vitrophanie.', referentiel: '' },
     ECA_IDENTIFIANT_ADHESIVE,
 ];
 
@@ -81,22 +81,22 @@ const ECA_ADHESIVES_REVERSIBLE: Adhesive[] = [
 ];
 
 const ECA_ADHESIVES_PMR_PICTOGRAMS: Adhesive[] = [
-    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
-    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
-    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+    { id: 'eca-8', name: 'Repère 8 - Adhesif valideurPMR-metro-Bagages', description: '19x19cm | Format carré bleu sur le bras de l\’ECA (spécifique PMR à bras).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+    { id: 'eca-9', name: 'Repère 9 - Adhesif valideurPMR-metro-Poussette', description: '19x19cm | Format carré bleu sur le bras de l\’ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
+    { id: 'eca-10', name: 'Repère 10 - Adhesif valideurPMR-metro-UFR', description: '19x19cm | Format carré bleu sur le bras de l\’ECA (spécifique PMR).', referentiel: '', groupId: 'pmr-pictogram', groupName: 'Pictogrammes de service' },
 ];
 
 const ECA_ADHESIVES_PMR_BRAS: Adhesive[] = [
     ...ECA_ADHESIVES_ENTREE,
     { id: 'eca-4', name: 'Repère 4 - Adhésif valideur-PMR-a-bras', description: '170x195mm | Sur platine jaune, autour du support de validation (spécifique PMR à bras).', referentiel: '' },
-    { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à bras).', referentiel: '' },
+    { id: 'eca-6', name: 'Repère 6 - Adhésif valideur-portillon-PMR-bras', description: '8x8cm | Format carré bleu sur le bras de l\’ECA (spécifique PMR à bras).', referentiel: '' },
     ...ECA_ADHESIVES_PMR_PICTOGRAMS,
 ];
 
 const ECA_ADHESIVES_PMR_VANTAUX: Adhesive[] = [
     ...ECA_ADHESIVES_ENTREE,
     { id: 'eca-5', name: 'Repère 5 - Adhésif valideur-PMRVantaux', description: '195x185mm | Sur platine jaune, autour du support de validation (spécifique PMR à vantaux).', referentiel: '' },
-    { id: 'eca-7', name: 'Repère 7 - Adhésif valideur-portillon-PMR-vantaux', description: '8x8cm | Format carré bleu sur le bras de l\'ECA (spécifique PMR à vantaux).', referentiel: '' },
+    { id: 'eca-7', name: 'Repère 7 - Adhésif valideur-portillon-PMR-vantaux', description: '8x8cm | Format carré bleu sur le bras de l\’ECA (spécifique PMR à vantaux).', referentiel: '' },
     // PMR à vantaux does not have the "Bagages" pictogram
     ...ECA_ADHESIVES_PMR_PICTOGRAMS.filter(p => p.id !== 'eca-8'),
 ];
