@@ -304,6 +304,7 @@ export interface AdhesiveInventoryItem {
     name: string;
     dimensions: string;
     material: string;
+    quantity: number;
 }
 
 export interface MaintenanceItem {

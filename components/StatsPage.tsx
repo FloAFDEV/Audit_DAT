@@ -650,6 +650,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du Produit</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Dimensions (cm)</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Matière / Usage</th>
+                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">Qté réseau</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -660,12 +661,15 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{item.dimensions}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.material}</td>
+                            <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
+                            </td>
                         </tr>
                         ))}
                         
                         {(!filteredInventory || filteredInventory.length === 0) && (
                         <tr>
-                            <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
+                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
                         </tr>
                         )}
                     </tbody>
