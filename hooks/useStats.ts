@@ -185,8 +185,11 @@ export const useStats = (lieux: Lieu[]) => {
 
     const adhesiveInventory = useMemo(() => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
+        const quantityMap = new Map<string, number>();
         const auditModules = AUDIT_MODULES_CONFIG;
-        
+
+        const addQty = (id: string, n: number) => quantityMap.set(id, (quantityMap.get(id) || 0) + n);
+
         const processAdhesiveList = (adList: any[], auditType: string) => {
             adList.forEach(ad => {
                 const { repere, name } = parseAdhesiveName(ad.name);
@@ -197,10 +200,12 @@ export const useStats = (lieux: Lieu[]) => {
                 } else if (material.includes('//')) {
                      [material, dimensions] = material.split('//').map(s => s.trim());
                 }
-                inventoryMap.set(ad.id, { id: ad.id, auditType, repere, name, dimensions, material });
+                if (!inventoryMap.has(ad.id)) {
+                    inventoryMap.set(ad.id, { id: ad.id, auditType, repere, name, dimensions, material, quantity: 0 });
+                }
             });
         };
-        
+
         const datConfig = auditModules.find(c=>c.type === AuditModuleType.DAT);
         if (datConfig) processAdhesiveList(ADHESIVES, datConfig.shortLabel);
 
@@ -210,27 +215,25 @@ export const useStats = (lieux: Lieu[]) => {
             processAdhesiveList(getPrAdhesives(EquipmentType.BS), prConfig.shortLabel);
             processAdhesiveList(getPrAdhesives(EquipmentType.CA), prConfig.shortLabel);
         }
-        
+
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
         if (ecaConfig) {
             Object.values(EcaEquipmentType).forEach(type => {
                 processAdhesiveList(getEcaAdhesives(type), ecaConfig.shortLabel);
             });
         }
-        
+
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
         if (pmrModule) {
             const allPmrMaterials = getAllPmrMaterials();
             allPmrMaterials.forEach(material => {
                 const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
-                inventoryMap.set(id, {
-                    id: id,
-                    auditType: pmrModule.shortLabel,
-                    repere: '-',
-                    name: "Adhésif de signalisation au sol",
-                    dimensions: "920x370mm",
-                    material: material,
-                });
+                if (!inventoryMap.has(id)) {
+                    inventoryMap.set(id, {
+                        id, auditType: pmrModule.shortLabel, repere: '-',
+                        name: "Adhésif de signalisation au sol", dimensions: "920x370mm", material, quantity: 0,
+                    });
+                }
             });
         }
 
@@ -244,40 +247,81 @@ export const useStats = (lieux: Lieu[]) => {
                 }
             });
             allCogPictoDims.forEach(dims => {
-                inventoryMap.set(`cog-picto-${dims}`, {
-                    id: `cog-picto-${dims}`, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
-                    dimensions: dims, material: 'Vinyle + Plastification'
-                });
+                const id = `cog-picto-${dims}`;
+                if (!inventoryMap.has(id)) {
+                    inventoryMap.set(id, {
+                        id, auditType: cogPictoModule.shortLabel, repere: '-', name: "Pictogramme cognitif",
+                        dimensions: dims, material: 'Vinyle + Plastification', quantity: 0,
+                    });
+                }
             });
         }
-        
+
+        // --- Compute quantities from lieux ---
+        for (const lieu of lieux) {
+            for (const module of lieu.modules) {
+                if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
+
+                if (module.type === AuditModuleType.DAT) {
+                    const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>
+                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
+                    ADHESIVES.forEach(ad => addQty(ad.id, datsCount));
+                }
+
+                if (module.type === AuditModuleType.PR) {
+                    for (const zone of (module.data as Pr).zones) {
+                        for (const equip of zone.equipments) {
+                            getPrAdhesives(equip.type).forEach(ad => addQty(ad.id, 1));
+                        }
+                    }
+                }
+
+                if (module.type === AuditModuleType.ECA) {
+                    for (const eca of ((module.data as EcaData).ecas || [])) {
+                        getEcaAdhesives(eca.type).forEach(ad => addQty(ad.id, 1));
+                    }
+                }
+
+                if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
+                    getAllPmrMaterials().forEach(material => {
+                        addQty(`pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`, 1);
+                    });
+                }
+
+                if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
+                    for (const picto of ((module.data as CognitivePictogramData).pictograms || [])) {
+                        const dim = getCognitivePictogramDimension(picto);
+                        addQty(`cog-picto-${dim}`, 1);
+                    }
+                }
+            }
+        }
+
+        // Merge quantities into inventory items
+        inventoryMap.forEach((item, id) => {
+            item.quantity = quantityMap.get(id) || 0;
+        });
+
         return Array.from(inventoryMap.values()).sort((a, b) => {
             const typeCompare = a.auditType.localeCompare(b.auditType);
-            if (typeCompare !== 0) {
-                return typeCompare;
-            }
+            if (typeCompare !== 0) return typeCompare;
 
             const repA = parseInt(a.repere, 10);
             const repB = parseInt(b.repere, 10);
-
             const isRepANumeric = !isNaN(repA);
             const isRepBNumeric = !isNaN(repB);
 
             if (isRepANumeric && isRepBNumeric) {
-                if (repA !== repB) {
-                    return repA - repB;
-                }
+                if (repA !== repB) return repA - repB;
             } else if (isRepANumeric) {
-                return -1; // Numeric reperes first
+                return -1;
             } else if (isRepBNumeric) {
                 return 1;
             }
-            
-            // Fallback to name if reperes are equal, non-numeric, or not present
             return a.name.localeCompare(b.name);
         });
 
-    }, []);
+    }, [lieux]);
 
     return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
 };
