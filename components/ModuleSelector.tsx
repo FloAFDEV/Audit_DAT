@@ -21,9 +21,14 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
         let modulesToDisplay = [...lieu.modules];
 
         // Apply transport line filter (Tram, Line C, etc.)
+        // If activeAuditFilters is set, a module matching the audit type filter bypasses
+        // the category predicate (e.g. P+R modules have no line and would be wrongly excluded).
         const activeFilterDef = AUDIT_CATEGORIES.find(f => f.key === activeFilter);
         if (activeFilterDef) {
-            modulesToDisplay = modulesToDisplay.filter(module => activeFilterDef.predicate(module));
+            modulesToDisplay = modulesToDisplay.filter(module =>
+                activeFilterDef.predicate(module) ||
+                (activeAuditFilters.length > 0 && activeAuditFilters.includes(module.type))
+            );
         }
 
         // Apply audit type filter (the sub-filters) if any are active
@@ -65,7 +70,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
         
         return modulesToDisplay;
 
-    }, [lieu.modules, lieu.name, activeAuditFilters]);
+    }, [lieu.modules, lieu.name, activeAuditFilters, activeFilter]);
 
     return (
         <div>
