@@ -245,6 +245,65 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
 
 
 /* =====================
+   ECA per-line detail sub-component
+   ===================== */
+
+const ECA_TYPE_ROWS = [
+    { label: "Tripodes entrée",        type: EcaEquipmentType.TripodeEntree },
+    { label: "Tripodes sortie",        type: EcaEquipmentType.TripodeSortie },
+    { label: "Vantaux entrée",         type: EcaEquipmentType.VantauxEntree },
+    { label: "Vantaux sortie",         type: EcaEquipmentType.VantauxSortie },
+    { label: "Vantaux réversibles",    type: EcaEquipmentType.VantauxReversible },
+    { label: "PMR à bras",             type: EcaEquipmentType.PMRBras },
+    { label: "PMR à vantaux",          type: EcaEquipmentType.PMRVantaux },
+    { label: "PMR vantaux réversible", type: EcaEquipmentType.PMRVantauxReversible },
+];
+
+const EcaTypeGrid: React.FC<{ byType: Record<string, number> }> = ({ byType }) => (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5">
+        {ECA_TYPE_ROWS.map(({ label, type }) => {
+            const count = byType[type] ?? 0;
+            if (count === 0) return null;
+            return (
+                <div key={type} className="flex justify-between items-center py-0.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{label}</span>
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0">{count}</span>
+                </div>
+            );
+        })}
+    </div>
+);
+
+const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
+    const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
+    const lines = [
+        { key: 'A',        label: 'Ligne A',          cfg: metroAConfig,  data: ecaBreakdown.byLine.A },
+        { key: 'B',        label: 'Ligne B',          cfg: metroBConfig,  data: ecaBreakdown.byLine.B },
+        { key: 'C',        label: 'Ligne C',          cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
+        { key: 'AEROPORT', label: 'Aéroport Express', cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
+    ];
+    return (
+        <div className="mt-2 space-y-3">
+            {lines.map(({ key, label, cfg, data }) => (
+                <div key={key} className="pl-4 border-l-2 border-slate-100 dark:border-slate-700">
+                    <div className="flex justify-between items-center">
+                        <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
+                            <CategoryIcon categoryConfig={cfg} size="sm" />
+                            {label}
+                        </span>
+                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
+                            {data.total}
+                            <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">({data.pmr} PMR)</span>
+                        </span>
+                    </div>
+                    {data.total > 0 && <EcaTypeGrid byType={data.byType} />}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+/* =====================
    Main component
    ===================== */
 
@@ -492,41 +551,13 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             {/* ECA */}
                             <div>
                             <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
-                            <div className="space-y-1 mt-1">
-                                {selectedLieuId ? (
+                            {selectedLieuId ? (
+                                <div className="space-y-1 mt-1">
                                     <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
-                                ) : (
-                                    <>
-                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={<>{ecaBreakdown.byLine.A.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.A.pmr} PMR)</span></>} isSubItem />
-                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={<>{ecaBreakdown.byLine.B.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.B.pmr} PMR)</span></>} isSubItem />
-                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={<>{ecaBreakdown.byLine.C.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.C.pmr} PMR)</span></>} isSubItem />
-                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={<>{ecaBreakdown.byLine.AEROPORT.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.AEROPORT.pmr} PMR)</span></>} isSubItem />
-                                    </>
-                                )}
-                            </div>
-                            {/* Détail par type d'ECA */}
-                            <div className="mt-3 pt-3 border-t border-dashed border-slate-100 dark:border-slate-700/50">
-                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Détail par type</p>
-                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
-                                    {[
-                                        { label: "Tripodes entrée",       type: EcaEquipmentType.TripodeEntree },
-                                        { label: "Tripodes sortie",       type: EcaEquipmentType.TripodeSortie },
-                                        { label: "Vantaux entrée",        type: EcaEquipmentType.VantauxEntree },
-                                        { label: "Vantaux sortie",        type: EcaEquipmentType.VantauxSortie },
-                                        { label: "Vantaux réversibles",   type: EcaEquipmentType.VantauxReversible },
-                                        { label: "PMR à bras",            type: EcaEquipmentType.PMRBras },
-                                        { label: "PMR vantaux",           type: EcaEquipmentType.PMRVantaux },
-                                        { label: "PMR vantaux réversible",type: EcaEquipmentType.PMRVantauxReversible },
-                                    ].map(({ label, type }) => (
-                                        <div key={type} className="flex justify-between items-center py-0.5">
-                                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{label}</span>
-                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0">
-                                                {ecaBreakdown.byType[type] ?? 0}
-                                            </span>
-                                        </div>
-                                    ))}
                                 </div>
-                            </div>
+                            ) : (
+                                <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
+                            )}
                             </div>
                         </div>
                         </div>
