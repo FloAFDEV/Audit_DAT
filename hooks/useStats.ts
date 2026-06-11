@@ -133,12 +133,26 @@ export const useStats = (lieux: Lieu[]) => {
     }, [lieux]);
 
     const ecaBreakdown = useMemo(() => {
+        const makeLineEntry = () => ({
+            total: 0, pmr: 0,
+            byType: {
+                [EcaEquipmentType.TripodeEntree]: 0,
+                [EcaEquipmentType.TripodeSortie]: 0,
+                [EcaEquipmentType.VantauxEntree]: 0,
+                [EcaEquipmentType.VantauxSortie]: 0,
+                [EcaEquipmentType.VantauxReversible]: 0,
+                [EcaEquipmentType.PMRBras]: 0,
+                [EcaEquipmentType.PMRVantaux]: 0,
+                [EcaEquipmentType.PMRVantauxReversible]: 0,
+            } as Record<string, number>,
+        });
+
         const byLine = {
-            A: { total: 0, pmr: 0 },
-            B: { total: 0, pmr: 0 },
-            C: { total: 0, pmr: 0 },
-            AEROPORT: { total: 0, pmr: 0 },
-            total: 0
+            A: makeLineEntry(),
+            B: makeLineEntry(),
+            C: makeLineEntry(),
+            AEROPORT: makeLineEntry(),
+            total: 0,
         };
         const byType: Record<string, number> = {
             [EcaEquipmentType.TripodeEntree]: 0,
@@ -156,24 +170,19 @@ export const useStats = (lieux: Lieu[]) => {
                 if (module.type === AuditModuleType.ECA && (!module.isFuture || module.line === 'C' || module.line === 'AEROPORT')) {
                     const data = module.data as EcaData;
                     const ecas = data.ecas || [];
-                    const count = ecas.length;
-                    const pmrInModule = ecas.filter(e => isPmrEcaType(e.type)).length;
 
-                    if (module.line === 'A') {
-                        byLine.A.total += count;
-                        byLine.A.pmr += pmrInModule;
-                    } else if (module.line === 'B') {
-                        byLine.B.total += count;
-                        byLine.B.pmr += pmrInModule;
-                    } else if (module.line === 'C') {
-                        byLine.C.total += count;
-                        byLine.C.pmr += pmrInModule;
-                    } else if (module.line === 'AEROPORT') {
-                        byLine.AEROPORT.total += count;
-                        byLine.AEROPORT.pmr += pmrInModule;
-                    }
+                    const lineKey = module.line === 'A' ? 'A'
+                        : module.line === 'B' ? 'B'
+                        : module.line === 'C' ? 'C'
+                        : module.line === 'AEROPORT' ? 'AEROPORT'
+                        : null;
 
                     for (const eca of ecas) {
+                        if (lineKey) {
+                            byLine[lineKey].total++;
+                            if (isPmrEcaType(eca.type)) byLine[lineKey].pmr++;
+                            if (eca.type in byLine[lineKey].byType) byLine[lineKey].byType[eca.type]++;
+                        }
                         if (eca.type in byType) byType[eca.type]++;
                     }
                 }
