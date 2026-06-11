@@ -1,7 +1,7 @@
 
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { ArrowLeft, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, History, Calendar, Trash2, Archive, X, Filter, Layout } from 'lucide-react';
-import { Lieu, MaintenanceItem, HistoryEntry, AuditModule, ModeData, AuditModuleType } from '../types';
+import { Lieu, MaintenanceItem, HistoryEntry, AuditModule, ModeData, AuditModuleType, EcaEquipmentType } from '../types';
 import { useStats } from '../hooks/useStats';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
@@ -503,6 +503,29 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                                     <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={<>{ecaBreakdown.byLine.AEROPORT.total} <span className="text-xs font-normal text-slate-500 dark:text-slate-400">({ecaBreakdown.byLine.AEROPORT.pmr} PMR)</span></>} isSubItem />
                                     </>
                                 )}
+                            </div>
+                            {/* Détail par type d'ECA */}
+                            <div className="mt-3 pt-3 border-t border-dashed border-slate-100 dark:border-slate-700/50">
+                                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">Détail par type</p>
+                                <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                                    {[
+                                        { label: "Tripodes entrée",       type: EcaEquipmentType.TripodeEntree },
+                                        { label: "Tripodes sortie",       type: EcaEquipmentType.TripodeSortie },
+                                        { label: "Vantaux entrée",        type: EcaEquipmentType.VantauxEntree },
+                                        { label: "Vantaux sortie",        type: EcaEquipmentType.VantauxSortie },
+                                        { label: "Vantaux réversibles",   type: EcaEquipmentType.VantauxReversible },
+                                        { label: "PMR à bras",            type: EcaEquipmentType.PMRBras },
+                                        { label: "PMR vantaux",           type: EcaEquipmentType.PMRVantaux },
+                                        { label: "PMR vantaux réversible",type: EcaEquipmentType.PMRVantauxReversible },
+                                    ].map(({ label, type }) => (
+                                        <div key={type} className="flex justify-between items-center py-0.5">
+                                            <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{label}</span>
+                                            <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0">
+                                                {ecaBreakdown.byType[type] ?? 0}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                             </div>
                         </div>
