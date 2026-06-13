@@ -48,7 +48,7 @@ export enum EcaEquipmentType {
     PMRVantauxReversible = "PMR à vantaux réversible",
 }
 
-export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'AEROPORT';
+export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'AEROPORT' | 'LAE';
 
 // =================================================================
 // DATA STRUCTURES

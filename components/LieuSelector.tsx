@@ -1,7 +1,10 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
-import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3 } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3, ShieldAlert } from 'lucide-react';
+import { gridContainerVariants } from '../hooks/motion/transitions';
+import { useFlipReflow, useCardSpotlight, useAuditHighlight, useBadgePulse } from '../hooks/gsap';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -71,7 +74,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetByModuleType, onResetAll, onRequestLogout 
     } = props;
     
-    const { activeAuditFilters, setIsStatsViewActive } = useAuditStore();
+    const { activeAuditFilters, setIsStatsViewActive, auditModeActive, setAuditModeActive } = useAuditStore();
+    const gridRef = useRef<HTMLDivElement>(null);
+    const activeBadgeRef = useBadgePulse(activeFilter);
     const [searchQuery, setSearchQuery] = useState('');
     const [isOrderReversed, setIsOrderReversed] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -157,7 +162,20 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const { orderedLieuxForDisplay, searchResults, availableAuditTypes } = useLieuList({
         lieux, searchQuery, activeFilter, isOrderReversed, activeAuditFilters
     });
-    
+
+    // Signature qui change dès qu'un filtre/tri modifie la composition de la grille.
+    const gridSignature = useMemo(
+        () => `${activeFilter}|${[...activeAuditFilters].sort().join(',')}|${isOrderReversed}|${(orderedLieuxForDisplay || []).map(l => l.id).join(',')}`,
+        [activeFilter, activeAuditFilters, isOrderReversed, orderedLieuxForDisplay]
+    );
+
+    // GSAP : reflow des cards qui restent (Framer gère l'entrée/sortie).
+    useFlipReflow(gridRef, gridSignature);
+    // GSAP : focus contextuel au survol (désactivé en mode audit pour ne pas masquer les anomalies).
+    useCardSpotlight(gridRef, '[data-flip-item]', !auditModeActive);
+    // GSAP : surbrillance pulsée des lieux à anomalies en mode audit.
+    useAuditHighlight(gridRef, auditModeActive, gridSignature);
+
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
         setSearchQuery('');
         setIsDropdownOpen(false);
@@ -265,6 +283,15 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
                 </div>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
+                    <button
+                        onClick={() => setAuditModeActive(!auditModeActive)}
+                        aria-pressed={auditModeActive}
+                        className={`flex-shrink-0 p-2 rounded-full transition-colors ${auditModeActive ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700'}`}
+                        title={auditModeActive ? "Désactiver le mode audit" : "Activer le mode audit (surligner les anomalies)"}
+                        aria-label="Mode audit"
+                    >
+                        <ShieldAlert className="w-5 h-5" />
+                    </button>
                     <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Afficher les statistiques" title="Afficher les statistiques">
                         <BarChart3 className="w-5 h-5" />
                     </button>
@@ -283,13 +310,17 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                             {/* FIX: Cast to `unknown` to allow custom CSS properties, resolving a TypeScript error where '--hover-color' was not recognized on the CSSProperties type. */}
                             <button onClick={() => onFilterChange('ALL')} className={getTabButtonClass('ALL')} style={{ ...getTabButtonStyle('ALL'), '--hover-color': getCategoryHoverColor('ALL') } as unknown as React.CSSProperties}>
                                 Tout le réseau
-                                <ProgressBadge progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)} isActive={activeFilter === 'ALL'} />
+                                <span ref={activeFilter === 'ALL' ? (activeBadgeRef as React.Ref<HTMLSpanElement>) : undefined} className="inline-flex origin-center">
+                                    <ProgressBadge progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)} isActive={activeFilter === 'ALL'} />
+                                </span>
                             </button>
                             {AUDIT_CATEGORIES.map(cat => (
                                 // FIX: Cast to `unknown` to allow custom CSS properties, resolving a TypeScript error where '--hover-color' was not recognized on the CSSProperties type.
                                 <button key={cat.key} onClick={() => onFilterChange(cat.key)} className={getTabButtonClass(cat.key)} style={{ ...getTabButtonStyle(cat.key), '--hover-color': getCategoryHoverColor(cat.key) } as unknown as React.CSSProperties}>
                                     {cat.label}
-                                    <ProgressBadge progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)} isActive={activeFilter === cat.key} />
+                                    <span ref={activeFilter === cat.key ? (activeBadgeRef as React.Ref<HTMLSpanElement>) : undefined} className="inline-flex origin-center">
+                                        <ProgressBadge progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)} isActive={activeFilter === cat.key} />
+                                    </span>
                                 </button>
                             ))}
                         </nav>
@@ -409,9 +440,19 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <p className="mt-1 text-sm font-light text-slate-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {orderedLieuxForDisplay.map((lieu) => <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} activeFilter={activeFilter} />)}
-                </div>
+                <motion.div
+                    ref={gridRef}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    variants={gridContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                >
+                    <AnimatePresence mode="popLayout">
+                        {orderedLieuxForDisplay.map((lieu) => (
+                            <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} activeFilter={activeFilter} />
+                        ))}
+                    </AnimatePresence>
+                </motion.div>
             )}
 
             <ConfirmationModal 
