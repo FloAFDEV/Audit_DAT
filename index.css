@@ -22,3 +22,67 @@
 .markdown-body ul { @apply list-disc pl-6 mb-4 space-y-2; }
 .markdown-body ol { @apply list-decimal pl-6 mb-4 space-y-2; }
 .markdown-body strong { @apply font-bold text-slate-900 dark:text-white; }
+
+/* =================================================================
+   DESIGN SYSTEM — états terrain & micro-3D des pictos (CSS only)
+   GPU-friendly : uniquement transform / opacity / filter.
+   Pas de GSAP ni Framer Motion ici — effets purement déclaratifs.
+   ================================================================= */
+
+/* --- Micro-3D des logos / pictogrammes ------------------------------------
+   Effet « matière » discret, activé au survol de la card parente (.group).
+   Les variables --rx/--ry permettent au hook vanilla useIconTilt de piloter
+   l'inclinaison selon la souris, sans re-render React. Sans JS, on retombe
+   sur une inclinaison statique subtile. */
+.icon-3d {
+  --rx: 5deg;
+  --ry: -5deg;
+  transform: perspective(420px) rotateX(0deg) rotateY(0deg) translateZ(0);
+  transform-style: preserve-3d;
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), filter 200ms ease;
+  will-change: transform;
+}
+.group:hover .icon-3d {
+  transform: perspective(420px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.04) translateZ(0);
+  filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.18));
+}
+
+/* --- États DAT : accent latéral lisible en 1 seconde ----------------------
+   .status-ok       → neutre, aucun effet dynamique.
+   .status-warning  → accent ambré + micro-pulse très doux.
+   .status-error    → accent rouge plus affirmé + pulse plus présent.
+   L'accent est un pseudo-élément (aucun reflow, la card est position:relative). */
+.status-ok::before,
+.status-warning::before,
+.status-error::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  border-radius: 0.5rem 0 0 0.5rem;
+  pointer-events: none;
+}
+.status-warning::before { background: #f59e0b; animation: dat-accent-pulse 2.4s ease-in-out infinite; }
+.status-error::before   { background: #ef4444; animation: dat-accent-pulse 1.6s ease-in-out infinite; }
+.status-warning { transition: box-shadow 200ms ease; }
+.status-error   { transition: box-shadow 200ms ease; }
+
+@keyframes dat-accent-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 1; }
+}
+
+/* En mode audit, GSAP prend la main sur l'emphase des anomalies :
+   on neutralise le pulse CSS pour éviter toute double-animation. */
+.audit-mode .status-error::before,
+.audit-mode .status-warning::before { animation: none; }
+
+/* Accessibilité : on respecte « réduire les animations ». */
+@media (prefers-reduced-motion: reduce) {
+  .icon-3d,
+  .group:hover .icon-3d { transition: none; }
+  .status-warning::before,
+  .status-error::before { animation: none; }
+}

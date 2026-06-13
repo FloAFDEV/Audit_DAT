@@ -5,6 +5,7 @@ import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } f
 import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3, ShieldAlert } from 'lucide-react';
 import { gridContainerVariants } from '../hooks/motion/transitions';
 import { useFlipReflow, useCardSpotlight, useAuditHighlight, useBadgePulse } from '../hooks/gsap';
+import { useIconTilt } from '../hooks/useIconTilt';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -175,6 +176,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     useCardSpotlight(gridRef, '[data-flip-item]', !auditModeActive);
     // GSAP : surbrillance pulsée des lieux à anomalies en mode audit.
     useAuditHighlight(gridRef, auditModeActive, gridSignature);
+    // Vanilla JS : inclinaison inertielle des pictos (CSS vars, sans re-render).
+    useIconTilt(gridRef, '[data-flip-item]', !auditModeActive);
 
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
         setSearchQuery('');
@@ -442,7 +445,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             ) : (
                 <motion.div
                     ref={gridRef}
-                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${auditModeActive ? 'audit-mode' : ''}`}
                     variants={gridContainerVariants}
                     initial="hidden"
                     animate="visible"
