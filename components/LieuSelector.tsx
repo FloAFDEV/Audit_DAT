@@ -4,8 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
 import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3, ShieldAlert } from 'lucide-react';
 import { gridContainerVariants } from '../hooks/motion/transitions';
-import { useFlipReflow, useCardSpotlight, useAuditHighlight, useBadgePulse } from '../hooks/gsap';
-import { useIconTilt } from '../hooks/useIconTilt';
+import { useFlipReflow, useCardSpotlight, useBadgePulse } from '../hooks/gsap';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
@@ -170,14 +169,12 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         [activeFilter, activeAuditFilters, isOrderReversed, orderedLieuxForDisplay]
     );
 
-    // GSAP : reflow des cards qui restent (Framer gère l'entrée/sortie).
+    // GSAP Flip : reflow des cards qui restent (Framer gère l'entrée/sortie).
     useFlipReflow(gridRef, gridSignature);
-    // GSAP : focus contextuel au survol (désactivé en mode audit pour ne pas masquer les anomalies).
+    // GSAP micro-interaction : focus au survol (désactivé en mode audit, où le CSS
+    // met déjà les anomalies en avant).
     useCardSpotlight(gridRef, '[data-flip-item]', !auditModeActive);
-    // GSAP : surbrillance pulsée des lieux à anomalies en mode audit.
-    useAuditHighlight(gridRef, auditModeActive, gridSignature);
-    // Vanilla JS : inclinaison inertielle des pictos (CSS vars, sans re-render).
-    useIconTilt(gridRef, '[data-flip-item]', !auditModeActive);
+    // (Mode audit : l'emphase des anomalies est gérée en CSS via .audit-mode .status-error.)
 
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
         setSearchQuery('');

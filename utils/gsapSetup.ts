@@ -4,10 +4,12 @@ import { Flip } from 'gsap/Flip';
 /**
  * Configuration GSAP centralisée.
  *
- * GSAP est utilisé EN COMPLÉMENT de Framer Motion, jamais en remplacement :
- *  - Framer Motion  → transitions de pages + apparition simple des cards (mount/unmount).
- *  - GSAP           → interactions DOM-level avancées : reflow de filtrage (Flip),
- *                     focus contextuel au survol, surbrillance du mode audit.
+ * GSAP est utilisé EN COMPLÉMENT de Framer Motion, jamais en remplacement.
+ * Règle d'or (cf. en-tête de index.css) :
+ *  - Framer Motion → navigation + mount/unmount des cards.
+ *  - GSAP Flip     → reflow de layout au filtrage UNIQUEMENT (useFlipReflow).
+ *  - GSAP micro    → survol (useCardSpotlight) + pulse du badge actif (useBadgePulse).
+ *  - CSS           → styles statiques + micro-effets (micro-3D, états, mode audit).
  *
  * On enregistre les plugins une seule fois au chargement du module.
  */

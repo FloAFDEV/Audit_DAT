@@ -2,12 +2,14 @@ import { useLayoutEffect, type RefObject } from 'react';
 import { gsap, prefersReducedMotion } from '../../utils/gsapSetup';
 
 /**
- * Focus contextuel avancé au survol (GSAP) : la card survolée prend un léger zoom
- * et passe au premier plan, pendant que les autres cards s'estompent (blur + dim).
- * Transforme la grille en outil d'inspection « ce que je regarde ressort ».
+ * Focus contextuel au survol (GSAP) : les cards NON survolées s'estompent
+ * (flou + léger assombrissement) pour faire ressortir celle qu'on inspecte.
+ * « Ce que je regarde ressort, le reste passe en retrait. »
  *
- * Interaction DOM-level pure → GSAP (et non Framer Motion). Délégation d'événements
- * pour rester performant quel que soit le nombre de cards.
+ * IMPORTANT (anti-conflit) : ce hook n'anime QUE la propriété `filter`. Le
+ * transform/opacity/scale des cards appartiennent à Framer Motion (variants de
+ * mount/exit) ; le zoom du picto appartient au CSS (.icon-3d). En se limitant à
+ * `filter`, le survol GSAP ne peut entrer en conflit avec aucun des deux.
  *
  * @param scopeRef     conteneur de la grille
  * @param itemSelector sélecteur des cards
@@ -30,16 +32,17 @@ export const useCardSpotlight = (
             const target = (e.target as HTMLElement).closest<HTMLElement>(itemSelector);
             if (!target || !root.contains(target)) return;
             for (const el of items()) {
-                if (el === target) {
-                    gsap.to(el, { scale: 1.035, zIndex: 2, duration: 0.3, ease: 'power3.out', overwrite: 'auto' });
-                } else {
-                    gsap.to(el, { scale: 0.985, opacity: 0.55, filter: 'blur(2px)', duration: 0.3, ease: 'power3.out', overwrite: 'auto' });
-                }
+                gsap.to(el, {
+                    filter: el === target ? 'blur(0px) brightness(1)' : 'blur(2px) brightness(0.9)',
+                    duration: 0.3,
+                    ease: 'power3.out',
+                    overwrite: 'auto',
+                });
             }
         };
 
         const handleLeave = () => {
-            gsap.to(items(), { scale: 1, opacity: 1, filter: 'blur(0px)', zIndex: 1, duration: 0.35, ease: 'power3.out', overwrite: 'auto' });
+            gsap.to(items(), { filter: 'blur(0px) brightness(1)', duration: 0.35, ease: 'power3.out', overwrite: 'auto' });
         };
 
         root.addEventListener('pointerover', handleEnter);
@@ -48,7 +51,7 @@ export const useCardSpotlight = (
         return () => {
             root.removeEventListener('pointerover', handleEnter);
             root.removeEventListener('pointerleave', handleLeave);
-            gsap.to(items(), { scale: 1, opacity: 1, filter: 'blur(0px)', clearProps: 'filter,zIndex', duration: 0 });
+            gsap.set(items(), { clearProps: 'filter' });
             ctx.revert();
         };
     }, [scopeRef, itemSelector, enabled]);
