@@ -33,7 +33,7 @@ export const useCardSpotlight = (
             if (!target || !root.contains(target)) return;
             for (const el of items()) {
                 gsap.to(el, {
-                    filter: el === target ? 'blur(0px) brightness(1)' : 'blur(2px) brightness(0.9)',
+                    filter: el === target ? 'blur(0px) brightness(1)' : 'blur(0px) brightness(0.82)',
                     duration: 0.3,
                     ease: 'power3.out',
                     overwrite: 'auto',

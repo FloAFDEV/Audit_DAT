@@ -46,7 +46,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         const radius = size === 'md' ? 'rounded-[8px]' : 'rounded-[6px]';
         return (
             <div 
-                className={`flex-shrink-0 flex items-center justify-center ${radius} bg-sky-500 text-white shadow-sm ring-1 ring-black/5 ${sizeClasses}`}
+                className={`flex-shrink-0 flex items-center justify-center ${radius} bg-sky-500 text-white shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 ${sizeClasses}`}
                 title="Tout le réseau"
             >
                 <Globe className={size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
@@ -75,7 +75,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
     };
 
     const radius = size === 'md' ? 'rounded-[8px]' : 'rounded-[6px]';
-    const commonClasses = `flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-sm ring-1 ring-black/5 transition-opacity ${sizing} ${colors.badgeText}`;
+    const commonClasses = `flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 transition-opacity ${sizing} ${colors.badgeText}`;
 
     if (asDiv) {
         return (
