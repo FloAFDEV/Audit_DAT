@@ -333,8 +333,9 @@ export const useStats = (lieux: Lieu[]) => {
                 }
 
                 if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
-                    for (const picto of ((module.data as CognitivePictogramData).pictograms || [])) {
-                        const dim = getCognitivePictogramDimension(picto);
+                    const cogData = module.data as CognitivePictogramData;
+                    for (const picto of (cogData.pictograms || [])) {
+                        const dim = getCognitivePictogramDimension(cogData.stationCode, picto.accessPointName);
                         addQty(`cog-picto-${dim}`, 1);
                     }
                 }

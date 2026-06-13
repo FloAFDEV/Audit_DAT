@@ -1,4 +1,6 @@
 import React, { useEffect, useMemo, useState, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { pageVariants } from './hooks/motion/transitions';
 import useAuditStore from './store';
 import Login from './components/Login';
 import AppRouter from './components/AppRouter';
@@ -168,6 +170,14 @@ const App: React.FC = () => {
                     />
                 </div>
                  <Suspense fallback={<Loader />}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                        key={`${store.isStatsViewActive}|${store.selectedLieuId}|${store.selectedModuleId}|${store.selectedStationId}|${store.selectedDirectionId}|${store.selectedDatId}|${store.selectedPrZoneId}|${store.selectedEquipmentId}|${store.selectedEcaId}|${store.isSignaletiqueActive}`}
+                        variants={pageVariants}
+                        initial="initial"
+                        animate="enter"
+                        exit="exit"
+                    >
                     <AppRouter
                         isStatsViewActive={store.isStatsViewActive}
                         isSignaletiqueActive={store.isSignaletiqueActive}
@@ -209,6 +219,8 @@ const App: React.FC = () => {
                         onResetAll={handlers.handleResetAllRequest}
                         onRequestLogout={() => setIsLogoutModalOpen(true)}
                     />
+                    </motion.div>
+                  </AnimatePresence>
                 </Suspense>
             </div>
       <footer className="text-center py-8 text-slate-500 dark:text-slate-400 text-[10px] font-light tracking-wider uppercase">

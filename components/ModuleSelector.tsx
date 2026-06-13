@@ -110,7 +110,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                                    <div className="flex items-center gap-3 flex-shrink-0">
+                                    <div className="icon-3d flex items-center gap-3 flex-shrink-0">
                                         <LineIcon module={module} size="md" />
                                         <ModuleIcon type={module.type} />
                                     </div>
