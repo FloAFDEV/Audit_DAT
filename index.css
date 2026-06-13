@@ -24,26 +24,29 @@
 .markdown-body strong { @apply font-bold text-slate-900 dark:text-white; }
 
 /* =================================================================
-   DESIGN SYSTEM — états terrain & micro-3D des pictos (CSS only)
-   GPU-friendly : uniquement transform / opacity / filter.
-   Pas de GSAP ni Framer Motion ici — effets purement déclaratifs.
+   RÈGLE D'OR DES ANIMATIONS (à respecter pour rester maintenable)
+   -----------------------------------------------------------------
+   Framer Motion        → navigation (transitions de page) + mount/unmount
+                          des cards (stagger, AnimatePresence). Possède
+                          transform/opacity des cards.
+   GSAP Flip            → reflow de layout au filtrage UNIQUEMENT.
+   GSAP micro-interaction → survol (flou des autres cards) + pulse du badge
+                          actif UNIQUEMENT. Ne touche que `filter` pour ne
+                          jamais entrer en conflit avec Framer.
+   CSS                  → styles statiques + micro-effets simples (micro-3D
+                          des pictos, accents d'état, emphase du mode audit).
    ================================================================= */
 
-/* --- Micro-3D des logos / pictogrammes ------------------------------------
+/* --- Micro-3D des logos / pictogrammes (CSS only) -------------------------
    Effet « matière » discret, activé au survol de la card parente (.group).
-   Les variables --rx/--ry permettent au hook vanilla useIconTilt de piloter
-   l'inclinaison selon la souris, sans re-render React. Sans JS, on retombe
-   sur une inclinaison statique subtile. */
+   GPU-friendly (transform), inclinaison fixe et subtile (~5°). */
 .icon-3d {
-  --rx: 5deg;
-  --ry: -5deg;
-  transform: perspective(420px) rotateX(0deg) rotateY(0deg) translateZ(0);
-  transform-style: preserve-3d;
+  transform: perspective(420px) rotateX(0deg) rotateY(0deg);
   transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), filter 200ms ease;
   will-change: transform;
 }
 .group:hover .icon-3d {
-  transform: perspective(420px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.04) translateZ(0);
+  transform: perspective(420px) rotateX(5deg) rotateY(-5deg) scale(1.04);
   filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.18));
 }
 
@@ -74,10 +77,12 @@
   50%      { opacity: 1; }
 }
 
-/* En mode audit, GSAP prend la main sur l'emphase des anomalies :
-   on neutralise le pulse CSS pour éviter toute double-animation. */
-.audit-mode .status-error::before,
-.audit-mode .status-warning::before { animation: none; }
+/* Mode audit : emphase CSS des anomalies (anneau rouge sur les erreurs).
+   Seules les erreurs ressortent — on neutralise l'accent warning. */
+.audit-mode .status-error {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.55), 0 8px 24px -6px rgba(239, 68, 68, 0.45);
+}
+.audit-mode .status-warning::before { animation: none; opacity: 0.3; }
 
 /* Accessibilité : on respecte « réduire les animations ». */
 @media (prefers-reduced-motion: reduce) {
