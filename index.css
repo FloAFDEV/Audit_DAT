@@ -37,6 +37,26 @@
                           des pictos, accents d'état, emphase du mode audit).
    ================================================================= */
 
+/* --- Badges de ligne (A, B, T1, P+R…) ------------------------------------
+   Overlay diagonal universel : fonctionne sur toute couleur inline badgeBg.
+   position:relative déjà présent sur les éléments via Tailwind (rounded + flex). */
+.line-badge {
+  position: relative;
+  overflow: hidden;
+}
+.line-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.22) 0%,
+    rgba(0, 0, 0, 0.10) 100%
+  );
+  pointer-events: none;
+}
+
 /* --- Micro-3D des logos / pictogrammes (CSS only) -------------------------
    Effet « matière » discret, activé au survol de la card parente (.group).
    GPU-friendly (transform), inclinaison fixe et subtile (~5°). */
