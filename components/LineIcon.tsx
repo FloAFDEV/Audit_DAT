@@ -23,8 +23,8 @@ export const LineIcon: React.FC<LineIconProps> = ({ module, size = 'md' }) => {
         const radius = size === 'md' ? 'rounded-[10px]' : 'rounded-[8px]';
 
         return (
-            <div 
-                className={`flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-sm ring-1 ring-black/5 ${sizeClasses} ${category.colors.badgeText}`}
+            <div
+                className={`line-badge flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 ${sizeClasses} ${category.colors.badgeText}`}
                 style={{ backgroundColor: category.colors.badgeBg }}
             >
                 {category.shortLabel}
