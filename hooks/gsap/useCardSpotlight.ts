@@ -2,19 +2,22 @@ import { useLayoutEffect, type RefObject } from 'react';
 import { gsap, prefersReducedMotion } from '../../utils/gsapSetup';
 
 /**
- * Focus contextuel au survol (GSAP) : les cards NON survolées s'estompent
- * (flou + léger assombrissement) pour faire ressortir celle qu'on inspecte.
- * « Ce que je regarde ressort, le reste passe en retrait. »
+ * Focus contextuel au survol (GSAP) — desktop uniquement.
+ * Les cards NON survolées s'estompent légèrement (blur 1px + dim).
  *
- * IMPORTANT (anti-conflit) : ce hook n'anime QUE la propriété `filter`. Le
- * transform/opacity/scale des cards appartiennent à Framer Motion (variants de
- * mount/exit) ; le zoom du picto appartient au CSS (.icon-3d). En se limitant à
- * `filter`, le survol GSAP ne peut entrer en conflit avec aucun des deux.
+ * MOBILE : désactivé via détection pointer:coarse (touchscreen).
+ * Sur iOS/Android, pointerover se déclenche au tap et pointerleave ne
+ * se déclenche jamais → l'état dim "colle" après chaque toucher.
+ * La règle CSS @media(hover:hover) ne suffit pas côté JS ; on lit
+ * matchMedia directement au montage du hook.
  *
- * @param scopeRef     conteneur de la grille
- * @param itemSelector sélecteur des cards
- * @param enabled      désactive l'effet (ex. quand le mode audit prend la main)
+ * ANTI-CONFLIT : ce hook n'anime QUE `filter`. transform/opacity/scale
+ * des cards → Framer Motion. transform des pictos → CSS .icon-3d.
  */
+const isTouchDevice = (): boolean =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(pointer: coarse)').matches;
+
 export const useCardSpotlight = (
     scopeRef: RefObject<HTMLElement | null>,
     itemSelector = '[data-flip-item]',
@@ -22,7 +25,7 @@ export const useCardSpotlight = (
 ) => {
     useLayoutEffect(() => {
         const root = scopeRef.current;
-        if (!root || !enabled || prefersReducedMotion()) return;
+        if (!root || !enabled || prefersReducedMotion() || isTouchDevice()) return;
 
         const ctx = gsap.context(() => {});
 

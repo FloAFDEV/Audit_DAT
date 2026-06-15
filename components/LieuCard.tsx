@@ -50,7 +50,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
-            className={`${cardBgClass} ${statusClass} relative p-4 rounded-lg shadow hover:shadow-lg transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600 cursor-pointer ${dimmed ? 'opacity-40' : ''}`}
+            className={`${cardBgClass} ${statusClass} lieu-card relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer ${dimmed ? 'opacity-40' : ''}`}
         >
             {hasAnomaly && (
                 <span className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white dark:ring-slate-900">
@@ -72,7 +72,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                         )}
                     </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-slate-400 dark:text-slate-500 group-hover:text-slate-800 dark:group-hover:text-slate-200 transition-colors flex-shrink-0 ml-2"/>
+                <ChevronRight className="lieu-card-chevron w-5 h-5 text-slate-400 dark:text-slate-500 transition-colors flex-shrink-0 ml-2"/>
             </div>
             <div className="mt-auto pt-4">
                 <div className="flex justify-between items-center mb-1">
