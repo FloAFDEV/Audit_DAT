@@ -14,9 +14,13 @@ import { gsap, prefersReducedMotion } from '../../utils/gsapSetup';
  * ANTI-CONFLIT : ce hook n'anime QUE `filter`. transform/opacity/scale
  * des cards → Framer Motion. transform des pictos → CSS .icon-3d.
  */
-const isTouchDevice = (): boolean =>
+// Détecte un vrai périphérique de pointage précis (souris, trackpad).
+// (pointer:coarse) seul échoue sur les hybrides (Surface, iPad+trackpad)
+// où le pointeur primaire reste "coarse" même quand une souris est présente.
+// (hover:hover) and (pointer:fine) = pointeur fin qui peut survoler = pointage réel.
+const hasFinePonter = (): boolean =>
     typeof window !== 'undefined' &&
-    window.matchMedia('(pointer: coarse)').matches;
+    window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 
 export const useCardSpotlight = (
     scopeRef: RefObject<HTMLElement | null>,
@@ -25,7 +29,7 @@ export const useCardSpotlight = (
 ) => {
     useLayoutEffect(() => {
         const root = scopeRef.current;
-        if (!root || !enabled || prefersReducedMotion() || isTouchDevice()) return;
+        if (!root || !enabled || prefersReducedMotion() || !hasFinePonter()) return;
 
         const ctx = gsap.context(() => {});
 

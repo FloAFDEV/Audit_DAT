@@ -121,7 +121,7 @@
 /* Hover desktop uniquement (@media hover:hover = vrais pointeurs, pas le touch).
    Les états :hover CSS "collent" sur iOS/Android après un tap — on les isole ici
    pour ne jamais déclencher ces effets sur écran tactile. */
-@media (hover: hover) {
+@media (hover: hover) and (pointer: fine) {
   .lieu-card:hover {
     box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
   }
