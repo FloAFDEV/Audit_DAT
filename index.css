@@ -121,20 +121,28 @@
 /* Hover desktop uniquement (@media hover:hover = vrais pointeurs, pas le touch).
    Les états :hover CSS "collent" sur iOS/Android après un tap — on les isole ici
    pour ne jamais déclencher ces effets sur écran tactile. */
+/* Hover desktop uniquement — vrais pointeurs (souris, trackpad, hybrides avec souris).
+   Principe SaaS moderne : chaque card élève individuellement au survol,
+   les voisines restent 100 % lisibles à leur état normal. */
 @media (hover: hover) and (pointer: fine) {
+  /* Élévation : shadow plus profonde + ring de focus subtil (indigo 20 %).
+     Le scale 1.02 est géré par Framer whileHover — on ne touche pas au transform. */
   .lieu-card:hover {
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.08),
+      0 12px 24px -4px rgba(0, 0, 0, 0.12),
+      0 0 0 1.5px rgba(99, 102, 241, 0.18); /* glow indigo très discret */
   }
   .dark .lieu-card:hover {
-    --tw-ring-color: rgb(71 85 105 / 1); /* slate-600 */
-    ring-color: var(--tw-ring-color);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.3),
+      0 12px 24px -4px rgba(0, 0, 0, 0.4),
+      0 0 0 1.5px rgba(129, 140, 248, 0.25); /* indigo-400 en dark */
   }
-  .lieu-card:hover .lieu-card-chevron {
-    color: rgb(30 41 59); /* slate-800 */
-  }
-  .dark .lieu-card:hover .lieu-card-chevron {
-    color: rgb(226 232 240); /* slate-200 */
-  }
+  /* Chevron : renforce la direction d'action */
+  .lieu-card:hover .lieu-card-chevron { color: rgb(30 41 59); }   /* slate-800 */
+  .dark .lieu-card:hover .lieu-card-chevron { color: rgb(226 232 240); } /* slate-200 */
+  /* Micro-3D des pictogrammes */
   .group:hover .icon-3d {
     transform: perspective(420px) rotateX(5deg) rotateY(-5deg) scale(1.04);
     filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.18)) !important;
