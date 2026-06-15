@@ -58,18 +58,15 @@
 }
 
 /* --- Micro-3D des logos / pictogrammes (CSS only) -------------------------
-   Effet « matière » discret, activé au survol de la card parente (.group).
-   GPU-friendly (transform), inclinaison fixe et subtile (~5°). */
+   Rendu statique 3D toujours présent (perspective + état neutre).
+   L'inclinaison hover est déplacée dans @media(hover:hover) — jamais
+   déclenchée sur écran tactile, jamais "collée" après un tap. */
 .icon-3d {
   transform: perspective(420px) rotateX(0deg) rotateY(0deg);
-  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1), filter 200ms ease;
-  will-change: transform;
-  /* Immune to parent GSAP filter (blur/dim) — icons always crisp */
+  transition: transform 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  /* will-change retiré : coût GPU permanent inutile sur mobile */
+  /* Immune au filtre GSAP parent — icônes toujours nettes */
   filter: blur(0) brightness(1) !important;
-}
-.group:hover .icon-3d {
-  transform: perspective(420px) rotateX(5deg) rotateY(-5deg) scale(1.04);
-  filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.18));
 }
 
 /* --- États DAT : accent latéral lisible en 1 seconde ----------------------
@@ -121,10 +118,32 @@
 }
 .audit-mode .status-warning::before { animation: none; opacity: 0.3; }
 
+/* Hover desktop uniquement (@media hover:hover = vrais pointeurs, pas le touch).
+   Les états :hover CSS "collent" sur iOS/Android après un tap — on les isole ici
+   pour ne jamais déclencher ces effets sur écran tactile. */
+@media (hover: hover) and (pointer: fine) {
+  .lieu-card:hover {
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -4px rgba(0,0,0,0.1);
+  }
+  .dark .lieu-card:hover {
+    --tw-ring-color: rgb(71 85 105 / 1); /* slate-600 */
+    ring-color: var(--tw-ring-color);
+  }
+  .lieu-card:hover .lieu-card-chevron {
+    color: rgb(30 41 59); /* slate-800 */
+  }
+  .dark .lieu-card:hover .lieu-card-chevron {
+    color: rgb(226 232 240); /* slate-200 */
+  }
+  .group:hover .icon-3d {
+    transform: perspective(420px) rotateX(5deg) rotateY(-5deg) scale(1.04);
+    filter: drop-shadow(0 5px 9px rgba(15, 23, 42, 0.18)) !important;
+  }
+}
+
 /* Accessibilité : on respecte « réduire les animations ». */
 @media (prefers-reduced-motion: reduce) {
-  .icon-3d,
-  .group:hover .icon-3d { transition: none; }
+  .icon-3d { transition: none; }
   .status-warning::before,
   .status-error::before { animation: none; }
 }
