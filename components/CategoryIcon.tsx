@@ -39,17 +39,18 @@ interface CategoryIconProps {
 }
 
 export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md', isFuture = false, asDiv = false }) => {
-    const sizeClasses = size === 'md' ? 'w-7 h-7' : 'w-6 h-6';
-    const textSize = size === 'md' ? 'text-sm' : 'text-[11px]';
+    // sm : 28px → meilleure lisibilité terrain + contraste AA renforcé
+    const sizeClasses = size === 'md' ? 'w-8 h-8' : 'w-7 h-7';
+    const textSize = size === 'md' ? 'text-sm font-bold' : 'text-xs font-bold';
 
     if (!categoryConfig) { // For "Tout le réseau"
-        const radius = size === 'md' ? 'rounded-[8px]' : 'rounded-[6px]';
+        const radius = size === 'md' ? 'rounded-[9px]' : 'rounded-[8px]';
         return (
-            <div 
+            <div
                 className={`line-badge flex-shrink-0 flex items-center justify-center ${radius} bg-sky-500 text-white shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 ${sizeClasses}`}
                 title="Tout le réseau"
             >
-                <Globe className={size === 'md' ? 'w-4 h-4' : 'w-3.5 h-3.5'} />
+                <Globe className={size === 'md' ? 'w-4.5 h-4.5' : 'w-4 h-4'} />
             </div>
         );
     }
@@ -58,8 +59,8 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
     const isLongLabel = (shortLabel?.length || 0) >= 3;
 
     const sizing = size === 'md'
-        ? (isLongLabel ? `h-7 px-2 ${textSize}` : `${sizeClasses} ${textSize}`)
-        : (isLongLabel ? `h-6 px-1.5 ${textSize}` : `${sizeClasses} ${textSize}`);
+        ? (isLongLabel ? `h-8 px-2.5 ${textSize}` : `${sizeClasses} ${textSize}`)
+        : (isLongLabel ? `h-7 px-2 ${textSize}` : `${sizeClasses} ${textSize}`);
 
     const info = getCategoryInfo(categoryConfig, isFuture);
 
@@ -74,7 +75,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         }
     };
 
-    const radius = size === 'md' ? 'rounded-[8px]' : 'rounded-[6px]';
+    const radius = size === 'md' ? 'rounded-[9px]' : 'rounded-[8px]';
     const commonClasses = `line-badge flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 transition-opacity ${sizing} ${colors.badgeText}`;
 
     if (asDiv) {

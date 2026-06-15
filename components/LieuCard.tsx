@@ -1,12 +1,6 @@
 
 import React from 'react';
-import { motion, useReducedMotion } from 'motion/react';
-
-// Détecté une seule fois au chargement du module — le type de pointeur ne change
-// pas au cours d'une session (sauf branchement/débranchement de souris, cas rare).
-const hasFinePointer =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+import { motion } from 'motion/react';
 import { Lieu, AuditCategory, AuditModuleType, ModeData } from '../types';
 import { LieuBadges } from './Icons';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
@@ -24,7 +18,6 @@ interface LieuCardProps {
 
 export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter }) => {
     const { activeAuditFilters, auditModeActive } = useAuditStore();
-    const prefersReducedMotion = useReducedMotion();
     const progress = getLieuProgress(lieu, activeAuditFilters);
     const defectCount = getLieuDefectCount(lieu);
     const hasAnomaly = defectCount > 0;
@@ -51,9 +44,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
         <motion.div
             variants={cardVariants}
             exit="exit"
-            whileHover={hasFinePointer && !prefersReducedMotion
-                ? { scale: 1.02, transition: { duration: 0.2, ease: 'easeOut' } }
-                : undefined}
+            whileHover={undefined}
             data-flip-item
             data-anomaly={hasAnomaly ? 'true' : 'false'}
             onClick={onSelect}
