@@ -21,13 +21,15 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
     const progress = getLieuProgress(lieu, activeAuditFilters);
     const defectCount = getLieuDefectCount(lieu);
     const hasAnomaly = defectCount > 0;
-    // En mode audit, on atténue les lieux sans défaut pour faire ressortir les anomalies.
-    const dimmed = auditModeActive && !hasAnomaly;
+    const isInProgress = progress > 0 && progress < 100;
+    // En mode audit, on atténue les lieux non commencés sans défaut.
+    // Les lieux en cours restent toujours visibles (l'auditeur est en train de les traiter).
+    const dimmed = auditModeActive && !hasAnomaly && !isInProgress;
 
     // Design system des états terrain (accent latéral lisible en 1 seconde).
     const statusClass = hasAnomaly
         ? 'status-error'
-        : (progress > 0 && progress < 100 ? 'status-warning' : 'status-ok');
+        : (isInProgress ? 'status-warning' : 'status-ok');
 
     const cardBgClass = 'bg-white dark:bg-slate-800';
     
@@ -37,7 +39,6 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index);
 
-    const isInProgress = progress > 0 && progress < 100;
     const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
 
     return (
