@@ -16,6 +16,7 @@ import { AuditFilterSelector } from './AuditFilterSelector';
 import useAuditStore from '../store';
 import { LieuCard } from './LieuCard';
 import { useLieuList } from '../hooks/useLieuList';
+import { useRecentLieux } from '../hooks/useRecentLieux';
 import { ProgressBadge } from './ProgressBadge';
 import { LieuBadges } from './Icons';
 import { ModuleIcon } from './ModuleIcon';
@@ -162,6 +163,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const { orderedLieuxForDisplay, searchResults, availableAuditTypes } = useLieuList({
         lieux, searchQuery, activeFilter, isOrderReversed, activeAuditFilters
     });
+
+    const recentLieux = useRecentLieux(lieux, activeFilter, activeAuditFilters);
 
     // Signature qui change dès qu'un filtre/tri modifie la composition de la grille.
     const gridSignature = useMemo(
@@ -431,6 +434,20 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     </div>
                 </div>
             </div>
+
+            {recentLieux.length > 0 && !searchQuery && (
+                <div className="mb-8">
+                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+                        Reprendre
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {recentLieux.map((lieu) => (
+                            <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} activeFilter={activeFilter} />
+                        ))}
+                    </div>
+                    <div className="mt-6 border-t border-slate-200 dark:border-slate-700" />
+                </div>
+            )}
 
             {(!orderedLieuxForDisplay || orderedLieuxForDisplay.length === 0) ? (
                  <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
