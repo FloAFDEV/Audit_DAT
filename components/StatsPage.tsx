@@ -61,6 +61,23 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   <h3 className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wider">{children}</h3>
 );
 
+/* Grille 2 colonnes compacte pour les sous-items par ligne — remplace space-y-1 StatRow isSubItem */
+const LineSubGrid: React.FC<{
+    items: Array<{ cfg: any; label: string; value: number }>
+}> = ({ items }) => (
+    <div className="grid grid-cols-2 gap-x-2 gap-y-0 mt-1.5">
+        {items.map(({ cfg, label, value }) => (
+            <div key={label} className="flex items-center justify-between gap-1 py-[3px] px-1">
+                <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate min-w-0">
+                    <CategoryIcon categoryConfig={cfg} size="sm" />
+                    <span className="truncate">{label}</span>
+                </span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0 ml-1 tabular-nums">{value}</span>
+            </div>
+        ))}
+    </div>
+);
+
 // StatRow centralisant l'amélioration des styles de valeur
 const StatRow: React.FC<{
   icon?: React.ReactNode;
@@ -273,6 +290,36 @@ const EcaTypeGrid: React.FC<{ byType: Record<string, number> }> = ({ byType }) =
         })}
     </div>
 );
+
+/* Affichage compact des lignes ECA en 2×2 grid — réduit la hauteur vs liste verticale */
+const EcaLineCompact: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
+    const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
+    const lines = [
+        { key: 'A',        label: 'Ligne A',    cfg: metroAConfig,  data: ecaBreakdown.byLine.A },
+        { key: 'B',        label: 'Ligne B',    cfg: metroBConfig,  data: ecaBreakdown.byLine.B },
+        { key: 'C',        label: 'Ligne C',    cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
+        { key: 'AEROPORT', label: 'Aéroport',   cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
+    ];
+    return (
+        <div className="grid grid-cols-2 gap-2.5 mt-2">
+            {lines.map(({ key, label, cfg, data }) => (
+                <div key={key} className="rounded-lg bg-slate-50 dark:bg-slate-700/40 border border-slate-100 dark:border-slate-700 p-2.5">
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0">
+                            <CategoryIcon categoryConfig={cfg} size="sm" />
+                            <span className="truncate">{label}</span>
+                        </span>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 flex-shrink-0 tabular-nums">{data.total}</span>
+                    </div>
+                    {data.pmr > 0 && (
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">{data.pmr} PMR</p>
+                    )}
+                    {data.total > 0 && <EcaTypeGrid byType={data.byType} />}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
@@ -552,26 +599,26 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 <StatCard title="DAT" icon={<Euro className="w-6 h-6" />}>
                     <StatRow label="Total distributeurs" value={globalCounts.datCount} highlight="primary" />
                     {!selectedLieuId && (
-                        <div className="space-y-1 pt-1">
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.datCountC} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport</span>} value={globalCounts.datCountAero} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
-                        </div>
+                        <LineSubGrid items={[
+                            { cfg: metroAConfig, label: 'Ligne A',  value: globalCounts.datCountA },
+                            { cfg: metroBConfig, label: 'Ligne B',  value: globalCounts.datCountB },
+                            { cfg: lineCConfig,  label: 'Ligne C',  value: globalCounts.datCountC },
+                            { cfg: laeConfig,    label: 'Aéroport', value: globalCounts.datCountAero },
+                            { cfg: tramConfig,   label: 'Tram',     value: globalCounts.datCountTram },
+                            { cfg: teleoConfig,  label: 'Téléo',    value: globalCounts.datCountTeleo },
+                        ]} />
                     )}
                     {!selectedLieuId && (
                         <div className="pt-2 border-t border-dashed border-slate-100 dark:border-slate-700/50">
                             <StatRow icon={<MapPin className="w-4 h-4" />} label="Total stations" value={globalCounts.stationCountTotal} />
-                            <div className="space-y-1 mt-1">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport</span>} value={globalCounts.stationCountAero} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
-                            </div>
+                            <LineSubGrid items={[
+                                { cfg: metroAConfig, label: 'Ligne A',  value: globalCounts.stationCountA },
+                                { cfg: metroBConfig, label: 'Ligne B',  value: globalCounts.stationCountB },
+                                { cfg: lineCConfig,  label: 'Ligne C',  value: globalCounts.stationCountC },
+                                { cfg: laeConfig,    label: 'Aéroport', value: globalCounts.stationCountAero },
+                                { cfg: tramConfig,   label: 'Tram',     value: globalCounts.stationCountTram },
+                                { cfg: teleoConfig,  label: 'Téléo',    value: globalCounts.stationCountTeleo },
+                            ]} />
                         </div>
                     )}
                 </StatCard>
@@ -584,7 +631,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                             <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
                         </div>
                     ) : (
-                        <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
+                        <EcaLineCompact ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
                     )}
                 </StatCard>
 
