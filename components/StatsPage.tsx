@@ -61,23 +61,6 @@ const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   <h3 className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wider">{children}</h3>
 );
 
-/* Grille 2 colonnes compacte pour les sous-items par ligne — remplace space-y-1 StatRow isSubItem */
-const LineSubGrid: React.FC<{
-    items: Array<{ cfg: any; label: string; value: number }>
-}> = ({ items }) => (
-    <div className="grid grid-cols-2 gap-x-2 gap-y-0 mt-1.5">
-        {items.map(({ cfg, label, value }) => (
-            <div key={label} className="flex items-center justify-between gap-1 py-[3px] px-1">
-                <span className="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400 truncate min-w-0">
-                    <CategoryIcon categoryConfig={cfg} size="sm" />
-                    <span className="truncate">{label}</span>
-                </span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0 ml-1 tabular-nums">{value}</span>
-            </div>
-        ))}
-    </div>
-);
-
 // StatRow centralisant l'amélioration des styles de valeur
 const StatRow: React.FC<{
   icon?: React.ReactNode;
@@ -290,36 +273,6 @@ const EcaTypeGrid: React.FC<{ byType: Record<string, number> }> = ({ byType }) =
         })}
     </div>
 );
-
-/* Affichage compact des lignes ECA en 2×2 grid — réduit la hauteur vs liste verticale */
-const EcaLineCompact: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
-    const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
-    const lines = [
-        { key: 'A',        label: 'Ligne A',    cfg: metroAConfig,  data: ecaBreakdown.byLine.A },
-        { key: 'B',        label: 'Ligne B',    cfg: metroBConfig,  data: ecaBreakdown.byLine.B },
-        { key: 'C',        label: 'Ligne C',    cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
-        { key: 'AEROPORT', label: 'Aéroport',   cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
-    ];
-    return (
-        <div className="grid grid-cols-2 gap-2.5 mt-2">
-            {lines.map(({ key, label, cfg, data }) => (
-                <div key={key} className="rounded-lg bg-slate-50 dark:bg-slate-700/40 border border-slate-100 dark:border-slate-700 p-2.5">
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 truncate min-w-0">
-                            <CategoryIcon categoryConfig={cfg} size="sm" />
-                            <span className="truncate">{label}</span>
-                        </span>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100 flex-shrink-0 tabular-nums">{data.total}</span>
-                    </div>
-                    {data.pmr > 0 && (
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-1">{data.pmr} PMR</p>
-                    )}
-                    {data.total > 0 && <EcaTypeGrid byType={data.byType} />}
-                </div>
-            ))}
-        </div>
-    );
-};
 
 const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
@@ -557,7 +510,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 )}
             </div>
 
-            {/* [1] BANNIÈRE ALERTES — pleine largeur, priorité maximale */}
+            {/* BANNIÈRE ALERTES — pleine largeur, priorité maximale */}
             {maintenanceSummary.allDefects.count > 0 && (
                 <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:px-6">
@@ -592,119 +545,173 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                 </div>
             )}
 
-            {/* [2] TROIS CARTES MÉTIER — DAT | ECA | P+R */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-                {/* DAT */}
-                <StatCard title="DAT" icon={<Euro className="w-6 h-6" />}>
-                    <StatRow label="Total distributeurs" value={globalCounts.datCount} highlight="primary" />
-                    {!selectedLieuId && (
-                        <LineSubGrid items={[
-                            { cfg: metroAConfig, label: 'Ligne A',  value: globalCounts.datCountA },
-                            { cfg: metroBConfig, label: 'Ligne B',  value: globalCounts.datCountB },
-                            { cfg: lineCConfig,  label: 'Ligne C',  value: globalCounts.datCountC },
-                            { cfg: laeConfig,    label: 'Aéroport', value: globalCounts.datCountAero },
-                            { cfg: tramConfig,   label: 'Tram',     value: globalCounts.datCountTram },
-                            { cfg: teleoConfig,  label: 'Téléo',    value: globalCounts.datCountTeleo },
-                        ]} />
-                    )}
-                    {!selectedLieuId && (
-                        <div className="pt-2 border-t border-dashed border-slate-100 dark:border-slate-700/50">
-                            <StatRow icon={<MapPin className="w-4 h-4" />} label="Total stations" value={globalCounts.stationCountTotal} />
-                            <LineSubGrid items={[
-                                { cfg: metroAConfig, label: 'Ligne A',  value: globalCounts.stationCountA },
-                                { cfg: metroBConfig, label: 'Ligne B',  value: globalCounts.stationCountB },
-                                { cfg: lineCConfig,  label: 'Ligne C',  value: globalCounts.stationCountC },
-                                { cfg: laeConfig,    label: 'Aéroport', value: globalCounts.stationCountAero },
-                                { cfg: tramConfig,   label: 'Tram',     value: globalCounts.stationCountTram },
-                                { cfg: teleoConfig,  label: 'Téléo',    value: globalCounts.stationCountTeleo },
-                            ]} />
+            {/* Grille principale : Aperçu Global (2/3) + Alertes (1/3) */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                
+                {/* COLONNE GAUCHE (2/3) : Aperçu Global */}
+                <div className="lg:col-span-2 space-y-8">
+                
+                <StatCard 
+                    title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"} 
+                    icon={<Building className="w-6 h-6" />}
+                >
+                    <div className="space-y-6">
+                    
+                    {/* Ligne 1 : Billettique et P+R */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Billettique */}
+                        <div>
+                        <SectionTitle>Équipements Billettique</SectionTitle>
+                        <div className="space-y-4">
+                            {/* DAT */}
+                            <div>
+                            <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
+                            <div className="space-y-1 mt-1">
+                                {selectedLieuId ? null : (
+                                    <>
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.datCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.datCountAero} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
+                                    </>
+                                )}
+                            </div>
+                            </div>
+                            
+                            <hr className="border-dashed border-slate-100 dark:border-slate-700/50" />
+                            
+                            {/* ECA */}
+                            <div>
+                            <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
+                            {selectedLieuId ? (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
+                                </div>
+                            ) : (
+                                <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
+                            )}
+                            </div>
                         </div>
-                    )}
-                </StatCard>
-
-                {/* ECA */}
-                <StatCard title="ECA" icon={<Fence className="w-6 h-6" />}>
-                    <StatRow label="Total valideurs" value={globalCounts.ecaCount} highlight="primary" />
-                    {selectedLieuId ? (
-                        <div className="space-y-1 pt-1">
-                            <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
                         </div>
-                    ) : (
-                        <EcaLineCompact ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
-                    )}
+
+                        {/* Parkings Relais */}
+                        <div>
+                        <SectionTitle>Parkings Relais (P+R)</SectionTitle>
+                        <div className="space-y-4">
+                            {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
+                            <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
+                            <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
+                            <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
+                        </div>
+                        </div>
+                    </div>
+                    
+                    <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+                    
+                    {/* Ligne 2 : Stations et Audits */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        {/* Stations */}
+                        <div>
+                        {selectedLieuId ? (
+                             <div className="py-4">
+                                <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
+                             </div>
+                        ) : (
+                            <>
+                            <SectionTitle>Stations par Ligne</SectionTitle>
+                            <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
+                            <div className="space-y-1 mt-1">
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                            </div>
+                            </>
+                        )}
+                        </div>
+                        
+                        {/* Audits */}
+                        <div>
+                        <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
+                        <div className="space-y-4">
+                            <div>
+                            <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} />
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
+                                </div>
+                            )}
+                            </div>
+                            <div>
+                            <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} />
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
+                                </div>
+                            )}
+                            </div>
+                            <div>
+                            <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} />
+                            {selectedLieuId ? null : (
+                                <div className="space-y-1 mt-1">
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
+                                    <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
+                                </div>
+                            )}
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    </div>
                 </StatCard>
+                </div>
 
-                {/* P+R */}
-                <StatCard title="P+R" icon={<Car className="w-6 h-6" />}>
-                    {!selectedLieuId && <StatRow label="Parkings Relais" value={globalCounts.prCount} highlight="primary" />}
-                    <div className="space-y-2 pt-1">
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
-                        <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
+                {/* COLONNE DROITE (1/3) : Alertes Maintenance */}
+                <div className="lg:col-span-1 space-y-8">
+                <StatCard 
+                    title="Alertes Maintenance" 
+                    icon={<AlertTriangle className="w-6 h-6 text-red-500" />} 
+                    className="!border-red-500/10 dark:!border-red-900/50" // Surcharge de la bordure pour l'alerte
+                >
+                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention.</p>
+                    <div className="space-y-4">
+                    {/* BOUTON UNIQUE PRINCIPAL */}
+                    <StatRow 
+                        label="Total Anomalies" 
+                        value={maintenanceSummary.allDefects.count} 
+                        highlight="danger" 
+                        onClick={() => setModalContent({ title: 'Anomalies constatées', items: maintenanceSummary.allDefects.items })} 
+                    />
+                    
+                    {/* DÉTAILS NON CLIQUABLES (À TITRE INFORMATIF) */}
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 text-center">
+                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{maintenanceSummary.absent.count}</div>
+                            <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
+                        </div>
+                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-center">
+                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{maintenanceSummary.toBeReplaced.count}</div>
+                            <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase mt-1">À remplacer</div>
+                        </div>
+                    </div>
                     </div>
                 </StatCard>
-            </div>
-
-            {/* [3] AUDITS SPÉCIFIQUES — ligne compacte */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                {/* Sol PMR */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-teal-500/10 dark:border-slate-700/50 shadow-sm p-4 flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300">
-                        <Footprints className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Sol PMR</p>
-                        <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{globalCounts.pmrFloorAdhesiveCount}</p>
-                        {!selectedLieuId && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                                <span className="text-xs text-slate-400">A <strong className="text-slate-600 dark:text-slate-300">{globalCounts.pmrFloorAdhesiveCountA}</strong></span>
-                                <span className="text-xs text-slate-400">B <strong className="text-slate-600 dark:text-slate-300">{globalCounts.pmrFloorAdhesiveCountB}</strong></span>
-                                <span className="text-xs text-slate-400">C <strong className="text-slate-600 dark:text-slate-300">{globalCounts.pmrFloorAdhesiveCountC}</strong></span>
-                                <span className="text-xs text-slate-400">Aéro <strong className="text-slate-600 dark:text-slate-300">{globalCounts.pmrFloorAdhesiveCountAero}</strong></span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Pictos Cognitifs */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-teal-500/10 dark:border-slate-700/50 shadow-sm p-4 flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-violet-50 dark:bg-violet-900/30 text-violet-600 dark:text-violet-300">
-                        <ScanEye className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Pictos Cognitifs</p>
-                        <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{globalCounts.cogPictoCount}</p>
-                        {!selectedLieuId && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                                <span className="text-xs text-slate-400">A <strong className="text-slate-600 dark:text-slate-300">{globalCounts.cogPictoCountA}</strong></span>
-                                <span className="text-xs text-slate-400">B <strong className="text-slate-600 dark:text-slate-300">{globalCounts.cogPictoCountB}</strong></span>
-                                <span className="text-xs text-slate-400">C <strong className="text-slate-600 dark:text-slate-300">{globalCounts.cogPictoCountC}</strong></span>
-                                <span className="text-xs text-slate-400">Aéro <strong className="text-slate-600 dark:text-slate-300">{globalCounts.cogPictoCountAero}</strong></span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Équipements Station */}
-                <div className="bg-white dark:bg-slate-800 rounded-xl border border-teal-500/10 dark:border-slate-700/50 shadow-sm p-4 flex items-center gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300">
-                        <Layout className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Équipements Station</p>
-                        <p className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{globalCounts.signaletiqueCount}</p>
-                        {!selectedLieuId && (
-                            <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
-                                <span className="text-xs text-slate-400">Tram <strong className="text-slate-600 dark:text-slate-300">{globalCounts.signaletiqueCountTram}</strong></span>
-                                <span className="text-xs text-slate-400">Aéro <strong className="text-slate-600 dark:text-slate-300">{globalCounts.signaletiqueCountAero}</strong></span>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </div>
-
-            <hr className="border-dashed border-slate-200 dark:border-slate-700 my-2" />
+            
+            <hr className="border-dashed border-slate-200 dark:border-slate-700 my-4" />
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
             <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />}>
