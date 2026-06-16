@@ -23,7 +23,7 @@ interface StatsPageProps {
    ===================== */
 
 const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
+  <div className="max-w-7xl mx-auto space-y-8">
     {children}
   </div>
 );
