@@ -51,7 +51,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
-            className={`${cardBgClass} ${statusClass} lieu-card relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer ${dimmed ? 'opacity-40' : ''}`}
+            className={`${cardBgClass} ${statusClass} lieu-card ${isInProgress ? 'is-in-progress' : ''} relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer ${dimmed ? 'opacity-40' : ''}`}
         >
             {hasAnomaly && (
                 <span className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white dark:ring-slate-900">
@@ -74,12 +74,16 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                 <ChevronRight className="lieu-card-chevron w-5 h-5 text-slate-400 dark:text-slate-500 transition-colors flex-shrink-0 ml-2"/>
             </div>
             <div className="mt-auto pt-4">
-                <div className="flex justify-between items-center mb-1">
-                    <span className="text-xs font-normal text-slate-500 dark:text-slate-400">Progression</span>
-                    <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                <div className="flex justify-between items-center mb-1.5">
+                    <span className={`text-xs font-medium ${isInProgress ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                        {isInProgress ? 'En cours' : 'Progression'}
+                    </span>
+                    <span className={`text-sm ${isInProgress ? 'font-semibold text-amber-600 dark:text-amber-400' : 'font-normal text-slate-700 dark:text-slate-300'}`}>
+                        {Math.round(progress)}%
+                    </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-1.5 dark:bg-slate-700">
-                    <div className={`${progressBarColor} h-1.5 rounded-full`} style={{ width: `${progress}%` }}></div>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-slate-700">
+                    <div className={`${progressBarColor} h-2.5 rounded-full`} style={{ width: `${progress}%` }}></div>
                 </div>
             </div>
         </motion.div>

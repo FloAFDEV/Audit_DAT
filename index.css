@@ -69,6 +69,16 @@
   filter: blur(0) brightness(1) !important;
 }
 
+/* --- Cards en cours : fond légèrement teinté pour repérage mobile ----------
+   Amber à 5% — assez pour distinguer d'un blanc neutre en scroll rapide,
+   pas assez pour perturber la lecture du contenu. */
+.lieu-card.is-in-progress {
+  background: linear-gradient(160deg, #fff 70%, rgba(251, 191, 36, 0.07) 100%);
+}
+.dark .lieu-card.is-in-progress {
+  background: linear-gradient(160deg, rgb(30 41 59) 70%, rgba(251, 191, 36, 0.09) 100%);
+}
+
 /* --- États DAT : accent latéral lisible en 1 seconde ----------------------
    .status-ok       → neutre, aucun effet dynamique.
    .status-warning  → accent ambré + micro-pulse très doux.
