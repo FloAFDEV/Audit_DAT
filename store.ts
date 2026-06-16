@@ -232,7 +232,14 @@ const useAuditStore = create<AppState>((set, get) => {
     theme: 'light',
     isStatsViewActive: false,
     auditModeActive: false,
-    activeFilter: 'ALL',
+    activeFilter: (() => {
+        try {
+            const saved = localStorage.getItem('tisseo-audit-active-filter') as AuditCategory | 'ALL' | null;
+            if (saved === 'ALL') return 'ALL';
+            if (saved && AUDIT_CATEGORIES.some(c => c.key === saved)) return saved;
+        } catch { /* ignore */ }
+        return 'ALL';
+    })(),
     activeAuditFilters: [],
     selectedLieuId: null,
     selectedModuleId: null,
@@ -438,21 +445,30 @@ const useAuditStore = create<AppState>((set, get) => {
     }),
     setAuditModeActive: (isActive) => set({ auditModeActive: isActive }),
 
-    setActiveFilter: (filter) => set({ activeFilter: filter, activeAuditFilters: [] }),
+    setActiveFilter: (filter) => {
+        try { localStorage.setItem('tisseo-audit-active-filter', filter); } catch { /* ignore */ }
+        set({ activeFilter: filter, activeAuditFilters: [] });
+    },
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
 
-    selectLieu: (lieuId) => set({
-        isStatsViewActive: false,
-        isSignaletiqueActive: false,
-        selectedLieuId: lieuId,
-        selectedModuleId: null,
-        selectedStationId: null,
-        selectedDirectionId: null,
-        selectedDatId: null,
-        selectedPrZoneId: null,
-        selectedEquipmentId: null,
-        selectedEcaId: null,
-    }),
+    selectLieu: (lieuId) => {
+        if (lieuId) {
+            // Enregistre la visite pour la section "Reprendre" (import dynamique pour éviter la circularité)
+            import('./hooks/useRecentLieux').then(({ trackRecentLieu }) => trackRecentLieu(lieuId));
+        }
+        set({
+            isStatsViewActive: false,
+            isSignaletiqueActive: false,
+            selectedLieuId: lieuId,
+            selectedModuleId: null,
+            selectedStationId: null,
+            selectedDirectionId: null,
+            selectedDatId: null,
+            selectedPrZoneId: null,
+            selectedEquipmentId: null,
+            selectedEcaId: null,
+        });
+    },
 
     selectModule: (moduleId) => {
         const { lieux, selectedLieuId, selectedStationId, selectedDirectionId } = get();
