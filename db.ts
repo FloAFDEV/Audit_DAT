@@ -209,3 +209,56 @@ db.version(10).stores({
         return tx.table('lieux').bulkPut(lieux);
     });
 });
+
+// V11: réconciliation des bornes P+R avec le seed corrigé (data/pr_structures.ts + adhesives.ts).
+//   Les données persistées ne sont jamais régénérées depuis le seed → on patche les enregistrements.
+//   1) Basso Cambo : suppression des bornes inexistantes BE14 et BS13.
+//   2) Basso Cambo : BE11 ne porte que l'adhésif « Tarifs + coordonnées » (adbe3) → surcharge
+//      adhesiveIds + nettoyage de sa map d'adhésifs (on conserve le statut déjà saisi sur adbe3).
+//   3) Toutes les bornes de sortie (BS) : ajout du « Repère 2 - Information Ticket » (adbs2)
+//      s'il est absent (NotChecked), sans écraser un statut existant.
+db.version(11).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+}).upgrade(tx => {
+    return tx.table('lieux').toArray().then((lieux: any[]) => {
+        lieux.forEach((lieu: any) => {
+            lieu.modules.forEach((module: any) => {
+                if (module.type !== 'PR') return;
+                const pr = module.data;
+                if (!pr || !Array.isArray(pr.zones)) return;
+
+                const isBasso = pr.name === 'Basso Cambo';
+
+                pr.zones.forEach((zone: any) => {
+                    if (!Array.isArray(zone.equipments)) return;
+
+                    // 1) Retirer BE14 / BS13 (n'existent que sur Basso Cambo dans le seed).
+                    if (isBasso) {
+                        zone.equipments = zone.equipments.filter(
+                            (eq: any) => eq.name !== 'BE14' && eq.name !== 'BS13'
+                        );
+                    }
+
+                    zone.equipments.forEach((eq: any) => {
+                        // 2) BE11 (Basso) : uniquement adbe3.
+                        if (isBasso && eq.name === 'BE11') {
+                            eq.adhesiveIds = ['adbe3'];
+                            const prev = eq.adhesives?.['adbe3'] ?? 'NotChecked';
+                            eq.adhesives = { adbe3: prev };
+                        }
+
+                        // 3) Bornes de sortie (BS) : garantir la présence d'adbs2.
+                        if (eq.type === 'BS') {
+                            if (!eq.adhesives) eq.adhesives = {};
+                            if (eq.adhesives['adbs2'] === undefined) {
+                                eq.adhesives['adbs2'] = 'NotChecked';
+                            }
+                        }
+                    });
+                });
+            });
+        });
+        return tx.table('lieux').bulkPut(lieux);
+    });
+});
