@@ -31,6 +31,7 @@ export const PR_ADHESIVES_BE: PrAdhesive[] = [
     { id: 'adbe10', name: 'Repère 10 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-entree-A3_ » // 32,8x45,1cm', location: 'Sur le latéral de la borne en entrée de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BE/ref-adbe10.pdf' }
 ];
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
+    { id: 'adbs2', name: 'Repère 2 - Information Ticket', description: 'Adhésif « P+r-rustine-ticket-P+r_2025-02-12 » // 9x5cm', location: 'Au dessus du distributeur de ticket parking, centré sur celui-ci', referentiel: '//serveur/docs/PNR/BS/ref-adbs2.pdf' },
     { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
     { id: 'adbs5', name: 'Repère 5 - Adhésif borne sortie "Bulle"', description: 'Adhésif borne sortie "Bulle" uniquement sur borne sortie // 99x115mm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
     { id: 'adbs11', name: 'Repère 11 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-sortie_A3_ »// 32,8x45,1cm', location: 'Sur le latéral de la borne en sorite de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BS/ref-adbs11.pdf' }
@@ -51,6 +52,19 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
         case EquipmentType.CA: return PR_ADHESIVES_CA;
         default: return [];
     }
+};
+
+/**
+ * Adhésifs effectifs d'une borne donnée.
+ * - Sans surcharge : liste complète dérivée du `type` (comportement standard).
+ * - Avec `adhesiveIds` : uniquement les adhésifs de ce type dont l'id est listé
+ *   (cas particulier terrain, ex : borne ne portant qu'un seul repère).
+ * L'ordre et la présentation d'origine sont préservés (filtrage sur la liste type).
+ */
+export const getEquipmentAdhesives = (type: EquipmentType, adhesiveIds?: string[]): PrAdhesive[] => {
+    const all = getPrAdhesives(type);
+    if (!adhesiveIds) return all;
+    return all.filter(ad => adhesiveIds.includes(ad.id));
 };
 
 // =================================================================

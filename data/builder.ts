@@ -4,7 +4,7 @@ import {
     Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './adhesives';
+import { ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from './adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS, AEROPORT_EXPRESS_STATIONS } from './stations';
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
@@ -218,7 +218,8 @@ const createPrModule = (prData: { id: string, name: string }): AuditModule => {
             id: uuidv4(),
             name: equipTemplate.name,
             type: equipTemplate.type,
-            adhesives: createInitialAdhesiveStatus(getPrAdhesives(equipTemplate.type)),
+            ...(equipTemplate.adhesiveIds ? { adhesiveIds: equipTemplate.adhesiveIds } : {}),
+            adhesives: createInitialAdhesiveStatus(getEquipmentAdhesives(equipTemplate.type, equipTemplate.adhesiveIds)),
             comment: '',
         }))
     }));

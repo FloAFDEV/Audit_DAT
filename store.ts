@@ -6,7 +6,7 @@ import {
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
 import { getInitialSignaletiqueData } from './data/signaletique_config';
-import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from './data/adhesives';
+import { ADHESIVES, getEcaAdhesives, getEquipmentAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { v4 as uuidv4 } from 'uuid';
 import { validateImportedData } from './utils/csvExporter';
@@ -678,7 +678,7 @@ const useAuditStore = create<AppState>((set, get) => {
             const zone = module.data.zones.find(z => z.id === selectedPrZoneId);
             const equipment = zone?.equipments.find(e => e.id === selectedEquipmentId);
             if (equipment) {
-                equipment.adhesives = createInitialAdhesiveStatus(getPrAdhesives(equipment.type));
+                equipment.adhesives = createInitialAdhesiveStatus(getEquipmentAdhesives(equipment.type, equipment.adhesiveIds));
                 equipment.comment = '';
                 delete equipment.completionDate;
             }

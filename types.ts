@@ -184,6 +184,10 @@ export interface Equipment {
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
     completionDate?: string;
+    // Surcharge optionnelle : restreint les adhésifs de CETTE borne à cette liste d'ids,
+    // au lieu de la liste complète dérivée du `type`. Utilisé pour les cas particuliers
+    // terrain (ex : borne ne portant qu'un seul adhésif). Absent = comportement standard.
+    adhesiveIds?: string[];
 }
 
 export interface PrZone {
