@@ -21,12 +21,16 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
         let modulesToDisplay = [...lieu.modules];
 
         // Apply transport line filter (Tram, Line C, etc.)
-        // If activeAuditFilters is set, a module matching the audit type filter bypasses
-        // the category predicate (e.g. P+R modules have no line and would be wrongly excluded).
+        // Les modules P+R n'ont pas de ligne (une borne P+R est un équipement du lieu, pas
+        // d'une ligne métro). Ils seraient donc exclus à tort par un filtre de ligne (ex : Basso
+        // Cambo, station Ligne A). On les garde toujours visibles dans leur lieu.
+        // Le filtre par type d'audit (activeAuditFilters, ci-dessous) reste prioritaire et
+        // pourra les masquer si l'utilisateur restreint explicitement aux autres types.
         const activeFilterDef = AUDIT_CATEGORIES.find(f => f.key === activeFilter);
         if (activeFilterDef) {
             modulesToDisplay = modulesToDisplay.filter(module =>
                 activeFilterDef.predicate(module) ||
+                module.type === AuditModuleType.PR ||
                 (activeAuditFilters.length > 0 && activeAuditFilters.includes(module.type))
             );
         }
