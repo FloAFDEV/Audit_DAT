@@ -4,7 +4,7 @@ import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
-import { getEcaAdhesives, getPrAdhesives, ADHESIVES } from '../data/adhesives';
+import { getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives, ADHESIVES } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
@@ -315,7 +315,7 @@ export const useStats = (lieux: Lieu[]) => {
                 if (module.type === AuditModuleType.PR) {
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
-                            getPrAdhesives(equip.type).forEach(ad => addQty(ad.id, 1));
+                            getEquipmentAdhesives(equip.type, equip.adhesiveIds).forEach(ad => addQty(ad.id, 1));
                         }
                     }
                 }

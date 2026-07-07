@@ -3,7 +3,7 @@ import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../t
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
 import { LieuBadges } from './Icons';
 
-import { getPrAdhesives } from '../data/adhesives';
+import { getEquipmentAdhesives } from '../data/adhesives';
 
 interface EquipmentSelectorProps {
   lieu: Lieu;
@@ -16,7 +16,7 @@ interface EquipmentSelectorProps {
 const getEquipmentProgress = (equipment: Equipment): number => {
     if (!equipment || !equipment.adhesives) return 0;
     
-    const adhesiveDefinitions = getPrAdhesives(equipment.type);
+    const adhesiveDefinitions = getEquipmentAdhesives(equipment.type, equipment.adhesiveIds);
     const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
     
     if (activeAdhesives.length === 0) return 100;

@@ -4,6 +4,9 @@ import { EquipmentType } from '../types';
 type EquipmentTemplate = {
     name: string;
     type: EquipmentType;
+    // Surcharge optionnelle des adhésifs de cette borne (ids issus de data/adhesives.ts).
+    // Absent = liste complète standard dérivée du `type`.
+    adhesiveIds?: string[];
 };
 
 type ZoneTemplate = {
@@ -87,13 +90,12 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
             {
                 name: 'MBC – Côté Silo',
                 equipments: [
-                    { name: 'BE11', type: EquipmentType.BE },
+                    // BE11 ne porte qu'un seul adhésif : « Tarifs + coordonnées » (adbe3).
+                    { name: 'BE11', type: EquipmentType.BE, adhesiveIds: ['adbe3'] },
                     { name: 'BE12', type: EquipmentType.BE },
                     { name: 'BE13', type: EquipmentType.BE },
-                    { name: 'BE14', type: EquipmentType.BE },
                     { name: 'BS11', type: EquipmentType.BS },
                     { name: 'BS12', type: EquipmentType.BS },
-                    { name: 'BS13', type: EquipmentType.BS },
                 ]
             },
             {

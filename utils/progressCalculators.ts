@@ -1,7 +1,7 @@
 // utils/progressCalculators.ts
 
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone } from '../types';
-import { getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
+import { getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 
 export enum ProgressStatus {
@@ -127,7 +127,7 @@ export const getPrZoneProgress = (zone: PrZone): number => {
     let checkedAdhesives = 0;
 
     for (const equipment of zone.equipments) {
-        const adhesiveDefinitions = getPrAdhesives(equipment.type);
+        const adhesiveDefinitions = getEquipmentAdhesives(equipment.type, equipment.adhesiveIds);
         const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
         totalAdhesives += activeAdhesives.length;
 
@@ -172,7 +172,7 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             if (zones.length > 0) hasAuditableContent = true;
             for (const zone of zones) {
                 for (const equipment of zone.equipments) {
-                    const adhesiveDefinitions = getPrAdhesives(equipment.type);
+                    const adhesiveDefinitions = getEquipmentAdhesives(equipment.type, equipment.adhesiveIds);
                     const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
                     totalApplicableItems += activeAdhesives.length;
                     

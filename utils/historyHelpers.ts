@@ -1,6 +1,6 @@
 
 import { AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
-import { getPrAdhesives, getEcaAdhesives } from '../data/adhesives';
+import { getPrAdhesives, getEcaAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 
 /**
  * Deeply clones an object and removes photo data to save space.
@@ -57,7 +57,7 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
                     // We need to check against definitions to know what is "applicable" if not checked
                     // But for history score, we usually count what HAS been audited or what IS applicable.
                     // Let's count all defined adhesives for the equipment type minus isDisabled
-                    const defs = getPrAdhesives(eq.type).filter(a => !a.isDisabled);
+                    const defs = getEquipmentAdhesives(eq.type, eq.adhesiveIds).filter(a => !a.isDisabled);
                     defs.forEach(def => {
                         const status = eq.adhesives[def.id] || AdhesiveStatus.NotChecked;
                         if(status !== AdhesiveStatus.NotApplicable && status !== AdhesiveStatus.NotChecked) {

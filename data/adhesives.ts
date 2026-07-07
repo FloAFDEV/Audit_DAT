@@ -53,6 +53,19 @@ export const getPrAdhesives = (type: EquipmentType): PrAdhesive[] => {
     }
 };
 
+/**
+ * Adhésifs effectifs d'une borne donnée.
+ * - Sans surcharge : liste complète dérivée du `type` (comportement standard).
+ * - Avec `adhesiveIds` : uniquement les adhésifs de ce type dont l'id est listé
+ *   (cas particulier terrain, ex : borne ne portant qu'un seul repère).
+ * L'ordre et la présentation d'origine sont préservés (filtrage sur la liste type).
+ */
+export const getEquipmentAdhesives = (type: EquipmentType, adhesiveIds?: string[]): PrAdhesive[] => {
+    const all = getPrAdhesives(type);
+    if (!adhesiveIds) return all;
+    return all.filter(ad => adhesiveIds.includes(ad.id));
+};
+
 // =================================================================
 // ADHÉSIFS ECA (Équipement de Contrôle d'Accès)
 // =================================================================
