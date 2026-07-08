@@ -110,6 +110,21 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
+    // Retour depuis un écran situé APRÈS le choix de direction (DATList, SignaletiqueAuditForm).
+    // Règle décrémentale d'un seul cran, identique au fil d'Ariane et à DatGroupSelector.handleBack :
+    //   - si la station a plusieurs directions → revient à l'écran de choix de direction ;
+    //   - si elle n'en a qu'une (direction auto-sélectionnée) → revient au module, comme aujourd'hui.
+    // Appelé uniquement depuis des branches où selectedModule/selectedStation sont non-nuls.
+    const backFromDirectionLevel = () => {
+        const stations = (selectedModule!.data as ModeData).stations;
+        const currentStation = stations.find(s => s.id === selectedStation?.id);
+        if (currentStation && currentStation.directions.length > 1) {
+            handlers.selectDirection(null);
+        } else {
+            handlers.selectModule(null);
+        }
+    };
+
     if (isStatsViewActive) {
         return <StatsPage lieux={lieux} onBack={() => handlers.setIsStatsViewActive(false)} />;
     }
@@ -237,7 +252,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onAddDat={handlers.handleAddDat}
             onRemoveDat={handlers.handleRemoveDat}
             onUpdateDatName={handlers.handleUpdateDatName}
-            onBack={() => handlers.selectModule(null)}
+            onBack={backFromDirectionLevel}
         />;
     }
 
@@ -336,9 +351,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onPhotoChange={handlers.handleSignaletiquePhotoChange}
             onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
             onReset={handlers.handleResetSignaletiqueRequest}
-            onBack={() => {
-                handlers.selectModule(null);
-            }}
+            onBack={backFromDirectionLevel}
         />;
     }
 
