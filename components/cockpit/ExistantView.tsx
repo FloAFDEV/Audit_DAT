@@ -21,6 +21,7 @@ import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
 import ReferenceQualificationView from './ReferenceQualificationView';
+import InventaireReseauView from './InventaireReseauView';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
 
@@ -320,23 +321,6 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
     );
 };
 
-/* ================= Inventaire réseau : placeholder ================= */
-// Restructuration pure : aucune nouvelle logique métier dans ce commit.
-// La donnée (installedCount/lieuCount/lines par référence) est déjà
-// calculée par le moteur d'index et déjà affichée dans la fiche de vie
-// et la liste Références — ce sous-onglet la mettra en avant comme
-// question de patrimoine à part entière dans un prochain commit.
-const InventaireReseauPlaceholder: React.FC = () => (
-    <div className="py-16 text-center text-slate-500 dark:text-slate-400">
-        <Boxes className="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">Inventaire réseau — bientôt disponible.</p>
-        <p className="text-sm mt-1 max-w-md mx-auto">
-            « Combien de cette référence sont posés aujourd'hui, sur quelles lignes, dans combien de stations ? »
-            En attendant, ces quantités sont déjà visibles sur chaque fiche référence.
-        </p>
-    </div>
-);
-
 /* ================= Conteneur de section ================= */
 
 type ExistantSubKey = 'references' | 'implantations' | 'inventaire' | 'qualification';
@@ -361,6 +345,17 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<ExistantSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
+    const [inventoryFocusId, setInventoryFocusId] = useState<string | null>(null);
+
+    // Depuis la fiche : « voir son inventaire réseau » ferme la fiche et
+    // bascule sur le sous-onglet Inventaire réseau, focalisé sur cette
+    // référence — navigation locale à Existant, pas via CockpitNavContext
+    // (fiche et inventaire sont deux sous-vues de la même section).
+    const handleViewInventory = (id: string) => {
+        setOpenReferenceId(null);
+        setInventoryFocusId(id);
+        setSubSection('inventaire');
+    };
 
     // Navigation transverse : une autre section peut demander l'ouverture
     // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
@@ -394,6 +389,7 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
                     index={index}
                     onBack={() => setOpenReferenceId(null)}
                     onOpenReference={setOpenReferenceId}
+                    onViewInventory={handleViewInventory}
                 />
             );
         }
@@ -433,7 +429,14 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
                     onOpenReference={setOpenReferenceId}
                 />
             )}
-            {subSection === 'inventaire' && <InventaireReseauPlaceholder />}
+            {subSection === 'inventaire' && (
+                <InventaireReseauView
+                    references={references}
+                    index={index}
+                    focusReferenceId={inventoryFocusId}
+                    onOpenReference={setOpenReferenceId}
+                />
+            )}
             {subSection === 'qualification' && (
                 <ReferenceQualificationView
                     references={references}
