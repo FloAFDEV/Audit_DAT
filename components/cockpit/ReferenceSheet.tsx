@@ -10,7 +10,7 @@
 // =================================================================
 import React from 'react';
 import {
-    ArrowLeft, ArrowRight, Ruler, MapPin, FileText, Link2, History, Flag, Radar, Camera,
+    ArrowLeft, Ruler, MapPin, FileText, Link2, History, Flag, Radar, Camera,
 } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
@@ -49,7 +49,7 @@ const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slat
 
 /* ---------- sections de la fiche ---------- */
 
-const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineIndex; onViewInventory: (id: string) => void }> = ({ reference, index, onViewInventory }) => {
+const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineIndex }> = ({ reference, index }) => {
     const usage = index.byReference.get(reference.id);
     if (!usage) {
         return (
@@ -80,43 +80,70 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                     <div className="text-xs font-semibold uppercase text-amber-600 dark:text-amber-400 mt-1">Non contrôlés</div>
                 </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <Field label="Lieux concernés" value={usage.lieuCount} />
-                <Field label="Lignes" value={usage.lines.join(', ')} />
                 <Field label="Types d'équipements" value={usage.equipmentTypes.length > 0 ? usage.equipmentTypes.join(', ') : 'DAT'} />
             </div>
-            {usage.byLieu.length > 0 && (
-                <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                    <table className="min-w-full text-sm">
-                        <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
-                            <tr>
-                                <th className="p-2.5 font-bold text-xs uppercase">Lieu</th>
-                                <th className="p-2.5 font-bold text-xs uppercase text-center">Exemplaires</th>
-                                <th className="p-2.5 font-bold text-xs uppercase text-center">Défauts</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                            {usage.byLieu.map(l => (
-                                <tr key={l.lieuId} className="bg-white dark:bg-slate-900">
-                                    <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.lieuName}</td>
-                                    <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">{l.installed}</td>
-                                    <td className="p-2.5 text-center">
-                                        {l.defects > 0
-                                            ? <span className="font-bold text-red-600 dark:text-red-400">{l.defects}</span>
-                                            : <span className="text-slate-400">—</span>}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-            <button
-                onClick={() => onViewInventory(reference.id)}
-                className="flex items-center gap-1 text-sm font-semibold text-teal-700 dark:text-teal-300 hover:underline"
-            >
-                Voir l'inventaire réseau (répartition par ligne) <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {usage.byLine.length > 0 && (
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Par ligne</h4>
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
+                                    <tr>
+                                        <th className="p-2.5 font-bold text-xs uppercase">Ligne</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Exemplaires</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Défauts</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {usage.byLine.map(l => (
+                                        <tr key={l.line} className="bg-white dark:bg-slate-900">
+                                            <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.line === 'P+R' ? 'P+R' : `Ligne ${l.line}`}</td>
+                                            <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">{l.installed}</td>
+                                            <td className="p-2.5 text-center">
+                                                {l.defects > 0
+                                                    ? <span className="font-bold text-red-600 dark:text-red-400">{l.defects}</span>
+                                                    : <span className="text-slate-400">—</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+                {usage.byLieu.length > 0 && (
+                    <div>
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Par lieu</h4>
+                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+                            <table className="min-w-full text-sm">
+                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
+                                    <tr>
+                                        <th className="p-2.5 font-bold text-xs uppercase">Lieu</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Exemplaires</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Défauts</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                    {usage.byLieu.map(l => (
+                                        <tr key={l.lieuId} className="bg-white dark:bg-slate-900">
+                                            <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.lieuName}</td>
+                                            <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">{l.installed}</td>
+                                            <td className="p-2.5 text-center">
+                                                {l.defects > 0
+                                                    ? <span className="font-bold text-red-600 dark:text-red-400">{l.defects}</span>
+                                                    : <span className="text-slate-400">—</span>}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
+            </div>
             {/* La sélection n'est pas une notion propriétaire d'Anomalies :
                 une fiche de référence en produit une du même contrat (source
                 'reference'), consommable par les mêmes futurs modules. */}
@@ -131,10 +158,9 @@ interface ReferenceSheetProps {
     index: PatrimoineIndex;
     onBack: () => void;
     onOpenReference: (referenceId: string) => void;
-    onViewInventory: (referenceId: string) => void;
 }
 
-const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference, onViewInventory }) => {
+const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference }) => {
     const refName = (id: string) => references.find(r => r.id === id)?.name ?? id;
     const linked = (id: string) => (
         <button
@@ -180,7 +206,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             </SheetSection>
 
             {/* Implantations (moteur d'index) */}
-            <UsageSection reference={reference} index={index} onViewInventory={onViewInventory} />
+            <UsageSection reference={reference} index={index} />
 
             {/* Pose recommandée */}
             <SheetSection title="Pose recommandée" icon={<MapPin className="w-4 h-4" />}>
