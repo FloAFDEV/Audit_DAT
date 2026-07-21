@@ -293,7 +293,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     >
                         <ShieldAlert className="w-5 h-5" />
                     </button>
-                    <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Afficher les statistiques" title="Afficher les statistiques">
+                    <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Ouvrir le cockpit signalétique" title="Ouvrir le cockpit signalétique">
                         <BarChart3 className="w-5 h-5" />
                     </button>
                     <ThemeSelector />
