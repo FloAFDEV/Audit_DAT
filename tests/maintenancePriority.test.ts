@@ -12,7 +12,7 @@ import { ImplantationRef, ReferenceUsage } from '../utils/cockpit/patrimoineInde
 const usage = (absent: number, toReplace: number): ReferenceUsage => ({
     referenceId: 'x', installedCount: absent + toReplace, okCount: 0,
     absentCount: absent, toReplaceCount: toReplace, uncheckedCount: 0,
-    defectCount: absent + toReplace, lieuCount: 1, lines: [], equipmentTypes: [], byLieu: [],
+    defectCount: absent + toReplace, lieuCount: 1, lines: [], equipmentTypes: [], byLieu: [], byLine: [],
 });
 
 const imp = (status: AdhesiveStatus): ImplantationRef => ({

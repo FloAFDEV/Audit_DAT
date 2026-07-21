@@ -207,6 +207,8 @@ describe('buildPatrimoineIndex', () => {
         // Tri byLieu : le lieu avec défauts en premier.
         expect(ad3.byLieu[0].lieuName).toBe('Jean-Jaurès');
         expect(ad3.byLieu[0].defects).toBe(1);
+        // byLine : les deux DAT sont sur la ligne A (fixture datLieu).
+        expect(ad3.byLine).toEqual([{ line: 'A', installed: 2, defects: 1 }]);
 
         const adbe3 = index.byReference.get('adbe3')!;
         expect(adbe3.installedCount).toBe(2);     // BE01 (standard) + BE11 (surcharge)

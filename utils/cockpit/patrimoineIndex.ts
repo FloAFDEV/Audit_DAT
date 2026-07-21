@@ -90,6 +90,8 @@ export interface ReferenceUsage {
     lines: string[];
     equipmentTypes: string[];
     byLieu: { lieuId: string; lieuName: string; installed: number; defects: number }[];
+    /** Répartition par ligne — « combien sur la ligne B ? » sans re-parcourir l'arbre. */
+    byLine: { line: string; installed: number; defects: number }[];
 }
 
 /** Compteurs de statut pour un regroupement (support, ligne, demain matière/commune...). */
@@ -236,6 +238,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
     // --- Agrégation : une seule passe sur les implantations ---
     const byReference = new Map<string, ReferenceUsage>();
     const byRefLieu = new Map<string, Map<string, { lieuId: string; lieuName: string; installed: number; defects: number }>>();
+    const byRefLine = new Map<string, Map<string, { line: string; installed: number; defects: number }>>();
     const bySupport = new Map<SignageSupport, GroupStatusCounts>();
     const byLine = new Map<string, GroupStatusCounts>();
     const totals: PatrimoineTotals = {
@@ -263,10 +266,11 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                 referenceId: imp.referenceId,
                 installedCount: 0, okCount: 0, absentCount: 0, toReplaceCount: 0,
                 uncheckedCount: 0, defectCount: 0, lieuCount: 0,
-                lines: [], equipmentTypes: [], byLieu: [],
+                lines: [], equipmentTypes: [], byLieu: [], byLine: [],
             };
             byReference.set(imp.referenceId, usage);
             byRefLieu.set(imp.referenceId, new Map());
+            byRefLine.set(imp.referenceId, new Map());
         }
 
         usage.installedCount++;
@@ -289,6 +293,15 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
         lieuEntry.installed++;
         if (isDefect(imp.status)) lieuEntry.defects++;
 
+        const lineMap = byRefLine.get(imp.referenceId)!;
+        let lineEntry = lineMap.get(imp.line);
+        if (!lineEntry) {
+            lineEntry = { line: imp.line, installed: 0, defects: 0 };
+            lineMap.set(imp.line, lineEntry);
+        }
+        lineEntry.installed++;
+        if (isDefect(imp.status)) lineEntry.defects++;
+
         // Dimensions patrimoine : support (via la fiche référence) et ligne.
         // D'autres axes (matière, commune, marché...) s'ajouteront ici sans
         // toucher aux vues existantes — même passe, nouvelle Map.
@@ -302,6 +315,8 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
         usage.byLieu = Array.from(byRefLieu.get(refId)!.values())
             .sort((a, b) => b.defects - a.defects || b.installed - a.installed);
         usage.lieuCount = usage.byLieu.length;
+        usage.byLine = Array.from(byRefLine.get(refId)!.values())
+            .sort((a, b) => b.installed - a.installed);
     });
 
     totals.defectCount = totals.absentCount + totals.toReplaceCount;
