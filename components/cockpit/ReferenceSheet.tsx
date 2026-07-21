@@ -153,7 +153,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{reference.name}</h2>
-                        {reference.needsReview && <Pill tone="amber">À arbitrer</Pill>}
+                        {reference.needsReview && <Pill tone="amber">À qualifier</Pill>}
                         {reference.isDisabled && <Pill tone="red">Désactivée</Pill>}
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-mono">
@@ -214,7 +214,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                     </ul>
                 )}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-                    Les fichiers de fabrication restent gérés hors application (références documentaires uniquement).
+                    Les fichiers de production restent gérés hors application (références documentaires uniquement).
                 </p>
             </SheetSection>
 
@@ -265,14 +265,14 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 )}
             </SheetSection>
 
-            {/* Arbitrage — décision métier, distincte des constats terrain (Interventions) */}
+            {/* Qualification — décision de catalogue, distincte des anomalies terrain (section Anomalies) */}
             {(reference.needsReview || reference.arbitrage) && (
-                <SheetSection title="Arbitrage" icon={<Flag className="w-4 h-4" />}>
+                <SheetSection title="Qualification" icon={<Flag className="w-4 h-4" />}>
                     {reference.needsReview && !reference.arbitrage && (
                         <p className="text-sm text-slate-700 dark:text-slate-300">
-                            Cette référence nécessite une décision métier (divergence documentaire ou qualification incomplète).
-                            Le détail figure dans les notes des documents externes ci-dessus — décision à prendre dans la
-                            section Arbitrages.
+                            Cette référence nécessite une décision de qualification catalogue (divergence documentaire ou
+                            classement incomplet). Le détail figure dans les notes des documents externes ci-dessus —
+                            décision à prendre dans Existant / Qualification référentiel.
                         </p>
                     )}
                     {reference.arbitrage && (

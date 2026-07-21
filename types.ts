@@ -389,13 +389,19 @@ export interface ExternalDocumentRef {
     note?: string;
 }
 
-/** Arbitrage métier sur une référence (vue Arbitrages du cockpit).
- *  SOUS-OBJET UNIQUE — jamais de champs plats éparpillés (needsReplace,
- *  replaceReason...) : tout ce qui concerne l'arbitrage vit ici.
+/** Qualification du référentiel (onglet « Qualification référentiel » de
+ *  Patrimoine) — SOUS-OBJET UNIQUE, jamais de champs plats éparpillés.
+ *  Portée volontairement restreinte au CATALOGUE (la fiche référence
+ *  elle-même est-elle correcte/complète ?) — ne concerne jamais un
+ *  constat terrain : un item absent/dégradé/non conforme est une
+ *  anomalie (section Anomalies), traitée automatiquement, sans
+ *  décision humaine. « to_replace » a donc été retiré de cet ensemble :
+ *  le remplacement est une conséquence opérationnelle d'une anomalie,
+ *  jamais une qualification de catalogue.
  *  Enregistre la décision humaine — ne l'applique jamais automatiquement :
  *  « remove » ne supprime rien (R1), l'application effective
  *  (désactivation, changement de version...) reste un acte d'administration. */
-export type ArbitrageStatus = 'to_replace' | 'keep' | 'remove' | 'to_document';
+export type ArbitrageStatus = 'keep' | 'remove' | 'to_document';
 
 export interface ArbitrageHistoryEntry {
     status: ArbitrageStatus;

@@ -1,25 +1,38 @@
 // components/cockpit/cockpitNav.ts
 // Navigation transverse du cockpit — sans router, cohérente avec le
 // pilotage par état de toute l'application.
-// Toute vue peut demander : « ouvre telle section » ou « ouvre la fiche
-// de telle référence » (règle 2 du contrat : LA fiche unique vit dans
-// la section Patrimoine — y naviguer est la seule façon de l'ouvrir).
+// Toute vue peut demander : « ouvre telle section », éventuellement un
+// sous-onglet précis, ou « ouvre la fiche de telle référence » (règle 2
+// du contrat : LA fiche unique vit dans la section Existant — y
+// naviguer est la seule façon de l'ouvrir).
 import { createContext, useContext } from 'react';
 
-// Généalogie du cockpit : Audit → Patrimoine → Interventions → (demain) Pose.
-// "Interventions" plutôt que "Maintenance" : c'est la finalité métier
-// (préparer l'action), la maintenance en redeviendra un filtre parmi
-// d'autres plutôt que le nom de la section.
-export type CockpitSectionKey = 'synthese' | 'patrimoine' | 'interventions' | 'arbitrages' | 'historique';
+// Généalogie du cockpit : Existant signalétique → Anomalies (constat
+// terrain) ou évolution design → Besoin d'intervention → Résumé SAE.
+// Frontière stricte : l'application produit une INFORMATION (item,
+// quantité, implantations, contexte de pose) — jamais la chaîne aval
+// (achat, fabrication, organisation, pose), qui reste du ressort du SAE.
+// La qualification du catalogue (ex-Arbitrages) n'est pas un étage du
+// flux opérationnel : c'est un sous-onglet d'Existant, réservé aux
+// questions de qualité de donnée (le référentiel est-il correct ?),
+// jamais aux constats terrain.
+export type CockpitSectionKey = 'synthese' | 'existant' | 'anomalies' | 'sae' | 'historique' | 'exports';
 
 export interface CockpitNavigation {
-    /** Change de section ; si referenceId est fourni, la section Patrimoine
-     *  ouvrira la fiche de vie correspondante à l'activation. */
-    navigate: (target: { section: CockpitSectionKey; referenceId?: string }) => void;
-    /** Référence en attente d'ouverture (consommée par PatrimoineView). */
+    /** Change de section ; `subSection` cible un onglet interne à la
+     *  section (générique — chaque section interprète sa propre valeur,
+     *  ex. Existant : 'references' | 'implantations' | 'inventaire' | 'qualification') ;
+     *  si `referenceId` est fourni, la section Existant ouvrira la
+     *  fiche de vie correspondante à l'activation. */
+    navigate: (target: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => void;
+    /** Référence en attente d'ouverture (consommée par ExistantView). */
     pendingReferenceId: string | null;
     /** À appeler une fois la fiche ouverte, pour vider la demande. */
     consumePendingReference: () => void;
+    /** Sous-onglet en attente d'activation (consommé par la section ciblée). */
+    pendingSubSection: string | null;
+    /** À appeler une fois le sous-onglet activé, pour vider la demande. */
+    consumePendingSubSection: () => void;
 }
 
 export const CockpitNavContext = createContext<CockpitNavigation | null>(null);

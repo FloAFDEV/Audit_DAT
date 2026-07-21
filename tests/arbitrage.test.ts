@@ -22,9 +22,9 @@ describe('applyArbitrageDecision', () => {
 
     it('décision suivante : la précédente part en historique, jamais effacée', () => {
         const first = applyArbitrageDecision(undefined, 'keep', 'motif 1', '2026-01-01T00:00:00.000Z');
-        const second = applyArbitrageDecision(first, 'to_replace', 'motif 2', '2026-02-01T00:00:00.000Z');
+        const second = applyArbitrageDecision(first, 'remove', 'motif 2', '2026-02-01T00:00:00.000Z');
 
-        expect(second.status).toBe('to_replace');
+        expect(second.status).toBe('remove');
         expect(second.reason).toBe('motif 2');
         expect(second.createdAt).toBe('2026-01-01T00:00:00.000Z'); // conservée
         expect(second.updatedAt).toBe('2026-02-01T00:00:00.000Z');
@@ -42,7 +42,7 @@ describe('applyArbitrageDecision', () => {
     it('trois décisions successives conservent tout l\'historique (jamais tronqué)', () => {
         let state = applyArbitrageDecision(undefined, 'to_document', 'a', '2026-01-01T00:00:00.000Z');
         state = applyArbitrageDecision(state, 'keep', 'b', '2026-02-01T00:00:00.000Z');
-        state = applyArbitrageDecision(state, 'to_replace', 'c', '2026-03-01T00:00:00.000Z');
+        state = applyArbitrageDecision(state, 'remove', 'c', '2026-03-01T00:00:00.000Z');
         expect(state.history).toHaveLength(2);
         expect(state.history!.map(h => h.status)).toEqual(['to_document', 'keep']);
     });
@@ -50,7 +50,7 @@ describe('applyArbitrageDecision', () => {
 
 describe('withArbitrageDecision — sous-objet unique, référence non mutée en place', () => {
     it("ajoute uniquement le champ 'arbitrage', aucun champ plat", () => {
-        const updated = withArbitrageDecision(baseRef, 'to_replace', 'test', '2026-07-21T00:00:00.000Z');
+        const updated = withArbitrageDecision(baseRef, 'to_document', 'test', '2026-07-21T00:00:00.000Z');
         const newKeys = Object.keys(updated).filter(k => !(k in baseRef));
         expect(newKeys).toEqual(['arbitrage']);
     });

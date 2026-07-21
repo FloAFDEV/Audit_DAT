@@ -262,11 +262,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </div>
             )}
 
-            {/* CARTE D'ACCÈS AU PATRIMOINE — compteur de santé, pas zone de travail.
-                L'exploitation se fait dans les sections Patrimoine / Maintenance /
-                Arbitrages ; les tuiles et boutons y mènent (navigation transverse). */}
+            {/* CARTE D'ACCÈS À L'EXISTANT — compteur de santé, pas zone de travail.
+                L'exploitation se fait dans les sections Existant / Anomalies /
+                SAE ; les tuiles et boutons y mènent (navigation transverse). */}
             <StatCard
-                title={`Patrimoine Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
+                title={`Existant Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
                 icon={<BookOpenCheck className="w-6 h-6" />}
             >
                 <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">
@@ -277,31 +277,31 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 ) : (
                     <>
                         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                            <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" onClick={() => nav.navigate({ section: 'patrimoine' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" onClick={() => nav.navigate({ section: 'patrimoine' })} />
+                            <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" onClick={() => nav.navigate({ section: 'existant' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" onClick={() => nav.navigate({ section: 'existant' })} />
                             <IndicatorTile value={patrimoineIndex.totals.okCount} label="Conformes" tone="teal" />
-                            <IndicatorTile value={patrimoineIndex.totals.defectCount} label="Non conformes" tone="red" onClick={() => nav.navigate({ section: 'interventions' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.defectCount} label="Anomalies" tone="red" onClick={() => nav.navigate({ section: 'anomalies' })} />
                             <IndicatorTile value={patrimoineIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
-                            <IndicatorTile value={needsReviewCount} label="À arbitrer" tone="amber" onClick={() => nav.navigate({ section: 'arbitrages' })} />
+                            <IndicatorTile value={needsReviewCount} label="À qualifier" tone="amber" onClick={() => nav.navigate({ section: 'existant', subSection: 'qualification' })} />
                         </div>
                         <div className="flex flex-wrap gap-3 pt-1">
                             <button
-                                onClick={() => nav.navigate({ section: 'patrimoine' })}
+                                onClick={() => nav.navigate({ section: 'existant' })}
                                 className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
                             >
-                                Explorer le patrimoine →
+                                Explorer l'existant →
                             </button>
                             <button
-                                onClick={() => nav.navigate({ section: 'interventions' })}
+                                onClick={() => nav.navigate({ section: 'anomalies' })}
                                 className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
                             >
-                                Ouvrir la maintenance →
+                                Voir les anomalies →
                             </button>
                             <button
-                                onClick={() => nav.navigate({ section: 'arbitrages' })}
+                                onClick={() => nav.navigate({ section: 'existant', subSection: 'qualification' })}
                                 className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
                             >
-                                Voir les arbitrages ({needsReviewCount}) →
+                                Qualifier le référentiel ({needsReviewCount}) →
                             </button>
                         </div>
                     </>
@@ -441,14 +441,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </StatCard>
                 </div>
 
-                {/* COLONNE DROITE (1/3) : Alertes Maintenance */}
+                {/* COLONNE DROITE (1/3) : Alertes Anomalies */}
                 <div className="lg:col-span-1 space-y-8">
                 <StatCard
-                    title="Alertes Maintenance"
+                    title="Alertes Anomalies"
                     icon={<AlertTriangle className="w-6 h-6 text-red-500" />}
                     className="!border-red-500/10 dark:!border-red-900/50" // Surcharge de la bordure pour l'alerte
                 >
-                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments nécessitant une intervention.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments signalés comme anomalies.</p>
                     <div className="space-y-4">
                     {/* BOUTON UNIQUE PRINCIPAL */}
                     <StatRow
