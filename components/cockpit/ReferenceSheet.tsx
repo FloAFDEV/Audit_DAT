@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
-import { SUPPORT_LABELS, STATUS_LABELS, formatDimensions, formatScope } from './labels';
+import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
 
 /* ---------- briques locales de la fiche ---------- */
 
@@ -259,13 +259,30 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 )}
             </SheetSection>
 
-            {/* Drapeaux / statut de la fiche */}
-            {reference.needsReview && (
-                <SheetSection title="Arbitrage en attente" icon={<Flag className="w-4 h-4" />}>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">
-                        Cette référence nécessite une décision métier (divergence documentaire ou qualification incomplète).
-                        Le détail figure dans les notes des documents externes ci-dessus.
-                    </p>
+            {/* Arbitrage — décision métier, distincte des constats terrain (Interventions) */}
+            {(reference.needsReview || reference.arbitrage) && (
+                <SheetSection title="Arbitrage" icon={<Flag className="w-4 h-4" />}>
+                    {reference.needsReview && !reference.arbitrage && (
+                        <p className="text-sm text-slate-700 dark:text-slate-300">
+                            Cette référence nécessite une décision métier (divergence documentaire ou qualification incomplète).
+                            Le détail figure dans les notes des documents externes ci-dessus — décision à prendre dans la
+                            section Arbitrages.
+                        </p>
+                    )}
+                    {reference.arbitrage && (
+                        <div className="space-y-1">
+                            <p className="text-sm text-slate-700 dark:text-slate-300">
+                                <span className="font-semibold">{ARBITRAGE_LABELS[reference.arbitrage.status]}</span>
+                                {reference.arbitrage.reason ? ` — ${reference.arbitrage.reason}` : ''}
+                            </p>
+                            {reference.arbitrage.updatedAt && (
+                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                    Décidé le {new Date(reference.arbitrage.updatedAt).toLocaleDateString('fr-FR')}
+                                    {(reference.arbitrage.history?.length ?? 0) > 0 ? ` · ${reference.arbitrage.history!.length} décision(s) antérieure(s)` : ''}
+                                </p>
+                            )}
+                        </div>
+                    )}
                 </SheetSection>
             )}
         </div>

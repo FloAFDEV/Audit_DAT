@@ -1,6 +1,6 @@
 // components/cockpit/labels.ts
 // Libellés partagés du cockpit — un seul vocabulaire pour toutes les sections.
-import { AdhesiveStatus, SignageDimensions, SignageSupport } from '../../types';
+import { AdhesiveStatus, ArbitrageStatus, SignageDimensions, SignageSupport } from '../../types';
 
 export const SUPPORT_LABELS: Record<SignageSupport, string> = {
     adhesif: 'Adhésif',
@@ -14,6 +14,13 @@ export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA', string> = {
     DAT: 'DAT',
     PR: 'P+R',
     ECA: 'ECA',
+};
+
+export const ARBITRAGE_LABELS: Record<ArbitrageStatus, string> = {
+    to_replace: 'À remplacer',
+    keep: 'À conserver',
+    remove: 'À supprimer',
+    to_document: 'À documenter',
 };
 
 export const STATUS_LABELS: Record<string, string> = {
