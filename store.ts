@@ -9,7 +9,7 @@ import { getInitialSignaletiqueData } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesives, getEquipmentAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { v4 as uuidv4 } from 'uuid';
-import { validateImportedData } from './utils/csvExporter';
+import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
 import { canEcaBeNotApplicable } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
@@ -178,19 +178,20 @@ const useAuditStore = create<AppState>((set, get) => {
     /**
      * Sauvegarde automatique de toutes les données dans localStorage avant
      * toute opération destructive (reset / hard-reset).
+     * Inclut le référentiel signalétique (signageReferences + signageAssets) :
+     * les corrections métier administrées ne doivent JAMAIS être perdues
+     * silencieusement — notamment lors d'un hard-reset (db.delete()) qui,
+     * sans ce backup, re-seederait le référentiel depuis les constantes.
      * Si localStorage est plein, déclenche un téléchargement automatique du fichier JSON.
      * @returns la clé localStorage utilisée pour le backup, ou '' si download forcé.
      */
     const _backupBeforeReset = async (scope: string): Promise<string> => {
-        const allLieux = await db.lieux.toArray();
-        const now = new Date().toISOString();
-        const backup = {
-            exportDate: now,
-            scope,
-            // Clé 'data' volontairement identique au format d'import JSON existant
-            // pour permettre la restauration via "Restaurer une sauvegarde (.json)".
-            data: allLieux,
-        };
+        const fullPayload = await buildFullExportPayload();
+        const now = fullPayload.exportDate;
+        // Format identique à l'export JSON v2 (clé 'data' + signageReferences +
+        // signageAssets) pour permettre la restauration complète via
+        // "Restaurer une sauvegarde (.json)".
+        const backup = { ...fullPayload, scope };
         const json = JSON.stringify(backup);
         const backupKey = `tisseo-audit-backup-${Date.now()}`;
         try {
@@ -256,6 +257,18 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     init: async () => {
         try {
+            // Protection IndexedDB : demande au navigateur de marquer le stockage
+            // comme persistant (réduit le risque d'éviction silencieuse de la base
+            // sous pression de stockage). Non bloquant, sans UI : un refus est
+            // simplement journalisé — l'app fonctionne à l'identique.
+            try {
+                if (navigator.storage?.persist) {
+                    navigator.storage.persist().then(granted => {
+                        if (!granted) console.warn('Stockage persistant refusé par le navigateur — pensez à exporter régulièrement (JSON).');
+                    }).catch(() => { /* ignore */ });
+                }
+            } catch { /* environnement sans navigator.storage */ }
+
             const storedAuth = localStorage.getItem('tisseo-audit-auth');
             const isAuthenticated = storedAuth === 'true';
 
@@ -1246,21 +1259,16 @@ const useAuditStore = create<AppState>((set, get) => {
 
     handleImportJsonData: async (jsonString: string) => {
         try {
-            let rawData;
-            try {
-                rawData = JSON.parse(jsonString);
-            } catch (e) {
-                throw new Error("Format de fichier invalide.");
-            }
-            const dataToValidate = (rawData.data && Array.isArray(rawData.data)) ? rawData.data : rawData;
-            if (!validateImportedData(dataToValidate)) throw new Error("Données invalides.");
+            // Parsing + validation des deux formats (v1 lieux seuls / v2 complet).
+            // RÈGLE : un import au format ancien (sans signageReferences) ne touche
+            // JAMAIS au référentiel local — ni écrasement, ni régénération.
+            const payload = parseImportPayload(jsonString);
 
             // Sauvegarde automatique des données actuelles avant remplacement par l'import.
             await _backupBeforeReset('pre-import');
-            await db.lieux.clear();
-            await db.lieux.bulkPut(dataToValidate);
+            await applyImportPayload(payload);
             set({
-                lieux: dataToValidate,
+                lieux: payload.lieux,
                 selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
         } catch (error) {

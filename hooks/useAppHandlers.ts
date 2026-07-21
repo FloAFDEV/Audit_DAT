@@ -149,8 +149,9 @@ export const useAppHandlers = () => {
         handleCsvExportFlow(lieuxToExport, fileNameBase, successMessage, activeFilter === 'ALL' ? undefined : categoryConfig, { titlePrefix: reminderTitlePrefix, titleSubject: reminderTitleSubject, reminderDescription: reminderDescription, months: 5 });
     };
     
-    const handleExportJson = () => {
-        const { success } = exportLieuxToJson(store.lieux);
+    const handleExportJson = async () => {
+        // Export complet (format v2) : lieux + référentiel signalétique + assets.
+        const { success } = await exportLieuxToJson();
         if (success) {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
             showSuccessToast({ icon, title: 'Exportation JSON réussie', message: 'Le fichier de données a été téléchargé.' });
