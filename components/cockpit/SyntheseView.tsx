@@ -8,7 +8,7 @@ import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertT
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
-import { useNetworkIndex } from '../../hooks/useNetworkIndex';
+import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
@@ -143,7 +143,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // Référentiel signalétique : moteur d'index réseau (source unique).
     const { references, isLoading: refsLoading } = useSignageReferences();
-    const networkIndex = useNetworkIndex(filteredLieux, references);
+    const patrimoineIndex = usePatrimoineIndex(filteredLieux, references);
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
@@ -282,7 +282,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
             {/* BLOC RÉFÉRENTIEL SIGNALÉTIQUE — servi par le moteur d'index réseau */}
             <StatCard
-                title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
+                title={`Patrimoine Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
                 icon={<BookOpenCheck className="w-6 h-6" />}
             >
                 <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">
@@ -293,10 +293,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" />
-                        <IndicatorTile value={networkIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" />
-                        <IndicatorTile value={networkIndex.totals.okCount} label="Conformes" tone="teal" />
-                        <IndicatorTile value={networkIndex.totals.defectCount} label="Non conformes" tone="red" />
-                        <IndicatorTile value={networkIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
+                        <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" />
+                        <IndicatorTile value={patrimoineIndex.totals.okCount} label="Conformes" tone="teal" />
+                        <IndicatorTile value={patrimoineIndex.totals.defectCount} label="Non conformes" tone="red" />
+                        <IndicatorTile value={patrimoineIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
                         <IndicatorTile value={needsReviewCount} label="À arbitrer" tone="amber" />
                     </div>
                 )}

@@ -1,4 +1,4 @@
-// tests/networkIndex.test.ts
+// tests/patrimoineIndex.test.ts
 // =================================================================
 // Tests du moteur d'index réseau (commit 3) — le cœur de calcul du
 // cockpit. Vérifie le contrat de plateforme :
@@ -11,8 +11,8 @@
 // =================================================================
 import { describe, it, expect } from 'vitest';
 import {
-    buildNetworkIndex, resolveReferencesForEquipment,
-} from '../utils/cockpit/networkIndex';
+    buildPatrimoineIndex, resolveReferencesForEquipment,
+} from '../utils/cockpit/patrimoineIndex';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import {
     Lieu, AuditModuleType, AdhesiveStatus, EquipmentType, EcaEquipmentType,
@@ -138,10 +138,10 @@ describe('resolveReferencesForEquipment (R10)', () => {
     });
 });
 
-describe('buildNetworkIndex', () => {
+describe('buildPatrimoineIndex', () => {
     it('DAT : 12 implantations par DAT, clé absente = Non contrôlé (R10)', () => {
         const lieux = [datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK, ad3: AdhesiveStatus.ToBeReplaced })];
-        const index = buildNetworkIndex(lieux, REFERENCES);
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
 
         expect(index.totals.implantationCount).toBe(12);
         expect(index.totals.okCount).toBe(1);
@@ -151,7 +151,7 @@ describe('buildNetworkIndex', () => {
     });
 
     it('P+R : surcharge locale respectée + isDisabled exclu', () => {
-        const index = buildNetworkIndex([prLieu()], REFERENCES);
+        const index = buildPatrimoineIndex([prLieu()], REFERENCES);
 
         // BE01 : 4 références BE ; BE11 : 1 seule (surcharge) ; CA01 : 5 (6 CA - adca8 disabled).
         const be01 = index.implantations.filter(i => i.equipmentLabel === 'BE01');
@@ -169,7 +169,7 @@ describe('buildNetworkIndex', () => {
     });
 
     it('ECA : scope sortie, NotApplicable non installé, ECA isNotApplicable ignoré', () => {
-        const index = buildNetworkIndex([ecaLieu()], REFERENCES);
+        const index = buildPatrimoineIndex([ecaLieu()], REFERENCES);
 
         const tripode = index.implantations.filter(i => i.equipmentLabel === 'Tripode S1');
         expect(tripode.map(i => i.referenceId)).toEqual(['eca-11']);
@@ -185,7 +185,7 @@ describe('buildNetworkIndex', () => {
     });
 
     it('module isFuture (hors C/AEROPORT) ignoré', () => {
-        const index = buildNetworkIndex([futureLieu()], REFERENCES);
+        const index = buildPatrimoineIndex([futureLieu()], REFERENCES);
         expect(index.totals.implantationCount).toBe(0);
     });
 
@@ -195,7 +195,7 @@ describe('buildNetworkIndex', () => {
             datLieu('l2', 'Capitole', { ad3: AdhesiveStatus.OK }),
             prLieu(),
         ];
-        const index = buildNetworkIndex(lieux, REFERENCES);
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
 
         const ad3 = index.byReference.get('ad3')!;
         expect(ad3.installedCount).toBe(2);       // 1 DAT par lieu
@@ -217,9 +217,49 @@ describe('buildNetworkIndex', () => {
     });
 
     it('réseau vide → index vide cohérent', () => {
-        const index = buildNetworkIndex([], REFERENCES);
+        const index = buildPatrimoineIndex([], REFERENCES);
         expect(index.implantations).toHaveLength(0);
         expect(index.totals.implantationCount).toBe(0);
         expect(index.byReference.size).toBe(0);
+        expect(index.bySupport.size).toBe(0);
+        expect(index.byLine.size).toBe(0);
+    });
+
+    it('dimensions patrimoine : « combien par support ? »', () => {
+        // Un DAT (12 refs adhésif, dont ad8 reclassé adhésif) + un ECA PMRVantaux
+        // (contient eca-3 → vitrophanie).
+        const lieux = [
+            datLieu('l1', 'Station Un', {}),
+            ecaLieu(),
+        ];
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+
+        const adhesif = index.bySupport.get('adhesif')!;
+        const vitro = index.bySupport.get('vitrophanie');
+        // eca-3 est dans le scope PMRVantaux → 1 vitrophanie implantée.
+        expect(vitro?.installed).toBe(1);
+        expect(adhesif.installed).toBeGreaterThan(12); // 12 DAT + refs ECA adhésif
+        // Cohérence globale : la somme des supports = total des implantations.
+        let sum = 0;
+        index.bySupport.forEach(c => { sum += c.installed; });
+        expect(sum).toBe(index.totals.implantationCount);
+    });
+
+    it('dimensions patrimoine : « combien par ligne ? »', () => {
+        const lieux = [
+            datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.ToBeReplaced }),   // ligne A
+            prLieu(),                                                            // P+R
+            ecaLieu(),                                                           // ligne B
+        ];
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+
+        expect(index.byLine.get('A')?.installed).toBe(12);
+        expect(index.byLine.get('A')?.defects).toBe(1);
+        expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 5); // BE01 + BE11 + CA01
+        expect(index.byLine.get('B')?.installed).toBeGreaterThan(0);
+        // Cohérence : somme des lignes = total.
+        let sum = 0;
+        index.byLine.forEach(c => { sum += c.installed; });
+        expect(sum).toBe(index.totals.implantationCount);
     });
 });

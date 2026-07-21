@@ -13,14 +13,15 @@
 //
 // Le contrat de plateforme complet (source de calcul unique via le
 // moteur d'index, fiche unique, sections pas pages, sélection→action)
-// est documenté dans utils/cockpit/networkIndex.ts.
+// est documenté dans utils/cockpit/patrimoineIndex.ts.
 // =================================================================
 import React, { lazy, Suspense, useState } from 'react';
-import { Building, Archive, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 
 const SyntheseView = lazy(() => import('./cockpit/SyntheseView'));
+const PatrimoineView = lazy(() => import('./cockpit/PatrimoineView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
 
 interface StatsPageProps {
@@ -28,16 +29,18 @@ interface StatsPageProps {
   onBack: () => void;
 }
 
-type CockpitSectionKey = 'synthese' | 'historique';
+type CockpitSectionKey = 'synthese' | 'patrimoine' | 'historique';
 
 /**
  * Registre des sections du cockpit. Les prochaines sections
- * (referentiel, maintenance, arbitrages) s'ajoutent ici — une entrée
- * par section, aucune modification du rendu ci-dessous.
+ * (maintenance avec défauts/arbitrages/préparation, demain campagnes,
+ * commandes, stocks, pose) s'ajoutent ici — une entrée par section,
+ * aucune modification du rendu ci-dessous.
  */
 const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'synthese',   label: 'Synthèse', Icon: Building },
-    { key: 'historique', label: 'Archives', Icon: Archive },
+    { key: 'synthese',   label: 'Synthèse',   Icon: Building },
+    { key: 'patrimoine', label: 'Patrimoine', Icon: Landmark },
+    { key: 'historique', label: 'Archives',   Icon: Archive },
 ];
 
 const SectionLoader: React.FC = () => (
@@ -71,6 +74,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
       <Suspense fallback={<SectionLoader />}>
         {activeSection === 'synthese' && <SyntheseView lieux={lieux} />}
+        {activeSection === 'patrimoine' && <PatrimoineView lieux={lieux} />}
         {activeSection === 'historique' && <HistoriqueView />}
       </Suspense>
     </Container>
