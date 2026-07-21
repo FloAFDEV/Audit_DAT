@@ -1,29 +1,37 @@
-// utils/cockpit/networkIndex.ts
+// utils/cockpit/patrimoineIndex.ts
 // =================================================================
-// MOTEUR D'INDEX RÉSEAU — cœur de calcul du cockpit métier.
+// MOTEUR D'INDEX DU PATRIMOINE — cœur de calcul du cockpit métier.
 // =================================================================
+// Le cockpit ne pense pas « référentiel » : il pense PATRIMOINE.
+// Le référentiel signalétique n'est qu'un des composants du patrimoine.
+// Aujourd'hui ce moteur indexe la signalétique référencée (DAT/PR/ECA) ;
+// demain il indexera d'autres familles (autres signalétiques, puis le
+// patrimoine élargi) et alimentera campagnes, maintenance, commandes,
+// statistiques, stocks et interventions — le cockpit reste, les modules
+// s'y branchent.
+//
 // CONTRAT DE PLATEFORME (opposable à toute évolution future) :
 //
 //  1. UNE SEULE SOURCE DE CALCUL — toute donnée agrégée du cockpit
-//     (usage d'une référence, défauts, compteurs de synthèse, futurs
-//     regroupements de campagne/commande) provient de buildNetworkIndex.
-//     Interdiction de re-parcourir l'arbre d'audit dans une vue.
-//     Si le cockpit sait qu'une référence est présente 427 fois, la
-//     maintenance, le référentiel, la synthèse et les futures commandes
-//     lisent exactement cette même donnée. Aucun recalcul parallèle.
+//     (usage d'une référence, défauts, compteurs, regroupements par
+//     support/matière/ligne, futures campagnes/commandes) provient de
+//     buildPatrimoineIndex. Interdiction de re-parcourir l'arbre d'audit
+//     dans une vue. Si le cockpit sait qu'une référence est présente
+//     427 fois, toutes les vues lisent exactement cette même donnée.
+//     Aucun recalcul parallèle. Aucune divergence.
 //
 //  2. UNE SEULE FICHE — toute référence, cliquée depuis n'importe quelle
 //     section, ouvre la même fiche de vie (ReferenceSheet).
 //
 //  3. DES SECTIONS, PAS DES PAGES — une nouvelle capacité = une nouvelle
-//     section de fiche ou un nouveau mode de regroupement Maintenance,
-//     jamais une page indépendante.
+//     section de fiche ou un nouveau mode de regroupement, jamais une
+//     page indépendante.
 //
 //  4. SÉLECTION → ACTION — toute fonctionnalité future (campagne,
 //     intervention, commande) est une action branchée sur une Selection
 //     (ensemble d'implantations) produite par les vues existantes.
 //
-//  5. LE RÉFÉRENTIEL NE CONNAÎT PAS LES FOURNISSEURS — le cockpit
+//  5. LE PATRIMOINE NE CONNAÎT PAS LES FOURNISSEURS — le cockpit
 //     travaille avec la référence métier, jamais avec une ligne de marché.
 //
 // R10 : ce moteur est le PREMIER lecteur conforme — la liste des
@@ -31,19 +39,19 @@
 // jamais des maps de statuts ; la map adhesives{} ne fournit que les
 // statuts saisis (clé absente = Non contrôlé).
 //
-// Périmètre : familles référencées (DAT / PR / ECA). Les familles hors
-// référentiel (PMR sol, pictos cognitifs, signalétique station) restent
-// servies par maintenanceGenerator jusqu'à leur éventuelle entrée au
-// référentiel — trajectoire connue, pas un oubli.
+// Périmètre actuel : familles référencées (DAT / PR / ECA). Les familles
+// hors référentiel (PMR sol, pictos cognitifs, signalétique station)
+// restent servies par maintenanceGenerator jusqu'à leur entrée au
+// patrimoine — trajectoire connue, pas un oubli.
 //
-// Échelle : un parcours O(n) unique, mémoïsé par l'appelant (useNetworkIndex).
-// Aucune hypothèse sur le nombre de références, de familles ou de lignes :
-// tout est piloté par les données (scope, arbre d'audit).
+// Échelle : un parcours O(n) unique, mémoïsé par l'appelant
+// (usePatrimoineIndex). Aucune hypothèse sur le nombre de références,
+// de familles, de lignes ou de supports : tout est piloté par les données.
 // =================================================================
 
 import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
-    SignageReference,
+    SignageReference, SignageSupport,
 } from '../../types';
 
 // -----------------------------------------------------------------
@@ -84,7 +92,15 @@ export interface ReferenceUsage {
     byLieu: { lieuId: string; lieuName: string; installed: number; defects: number }[];
 }
 
-export interface NetworkTotals {
+/** Compteurs de statut pour un regroupement (support, ligne, demain matière/commune...). */
+export interface GroupStatusCounts {
+    installed: number;
+    ok: number;
+    defects: number;
+    unchecked: number;
+}
+
+export interface PatrimoineTotals {
     implantationCount: number;
     okCount: number;
     defectCount: number;
@@ -95,10 +111,14 @@ export interface NetworkTotals {
     referencesInstalledCount: number;
 }
 
-export interface NetworkIndex {
+export interface PatrimoineIndex {
     implantations: ImplantationRef[];
     byReference: Map<string, ReferenceUsage>;
-    totals: NetworkTotals;
+    /** « Combien de Dibond ? de PVC ? de vitrophanies ? » — par support physique. */
+    bySupport: Map<SignageSupport, GroupStatusCounts>;
+    /** « Combien par ligne ? » — A/B/C/TRAM/TELEO/AEROPORT/P+R. */
+    byLine: Map<string, GroupStatusCounts>;
+    totals: PatrimoineTotals;
 }
 
 /**
@@ -142,8 +162,9 @@ export const resolveReferencesForEquipment = (
 
 const isDefect = (s: AdhesiveStatus) => s === AdhesiveStatus.Absent || s === AdhesiveStatus.ToBeReplaced;
 
-export const buildNetworkIndex = (lieux: Lieu[], references: SignageReference[]): NetworkIndex => {
+export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference[]): PatrimoineIndex => {
     const implantations: ImplantationRef[] = [];
+    const refById = new Map(references.map(r => [r.id, r]));
 
     const pushImplantations = (
         refs: SignageReference[],
@@ -214,7 +235,7 @@ export const buildNetworkIndex = (lieux: Lieu[], references: SignageReference[])
                     }
                     break;
                 }
-                // PMR sol / pictos / signalétique : hors référentiel (cf. en-tête).
+                // PMR sol / pictos / signalétique : hors patrimoine référencé (cf. en-tête).
             }
         }
     }
@@ -222,10 +243,24 @@ export const buildNetworkIndex = (lieux: Lieu[], references: SignageReference[])
     // --- Agrégation : une seule passe sur les implantations ---
     const byReference = new Map<string, ReferenceUsage>();
     const byRefLieu = new Map<string, Map<string, { lieuId: string; lieuName: string; installed: number; defects: number }>>();
-    const totals: NetworkTotals = {
+    const bySupport = new Map<SignageSupport, GroupStatusCounts>();
+    const byLine = new Map<string, GroupStatusCounts>();
+    const totals: PatrimoineTotals = {
         implantationCount: 0, okCount: 0, defectCount: 0,
         absentCount: 0, toReplaceCount: 0, uncheckedCount: 0,
         referencesInstalledCount: 0,
+    };
+
+    const bumpGroup = <K,>(map: Map<K, GroupStatusCounts>, key: K, status: AdhesiveStatus) => {
+        let entry = map.get(key);
+        if (!entry) {
+            entry = { installed: 0, ok: 0, defects: 0, unchecked: 0 };
+            map.set(key, entry);
+        }
+        entry.installed++;
+        if (status === AdhesiveStatus.OK) entry.ok++;
+        else if (isDefect(status)) entry.defects++;
+        else entry.unchecked++;
     };
 
     for (const imp of implantations) {
@@ -260,6 +295,13 @@ export const buildNetworkIndex = (lieux: Lieu[], references: SignageReference[])
         }
         lieuEntry.installed++;
         if (isDefect(imp.status)) lieuEntry.defects++;
+
+        // Dimensions patrimoine : support (via la fiche référence) et ligne.
+        // D'autres axes (matière, commune, marché...) s'ajouteront ici sans
+        // toucher aux vues existantes — même passe, nouvelle Map.
+        const ref = refById.get(imp.referenceId);
+        if (ref) bumpGroup(bySupport, ref.support, imp.status);
+        bumpGroup(byLine, imp.line, imp.status);
     }
 
     byReference.forEach((usage, refId) => {
@@ -272,5 +314,5 @@ export const buildNetworkIndex = (lieux: Lieu[], references: SignageReference[])
     totals.defectCount = totals.absentCount + totals.toReplaceCount;
     totals.referencesInstalledCount = byReference.size;
 
-    return { implantations, byReference, totals };
+    return { implantations, byReference, bySupport, byLine, totals };
 };

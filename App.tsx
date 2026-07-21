@@ -8,6 +8,7 @@ import { Breadcrumbs } from './components/Breadcrumbs';
 import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditCategory, PMRFloorAdhesiveData, EcaEquipmentType, CognitivePictogramData, PrZone } from './types';
 import ConfirmationModal from './components/ConfirmationModal';
 import ReminderModal from './components/ReminderModal';
+import AboutModal from './components/AboutModal';
 import { Toaster } from 'react-hot-toast';
 import { useAppHandlers } from './hooks/useAppHandlers';
 
@@ -73,6 +74,7 @@ const SuccessAnimation: React.FC = () => (
 
 const App: React.FC = () => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
     
     // State selectors from Zustand store
     const store = useAuditStore();
@@ -232,9 +234,16 @@ const App: React.FC = () => {
           >
             Contact
           </a>{" "}
-          | 72 76
+          | 72 76 |{" "}
+          <button
+            onClick={() => setIsAboutModalOpen(true)}
+            className="text-indigo-500 hover:underline font-normal uppercase tracking-wider"
+          >
+            À propos
+          </button>
         </p>
       </footer>
+      <AboutModal isOpen={isAboutModalOpen} onClose={() => setIsAboutModalOpen(false)} />
              <ConfirmationModal
                 isOpen={isLogoutModalOpen}
                 onClose={() => setIsLogoutModalOpen(false)}

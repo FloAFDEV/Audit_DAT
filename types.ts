@@ -389,6 +389,29 @@ export interface ExternalDocumentRef {
     note?: string;
 }
 
+/** Arbitrage métier sur une référence (vue Arbitrages du cockpit).
+ *  SOUS-OBJET UNIQUE — jamais de champs plats éparpillés (needsReplace,
+ *  replaceReason...) : tout ce qui concerne l'arbitrage vit ici.
+ *  Enregistre la décision humaine — ne l'applique jamais automatiquement :
+ *  « remove » ne supprime rien (R1), l'application effective
+ *  (désactivation, changement de version...) reste un acte d'administration. */
+export type ArbitrageStatus = 'to_replace' | 'keep' | 'remove' | 'to_document';
+
+export interface ArbitrageHistoryEntry {
+    status: ArbitrageStatus;
+    reason?: string;
+    date: string;   // ISO
+    author?: string;
+}
+
+export interface ArbitrageState {
+    status: ArbitrageStatus;
+    reason?: string;
+    createdAt?: string;  // ISO — première décision
+    updatedAt?: string;  // ISO — dernière modification
+    history?: ArbitrageHistoryEntry[]; // décisions remplacées — jamais effacées
+}
+
 /** Snapshot d'une version physique antérieure (R2 : le versioning ne
  *  concerne que l'objet posé — jamais le marché, le prix ou le prestataire). */
 export interface SignageReferenceVersion {
@@ -432,6 +455,8 @@ export interface SignageReference {
     pairedWith?: string; // association physique (ex. recto/verso adca12/adca13)
     isDisabled?: boolean;
     needsReview?: boolean; // tâche d'administration en attente (divergence, qualification)
+    /** Arbitrage métier — sous-objet unique (statut, motif, historique). */
+    arbitrage?: ArbitrageState;
     legacyDescription?: string; // texte d'origine intégral — filet de sécurité
 }
 

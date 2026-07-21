@@ -49,6 +49,37 @@ export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children
   <h3 className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wider">{children}</h3>
 );
 
+/** Tuile d'indicateur compacte — partagée par toutes les sections du cockpit.
+ *  Cliquable si onClick est fourni (raccourci de navigation métier). */
+export const IndicatorTile: React.FC<{
+    value: number;
+    label: string;
+    tone: 'teal' | 'red' | 'amber' | 'slate' | 'sky';
+    onClick?: () => void;
+}> = ({ value, label, tone, onClick }) => {
+    const tones: Record<string, string> = {
+        teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-700 dark:text-teal-300',
+        red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300',
+        amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300',
+        slate: 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
+        sky:   'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/30 text-sky-700 dark:text-sky-300',
+    };
+    const content = (
+        <>
+            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-xs font-semibold uppercase mt-1 opacity-80">{label}</div>
+        </>
+    );
+    if (onClick) {
+        return (
+            <button onClick={onClick} className={`p-3 rounded-lg border text-center w-full transition-transform hover:scale-[1.02] hover:shadow-sm ${tones[tone]}`}>
+                {content}
+            </button>
+        );
+    }
+    return <div className={`p-3 rounded-lg border text-center ${tones[tone]}`}>{content}</div>;
+};
+
 // StatRow centralisant l'amélioration des styles de valeur
 export const StatRow: React.FC<{
   icon?: React.ReactNode;

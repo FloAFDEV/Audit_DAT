@@ -8,12 +8,13 @@ import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertT
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
-import { useNetworkIndex } from '../../hooks/useNetworkIndex';
+import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
-import { StatCard, SectionTitle, StatRow } from './primitives';
+import { StatCard, SectionTitle, StatRow, IndicatorTile } from './primitives';
+import { useCockpitNav } from './cockpitNav';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -74,31 +75,12 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreak
     );
 };
 
-/* =====================
-   Bloc Référentiel signalétique (nouveau — servi par l'index réseau)
-   ===================== */
-
-const IndicatorTile: React.FC<{ value: number; label: string; tone: 'teal' | 'red' | 'amber' | 'slate' | 'sky' }> = ({ value, label, tone }) => {
-    const tones: Record<string, string> = {
-        teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-700 dark:text-teal-300',
-        red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300',
-        amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300',
-        slate: 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-        sky:   'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/30 text-sky-700 dark:text-sky-300',
-    };
-    return (
-        <div className={`p-3 rounded-lg border text-center ${tones[tone]}`}>
-            <div className="text-2xl font-bold">{value}</div>
-            <div className="text-xs font-semibold uppercase mt-1 opacity-80">{label}</div>
-        </div>
-    );
-};
-
 interface SyntheseViewProps {
     lieux: Lieu[];
 }
 
 const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
+    const nav = useCockpitNav();
     // --- LOCATION FILTER LOGIC ---
     const [selectedLieuId, setSelectedLieuId] = useState<string | null>(null);
     const [filterQuery, setFilterQuery] = useState('');
@@ -143,7 +125,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // Référentiel signalétique : moteur d'index réseau (source unique).
     const { references, isLoading: refsLoading } = useSignageReferences();
-    const networkIndex = useNetworkIndex(filteredLieux, references);
+    const patrimoineIndex = usePatrimoineIndex(filteredLieux, references);
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
@@ -280,25 +262,49 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </div>
             )}
 
-            {/* BLOC RÉFÉRENTIEL SIGNALÉTIQUE — servi par le moteur d'index réseau */}
+            {/* CARTE D'ACCÈS AU PATRIMOINE — compteur de santé, pas zone de travail.
+                L'exploitation se fait dans les sections Patrimoine / Maintenance /
+                Arbitrages ; les tuiles et boutons y mènent (navigation transverse). */}
             <StatCard
-                title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
+                title={`Patrimoine Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
                 icon={<BookOpenCheck className="w-6 h-6" />}
             >
                 <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">
-                    État du parc des références suivies (familles DAT / P+R / ECA) — source : référentiel signalétique.
+                    État du parc des références suivies (familles DAT / P+R / ECA) — cliquez pour explorer.
                 </p>
                 {refsLoading ? (
                     <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
                 ) : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                        <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" />
-                        <IndicatorTile value={networkIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" />
-                        <IndicatorTile value={networkIndex.totals.okCount} label="Conformes" tone="teal" />
-                        <IndicatorTile value={networkIndex.totals.defectCount} label="Non conformes" tone="red" />
-                        <IndicatorTile value={networkIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
-                        <IndicatorTile value={needsReviewCount} label="À arbitrer" tone="amber" />
-                    </div>
+                    <>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                            <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" onClick={() => nav.navigate({ section: 'patrimoine' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" onClick={() => nav.navigate({ section: 'patrimoine' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.okCount} label="Conformes" tone="teal" />
+                            <IndicatorTile value={patrimoineIndex.totals.defectCount} label="Non conformes" tone="red" onClick={() => nav.navigate({ section: 'interventions' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
+                            <IndicatorTile value={needsReviewCount} label="À arbitrer" tone="amber" onClick={() => nav.navigate({ section: 'arbitrages' })} />
+                        </div>
+                        <div className="flex flex-wrap gap-3 pt-1">
+                            <button
+                                onClick={() => nav.navigate({ section: 'patrimoine' })}
+                                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
+                            >
+                                Explorer le patrimoine →
+                            </button>
+                            <button
+                                onClick={() => nav.navigate({ section: 'interventions' })}
+                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
+                            >
+                                Ouvrir la maintenance →
+                            </button>
+                            <button
+                                onClick={() => nav.navigate({ section: 'arbitrages' })}
+                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
+                            >
+                                Voir les arbitrages ({needsReviewCount}) →
+                            </button>
+                        </div>
+                    </>
                 )}
             </StatCard>
 
