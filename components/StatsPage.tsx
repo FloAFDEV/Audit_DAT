@@ -6,27 +6,33 @@
 // d'entrée du cockpit d'exploitation du patrimoine signalétique
 // (toute la vie de la signalétique après l'audit).
 //
+// Flux métier : Audit terrain → Anomalie → Besoin matériel → Commande
+// → Résumé de pose SAE → Historique. La section « Préparation » est un
+// placeholder qui matérialise les trois étapes à venir (Besoins
+// matériels, Commandes, Résumés de pose SAE), construites une par une
+// dans de futurs commits — jamais toutes à la fois.
+//
 // Architecture : un REGISTRE de sections piloté par les données —
-// ajouter une capacité au cockpit = ajouter une entrée au registre
-// (demain : campagnes, commandes, stocks, pose), jamais restructurer
-// cette coquille. La navigation transverse (raccourcis Synthèse →
-// sections, ouverture de fiche depuis n'importe où) passe par
-// CockpitNavContext — sans router.
+// ajouter une capacité au cockpit = ajouter une entrée au registre,
+// jamais restructurer cette coquille. La navigation transverse
+// (raccourcis Synthèse → sections/sous-onglets, ouverture de fiche
+// depuis n'importe où) passe par CockpitNavContext — sans router.
 //
 // Le contrat de plateforme complet (source de calcul unique via le
 // moteur d'index, fiche unique, sections pas pages, sélection→action)
-// est documenté dans utils/cockpit/patrimoineIndex.ts.
+// est documenté dans utils/cockpit/patrimoineIndex.ts et
+// utils/cockpit/selection.ts.
 // =================================================================
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { Building, Archive, Landmark, Wrench, Scale, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, AlertTriangle, PackageSearch, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
 
 const SyntheseView = lazy(() => import('./cockpit/SyntheseView'));
 const PatrimoineView = lazy(() => import('./cockpit/PatrimoineView'));
-const InterventionsView = lazy(() => import('./cockpit/InterventionsView'));
-const ArbitragesView = lazy(() => import('./cockpit/ArbitragesView'));
+const AnomaliesView = lazy(() => import('./cockpit/AnomaliesView'));
+const PreparationView = lazy(() => import('./cockpit/PreparationView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
 
 interface StatsPageProps {
@@ -36,15 +42,15 @@ interface StatsPageProps {
 
 /**
  * Registre des sections du cockpit — une entrée par section, aucune
- * modification du rendu pour en ajouter (demain : campagnes, commandes,
- * stocks, pose).
+ * modification du rendu pour en ajouter (demain : contenu réel de
+ * Préparation, puis validation pose terrain, campagnes...).
  */
 const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'synthese',      label: 'Synthèse',      Icon: Building },
-    { key: 'patrimoine',    label: 'Patrimoine',    Icon: Landmark },
-    { key: 'interventions', label: 'Interventions', Icon: Wrench },
-    { key: 'arbitrages',    label: 'Arbitrages',    Icon: Scale },
-    { key: 'historique',    label: 'Archives',      Icon: Archive },
+    { key: 'synthese',    label: 'Synthèse',      Icon: Building },
+    { key: 'patrimoine',  label: 'Patrimoine',    Icon: Landmark },
+    { key: 'anomalies',   label: 'Anomalies',     Icon: AlertTriangle },
+    { key: 'preparation', label: 'Préparation',   Icon: PackageSearch },
+    { key: 'historique',  label: 'Archives',      Icon: Archive },
 ];
 
 const SectionLoader: React.FC = () => (
@@ -56,9 +62,11 @@ const SectionLoader: React.FC = () => (
 const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const [activeSection, setActiveSection] = useState<CockpitSectionKey>('synthese');
   const [pendingReferenceId, setPendingReferenceId] = useState<string | null>(null);
+  const [pendingSubSection, setPendingSubSection] = useState<string | null>(null);
 
   const nav = useMemo(() => ({
-      navigate: ({ section, referenceId }: { section: CockpitSectionKey; referenceId?: string }) => {
+      navigate: ({ section, subSection, referenceId }: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => {
+          if (subSection) setPendingSubSection(subSection);
           // Une fiche demandée s'ouvre toujours dans Patrimoine (fiche unique).
           if (referenceId) {
               setPendingReferenceId(referenceId);
@@ -69,7 +77,9 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
       },
       pendingReferenceId,
       consumePendingReference: () => setPendingReferenceId(null),
-  }), [pendingReferenceId]);
+      pendingSubSection,
+      consumePendingSubSection: () => setPendingSubSection(null),
+  }), [pendingReferenceId, pendingSubSection]);
 
   return (
     <CockpitNavContext.Provider value={nav}>
@@ -95,8 +105,8 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
       <Suspense fallback={<SectionLoader />}>
         {activeSection === 'synthese' && <SyntheseView lieux={lieux} />}
         {activeSection === 'patrimoine' && <PatrimoineView lieux={lieux} />}
-        {activeSection === 'interventions' && <InterventionsView lieux={lieux} />}
-        {activeSection === 'arbitrages' && <ArbitragesView />}
+        {activeSection === 'anomalies' && <AnomaliesView lieux={lieux} />}
+        {activeSection === 'preparation' && <PreparationView />}
         {activeSection === 'historique' && <HistoriqueView />}
       </Suspense>
     </Container>

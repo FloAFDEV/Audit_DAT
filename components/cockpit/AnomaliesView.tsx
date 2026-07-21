@@ -1,21 +1,30 @@
-// components/cockpit/InterventionsView.tsx
+// components/cockpit/AnomaliesView.tsx
 // =================================================================
-// Section « Interventions » du cockpit.
+// Section « Anomalies » du cockpit (ex-Interventions — renommage pur).
 // -----------------------------------------------------------------
-// Généalogie : Audit → Patrimoine → INTERVENTIONS (ce module, question
-// « que devons-nous faire maintenant ? ») → demain Production/Pose.
+// Généalogie : Audit terrain → Anomalie → Besoin matériel → Commande →
+// Résumé de pose SAE → Historique. Ce module couvre les deux premières
+// cases (défauts détectés + priorisation) : un item absent/dégradé/non
+// conforme est un CONSTAT, pas une décision — aucune validation humaine
+// n'est requise pour le chemin par défaut (contrairement à la
+// Qualification référentiel de Patrimoine, réservée aux questions de
+// qualité du catalogue).
 //
 // Rendu en « ordres de travail patrimoine » (cartes par bande d'urgence),
 // pas un tableau plat ligne|défaut|quantité|station — sinon on revient
 // au tableau Excel. Bandes calculées par des RÈGLES EXPLICITES
 // (utils/cockpit/maintenanceActions.ts::bandOf), jamais un score opaque.
 //
+// Moteur inchangé (maintenanceActions.ts, MaintenanceAction,
+// MaintenancePriority) : seul le nom de la section et son vocabulaire
+// changent, pas la logique de regroupement/priorisation.
+//
 // Chaque carte est une Selection affichée (contrat de plateforme,
-// règle 4) : le futur bouton "Préparer l'intervention" / "Générer un
-// export chantier" se posera ici sans redessiner la vue.
+// règle 4) : les futurs consommateurs (Besoin matériel, Résumé de pose
+// SAE — section Préparation) se poseront ici sans redessiner la vue.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Eye, ChevronRight, Wrench } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Eye, ChevronRight } from 'lucide-react';
 import { Lieu } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -90,16 +99,16 @@ const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: st
         )}
 
         {/* Chaque carte EST une Selection (id/source/createdAt) — le contrat
-            transversal, pas une propriété du module Interventions. */}
+            transversal, pas une propriété du module Anomalies. */}
         <SelectionConsumers selection={action} />
     </div>
 );
 
-interface InterventionsViewProps {
+interface AnomaliesViewProps {
     lieux: Lieu[];
 }
 
-const InterventionsView: React.FC<InterventionsViewProps> = ({ lieux }) => {
+const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     const { references, isLoading } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
@@ -120,8 +129,8 @@ const InterventionsView: React.FC<InterventionsViewProps> = ({ lieux }) => {
     if (actions.length === 0) {
         return (
             <div className="py-16 text-center text-slate-500 dark:text-slate-400">
-                <Wrench className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Aucune intervention en attente.</p>
+                <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Aucune anomalie en attente.</p>
                 <p className="text-sm mt-1">Tous les éléments suivis sont conformes ou non contrôlés.</p>
             </div>
         );
@@ -179,4 +188,4 @@ const InterventionsView: React.FC<InterventionsViewProps> = ({ lieux }) => {
     );
 };
 
-export default InterventionsView;
+export default AnomaliesView;

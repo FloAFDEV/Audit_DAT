@@ -9,12 +9,14 @@
 // moteur d'index du patrimoine ; la fiche ouverte ici est LA fiche
 // unique (ReferenceSheet).
 // =================================================================
-import React, { useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Search, LucideIcon } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BookOpenCheck, MapPinned, Scale, Search, LucideIcon } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
+import ReferenceQualificationView from './ReferenceQualificationView';
+import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
 
 /* ================= Références : liste filtrable ================= */
@@ -98,7 +100,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300'
                     }`}
                 >
-                    À arbitrer ({reviewCount})
+                    À qualifier ({reviewCount})
                 </button>
             </div>
 
@@ -128,7 +130,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                                     <td className="p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
-                                            {ref.needsReview && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">Arbitrage</span>}
+                                            {ref.needsReview && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">À qualifier</span>}
                                             {ref.isDisabled && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">Désactivée</span>}
                                         </div>
                                         <span className="block font-mono text-xs text-slate-400 dark:text-slate-500 mt-0.5">
@@ -315,22 +317,44 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
 /* ================= Conteneur de section ================= */
 
-type PatrimoineSubKey = 'references' | 'implantations';
+type PatrimoineSubKey = 'references' | 'implantations' | 'qualification';
 
 const SUB_SECTIONS: { key: PatrimoineSubKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'references',    label: 'Références',    Icon: BookOpenCheck },
-    { key: 'implantations', label: 'Implantations', Icon: MapPinned },
+    { key: 'references',    label: 'Références',              Icon: BookOpenCheck },
+    { key: 'implantations', label: 'Implantations',            Icon: MapPinned },
+    { key: 'qualification', label: 'Qualification référentiel', Icon: Scale },
 ];
+
+const isPatrimoineSubKey = (v: string): v is PatrimoineSubKey =>
+    v === 'references' || v === 'implantations' || v === 'qualification';
 
 interface PatrimoineViewProps {
     lieux: Lieu[];
 }
 
 const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
-    const { references, isLoading } = useSignageReferences();
+    const { references, isLoading, reload } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
+    const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<PatrimoineSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
+
+    // Navigation transverse : une autre section peut demander l'ouverture
+    // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
+    // d'une fiche précise — consommé une fois pris en compte.
+    useEffect(() => {
+        if (nav.pendingSubSection && isPatrimoineSubKey(nav.pendingSubSection)) {
+            setSubSection(nav.pendingSubSection);
+            nav.consumePendingSubSection();
+        }
+    }, [nav.pendingSubSection]);
+
+    useEffect(() => {
+        if (nav.pendingReferenceId) {
+            setOpenReferenceId(nav.pendingReferenceId);
+            nav.consumePendingReference();
+        }
+    }, [nav.pendingReferenceId]);
 
     if (isLoading) {
         return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement du patrimoine…</div>;
@@ -355,7 +379,7 @@ const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
     return (
         <div className="space-y-5">
             {/* Sous-navigation (registre) */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
                 {SUB_SECTIONS.map(({ key, label, Icon }) => (
                     <button
                         key={key}
@@ -383,6 +407,13 @@ const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
                 <ImplantationsExplorer
                     references={references}
                     index={index}
+                    onOpenReference={setOpenReferenceId}
+                />
+            )}
+            {subSection === 'qualification' && (
+                <ReferenceQualificationView
+                    references={references}
+                    onReload={reload}
                     onOpenReference={setOpenReferenceId}
                 />
             )}

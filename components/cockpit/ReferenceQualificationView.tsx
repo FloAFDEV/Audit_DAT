@@ -1,34 +1,33 @@
-// components/cockpit/ArbitragesView.tsx
+// components/cockpit/ReferenceQualificationView.tsx
 // =================================================================
-// Section « Arbitrages » du cockpit.
+// Sous-vue « Qualification référentiel » de la section Patrimoine
+// (ex-section racine « Arbitrages » — déplacement + renommage).
 // -----------------------------------------------------------------
-// Séparation stricte avec Interventions :
-//   Interventions = « il y a un problème physique à traiter » (observation).
-//   Arbitrages    = « on décide quoi faire de cet élément » (décision).
-// Une référence peut avoir 12 implantations non conformes (Interventions)
-// et une décision "keep" ici (ancienne génération mais compatible) —
-// les deux sujets ne se déduisent jamais l'un de l'autre.
+// Portée strictement limitée au CATALOGUE : « cette fiche référence
+// est-elle correcte/complète ? » — jamais un constat terrain (ça, c'est
+// le rôle de la section Anomalies, traité automatiquement, sans
+// décision humaine). C'est pourquoi ce n'est plus une section racine
+// du cockpit : c'est un sous-onglet de Patrimoine, au même titre que
+// Références et Implantations — une question de qualité de donnée, pas
+// une étape du flux opérationnel.
 //
-// Écrit dans signageReferences via useArbitrage (seule mutation du
-// commit) : sous-objet unique `arbitrage` (R1 : "remove" n'efface
+// Écrit dans signageReferences via useArbitrage (seule mutation de ce
+// module) : sous-objet unique `arbitrage` (R1 : "remove" n'efface
 // jamais la référence, seulement la décision).
 // =================================================================
 import React, { useMemo, useState } from 'react';
 import { Scale, Check, ChevronRight, History } from 'lucide-react';
 import { ArbitrageStatus, SignageReference } from '../../types';
-import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { useArbitrage } from '../../hooks/useArbitrage';
-import { useCockpitNav } from './cockpitNav';
 import { ARBITRAGE_LABELS as DECISION_LABELS } from './labels';
 
 const DECISION_STYLE: Record<ArbitrageStatus, string> = {
-    to_replace: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
     keep: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
     remove: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
     to_document: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
 };
 
-const DECISION_ORDER: ArbitrageStatus[] = ['to_replace', 'keep', 'remove', 'to_document'];
+const DECISION_ORDER: ArbitrageStatus[] = ['keep', 'remove', 'to_document'];
 
 /** Motif de la divergence — dérivé des documents externes seedés (R8),
  *  sans nouveau champ : la donnée existe déjà, on la rend simplement lisible. */
@@ -36,10 +35,10 @@ const reviewReasonOf = (ref: SignageReference): string => {
     const noted = ref.externalDocuments?.find(d => d.note)?.note;
     if (noted) return noted;
     if (ref.legacyDescription) return 'Qualification à compléter (description historique disponible ci-dessous).';
-    return 'Élément signalé pour arbitrage.';
+    return 'Référence signalée pour qualification.';
 };
 
-const ArbitrageCard: React.FC<{
+const QualificationCard: React.FC<{
     reference: SignageReference;
     onOpenReference: (id: string) => void;
     onDecide: (status: ArbitrageStatus, reason: string) => void;
@@ -93,7 +92,7 @@ const ArbitrageCard: React.FC<{
                 </details>
             )}
 
-            {/* Décision */}
+            {/* Décision de qualification (catalogue uniquement) */}
             <div className="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-2">
                 <div className="flex flex-wrap gap-2">
                     {DECISION_ORDER.map(status => (
@@ -139,28 +138,28 @@ const ArbitrageCard: React.FC<{
     );
 };
 
-const ArbitragesView: React.FC = () => {
-    const { references, isLoading, reload } = useSignageReferences();
+interface ReferenceQualificationViewProps {
+    references: SignageReference[];
+    onReload: () => void;
+    onOpenReference: (id: string) => void;
+}
+
+const ReferenceQualificationView: React.FC<ReferenceQualificationViewProps> = ({ references, onReload, onOpenReference }) => {
     const { decide } = useArbitrage();
-    const nav = useCockpitNav();
 
     const pending = useMemo(() => references.filter(r => r.needsReview), [references]);
     const decided = useMemo(() => references.filter(r => !r.needsReview && r.arbitrage), [references]);
 
     const handleDecide = async (reference: SignageReference, status: ArbitrageStatus, reason: string) => {
         await decide(reference, status, reason || undefined);
-        reload();
+        onReload();
     };
-
-    if (isLoading) {
-        return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement…</div>;
-    }
 
     if (pending.length === 0 && decided.length === 0) {
         return (
             <div className="py-16 text-center text-slate-500 dark:text-slate-400">
                 <Scale className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Aucun arbitrage en attente.</p>
+                <p className="font-medium">Aucune qualification en attente.</p>
                 <p className="text-sm mt-1">Le référentiel ne signale aucune divergence à trancher.</p>
             </div>
         );
@@ -170,17 +169,17 @@ const ArbitragesView: React.FC = () => {
         <div className="space-y-8">
             <section>
                 <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-3">
-                    À arbitrer ({pending.length})
+                    À qualifier ({pending.length})
                 </h3>
                 {pending.length === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucun élément en attente.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucune référence en attente.</p>
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {pending.map(ref => (
-                            <ArbitrageCard
+                            <QualificationCard
                                 key={ref.id}
                                 reference={ref}
-                                onOpenReference={(id) => nav.navigate({ section: 'patrimoine', referenceId: id })}
+                                onOpenReference={onOpenReference}
                                 onDecide={(status, reason) => handleDecide(ref, status, reason)}
                             />
                         ))}
@@ -195,10 +194,10 @@ const ArbitragesView: React.FC = () => {
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {decided.map(ref => (
-                            <ArbitrageCard
+                            <QualificationCard
                                 key={ref.id}
                                 reference={ref}
-                                onOpenReference={(id) => nav.navigate({ section: 'patrimoine', referenceId: id })}
+                                onOpenReference={onOpenReference}
                                 onDecide={(status, reason) => handleDecide(ref, status, reason)}
                             />
                         ))}
@@ -209,4 +208,4 @@ const ArbitragesView: React.FC = () => {
     );
 };
 
-export default ArbitragesView;
+export default ReferenceQualificationView;

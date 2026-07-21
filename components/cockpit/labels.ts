@@ -17,7 +17,6 @@ export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA', string> = {
 };
 
 export const ARBITRAGE_LABELS: Record<ArbitrageStatus, string> = {
-    to_replace: 'À remplacer',
     keep: 'À conserver',
     remove: 'À supprimer',
     to_document: 'À documenter',
