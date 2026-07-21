@@ -1,12 +1,15 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry } from './types';
+import { Lieu, HistoryEntry, SignageReference, SignageAsset } from './types';
+import { buildSignageReferencesSeed } from './data/signage_seed';
 
 // FIX: Switched from a subclassing pattern to a typed Dexie instance.
 export const db = new Dexie('TisseoAuditDB') as Dexie & {
     lieux: EntityTable<Lieu, 'id'>;
     history: EntityTable<HistoryEntry, 'id'>;
+    signageReferences: EntityTable<SignageReference, 'id'>;
+    signageAssets: EntityTable<SignageAsset, 'id'>;
 };
 
 // V5: introduction de la table history.
@@ -261,4 +264,30 @@ db.version(11).stores({
         });
         return tx.table('lieux').bulkPut(lieux);
     });
+});
+
+// V12: création du référentiel signalétique (spécification signageReferences, commit 1).
+//   - signageReferences : catalogue métier destiné à devenir administrable.
+//     Index : id (clé primaire, ids historiques ad1/adbe1/eca-11... conservés)
+//     et auditType (dénormalisé depuis scope.auditType — règle R11).
+//     Seed initial depuis data/adhesives.ts (38 références) : après cette
+//     migration, la table est la source de vérité métier (règle R3) ; les
+//     constantes historiques restent utilisées par les lecteurs existants
+//     jusqu'à leur bascule progressive (strangler pattern).
+//   - signageAssets : médias terrain légers (Blob image compressée uniquement,
+//     règle R6). Vide au seed — aucun fichier de production n'entre ici (R5).
+//   ⚠ Aucune modification de la table lieux : l'arbre d'audit reste intact (R9).
+db.version(12).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    signageAssets: 'id, referenceId',
+}).upgrade(tx => {
+    return tx.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
+});
+
+// Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
+// Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
+db.on('populate', (tx) => {
+    tx.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
 });
