@@ -24,6 +24,7 @@ import {
     URGENCY_BAND_LABELS, UrgencyBand,
 } from '../../utils/cockpit/maintenanceActions';
 import { useCockpitNav } from './cockpitNav';
+import SelectionConsumers from './SelectionConsumers';
 
 const BAND_ORDER: UrgencyBand[] = ['urgent', 'a_planifier', 'surveillance'];
 
@@ -87,6 +88,10 @@ const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: st
                 Voir la fiche référence <ChevronRight className="w-3.5 h-3.5" />
             </button>
         )}
+
+        {/* Chaque carte EST une Selection (id/source/createdAt) — le contrat
+            transversal, pas une propriété du module Interventions. */}
+        <SelectionConsumers selection={action} />
     </div>
 );
 

@@ -14,7 +14,9 @@ import {
 } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
+import { selectionFromReference } from '../../utils/cockpit/selection';
 import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+import SelectionConsumers from './SelectionConsumers';
 
 /* ---------- briques locales de la fiche ---------- */
 
@@ -109,6 +111,10 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                     </table>
                 </div>
             )}
+            {/* La sélection n'est pas une notion propriétaire d'Interventions :
+                une fiche de référence en produit une du même contrat (source
+                'reference'), consommable par les mêmes futurs modules. */}
+            <SelectionConsumers selection={selectionFromReference(index, reference.id, reference.name)} />
         </SheetSection>
     );
 };

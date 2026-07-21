@@ -16,13 +16,16 @@
 // bandées par des RÈGLES EXPLICITES (pas un score opaque — cf.
 // maintenancePriority.ts) et triées par urgence transparente.
 //
-// Chaque action EST une Selection (règle 4) : la prise sur laquelle se
-// brancheront campagnes, lots d'intervention et exports chantier/pose —
-// sans redessiner les vues.
+// Chaque action EST une Selection à part entière (id, source, createdAt —
+// cf. selection.ts) : la prise sur laquelle se brancheront demain
+// campagnes, lots d'intervention et exports chantier/pose — sans
+// redessiner les vues. Interventions ne possède pas la notion de
+// sélection, elle la consomme comme n'importe quel autre module.
 // =================================================================
 
 import { AdhesiveStatus, SignageReference } from '../../types';
-import { ImplantationRef, PatrimoineIndex, Selection } from './patrimoineIndex';
+import { ImplantationRef, PatrimoineIndex } from './patrimoineIndex';
+import { Selection, SelectionSource, createSelection } from './selection';
 import {
     MaintenancePriority, calculatePriorityFactors, calculatePriorityFactorsFromItems, comparePriority,
 } from './maintenancePriority';
@@ -68,7 +71,15 @@ export interface MaintenanceAction extends Selection {
 
 const isDefect = (s: AdhesiveStatus) => s === AdhesiveStatus.Absent || s === AdhesiveStatus.ToBeReplaced;
 
+/** mode de regroupement → source de la Selection (contrat transversal). */
+const SOURCE_BY_MODE: Record<MaintenanceGroupMode, SelectionSource> = {
+    reference: 'reference',
+    site: 'site',
+    line: 'line',
+};
+
 const makeAction = (
+    mode: MaintenanceGroupMode,
     key: string,
     label: string,
     subtitle: string | undefined,
@@ -76,8 +87,12 @@ const makeAction = (
     priority: MaintenancePriority,
 ): MaintenanceAction => {
     const absentCount = items.filter(i => i.status === AdhesiveStatus.Absent).length;
+    // Chaque action EST construite via le constructeur transversal — pas
+    // un objet ad hoc qui ressemblerait à une Selection sans en être une.
+    const selection = createSelection(SOURCE_BY_MODE[mode], label, items);
     return {
-        key, label, subtitle, items,
+        ...selection,
+        key, subtitle,
         absentCount,
         toReplaceCount: items.length - absentCount,
         lieuCount: new Set(items.map(i => i.lieuId)).size,
@@ -125,6 +140,7 @@ export const buildMaintenanceActions = (
                 const priority = usage ? calculatePriorityFactors(usage) : calculatePriorityFactorsFromItems(items);
                 const lieuCount = new Set(items.map(i => i.lieuId)).size;
                 actions.push(makeAction(
+                    mode,
                     refId,
                     ref?.name ?? refId,
                     `${ref?.code ? `${ref.code} · ` : ''}${lieuCount} lieu${lieuCount > 1 ? 'x' : ''}`,
@@ -138,6 +154,7 @@ export const buildMaintenanceActions = (
             for (const [lieuId, items] of collectBy(i => i.lieuId)) {
                 const refCount = new Set(items.map(i => i.referenceId)).size;
                 actions.push(makeAction(
+                    mode,
                     lieuId,
                     items[0].lieuName,
                     `${refCount} référence${refCount > 1 ? 's' : ''} concernée${refCount > 1 ? 's' : ''}`,
@@ -151,6 +168,7 @@ export const buildMaintenanceActions = (
             for (const [line, items] of collectBy(i => i.line)) {
                 const lieuCount = new Set(items.map(i => i.lieuId)).size;
                 actions.push(makeAction(
+                    mode,
                     line,
                     line === 'P+R' ? 'Parkings Relais' : `Ligne ${line}`,
                     `${lieuCount} lieu${lieuCount > 1 ? 'x' : ''}`,

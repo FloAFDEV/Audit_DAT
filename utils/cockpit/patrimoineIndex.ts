@@ -121,16 +121,9 @@ export interface PatrimoineIndex {
     totals: PatrimoineTotals;
 }
 
-/**
- * Une sélection = la prise sur laquelle se brancheront les futures actions
- * (préparer une intervention, générer un document, ouvrir une campagne).
- * Aujourd'hui la seule action est l'affichage ; le type existe pour que
- * les vues soient productrices de sélections dès leur naissance.
- */
-export interface Selection {
-    label: string;
-    items: ImplantationRef[];
-}
+// Le type Selection (objet métier transversal, contrat "sélection → action")
+// vit désormais dans ./selection.ts — pas ici, pour qu'aucun module ne
+// puisse se l'approprier comme une notion propriétaire.
 
 // -----------------------------------------------------------------
 // Résolveur (R10) : quelles références s'appliquent à un équipement ?
