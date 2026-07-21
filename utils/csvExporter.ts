@@ -10,6 +10,7 @@ import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
+import { buildFullExportPayload, validateLieuxData } from './signageSerializer';
 
 /**
  * Converts a string into a URL-friendly slug.
@@ -48,13 +49,16 @@ const downloadFile = (content: string, fileName: string, mimeType: string) => {
 // SECTION: JSON EXPORT/IMPORT
 // =================================================================
 
-export const exportLieuxToJson = (lieux: Lieu[]): { success: boolean } => {
+/**
+ * Export JSON complet (format v2) : lieux + signageReferences + signageAssets.
+ * Lit directement les tables Dexie — le référentiel administré est TOUJOURS
+ * inclus dans la sauvegarde (aucune perte possible des corrections métier).
+ * Reste compatible en restauration avec les anciens fichiers (format v1).
+ */
+export const exportLieuxToJson = async (): Promise<{ success: boolean }> => {
     try {
-        const exportData = {
-            exportDate: new Date().toISOString().slice(0, 10),
-            data: lieux,
-        };
-        const jsonString = JSON.stringify(exportData, null, 2);
+        const payload = await buildFullExportPayload();
+        const jsonString = JSON.stringify(payload, null, 2);
         downloadFile(jsonString, `export-auditref-${new Date().toISOString().slice(0, 10)}.json`, 'application/json');
         return { success: true };
     } catch (error) {
@@ -63,13 +67,9 @@ export const exportLieuxToJson = (lieux: Lieu[]): { success: boolean } => {
     }
 };
 
-export const validateImportedData = (data: any): data is Lieu[] => {
-    if (!Array.isArray(data)) return false;
-    if (data.length === 0) return true; // Empty array is valid
-    const firstLieu = data[0];
-    // Basic structural check
-    return 'id' in firstLieu && 'name' in firstLieu && 'modules' in firstLieu && Array.isArray(firstLieu.modules);
-};
+// Validation des lieux : déplacée dans utils/signageSerializer.ts (source unique),
+// ré-exportée ici pour ne pas casser les imports existants.
+export const validateImportedData = validateLieuxData;
 
 // =================================================================
 // SECTION: CALENDAR (.ics) EXPORT & HOLIDAY LOGIC

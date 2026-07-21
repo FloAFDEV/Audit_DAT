@@ -1,0 +1,188 @@
+// components/cockpit/HistoriqueView.tsx
+// Section « Historique » du cockpit — archives des audits.
+// Contenu déplacé depuis StatsPage (onglet history), fonctionnellement identique.
+import React, { useState, useEffect } from 'react';
+import { Archive, History, Trash2 } from 'lucide-react';
+import { Lieu, AuditModule, HistoryEntry, MaintenanceItem } from '../../types';
+import { db } from '../../db';
+import { StatCard } from './primitives';
+import ConfirmationModal from '../ConfirmationModal';
+import MaintenanceListModal from '../MaintenanceListModal';
+import { generateMaintenanceSummary } from '../../utils/maintenanceGenerator';
+import { HistoryChart } from '../HistoryChart';
+
+interface HistoryListProps {
+    onViewSnapshot: (entry: HistoryEntry) => void;
+}
+
+const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
+    const [history, setHistory] = useState<HistoryEntry[]>([]);
+    const [entryToDelete, setEntryToDelete] = useState<HistoryEntry | null>(null);
+
+    const loadHistory = () => {
+        db.history.orderBy('date').reverse().toArray().then(setHistory);
+    };
+
+    useEffect(() => {
+        loadHistory();
+    }, []);
+
+    const handleDelete = async () => {
+        if (entryToDelete && entryToDelete.id) {
+            await db.history.delete(entryToDelete.id);
+            setEntryToDelete(null);
+            loadHistory();
+        }
+    };
+
+    const getDateParts = (dateStr: string) => {
+        const date = new Date(dateStr);
+        const day = date.toLocaleDateString('fr-FR', { day: '2-digit' });
+        const month = date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', '');
+        const year = date.getFullYear();
+        const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+        return { day, month, year, time };
+    };
+
+    const getSubtitle = (type: string) => {
+        switch(type) {
+            case 'GLOBAL': return 'Réinitialisation complète du réseau';
+            case 'CATEGORY': return 'Réinitialisation par ligne / catégorie';
+            case 'MODULE_TYPE': return 'Réinitialisation par type d\'équipement';
+            case 'SINGLE_AUDIT': return 'Réinitialisation d\'audit unique';
+            default: return 'Instantané';
+        }
+    };
+
+    if (!history || history.length === 0) {
+        return (
+            <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+                <Archive className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Aucune archive disponible.</p>
+                <p className="text-sm mt-1">Les archives se créent automatiquement lors de la réinitialisation d'un audit.</p>
+            </div>
+        );
+    }
+
+    return (
+        <>
+            <HistoryChart data={history} />
+
+            <div className="space-y-4">
+                {history.map((entry) => {
+                    const { day, month, year, time } = getDateParts(entry.date);
+                    return (
+                        <div key={entry.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-0 flex hover:shadow-md transition-shadow overflow-hidden group">
+                            {/* Gauche : Date */}
+                            <div className="flex flex-col items-center justify-center min-w-[90px] bg-slate-50 dark:bg-slate-700/50 border-r border-slate-200 dark:border-slate-700 py-4">
+                                <span className="text-2xl font-bold text-gray-700 dark:text-slate-200 leading-none">{day}</span>
+                                <span className="text-xs font-bold uppercase text-gray-500 dark:text-slate-400 mt-1">{month}</span>
+                                <span className="text-xs text-gray-400 dark:text-slate-500 mt-2">{year}</span>
+                                <span className="text-xs text-gray-400 dark:text-slate-500">{time}</span>
+                            </div>
+
+                            {/* Centre : Contenu (Cliquable) */}
+                            <button
+                                onClick={() => onViewSnapshot(entry)}
+                                className="flex-1 flex items-center p-4 text-left outline-none focus:bg-slate-50 dark:focus:bg-slate-700/50"
+                            >
+                                <div className="flex-1 min-w-0 pr-4">
+                                    <h4 className="font-bold text-lg text-gray-900 dark:text-slate-100 truncate mb-1 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                        {entry.title}
+                                    </h4>
+                                    <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2">
+                                        <History className="w-3 h-3" />
+                                        {getSubtitle(entry.type)}
+                                    </p>
+                                </div>
+
+                                {/* Droite : Score */}
+                                <div className="flex-shrink-0">
+                                    <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-bold ${
+                                        entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
+                                        entry.score >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' :
+                                        entry.score > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
+                                        'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400' // Style neutre pour 0%
+                                    }`}>
+                                        {entry.score > 0 ? `${entry.score}%` : '-'}
+                                    </span>
+                                </div>
+                            </button>
+
+                            {/* Action : Supprimer */}
+                            <div className="flex items-center pr-4 pl-2 border-l border-slate-100 dark:border-slate-700">
+                                <button
+                                    onClick={() => setEntryToDelete(entry)}
+                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                    title="Supprimer cette entrée"
+                                >
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            <ConfirmationModal
+                isOpen={!!entryToDelete}
+                onClose={() => setEntryToDelete(null)}
+                onConfirm={handleDelete}
+                title="Supprimer l'archive"
+                message="Êtes-vous sûr de vouloir supprimer cette entrée d'archive ? Cette action est irréversible."
+                isDestructive
+            />
+        </>
+    );
+};
+
+const HistoriqueView: React.FC = () => {
+    const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
+
+    const handleViewSnapshot = (entry: HistoryEntry) => {
+        try {
+            const data = JSON.parse(entry.details);
+            // Normalisation des données pour le générateur
+            let lieuxToAnalyze: Lieu[] = [];
+
+            if (Array.isArray(data)) {
+                // Cas GLOBAL ou CATEGORY : c'est déjà une liste de Lieux
+                lieuxToAnalyze = data as Lieu[];
+            } else if (data && typeof data === 'object' && 'type' in data) {
+                // Cas SINGLE_AUDIT : c'est un Module seul.
+                // On doit le wrapper dans une structure Lieu pour que le générateur fonctionne
+                const module = data as AuditModule;
+                lieuxToAnalyze = [{
+                    id: 'snapshot-wrapper',
+                    name: 'Archive',
+                    modules: [module]
+                }];
+            }
+
+            const summary = generateMaintenanceSummary(lieuxToAnalyze);
+            setModalContent({
+                title: `Détails de l'archive : ${entry.title}`,
+                items: summary.allDefects.items
+            });
+
+        } catch (e) {
+            console.error("Failed to parse history entry details", e);
+        }
+    };
+
+    return (
+        <>
+            <StatCard title="Archives des Audits" icon={<Archive className="w-6 h-6" />}>
+                <HistoryList onViewSnapshot={handleViewSnapshot} />
+            </StatCard>
+            <MaintenanceListModal
+                isOpen={!!modalContent}
+                onClose={() => setModalContent(null)}
+                title={modalContent?.title || ''}
+                items={modalContent?.items || []}
+            />
+        </>
+    );
+};
+
+export default HistoriqueView;

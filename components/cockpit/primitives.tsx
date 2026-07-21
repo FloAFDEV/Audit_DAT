@@ -1,0 +1,104 @@
+// components/cockpit/primitives.tsx
+// =================================================================
+// Primitives UI partagées du cockpit métier.
+// Extraction PURE depuis StatsPage.tsx (aucun changement de style) :
+// toutes les sections du cockpit (Synthèse, Référentiel, Maintenance,
+// Arbitrages, Historique et futures) composent ces briques — jamais
+// leurs propres variantes locales.
+// =================================================================
+import React from 'react';
+import { ArrowLeft } from 'lucide-react';
+import { Logo } from '../Logo';
+
+export const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="max-w-7xl mx-auto space-y-8">
+    {children}
+  </div>
+);
+
+export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title, onBack }) => (
+  <div className="flex items-center gap-4">
+    <button
+      onClick={onBack}
+      className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+      aria-label="Retour"
+    >
+      <ArrowLeft className="w-5 h-5" />
+    </button>
+    <div className="flex items-center gap-3">
+        <Logo className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
+        <h1 className="text-3xl md:text-4xl font-extrabold leading-tight text-gray-900 dark:text-slate-100">{title}</h1>
+    </div>
+  </div>
+);
+
+// StatCard optimisé pour l'esthétique
+export const StatCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, icon, children, className = '' }) => (
+  <section className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-teal-500/10 dark:border-slate-700/50 ${className}`}>
+    <div className="flex items-center gap-4 mb-5">
+      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
+        {icon}
+      </div>
+      <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
+    </div>
+    <div className="space-y-6">{children}</div>
+  </section>
+);
+
+export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h3 className="text-sm md:text-base font-semibold text-slate-600 dark:text-slate-300 mb-3 uppercase tracking-wider">{children}</h3>
+);
+
+// StatRow centralisant l'amélioration des styles de valeur
+export const StatRow: React.FC<{
+  icon?: React.ReactNode;
+  label: React.ReactNode;
+  value: React.ReactNode;
+  isSubItem?: boolean;
+  highlight?: 'danger' | 'warning' | 'info' | 'primary' | null; // 'primary' pour les totaux
+  onClick?: () => void;
+}> = ({ icon, label, value, isSubItem = false, highlight = null, onClick }) => {
+
+  let valueClass = isSubItem ? 'text-sm' : 'text-base';
+  let labelClass = isSubItem ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300';
+  let badgeClass = '';
+
+  if (highlight === 'primary') {
+    // Style pour les totaux principaux (plus grand et couleur d'accent)
+    valueClass = 'text-2xl md:text-3xl font-extrabold text-teal-600 dark:text-teal-400';
+    labelClass = 'text-lg font-bold text-gray-800 dark:text-slate-100';
+  } else {
+    // Styles pour les alertes et sous-éléments
+    badgeClass = highlight === 'danger' ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
+                 isSubItem
+                    ? 'font-medium text-slate-800 dark:text-slate-200'
+                    : 'font-semibold px-2 py-0.5 rounded text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-700';
+  }
+
+  const content = (
+      <div className={`flex justify-between items-center ${isSubItem ? 'pl-8' : 'pl-0'} py-1`}>
+        <div className={`flex items-center gap-3 ${labelClass}`}>
+          {icon && !highlight && <div className="w-5 h-5 flex items-center justify-center">{icon}</div>}
+          <div className={`${isSubItem ? 'text-sm' : 'font-medium'}`}>{label}</div>
+        </div>
+        <div className={`${valueClass} ${badgeClass}`}>{value}</div>
+      </div>
+  );
+
+  if (onClick) {
+    const numericValue = typeof value === 'string' ? parseInt(value, 10) : typeof value === 'number' ? value : -1;
+    return (
+      <button
+        onClick={onClick}
+        disabled={numericValue === 0}
+        className="w-full text-left rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 -mx-2 px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+      >
+        {content}
+      </button>
+    );
+  }
+
+  return content;
+};
