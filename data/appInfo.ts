@@ -11,8 +11,8 @@ export const APP_PIPELINE = [
     'Audit terrain',
     'Référentiel signalétique',
     'Analyse conformité',
-    'Préparation d\'interventions',
-    'Production terrain',
+    'Besoins d\'intervention',
+    'Résumés SAE',
 ];
 
 export const APP_AUTHOR = 'FloAFDEV';

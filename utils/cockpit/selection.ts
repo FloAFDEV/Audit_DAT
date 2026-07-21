@@ -16,9 +16,9 @@
 // Ce module ne fait QUE produire et manipuler des Selection — aucune
 // logique d'export, de campagne ou de commande n'est construite ici.
 // Les consommateurs liront ce contrat plus tard ; jamais l'inverse.
-// Interventions n'est plus le propriétaire de la notion de sélection :
-// c'est un producteur parmi d'autres (Patrimoine/Références,
-// Implantations, Arbitrages, futures vues).
+// Anomalies n'est plus le propriétaire de la notion de sélection :
+// c'est un producteur parmi d'autres (Existant/Références,
+// Implantations, Qualification référentiel, futures vues).
 //
 // Persistance : l'id est renouvelé à chaque calcul (une Selection n'est
 // pas encore enregistrée en base). La persistance viendra avec le
@@ -52,8 +52,8 @@ export const createSelection = (
 });
 
 /** Toutes les implantations d'une référence — source: 'reference'.
- *  Démontre que la sélection ne vient pas que d'Interventions : la
- *  fiche de vie (Patrimoine) en produit une, du même contrat. */
+ *  Démontre que la sélection ne vient pas que d'Anomalies : la
+ *  fiche de vie (Existant) en produit une, du même contrat. */
 export const selectionFromReference = (index: PatrimoineIndex, referenceId: string, label: string): Selection =>
     createSelection('reference', label, index.implantations.filter(i => i.referenceId === referenceId));
 

@@ -1,16 +1,21 @@
-// components/cockpit/PatrimoineView.tsx
+// components/cockpit/ExistantView.tsx
 // =================================================================
-// Section « Patrimoine » du cockpit.
+// Section « Existant » du cockpit (ex-Patrimoine — renommage pur).
+// -----------------------------------------------------------------
+// Répond à « qu'avons-nous aujourd'hui sur le réseau ? » — la source de
+// vérité quantitative, indépendante de tout audit ou anomalie. C'est ce
+// qui permet de répondre à « le design remplace cet item partout, combien
+// faut-il prévoir ? » sans refaire un audit.
 // Sous-navigation pilotée par les données : Références (catalogue +
-// fiche de vie) et Implantations (exemplaires sur le terrain).
-// Demain : Recherche transverse, autres familles de patrimoine —
-// une entrée de plus au registre, jamais une restructuration.
+// fiche de vie), Implantations (exemplaires sur le terrain), Inventaire
+// réseau (quantités par référence) et Qualification référentiel
+// (qualité du catalogue, jamais un constat terrain).
 // Contrat de plateforme : toutes les données agrégées viennent du
 // moteur d'index du patrimoine ; la fiche ouverte ici est LA fiche
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Scale, Search, LucideIcon } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Boxes, Scale, Search, LucideIcon } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -315,35 +320,53 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
     );
 };
 
+/* ================= Inventaire réseau : placeholder ================= */
+// Restructuration pure : aucune nouvelle logique métier dans ce commit.
+// La donnée (installedCount/lieuCount/lines par référence) est déjà
+// calculée par le moteur d'index et déjà affichée dans la fiche de vie
+// et la liste Références — ce sous-onglet la mettra en avant comme
+// question de patrimoine à part entière dans un prochain commit.
+const InventaireReseauPlaceholder: React.FC = () => (
+    <div className="py-16 text-center text-slate-500 dark:text-slate-400">
+        <Boxes className="w-10 h-10 mx-auto mb-3 opacity-40" />
+        <p className="font-medium">Inventaire réseau — bientôt disponible.</p>
+        <p className="text-sm mt-1 max-w-md mx-auto">
+            « Combien de cette référence sont posés aujourd'hui, sur quelles lignes, dans combien de stations ? »
+            En attendant, ces quantités sont déjà visibles sur chaque fiche référence.
+        </p>
+    </div>
+);
+
 /* ================= Conteneur de section ================= */
 
-type PatrimoineSubKey = 'references' | 'implantations' | 'qualification';
+type ExistantSubKey = 'references' | 'implantations' | 'inventaire' | 'qualification';
 
-const SUB_SECTIONS: { key: PatrimoineSubKey; label: string; Icon: LucideIcon }[] = [
+const SUB_SECTIONS: { key: ExistantSubKey; label: string; Icon: LucideIcon }[] = [
     { key: 'references',    label: 'Références',              Icon: BookOpenCheck },
     { key: 'implantations', label: 'Implantations',            Icon: MapPinned },
+    { key: 'inventaire',    label: 'Inventaire réseau',        Icon: Boxes },
     { key: 'qualification', label: 'Qualification référentiel', Icon: Scale },
 ];
 
-const isPatrimoineSubKey = (v: string): v is PatrimoineSubKey =>
-    v === 'references' || v === 'implantations' || v === 'qualification';
+const isExistantSubKey = (v: string): v is ExistantSubKey =>
+    v === 'references' || v === 'implantations' || v === 'inventaire' || v === 'qualification';
 
-interface PatrimoineViewProps {
+interface ExistantViewProps {
     lieux: Lieu[];
 }
 
-const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
+const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
     const { references, isLoading, reload } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
-    const [subSection, setSubSection] = useState<PatrimoineSubKey>('references');
+    const [subSection, setSubSection] = useState<ExistantSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
 
     // Navigation transverse : une autre section peut demander l'ouverture
     // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
     // d'une fiche précise — consommé une fois pris en compte.
     useEffect(() => {
-        if (nav.pendingSubSection && isPatrimoineSubKey(nav.pendingSubSection)) {
+        if (nav.pendingSubSection && isExistantSubKey(nav.pendingSubSection)) {
             setSubSection(nav.pendingSubSection);
             nav.consumePendingSubSection();
         }
@@ -410,6 +433,7 @@ const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
                     onOpenReference={setOpenReferenceId}
                 />
             )}
+            {subSection === 'inventaire' && <InventaireReseauPlaceholder />}
             {subSection === 'qualification' && (
                 <ReferenceQualificationView
                     references={references}
@@ -421,4 +445,4 @@ const PatrimoineView: React.FC<PatrimoineViewProps> = ({ lieux }) => {
     );
 };
 
-export default PatrimoineView;
+export default ExistantView;

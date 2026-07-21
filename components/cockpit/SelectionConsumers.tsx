@@ -13,9 +13,9 @@
 //       └── Analyse
 //
 // Composant volontairement générique et réutilisable : n'importe quelle
-// vue qui produit une Selection (Interventions, fiche de vie, demain
-// Implantations/Arbitrages) l'affiche à l'identique — la sélection n'est
-// la propriété d'aucun module.
+// vue qui produit une Selection (Anomalies, fiche de vie, demain
+// Implantations/Qualification référentiel) l'affiche à l'identique — la
+// sélection n'est la propriété d'aucun module.
 // =================================================================
 import React from 'react';
 import { FileDown, CalendarRange, ClipboardList, BarChart3, LucideIcon } from 'lucide-react';

@@ -1,13 +1,13 @@
 // components/cockpit/ReferenceQualificationView.tsx
 // =================================================================
-// Sous-vue « Qualification référentiel » de la section Patrimoine
+// Sous-vue « Qualification référentiel » de la section Existant
 // (ex-section racine « Arbitrages » — déplacement + renommage).
 // -----------------------------------------------------------------
 // Portée strictement limitée au CATALOGUE : « cette fiche référence
 // est-elle correcte/complète ? » — jamais un constat terrain (ça, c'est
 // le rôle de la section Anomalies, traité automatiquement, sans
 // décision humaine). C'est pourquoi ce n'est plus une section racine
-// du cockpit : c'est un sous-onglet de Patrimoine, au même titre que
+// du cockpit : c'est un sous-onglet d'Existant, au même titre que
 // Références et Implantations — une question de qualité de donnée, pas
 // une étape du flux opérationnel.
 //

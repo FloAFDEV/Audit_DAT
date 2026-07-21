@@ -6,11 +6,15 @@
 // d'entrée du cockpit d'exploitation du patrimoine signalétique
 // (toute la vie de la signalétique après l'audit).
 //
-// Flux métier : Audit terrain → Anomalie → Besoin matériel → Commande
-// → Résumé de pose SAE → Historique. La section « Préparation » est un
-// placeholder qui matérialise les trois étapes à venir (Besoins
-// matériels, Commandes, Résumés de pose SAE), construites une par une
-// dans de futurs commits — jamais toutes à la fois.
+// Flux métier : Existant signalétique → Anomalie (constat terrain) ou
+// évolution design → Besoin d'intervention → Résumé SAE. Frontière
+// stricte : l'application produit une INFORMATION (item, quantité,
+// implantations, contexte de pose) — jamais la chaîne aval (achat,
+// fabrication, organisation, pose), qui reste du ressort du SAE.
+// « Besoins d'intervention » (sous Anomalies), « Résumés de pose »
+// (section SAE) et « Exports » sont des placeholders qui matérialisent
+// l'arborescence cible, construits un par un dans de futurs commits —
+// jamais tous à la fois.
 //
 // Architecture : un REGISTRE de sections piloté par les données —
 // ajouter une capacité au cockpit = ajouter une entrée au registre,
@@ -24,16 +28,17 @@
 // utils/cockpit/selection.ts.
 // =================================================================
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { Building, Archive, Landmark, AlertTriangle, PackageSearch, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, AlertTriangle, Send, Download, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
 
 const SyntheseView = lazy(() => import('./cockpit/SyntheseView'));
-const PatrimoineView = lazy(() => import('./cockpit/PatrimoineView'));
+const ExistantView = lazy(() => import('./cockpit/ExistantView'));
 const AnomaliesView = lazy(() => import('./cockpit/AnomaliesView'));
-const PreparationView = lazy(() => import('./cockpit/PreparationView'));
+const SAEView = lazy(() => import('./cockpit/SAEView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
+const ExportsView = lazy(() => import('./cockpit/ExportsView'));
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -46,11 +51,12 @@ interface StatsPageProps {
  * Préparation, puis validation pose terrain, campagnes...).
  */
 const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'synthese',    label: 'Synthèse',      Icon: Building },
-    { key: 'patrimoine',  label: 'Patrimoine',    Icon: Landmark },
-    { key: 'anomalies',   label: 'Anomalies',     Icon: AlertTriangle },
-    { key: 'preparation', label: 'Préparation',   Icon: PackageSearch },
-    { key: 'historique',  label: 'Archives',      Icon: Archive },
+    { key: 'synthese',   label: 'Synthèse',   Icon: Building },
+    { key: 'existant',   label: 'Existant',   Icon: Landmark },
+    { key: 'anomalies',  label: 'Anomalies',  Icon: AlertTriangle },
+    { key: 'sae',        label: 'SAE',        Icon: Send },
+    { key: 'historique', label: 'Archives',   Icon: Archive },
+    { key: 'exports',    label: 'Exports',    Icon: Download },
 ];
 
 const SectionLoader: React.FC = () => (
@@ -67,10 +73,10 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const nav = useMemo(() => ({
       navigate: ({ section, subSection, referenceId }: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => {
           if (subSection) setPendingSubSection(subSection);
-          // Une fiche demandée s'ouvre toujours dans Patrimoine (fiche unique).
+          // Une fiche demandée s'ouvre toujours dans Existant (fiche unique).
           if (referenceId) {
               setPendingReferenceId(referenceId);
-              setActiveSection('patrimoine');
+              setActiveSection('existant');
           } else {
               setActiveSection(section);
           }
@@ -104,10 +110,11 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
       <Suspense fallback={<SectionLoader />}>
         {activeSection === 'synthese' && <SyntheseView lieux={lieux} />}
-        {activeSection === 'patrimoine' && <PatrimoineView lieux={lieux} />}
+        {activeSection === 'existant' && <ExistantView lieux={lieux} />}
         {activeSection === 'anomalies' && <AnomaliesView lieux={lieux} />}
-        {activeSection === 'preparation' && <PreparationView />}
+        {activeSection === 'sae' && <SAEView />}
         {activeSection === 'historique' && <HistoriqueView />}
+        {activeSection === 'exports' && <ExportsView />}
       </Suspense>
     </Container>
     </CockpitNavContext.Provider>

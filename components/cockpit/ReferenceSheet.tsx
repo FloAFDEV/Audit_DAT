@@ -214,7 +214,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                     </ul>
                 )}
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-                    Les fichiers de fabrication restent gérés hors application (références documentaires uniquement).
+                    Les fichiers de production restent gérés hors application (références documentaires uniquement).
                 </p>
             </SheetSection>
 
@@ -272,7 +272,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         <p className="text-sm text-slate-700 dark:text-slate-300">
                             Cette référence nécessite une décision de qualification catalogue (divergence documentaire ou
                             classement incomplet). Le détail figure dans les notes des documents externes ci-dessus —
-                            décision à prendre dans Patrimoine / Qualification référentiel.
+                            décision à prendre dans Existant / Qualification référentiel.
                         </p>
                     )}
                     {reference.arbitrage && (
