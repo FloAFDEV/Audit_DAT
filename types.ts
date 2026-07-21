@@ -334,3 +334,118 @@ export interface HistoryEntry {
     details: string; // JSON stringified data (lightweight, no photos)
     categoryKey?: string; // For filtering
 }
+
+// =================================================================
+// RÉFÉRENTIEL SIGNALÉTIQUE (signageReferences) — spécification commit 1
+// -----------------------------------------------------------------
+// Règle absolue : ce modèle décrit l'objet tel que l'agent terrain
+// l'identifie — jamais son processus de fabrication (pas d'impression,
+// de finition, de colle, de recto-verso, de prix, ni de ligne BPU
+// structurante). Les détails fournisseur passent par ExternalDocumentRef.
+// L'arbre d'audit Lieu → Module → Équipement → adhesives{} reste la
+// source de vérité des statuts terrain ; ce référentiel n'en stocke aucun.
+// =================================================================
+
+/** Liste fermée assumée : vocabulaire structurel stable.
+ *  'vitrophanie' = support signalétique destiné à une pose sur vitrage.
+ *  'autre' = support physique réellement rencontré mais non encore
+ *  catégorisé → needsReview obligatoire jusqu'à qualification. */
+export type SignageSupport = 'adhesif' | 'dibond' | 'pvc' | 'vitrophanie' | 'autre';
+
+/** width/height individuellement optionnelles (lettrage, découpe,
+ *  largeur variable — cf. BPU PICTO ligne 40). */
+export interface SignageDimensions {
+    width?: number;
+    height?: number;
+    unit: 'cm' | 'mm';
+}
+
+/** Règle d'implantation (liste blanche, sans moteur de règles).
+ *  equipmentTypes absent = tous les équipements de la famille.
+ *  Les dérogations locales passent par equipment.adhesiveIds (inchangé). */
+export type SignageScope =
+    | { auditType: 'DAT' }
+    | { auditType: 'PR'; equipmentTypes?: EquipmentType[] }
+    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] };
+
+/** Localisation recommandée + consignes. `zone` est un texte court
+ *  administrable (suggestions issues des valeurs existantes), pas une
+ *  liste fermée. Aucun ordre de pose : fiche de référence, pas un workflow. */
+export interface SignagePlacement {
+    zone?: string;
+    position?: string;
+    alignmentMark?: string;
+    installationGuidance?: string;
+}
+
+/** Référence documentaire externe (BPU, fichier imprimeur, annexe marché).
+ *  Texte uniquement — les fichiers réels restent hors application (R5).
+ *  `provider` est libre : PICTO n'est qu'une valeur possible. */
+export interface ExternalDocumentRef {
+    provider: string;
+    fileReference: string;
+    docVersion?: string;
+    forVersion?: number;
+    note?: string;
+}
+
+/** Snapshot d'une version physique antérieure (R2 : le versioning ne
+ *  concerne que l'objet posé — jamais le marché, le prix ou le prestataire). */
+export interface SignageReferenceVersion {
+    version: number;
+    support: SignageSupport;
+    material?: string;
+    dimensions?: SignageDimensions;
+    label?: string;
+    effectiveTo: string; // ISO date de fin de validité
+    changeReason?: string;
+}
+
+export interface SignageReference {
+    // --- Identité — immuable (R1 : jamais de renommage d'id, fusion ou suppression) ---
+    id: string;   // ids historiques conservés : ad1, adbe1, eca-11...
+    code?: string; // future nomenclature Tisséo (colonne « Référence Tisseo » du BPU)
+    name: string;
+
+    // --- Implantation ---
+    /** R11 : dérivé de scope.auditType (dénormalisé pour index Dexie).
+     *  Jamais édité indépendamment du scope. */
+    auditType: 'DAT' | 'PR' | 'ECA';
+    scope: SignageScope;
+
+    // --- Caractéristiques physiques ACTIVES (à plat — la lecture courante ne
+    //     résout jamais un tableau de versions) ---
+    version: number; // défaut 1
+    support: SignageSupport;
+    material?: string; // libellé matière administrable (absorbe les vocabulaires prestataires)
+    dimensions?: SignageDimensions;
+    placement: SignagePlacement;
+
+    // --- Historique physique ---
+    previousVersions?: SignageReferenceVersion[];
+
+    // --- Documentation externe (texte uniquement, jamais de fichier) ---
+    externalDocuments?: ExternalDocumentRef[];
+
+    // --- Liens et drapeaux ---
+    sameAs?: string[];   // équivalences métier (comptage commun) — jamais de fusion
+    pairedWith?: string; // association physique (ex. recto/verso adca12/adca13)
+    isDisabled?: boolean;
+    needsReview?: boolean; // tâche d'administration en attente (divergence, qualification)
+    legacyDescription?: string; // texte d'origine intégral — filet de sécurité
+}
+
+/** Assets terrain légers uniquement (R6) : image compressée, jamais un
+ *  document de production. Les PDF imprimeur restent hors application. */
+export type SignageAssetKind = 'poseExample' | 'schema' | 'illustration';
+
+export interface SignageAsset {
+    id: string;
+    referenceId: string; // SignageReference.id
+    kind: SignageAssetKind;
+    blob: Blob;
+    mimeType: string;
+    label?: string;
+    forVersion?: number;
+    addedAt: string; // ISO date
+}
