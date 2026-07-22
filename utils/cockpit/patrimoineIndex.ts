@@ -81,6 +81,45 @@
 //     d'urgence ni son tri. Même principe que maintenancePriority :
 //     affiché, jamais décideur.
 //
+//  7. PLUSIEURS RÉFÉRENTIELS MÉTIER, UN PATRIMOINE COMMUN — le
+//     cockpit donne accès à plusieurs référentiels métier autonomes :
+//     Signalétique IV (signageReferences, déjà aligné sur ce contrat),
+//     PMR sol et Pictogrammes cognitifs (référentiels métier autonomes
+//     déjà existants — prestataire et logique de maintenance propres —
+//     mais avec un modèle encore distinct : catalogue normalisé, index
+//     patrimonial et journal restent à construire pour eux). « Patrimoine »
+//     désigne cette notion transverse, jamais un catalogue unique.
+//
+//     Chaque référentiel possède son propre triplet des trois mémoires
+//     (règle 6), intégralement : son propre Référentiel (catalogue),
+//     son propre Audit (constat terrain), son propre futur Journal
+//     d'événements. Ces triplets ne se partagent jamais entre
+//     référentiels — un événement du Journal PMR sol n'est jamais lu
+//     comme un fait du Référentiel Signalétique IV, et réciproquement.
+//
+//     Aucune fusion artificielle. Deux référentiels ne sont jamais
+//     regroupés dans un même catalogue ou un même moteur de calcul pour
+//     simplifier le code — leur autonomie métier (prestataire, cycle de
+//     maintenance) prime sur toute commodité technique.
+//
+//     La règle 1 (une seule source de calcul) s'applique À L'INTÉRIEUR
+//     de chaque référentiel, pas entre eux : patrimoineIndex reste
+//     l'unique moteur de calcul du référentiel Signalétique IV. Un
+//     référentiel aligné sur ce contrat ne reçoit pas un moteur inventé
+//     au cas par cas : il obtient sa propre instance du même principe
+//     de calcul patrimonial (résoudre un scope, construire des
+//     implantations, agréger en usage/totaux), adaptée à son modèle
+//     métier — jamais un moteur unique couvrant tous les référentiels
+//     à la fois, jamais une multiplication de moteurs hétérogènes.
+//
+//     Une vue Synthèse peut agréger des résultats de plusieurs
+//     référentiels — mais seulement en affichage, jamais en calcul :
+//     chaque composante reste nommée et distincte à l'écran (« N
+//     Signalétique IV + M PMR sol », jamais un total unique masquant
+//     ses origines). Selection reste le seul mécanisme transversal
+//     natif : elle sélectionne des faits déjà calculés par chaque
+//     référentiel, elle ne recalcule jamais rien elle-même.
+//
 // R10 : ce moteur est le PREMIER lecteur conforme — la liste des
 // implantations dérive du scope des références (signageReferences),
 // jamais des maps de statuts ; la map adhesives{} ne fournit que les
