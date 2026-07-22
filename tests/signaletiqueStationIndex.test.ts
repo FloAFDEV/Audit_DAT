@@ -112,7 +112,7 @@ describe('buildSignaletiqueStationIndex', () => {
         expect(index.totals.uncheckedCount).toBe(4);
 
         // NOT_APPLICABLE (bandeauStation.direction1.stationNameContent) -> exclu du décompte.
-        expect(index.totals.installedCount).toBe(
+        expect(index.totals.implantationCount).toBe(
             index.totals.okCount + index.totals.absentCount + index.totals.toReplaceCount
             + index.totals.hsCount + index.totals.uncheckedCount
         );
@@ -121,7 +121,7 @@ describe('buildSignaletiqueStationIndex', () => {
     it('module isFuture (hors C/AEROPORT) ignoré', () => {
         const index = buildSignaletiqueStationIndex([futureLieu()]);
         expect(index.items).toHaveLength(0);
-        expect(index.totals.installedCount).toBe(0);
+        expect(index.totals.implantationCount).toBe(0);
     });
 
     it('réseau vide -> index vide cohérent', () => {

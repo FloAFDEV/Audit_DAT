@@ -258,7 +258,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                 <div className="max-w-sm">
                     <AnomalySummaryCard
                         icon={<Layout className="w-4 h-4" />}
-                        title="Équipements Station"
+                        title="Anomalies Équipements Station"
                         count={signaletiqueStationIndex.totals.defectCount}
                         subCounts={[
                             { label: 'absents', value: signaletiqueStationIndex.totals.absentCount, tone: 'red' },

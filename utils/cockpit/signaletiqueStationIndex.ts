@@ -51,7 +51,7 @@ export interface SignaletiqueStationItemRef {
 }
 
 export interface SignaletiqueStationTotals {
-    installedCount: number;
+    implantationCount: number;
     okCount: number;
     absentCount: number;
     toReplaceCount: number;
@@ -158,7 +158,7 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
     }
 
     const totals: SignaletiqueStationTotals = {
-        installedCount: items.length, okCount: 0, absentCount: 0, toReplaceCount: 0,
+        implantationCount: items.length, okCount: 0, absentCount: 0, toReplaceCount: 0,
         hsCount: 0, defectCount: 0, uncheckedCount: 0,
     };
 
