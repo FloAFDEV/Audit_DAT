@@ -1,15 +1,15 @@
-// components/cockpit/ExistantView.tsx
+// components/cockpit/ReferentielView.tsx
 // =================================================================
-// Section « Existant » du cockpit (ex-Patrimoine — renommage pur).
+// Section « Référentiel » du cockpit (ex-Existant — renommage pur).
 // -----------------------------------------------------------------
 // Répond à « qu'avons-nous aujourd'hui sur le réseau ? » — la source de
-// vérité quantitative, indépendante de tout audit ou anomalie. C'est ce
-// qui permet de répondre à « le design remplace cet item partout, combien
-// faut-il prévoir ? » sans refaire un audit.
+// vérité du patrimoine actuel, indépendante de tout audit ou anomalie.
+// C'est ce qui permet de répondre à « le design remplace cet item
+// partout, combien faut-il prévoir ? » sans refaire un audit.
 // Sous-navigation pilotée par les données : Références (catalogue +
 // quantités déjà visibles par référence) et Implantations (parc terrain,
 // répartitions déjà visibles par support/ligne), plus Qualification
-// référentiel (qualité du catalogue, jamais un constat terrain).
+// du référentiel (qualité du catalogue, jamais un constat terrain).
 // Pas d'onglet « Inventaire réseau » séparé : le besoin (quantité
 // installée, stations, lignes) est déjà couvert par ces deux vues et par
 // la fiche de vie — un onglet de plus aurait été un doublon, jamais une
@@ -330,33 +330,33 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
 /* ================= Conteneur de section ================= */
 
-type ExistantSubKey = 'references' | 'implantations' | 'qualification';
+type ReferentielSubKey = 'references' | 'implantations' | 'qualification';
 
-const SUB_SECTIONS: { key: ExistantSubKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'references',    label: 'Références',              Icon: BookOpenCheck },
-    { key: 'implantations', label: 'Implantations',            Icon: MapPinned },
-    { key: 'qualification', label: 'Qualification référentiel', Icon: Scale },
+const SUB_SECTIONS: { key: ReferentielSubKey; label: string; Icon: LucideIcon }[] = [
+    { key: 'references',    label: 'Références',                 Icon: BookOpenCheck },
+    { key: 'implantations', label: 'Implantations',               Icon: MapPinned },
+    { key: 'qualification', label: 'Qualification du référentiel', Icon: Scale },
 ];
 
-const isExistantSubKey = (v: string): v is ExistantSubKey =>
+const isReferentielSubKey = (v: string): v is ReferentielSubKey =>
     v === 'references' || v === 'implantations' || v === 'qualification';
 
-interface ExistantViewProps {
+interface ReferentielViewProps {
     lieux: Lieu[];
 }
 
-const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
+const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const { references, isLoading, reload } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
-    const [subSection, setSubSection] = useState<ExistantSubKey>('references');
+    const [subSection, setSubSection] = useState<ReferentielSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
 
     // Navigation transverse : une autre section peut demander l'ouverture
     // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
     // d'une fiche précise — consommé une fois pris en compte.
     useEffect(() => {
-        if (nav.pendingSubSection && isExistantSubKey(nav.pendingSubSection)) {
+        if (nav.pendingSubSection && isReferentielSubKey(nav.pendingSubSection)) {
             setSubSection(nav.pendingSubSection);
             nav.consumePendingSubSection();
         }
@@ -370,7 +370,7 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
     }, [nav.pendingReferenceId]);
 
     if (isLoading) {
-        return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement du patrimoine…</div>;
+        return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement du référentiel…</div>;
     }
 
     // Fiche de vie (règle 2 : LA fiche unique) — prioritaire sur les sous-vues.
@@ -434,4 +434,4 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
     );
 };
 
-export default ExistantView;
+export default ReferentielView;

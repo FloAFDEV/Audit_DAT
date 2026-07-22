@@ -2,8 +2,8 @@
 // =================================================================
 // Primitives UI partagées du cockpit métier.
 // Extraction PURE depuis StatsPage.tsx (aucun changement de style) :
-// toutes les sections du cockpit (Synthèse, Existant, Anomalies, SAE,
-// Historique, Exports et futures) composent ces briques — jamais
+// toutes les sections du cockpit (Synthèse, Référentiel, Analyse des
+// anomalies, SAE, Archives et futures) composent ces briques — jamais
 // leurs propres variantes locales.
 // =================================================================
 import React from 'react';

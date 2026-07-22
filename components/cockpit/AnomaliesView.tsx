@@ -1,35 +1,36 @@
 // components/cockpit/AnomaliesView.tsx
 // =================================================================
-// Section « Anomalies » du cockpit.
+// Section « Analyse des anomalies » du cockpit (ex-« Anomalies »,
+// libellé affiné pour ne pas entrer en collision avec « Audit terrain »
+// — les formulaires d'audit vivent ailleurs dans l'application ; cette
+// section ne fait qu'analyser leurs résultats).
 // -----------------------------------------------------------------
-// Généalogie : Existant signalétique → Anomalie (constat terrain) →
-// Besoin d'intervention → Résumé SAE. Un item absent/dégradé/non
+// Généalogie : Référentiel signalétique → Anomalie (constat terrain) →
+// Résumé d'intervention destiné au SAE. Un item absent/dégradé/non
 // conforme est un CONSTAT, pas une décision — aucune validation humaine
 // n'est requise pour le chemin par défaut (contrairement à la
-// Qualification référentiel d'Existant, réservée aux questions de
-// qualité du catalogue).
+// Qualification du référentiel, réservée aux questions de qualité du
+// catalogue).
 //
-// Deux sous-onglets : Défauts détectés (rendu en « ordres de travail
-// patrimoine », cartes par bande d'urgence — pas un tableau plat
-// ligne|défaut|quantité|station, sinon on revient au tableau Excel) et
-// Besoins d'intervention (regroupement support/référence/quantité,
-// PLACEHOLDER dans ce commit — aucune nouvelle logique métier). Bandes
-// calculées par des RÈGLES EXPLICITES (utils/cockpit/maintenanceActions.ts
-// ::bandOf), jamais un score opaque.
+// Rendu en « ordres de travail patrimoine » (cartes par bande
+// d'urgence — pas un tableau plat ligne|défaut|quantité|station, sinon
+// on revient au tableau Excel). Bandes calculées par des RÈGLES
+// EXPLICITES (utils/cockpit/maintenanceActions.ts::bandOf), jamais un
+// score opaque.
 //
 // Moteur inchangé (maintenanceActions.ts, MaintenanceAction,
 // MaintenancePriority) : seul le nom de la section et son vocabulaire
 // changent, pas la logique de regroupement/priorisation.
 //
 // Chaque carte est une Selection affichée (contrat de plateforme,
-// règle 4) : les futurs consommateurs (Besoins d'intervention, Résumés
-// de pose — section SAE) se poseront ici sans redessiner la vue.
+// règle 4) : les futurs consommateurs (Résumé d'intervention — section
+// SAE) se poseront ici sans redessiner la vue.
 //
 // Frontière : ce module ne produit jamais de donnée d'achat, de
 // fabrication ni de commande — seulement item + quantité + localisation.
 // =================================================================
-import React, { useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Eye, ChevronRight, ClipboardList, LucideIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { AlertTriangle, CalendarClock, Eye, ChevronRight } from 'lucide-react';
 import { Lieu } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -109,28 +110,11 @@ const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: st
     </div>
 );
 
-/* ================= Besoins d'intervention : placeholder ================= */
-// Restructuration pure : aucune nouvelle logique métier dans ce commit.
-// Regroupera demain support → référence → quantité + origine (N anomalies,
-// M stations, ligne), calculé depuis buildMaintenanceActions — jamais de
-// fournisseur, de prix, ni de commande.
-const BesoinsInterventionPlaceholder: React.FC = () => (
-    <div className="py-16 text-center text-slate-500 dark:text-slate-400">
-        <ClipboardList className="w-10 h-10 mx-auto mb-3 opacity-40" />
-        <p className="font-medium">Besoins d'intervention — bientôt disponible.</p>
-        <p className="text-sm mt-1 max-w-md mx-auto">
-            Regroupement par référence : item, quantité nécessaire et localisation, calculé depuis les anomalies détectées.
-        </p>
-    </div>
-);
-
-/* ================= Défauts détectés ================= */
-
-interface DefautsDetectesProps {
+interface AnomaliesViewProps {
     lieux: Lieu[];
 }
 
-const DefautsDetectesView: React.FC<DefautsDetectesProps> = ({ lieux }) => {
+const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     const { references, isLoading } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
@@ -194,7 +178,7 @@ const DefautsDetectesView: React.FC<DefautsDetectesProps> = ({ lieux }) => {
                                     key={action.key}
                                     action={action}
                                     referenceKey={mode === 'reference'}
-                                    onOpenReference={(id) => nav.navigate({ section: 'existant', referenceId: id })}
+                                    onOpenReference={(id) => nav.navigate({ section: 'referentiel', referenceId: id })}
                                 />
                             ))}
                         </div>
@@ -206,57 +190,6 @@ const DefautsDetectesView: React.FC<DefautsDetectesProps> = ({ lieux }) => {
                 Priorisation par facteurs transparents (gravité, ampleur) — aucun score agrégé tant que les pondérations métier
                 ne sont pas validées. Source : moteur d'index du patrimoine.
             </p>
-        </div>
-    );
-};
-
-/* ================= Conteneur de section ================= */
-
-type AnomaliesSubKey = 'defauts' | 'besoins';
-
-const SUB_SECTIONS: { key: AnomaliesSubKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'defauts', label: 'Défauts détectés',       Icon: AlertTriangle },
-    { key: 'besoins', label: "Besoins d'intervention", Icon: ClipboardList },
-];
-
-const isAnomaliesSubKey = (v: string): v is AnomaliesSubKey => v === 'defauts' || v === 'besoins';
-
-interface AnomaliesViewProps {
-    lieux: Lieu[];
-}
-
-const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
-    const nav = useCockpitNav();
-    const [subSection, setSubSection] = useState<AnomaliesSubKey>('defauts');
-
-    useEffect(() => {
-        if (nav.pendingSubSection && isAnomaliesSubKey(nav.pendingSubSection)) {
-            setSubSection(nav.pendingSubSection);
-            nav.consumePendingSubSection();
-        }
-    }, [nav.pendingSubSection]);
-
-    return (
-        <div className="space-y-5">
-            <div className="flex gap-2 flex-wrap">
-                {SUB_SECTIONS.map(({ key, label, Icon }) => (
-                    <button
-                        key={key}
-                        onClick={() => setSubSection(key)}
-                        className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
-                            subSection === key
-                                ? 'bg-teal-600 text-white shadow-sm'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
-                        }`}
-                    >
-                        <Icon className="w-4 h-4" />
-                        {label}
-                    </button>
-                ))}
-            </div>
-
-            {subSection === 'defauts' && <DefautsDetectesView lieux={lieux} />}
-            {subSection === 'besoins' && <BesoinsInterventionPlaceholder />}
         </div>
     );
 };

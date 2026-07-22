@@ -2,8 +2,8 @@
 // =================================================================
 // ARBITRAGE — « on décide quoi faire de cet objet posé ».
 // -----------------------------------------------------------------
-// Séparation stricte avec les anomalies (utils/cockpit/maintenanceActions.ts) :
-//   Anomalies  = « il y a un problème physique à traiter » (observation).
+// Séparation stricte avec l'analyse des anomalies (utils/cockpit/maintenanceActions.ts) :
+//   Anomalie   = « il y a un problème physique à traiter » (observation).
 //   Arbitrage  = « on décide quoi faire de cet élément » (décision).
 // Une référence peut avoir 12 implantations non conformes (intervention)
 // ET une décision d'arbitrage "keep" (ancienne génération mais compatible) :

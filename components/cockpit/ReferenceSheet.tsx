@@ -305,7 +305,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         <p className="text-sm text-slate-700 dark:text-slate-300">
                             Cette référence nécessite une décision de qualification catalogue (divergence documentaire ou
                             classement incomplet). Le détail figure dans les notes des documents externes ci-dessus —
-                            décision à prendre dans Existant / Qualification référentiel.
+                            décision à prendre dans Référentiel / Qualification du référentiel.
                         </p>
                     )}
                     {reference.arbitrage && (
