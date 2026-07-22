@@ -4,8 +4,8 @@
 // « Référentiel signalétique » servi par le moteur d'index réseau
 // (contrat de plateforme : aucune donnée agrégée calculée localement).
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, X, Filter, Layout, BookOpenCheck } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, AuditCategory } from '../../types';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, X, Filter, Layout, BookOpenCheck, ChevronRight } from 'lucide-react';
+import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -15,17 +15,6 @@ import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, SectionTitle, StatRow, IndicatorTile } from './primitives';
 import { useCockpitNav } from './cockpitNav';
-
-// Adaptateur minimal ImplantationRef → MaintenanceItem, pour réutiliser
-// MaintenanceListModal/exportMaintenanceListToCsv tels quels (aucune
-// nouvelle couche de mapping permanente — colocalisé ici, un seul usage).
-// Ligne → catégorie : même correspondance que getCategoryForModule
-// (utils/maintenanceGenerator.ts), simplement dérivée de imp.line au lieu
-// du module d'audit.
-const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
-    'A': 'METRO_A', 'B': 'METRO_B', 'C': 'METRO_C',
-    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'AEROPORT', 'P+R': 'PR',
-};
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -86,6 +75,70 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreak
     );
 };
 
+/* =====================
+   Carte compacte « État des anomalies » — une par référentiel autonome.
+   Ne recalcule rien : reçoit un compte déjà produit ailleurs (patrimoineIndex
+   pour Signalétique IV, generateMaintenanceSummary filtré pour PMR sol /
+   Pictogrammes cognitifs). Jamais de total fusionné entre cartes.
+   ===================== */
+
+interface AnomalySummaryCardProps {
+    icon: React.ReactNode;
+    title: string;
+    count: number;
+    subCounts?: { label: string; value: number; tone: 'red' | 'amber' }[];
+    detailLabel: string;
+    detailDisabled?: boolean;
+    onDetail: () => void;
+}
+
+const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, title, count, subCounts, detailLabel, detailDisabled, onDetail }) => {
+    const hasAnomalies = count > 0;
+    return (
+        <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${hasAnomalies ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                        {icon}
+                    </div>
+                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">{title}</span>
+                </div>
+                {hasAnomalies && (
+                    <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-bold bg-red-600 text-white" aria-label={`${count} anomalies`}>
+                        {count}
+                    </span>
+                )}
+            </div>
+
+            <div className="flex items-baseline gap-2">
+                <span className={`text-3xl font-extrabold ${hasAnomalies ? 'text-red-700 dark:text-red-300' : 'text-slate-400 dark:text-slate-500'}`}>{count}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">anomalie{count > 1 ? 's' : ''}</span>
+            </div>
+
+            {subCounts && subCounts.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {subCounts.map(sc => (
+                        <span
+                            key={sc.label}
+                            className={`text-xs font-semibold px-2 py-0.5 rounded ${sc.tone === 'red' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}
+                        >
+                            {sc.value} {sc.label}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <button
+                onClick={onDetail}
+                disabled={detailDisabled}
+                className="mt-auto inline-flex items-center justify-center gap-1 text-sm font-semibold rounded-lg px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {detailLabel} <ChevronRight className="w-4 h-4" />
+            </button>
+        </div>
+    );
+};
+
 interface SyntheseViewProps {
     lieux: Lieu[];
 }
@@ -140,27 +193,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
-    // Anomalies Signalétique IV (DAT/PR/ECA) : exclusivement patrimoineIndex,
-    // plus aucune lecture de generateMaintenanceSummary pour ce référentiel
+    // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
     // (règle 7 : une seule source de calcul, à l'intérieur de ce référentiel).
-    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
-    const signaletiqueIvDefectItems = useMemo<MaintenanceItem[]>(() => (
-        patrimoineIndex.implantations
-            .filter(imp => imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced)
-            .map(imp => {
-                const ref = refById.get(imp.referenceId);
-                return {
-                    lieuName: imp.lieuName,
-                    moduleName: imp.moduleName,
-                    elementName: imp.equipmentLabel,
-                    context: imp.context,
-                    adhesiveName: ref?.name ?? imp.referenceId,
-                    status: imp.status,
-                    category: LINE_TO_CATEGORY[imp.line],
-                    auditType: ref?.auditType as AuditModuleType | undefined,
-                };
-            })
-    ), [patrimoineIndex, refById]);
+    // Le détail (liste + export) vit désormais dans Analyse des anomalies,
+    // pas ici — Synthèse ne fait qu'orienter (nav.navigate).
 
     // PMR sol / Pictogrammes cognitifs : référentiels autonomes hors
     // patrimoineIndex (règle 7) — conservés temporairement via le moteur
@@ -271,92 +307,44 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </div>
 
-            {/* BANNIÈRE ALERTES SIGNALÉTIQUE IV — pleine largeur, priorité maximale.
-                Source exclusive : patrimoineIndex (règle 7 : une seule source de
-                calcul à l'intérieur de ce référentiel). */}
-            {patrimoineIndex.totals.defectCount > 0 && (
-                <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:px-6">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-red-100 dark:bg-red-900/50">
-                                <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
-                            </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-red-800 dark:text-red-200">
-                                    {patrimoineIndex.totals.defectCount} anomalie{patrimoineIndex.totals.defectCount > 1 ? 's' : ''} Signalétique IV détectée{patrimoineIndex.totals.defectCount > 1 ? 's' : ''}
-                                </p>
-                                <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">Éléments nécessitant une intervention de maintenance</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                            <div className="flex items-center gap-2 bg-red-100 dark:bg-red-900/40 rounded-lg px-3 py-1.5">
-                                <span className="text-xl font-extrabold text-red-700 dark:text-red-300">{patrimoineIndex.totals.absentCount}</span>
-                                <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase">Absents</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg px-3 py-1.5">
-                                <span className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{patrimoineIndex.totals.toReplaceCount}</span>
-                                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">À remplacer</span>
-                            </div>
-                            <button
-                                onClick={() => setModalContent({ title: 'Anomalies Signalétique IV constatées', items: signaletiqueIvDefectItems })}
-                                className="text-sm font-semibold text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline underline-offset-2 transition-colors whitespace-nowrap"
-                            >
-                                Voir la liste →
-                            </button>
-                        </div>
-                    </div>
+            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
+                référentiel autonome (règle 7 : jamais fusionnées). Chaque
+                carte restitue un compte déjà produit ailleurs, elle ne
+                recalcule rien. Signalétique IV oriente vers Analyse des
+                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
+                cognitifs ouvrent la liste existante faute de section dédiée. */}
+            <section>
+                <SectionTitle>État des anomalies</SectionTitle>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <AnomalySummaryCard
+                        icon={<BookOpenCheck className="w-4 h-4" />}
+                        title="Signalétique IV"
+                        count={patrimoineIndex.totals.defectCount}
+                        subCounts={[
+                            { label: 'absents', value: patrimoineIndex.totals.absentCount, tone: 'red' },
+                            { label: 'à remplacer', value: patrimoineIndex.totals.toReplaceCount, tone: 'amber' },
+                        ]}
+                        detailLabel="Voir le détail"
+                        onDetail={() => nav.navigate({ section: 'audit' })}
+                    />
+                    <AnomalySummaryCard
+                        icon={<Footprints className="w-4 h-4" />}
+                        title="PMR sol"
+                        count={pmrSolDefectItems.length}
+                        detailLabel="Voir le détail"
+                        detailDisabled={pmrSolDefectItems.length === 0}
+                        onDetail={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
+                    />
+                    <AnomalySummaryCard
+                        icon={<ScanEye className="w-4 h-4" />}
+                        title="Pictogrammes cognitifs"
+                        count={pictogrammesDefectItems.length}
+                        detailLabel="Voir le détail"
+                        detailDisabled={pictogrammesDefectItems.length === 0}
+                        onDetail={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
+                    />
                 </div>
-            )}
-
-            {/* BANNIÈRE ALERTES PMR SOL / PICTOGRAMMES — référentiels autonomes,
-                jamais additionnés au total Signalétique IV ci-dessus, ni entre
-                eux (règle 7) : chaque référentiel garde son propre compteur et
-                sa propre action « Voir la liste », jamais un total fusionné. */}
-            {(pmrSolDefectItems.length > 0 || pictogrammesDefectItems.length > 0) && (
-                <div className="rounded-xl border border-sky-200 dark:border-sky-900/60 bg-sky-50 dark:bg-sky-950/40 shadow-sm">
-                    <div className="p-4 sm:px-6 space-y-3">
-                        <p className="text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wide">
-                            Référentiels autonomes, distincts de la Signalétique IV
-                        </p>
-                        {pmrSolDefectItems.length > 0 && (
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
-                                        <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-                                    </div>
-                                    <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
-                                        {pmrSolDefectItems.length} anomalie{pmrSolDefectItems.length > 1 ? 's' : ''} PMR sol
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
-                                    className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
-                                >
-                                    Voir la liste →
-                                </button>
-                            </div>
-                        )}
-                        {pictogrammesDefectItems.length > 0 && (
-                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
-                                        <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
-                                    </div>
-                                    <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
-                                        {pictogrammesDefectItems.length} anomalie{pictogrammesDefectItems.length > 1 ? 's' : ''} Pictogrammes cognitifs
-                                    </p>
-                                </div>
-                                <button
-                                    onClick={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
-                                    className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
-                                >
-                                    Voir la liste →
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
+            </section>
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
@@ -365,15 +353,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             <StatCard
                 title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
                 icon={<BookOpenCheck className="w-6 h-6" />}
+                className="!p-4 sm:!p-6"
             >
-                <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">
-                    État du parc des références suivies (familles DAT / P+R / ECA) — cliquez pour explorer.
-                </p>
                 {refsLoading ? (
                     <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
                             <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
                             <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
                             <IndicatorTile value={patrimoineIndex.totals.okCount} label="Conformes" tone="teal" />
@@ -405,13 +391,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </StatCard>
 
-            {/* Aperçu Global du Réseau — pleine largeur. La carte « Alertes
-                Anomalies » qui occupait la colonne de droite a été retirée :
-                Synthèse reste une vue d'état, le traitement des anomalies
-                Signalétique IV se fait dans Analyse des anomalies (tuile et
-                boutons ci-dessus), PMR sol/Pictogrammes restent dans leur
-                bannière dédiée ci-dessus — plus d'écran de traitement en
-                double ici. */}
+            {/* Aperçu Global du Réseau — pleine largeur, sous l'État des
+                anomalies. Synthèse reste une vue d'état : le traitement se
+                fait dans Analyse des anomalies (Signalétique IV) ou via la
+                liste PMR sol/Pictogrammes ci-dessus — jamais ici. */}
             <div className="space-y-8">
 
                 <StatCard
@@ -559,15 +542,16 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     />
                 </div>
 
-                <div className="overflow-auto max-h-96 border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
+                {/* Desktop/tablette : tableau complet. */}
+                <div className="hidden sm:block overflow-auto max-h-96 border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
                     <table className="min-w-full text-sm">
                     <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Type</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Rep.</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du Produit</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Dimensions (cm)</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Matière / Usage</th>
+                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions (cm)</th>
+                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden lg:table-cell">Matière / Usage</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">Qté réseau</th>
                         </tr>
                     </thead>
@@ -577,8 +561,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
                             <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
-                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{item.dimensions}</td>
-                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.material}</td>
+                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
                             <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                 {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
                             </td>
@@ -592,6 +576,39 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         )}
                     </tbody>
                     </table>
+                </div>
+
+                {/* Mobile : présentation carte, plus lisible qu'un tableau
+                    compressé sur petit écran (colonnes secondaires intégrées
+                    en ligne, pas masquées silencieusement). */}
+                <div className="sm:hidden space-y-2 max-h-96 overflow-auto">
+                    {filteredInventory.map(item => (
+                        <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                            <div className="min-w-0">
+                                <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400 truncate">
+                                    {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
+                                </div>
+                                <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{item.name}</div>
+                                {(item.dimensions || item.material) && (
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                        {[item.dimensions, item.material].filter(Boolean).join(' · ')}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-shrink-0 text-right">
+                                <div className="text-lg font-bold text-teal-700 dark:text-teal-400">
+                                    {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
+                                </div>
+                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">réseau</div>
+                            </div>
+                        </div>
+                    ))}
+
+                    {(!filteredInventory || filteredInventory.length === 0) && (
+                        <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
+                            Aucun adhésif trouvé correspondant à la recherche « {searchTerm} ».
+                        </p>
+                    )}
                 </div>
                 </div>
             </StatCard>
