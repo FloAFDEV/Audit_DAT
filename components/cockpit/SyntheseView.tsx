@@ -5,7 +5,7 @@
 // (contrat de plateforme : aucune donnée agrégée calculée localement).
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, AlertTriangle, X, Filter, Layout, BookOpenCheck } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
+import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, AuditCategory } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -15,6 +15,17 @@ import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, SectionTitle, StatRow, IndicatorTile } from './primitives';
 import { useCockpitNav } from './cockpitNav';
+
+// Adaptateur minimal ImplantationRef → MaintenanceItem, pour réutiliser
+// MaintenanceListModal/exportMaintenanceListToCsv tels quels (aucune
+// nouvelle couche de mapping permanente — colocalisé ici, un seul usage).
+// Ligne → catégorie : même correspondance que getCategoryForModule
+// (utils/maintenanceGenerator.ts), simplement dérivée de imp.line au lieu
+// du module d'audit.
+const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
+    'A': 'METRO_A', 'B': 'METRO_B', 'C': 'METRO_C',
+    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'AEROPORT', 'P+R': 'PR',
+};
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -129,6 +140,37 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
+    // Anomalies Signalétique IV (DAT/PR/ECA) : exclusivement patrimoineIndex,
+    // plus aucune lecture de generateMaintenanceSummary pour ce référentiel
+    // (règle 7 : une seule source de calcul, à l'intérieur de ce référentiel).
+    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
+    const signaletiqueIvDefectItems = useMemo<MaintenanceItem[]>(() => (
+        patrimoineIndex.implantations
+            .filter(imp => imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced)
+            .map(imp => {
+                const ref = refById.get(imp.referenceId);
+                return {
+                    lieuName: imp.lieuName,
+                    moduleName: imp.moduleName,
+                    elementName: imp.equipmentLabel,
+                    context: imp.context,
+                    adhesiveName: ref?.name ?? imp.referenceId,
+                    status: imp.status,
+                    category: LINE_TO_CATEGORY[imp.line],
+                    auditType: ref?.auditType as AuditModuleType | undefined,
+                };
+            })
+    ), [patrimoineIndex, refById]);
+
+    // PMR sol / Pictogrammes cognitifs : référentiels autonomes hors
+    // patrimoineIndex (règle 7) — conservés temporairement via le moteur
+    // legacy, jamais additionnés silencieusement au total Signalétique IV.
+    const autresReferentielsDefectItems = useMemo(() => (
+        maintenanceSummary.allDefects.items.filter(item =>
+            item.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE || item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS
+        )
+    ), [maintenanceSummary]);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
@@ -227,8 +269,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </div>
 
-            {/* BANNIÈRE ALERTES — pleine largeur, priorité maximale */}
-            {maintenanceSummary.allDefects.count > 0 && (
+            {/* BANNIÈRE ALERTES SIGNALÉTIQUE IV — pleine largeur, priorité maximale.
+                Source exclusive : patrimoineIndex (règle 7 : une seule source de
+                calcul à l'intérieur de ce référentiel). */}
+            {patrimoineIndex.totals.defectCount > 0 && (
                 <div className="rounded-xl border border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40 shadow-sm">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:px-6">
                         <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -237,27 +281,53 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             </div>
                             <div className="min-w-0">
                                 <p className="text-sm font-bold text-red-800 dark:text-red-200">
-                                    {maintenanceSummary.allDefects.count} anomalie{maintenanceSummary.allDefects.count > 1 ? 's' : ''} détectée{maintenanceSummary.allDefects.count > 1 ? 's' : ''}
+                                    {patrimoineIndex.totals.defectCount} anomalie{patrimoineIndex.totals.defectCount > 1 ? 's' : ''} Signalétique IV détectée{patrimoineIndex.totals.defectCount > 1 ? 's' : ''}
                                 </p>
                                 <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">Éléments nécessitant une intervention de maintenance</p>
                             </div>
                         </div>
                         <div className="flex items-center gap-3 flex-shrink-0">
                             <div className="flex items-center gap-2 bg-red-100 dark:bg-red-900/40 rounded-lg px-3 py-1.5">
-                                <span className="text-xl font-extrabold text-red-700 dark:text-red-300">{maintenanceSummary.absent.count}</span>
+                                <span className="text-xl font-extrabold text-red-700 dark:text-red-300">{patrimoineIndex.totals.absentCount}</span>
                                 <span className="text-xs font-semibold text-red-600 dark:text-red-400 uppercase">Absents</span>
                             </div>
                             <div className="flex items-center gap-2 bg-amber-100 dark:bg-amber-900/40 rounded-lg px-3 py-1.5">
-                                <span className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{maintenanceSummary.toBeReplaced.count}</span>
+                                <span className="text-xl font-extrabold text-amber-700 dark:text-amber-300">{patrimoineIndex.totals.toReplaceCount}</span>
                                 <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">À remplacer</span>
                             </div>
                             <button
-                                onClick={() => setModalContent({ title: 'Anomalies constatées', items: maintenanceSummary.allDefects.items })}
+                                onClick={() => setModalContent({ title: 'Anomalies Signalétique IV constatées', items: signaletiqueIvDefectItems })}
                                 className="text-sm font-semibold text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100 underline underline-offset-2 transition-colors whitespace-nowrap"
                             >
                                 Voir la liste →
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* BANNIÈRE ALERTES PMR SOL / PICTOGRAMMES — référentiels autonomes,
+                jamais additionnés au total Signalétique IV ci-dessus (règle 7). */}
+            {autresReferentielsDefectItems.length > 0 && (
+                <div className="rounded-xl border border-sky-200 dark:border-sky-900/60 bg-sky-50 dark:bg-sky-950/40 shadow-sm">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:px-6">
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
+                                <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                            </div>
+                            <div className="min-w-0">
+                                <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
+                                    {autresReferentielsDefectItems.length} anomalie{autresReferentielsDefectItems.length > 1 ? 's' : ''} PMR sol / Pictogrammes cognitifs
+                                </p>
+                                <p className="text-xs text-sky-600 dark:text-sky-400 mt-0.5">Référentiels autonomes, distincts de la Signalétique IV</p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => setModalContent({ title: 'Anomalies PMR sol / Pictogrammes cognitifs', items: autresReferentielsDefectItems })}
+                            className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
+                        >
+                            Voir la liste →
+                        </button>
                     </div>
                 </div>
             )}
@@ -449,27 +519,38 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     icon={<AlertTriangle className="w-6 h-6 text-red-500" />}
                     className="!border-red-500/10 dark:!border-red-900/50" // Surcharge de la bordure pour l'alerte
                 >
-                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments signalés comme anomalies.</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments Signalétique IV signalés comme anomalies.</p>
                     <div className="space-y-4">
-                    {/* BOUTON UNIQUE PRINCIPAL */}
+                    {/* BOUTON UNIQUE PRINCIPAL — source exclusive : patrimoineIndex */}
                     <StatRow
-                        label="Total Anomalies"
-                        value={maintenanceSummary.allDefects.count}
+                        label="Total Anomalies Signalétique IV"
+                        value={patrimoineIndex.totals.defectCount}
                         highlight="danger"
-                        onClick={() => setModalContent({ title: 'Anomalies constatées', items: maintenanceSummary.allDefects.items })}
+                        onClick={() => setModalContent({ title: 'Anomalies Signalétique IV constatées', items: signaletiqueIvDefectItems })}
                     />
 
                     {/* DÉTAILS NON CLIQUABLES (À TITRE INFORMATIF) */}
                     <div className="grid grid-cols-2 gap-3 pt-2">
                         <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 text-center">
-                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{maintenanceSummary.absent.count}</div>
+                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{patrimoineIndex.totals.absentCount}</div>
                             <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
                         </div>
                         <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-center">
-                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{maintenanceSummary.toBeReplaced.count}</div>
+                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{patrimoineIndex.totals.toReplaceCount}</div>
                             <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase mt-1">À remplacer</div>
                         </div>
                     </div>
+
+                    {/* PMR sol / Pictogrammes — référentiels autonomes, jamais
+                        additionnés au total Signalétique IV ci-dessus (règle 7). */}
+                    {autresReferentielsDefectItems.length > 0 && (
+                        <StatRow
+                            label="PMR sol / Pictogrammes cognitifs"
+                            value={autresReferentielsDefectItems.length}
+                            highlight="info"
+                            onClick={() => setModalContent({ title: 'Anomalies PMR sol / Pictogrammes cognitifs', items: autresReferentielsDefectItems })}
+                        />
+                    )}
                     </div>
                 </StatCard>
                 </div>
