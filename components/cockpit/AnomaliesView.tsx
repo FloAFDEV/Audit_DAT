@@ -30,8 +30,8 @@
 // fabrication ni de commande — seulement item + quantité + localisation.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Eye, ChevronRight } from 'lucide-react';
-import { Lieu } from '../../types';
+import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download } from 'lucide-react';
+import { Lieu, MaintenanceItem, AuditModuleType, AdhesiveStatus, AuditCategory } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import {
@@ -40,6 +40,18 @@ import {
 } from '../../utils/cockpit/maintenanceActions';
 import { useCockpitNav } from './cockpitNav';
 import SelectionConsumers from './SelectionConsumers';
+import MaintenanceListModal from '../MaintenanceListModal';
+
+// Adaptateur minimal ImplantationRef → MaintenanceItem, pour réutiliser
+// MaintenanceListModal/exportMaintenanceListToCsv tels quels (aucune nouvelle
+// couche de mapping permanente — colocalisé ici, un seul usage : la liste
+// détaillée/export vit désormais dans Analyse des anomalies, pas Synthèse).
+// Ligne → catégorie : même correspondance que getCategoryForModule
+// (utils/maintenanceGenerator.ts), simplement dérivée de imp.line.
+const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
+    'A': 'METRO_A', 'B': 'METRO_B', 'C': 'METRO_C',
+    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'AEROPORT', 'P+R': 'PR',
+};
 
 const BAND_ORDER: UrgencyBand[] = ['urgent', 'a_planifier', 'surveillance'];
 
@@ -119,6 +131,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
     const [mode, setMode] = useState<MaintenanceGroupMode>('reference');
+    const [showListModal, setShowListModal] = useState(false);
 
     const actions = useMemo(() => buildMaintenanceActions(index, references, mode), [index, references, mode]);
     const byBand = useMemo(() => {
@@ -127,6 +140,27 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
         for (const action of actions) grouped.get(action.band)!.push(action);
         return grouped;
     }, [actions]);
+
+    // Liste plate + export CSV — même source (index), simple présentation
+    // alternative aux cartes par bande, pas un second calcul.
+    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
+    const flatDefectItems = useMemo<MaintenanceItem[]>(() => (
+        index.implantations
+            .filter(imp => imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced)
+            .map(imp => {
+                const ref = refById.get(imp.referenceId);
+                return {
+                    lieuName: imp.lieuName,
+                    moduleName: imp.moduleName,
+                    elementName: imp.equipmentLabel,
+                    context: imp.context,
+                    adhesiveName: ref?.name ?? imp.referenceId,
+                    status: imp.status,
+                    category: LINE_TO_CATEGORY[imp.line],
+                    auditType: ref?.auditType as AuditModuleType | undefined,
+                };
+            })
+    ), [index, refById]);
 
     if (isLoading) {
         return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement…</div>;
@@ -144,20 +178,28 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-wrap gap-2">
-                {MAINTENANCE_GROUP_MODES.map(({ key, label }) => (
-                    <button
-                        key={key}
-                        onClick={() => setMode(key)}
-                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                            mode === key
-                                ? 'bg-teal-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                        }`}
-                    >
-                        {label}
-                    </button>
-                ))}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap gap-2">
+                    {MAINTENANCE_GROUP_MODES.map(({ key, label }) => (
+                        <button
+                            key={key}
+                            onClick={() => setMode(key)}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                mode === key
+                                    ? 'bg-teal-600 text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                </div>
+                <button
+                    onClick={() => setShowListModal(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                >
+                    <Download className="w-3.5 h-3.5" /> Voir en liste / Exporter
+                </button>
             </div>
 
             {BAND_ORDER.map(band => {
@@ -190,6 +232,13 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                 Priorisation par facteurs transparents (gravité, ampleur) — aucun score agrégé tant que les pondérations métier
                 ne sont pas validées. Source : moteur d'index du patrimoine.
             </p>
+
+            <MaintenanceListModal
+                isOpen={showListModal}
+                onClose={() => setShowListModal(false)}
+                title="Anomalies Signalétique IV constatées"
+                items={flatDefectItems}
+            />
         </div>
     );
 };
