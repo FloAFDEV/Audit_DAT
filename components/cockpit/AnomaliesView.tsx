@@ -30,10 +30,12 @@
 // fabrication ni de commande — seulement item + quantité + localisation.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download, Layout } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, AdhesiveStatus, AuditCategory } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
+import { useSignaletiqueStationIndex } from '../../hooks/useSignaletiqueStationIndex';
+import { signaletiqueStationDefectsToMaintenanceItems } from '../../utils/cockpit/signaletiqueStationIndex';
 import {
     buildMaintenanceActions, MAINTENANCE_GROUP_MODES, MaintenanceGroupMode, MaintenanceAction,
     URGENCY_BAND_LABELS, UrgencyBand,
@@ -41,6 +43,7 @@ import {
 import { useCockpitNav } from './cockpitNav';
 import SelectionConsumers from './SelectionConsumers';
 import MaintenanceListModal from '../MaintenanceListModal';
+import { SectionTitle, AnomalySummaryCard } from './primitives';
 
 // Adaptateur minimal ImplantationRef → MaintenanceItem, pour réutiliser
 // MaintenanceListModal/exportMaintenanceListToCsv tels quels (aucune nouvelle
@@ -132,6 +135,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
     const [mode, setMode] = useState<MaintenanceGroupMode>('reference');
     const [showListModal, setShowListModal] = useState(false);
+    const [showStationListModal, setShowStationListModal] = useState(false);
 
     const actions = useMemo(() => buildMaintenanceActions(index, references, mode), [index, references, mode]);
     const byBand = useMemo(() => {
@@ -162,82 +166,123 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
             })
     ), [index, refById]);
 
+    // Équipements Station : référentiel autonome, sa propre instance du
+    // principe de calcul patrimonial (règle 7) — jamais fusionné dans les
+    // cartes par bande ci-dessus, qui restent exclusivement Signalétique IV.
+    const signaletiqueStationIndex = useSignaletiqueStationIndex(lieux);
+    const signaletiqueStationDefectItems = useMemo(() => (
+        signaletiqueStationDefectsToMaintenanceItems(signaletiqueStationIndex.items)
+    ), [signaletiqueStationIndex]);
+
     if (isLoading) {
         return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement…</div>;
     }
 
-    if (actions.length === 0) {
-        return (
-            <div className="py-16 text-center text-slate-500 dark:text-slate-400">
-                <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Aucune anomalie en attente.</p>
-                <p className="text-sm mt-1">Tous les éléments suivis sont conformes ou non contrôlés.</p>
-            </div>
-        );
-    }
-
     return (
-        <div className="space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap gap-2">
-                    {MAINTENANCE_GROUP_MODES.map(({ key, label }) => (
-                        <button
-                            key={key}
-                            onClick={() => setMode(key)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                mode === key
-                                    ? 'bg-teal-600 text-white'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                            }`}
-                        >
-                            {label}
-                        </button>
-                    ))}
+        <div className="space-y-8">
+            <section className="space-y-6">
+                <SectionTitle>Signalétique IV</SectionTitle>
+                {actions.length === 0 ? (
+                    <div className="py-16 text-center text-slate-500 dark:text-slate-400">
+                        <AlertTriangle className="w-10 h-10 mx-auto mb-3 opacity-40" />
+                        <p className="font-medium">Aucune anomalie en attente.</p>
+                        <p className="text-sm mt-1">Tous les éléments suivis sont conformes ou non contrôlés.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex flex-wrap gap-2">
+                                {MAINTENANCE_GROUP_MODES.map(({ key, label }) => (
+                                    <button
+                                        key={key}
+                                        onClick={() => setMode(key)}
+                                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                            mode === key
+                                                ? 'bg-teal-600 text-white'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                        }`}
+                                    >
+                                        {label}
+                                    </button>
+                                ))}
+                            </div>
+                            <button
+                                onClick={() => setShowListModal(true)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                            >
+                                <Download className="w-3.5 h-3.5" /> Voir en liste / Exporter
+                            </button>
+                        </div>
+
+                        {BAND_ORDER.map(band => {
+                            const items = byBand.get(band)!;
+                            if (items.length === 0) return null;
+                            return (
+                                <section key={band}>
+                                    <div className="flex items-center gap-2 mb-3">
+                                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase ${BAND_STYLE[band].badge}`}>
+                                            {BAND_STYLE[band].icon}
+                                            {URGENCY_BAND_LABELS[band]}
+                                        </span>
+                                        <span className="text-sm text-slate-500 dark:text-slate-400">{items.length} action{items.length > 1 ? 's' : ''}</span>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {items.map(action => (
+                                            <ActionCard
+                                                key={action.key}
+                                                action={action}
+                                                referenceKey={mode === 'reference'}
+                                                onOpenReference={(id) => nav.navigate({ section: 'referentiel', referenceId: id })}
+                                            />
+                                        ))}
+                                    </div>
+                                </section>
+                            );
+                        })}
+
+                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                            Priorisation par facteurs transparents (gravité, ampleur) — aucun score agrégé tant que les pondérations métier
+                            ne sont pas validées. Source : moteur d'index du patrimoine.
+                        </p>
+                    </>
+                )}
+            </section>
+
+            <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+
+            {/* Équipements Station — référentiel autonome distinct de la
+                Signalétique IV (règle 7), jamais fusionné dans les cartes par
+                bande ci-dessus. Compteur + liste/export propres. */}
+            <section className="space-y-3">
+                <SectionTitle>Équipements Station</SectionTitle>
+                <div className="max-w-sm">
+                    <AnomalySummaryCard
+                        icon={<Layout className="w-4 h-4" />}
+                        title="Anomalies Équipements Station"
+                        count={signaletiqueStationIndex.totals.defectCount}
+                        subCounts={[
+                            { label: 'absents', value: signaletiqueStationIndex.totals.absentCount, tone: 'red' },
+                            { label: 'à remplacer', value: signaletiqueStationIndex.totals.toReplaceCount, tone: 'amber' },
+                            { label: 'HS', value: signaletiqueStationIndex.totals.hsCount, tone: 'red' },
+                        ]}
+                        detailLabel="Voir en liste / Exporter"
+                        detailDisabled={signaletiqueStationDefectItems.length === 0}
+                        onDetail={() => setShowStationListModal(true)}
+                    />
                 </div>
-                <button
-                    onClick={() => setShowListModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
-                >
-                    <Download className="w-3.5 h-3.5" /> Voir en liste / Exporter
-                </button>
-            </div>
-
-            {BAND_ORDER.map(band => {
-                const items = byBand.get(band)!;
-                if (items.length === 0) return null;
-                return (
-                    <section key={band}>
-                        <div className="flex items-center gap-2 mb-3">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold uppercase ${BAND_STYLE[band].badge}`}>
-                                {BAND_STYLE[band].icon}
-                                {URGENCY_BAND_LABELS[band]}
-                            </span>
-                            <span className="text-sm text-slate-500 dark:text-slate-400">{items.length} action{items.length > 1 ? 's' : ''}</span>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {items.map(action => (
-                                <ActionCard
-                                    key={action.key}
-                                    action={action}
-                                    referenceKey={mode === 'reference'}
-                                    onOpenReference={(id) => nav.navigate({ section: 'referentiel', referenceId: id })}
-                                />
-                            ))}
-                        </div>
-                    </section>
-                );
-            })}
-
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-                Priorisation par facteurs transparents (gravité, ampleur) — aucun score agrégé tant que les pondérations métier
-                ne sont pas validées. Source : moteur d'index du patrimoine.
-            </p>
+            </section>
 
             <MaintenanceListModal
                 isOpen={showListModal}
                 onClose={() => setShowListModal(false)}
                 title="Anomalies Signalétique IV constatées"
                 items={flatDefectItems}
+            />
+            <MaintenanceListModal
+                isOpen={showStationListModal}
+                onClose={() => setShowStationListModal(false)}
+                title="Anomalies Équipements Station"
+                items={signaletiqueStationDefectItems}
             />
         </div>
     );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { AuditModuleType } from '../types';
-import { Euro, Car, Fence, Footprints, ScanEye } from 'lucide-react';
+import { Euro, Car, Fence, Footprints, ScanEye, Layout } from 'lucide-react';
 
 interface ModuleIconProps {
   type: AuditModuleType;
@@ -19,6 +19,8 @@ export const ModuleIcon: React.FC<ModuleIconProps> = ({ type, className = "w-6 h
             return <Footprints className={className} />;
         case AuditModuleType.COGNITIVE_PICTOGRAMS:
             return <ScanEye className={className} />;
+        case AuditModuleType.SIGNALETIQUE:
+            return <Layout className={className} />;
         default:
             return null;
     }
