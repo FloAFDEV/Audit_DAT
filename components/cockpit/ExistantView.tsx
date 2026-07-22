@@ -7,21 +7,24 @@
 // qui permet de répondre à « le design remplace cet item partout, combien
 // faut-il prévoir ? » sans refaire un audit.
 // Sous-navigation pilotée par les données : Références (catalogue +
-// fiche de vie), Implantations (exemplaires sur le terrain), Inventaire
-// réseau (quantités par référence) et Qualification référentiel
-// (qualité du catalogue, jamais un constat terrain).
+// quantités déjà visibles par référence) et Implantations (parc terrain,
+// répartitions déjà visibles par support/ligne), plus Qualification
+// référentiel (qualité du catalogue, jamais un constat terrain).
+// Pas d'onglet « Inventaire réseau » séparé : le besoin (quantité
+// installée, stations, lignes) est déjà couvert par ces deux vues et par
+// la fiche de vie — un onglet de plus aurait été un doublon, jamais une
+// nouvelle capacité.
 // Contrat de plateforme : toutes les données agrégées viennent du
 // moteur d'index du patrimoine ; la fiche ouverte ici est LA fiche
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Boxes, Scale, Search, LucideIcon } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Scale, Search, LucideIcon } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
 import ReferenceQualificationView from './ReferenceQualificationView';
-import InventaireReseauView from './InventaireReseauView';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
 
@@ -29,7 +32,7 @@ import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } fr
 
 interface ReferencesListProps {
     references: SignageReference[];
-    usageOf: (id: string) => { installedCount: number; defectCount: number } | undefined;
+    usageOf: (id: string) => { installedCount: number; defectCount: number; lieuCount: number; lines: string[] } | undefined;
     onOpen: (id: string) => void;
 }
 
@@ -121,6 +124,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Posés</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden sm:table-cell">Défauts</th>
+                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
+                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Docs</th>
                         </tr>
                     </thead>
@@ -152,6 +157,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                                             ? <span className="font-bold text-red-600 dark:text-red-400">{usage.defectCount}</span>
                                             : <span className="text-slate-400">—</span>}
                                     </td>
+                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
+                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-500 dark:text-slate-400 hidden lg:table-cell">
                                         {(ref.externalDocuments?.length ?? 0) > 0 ? ref.externalDocuments!.length : '—'}
                                     </td>
@@ -160,7 +167,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                         })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                                <td colSpan={9} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                                     Aucune référence ne correspond aux filtres.
                                 </td>
                             </tr>
@@ -169,7 +176,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                 </table>
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-                {filtered.length} référence{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''} · quantités calculées par le moteur d'index du patrimoine.
+                {filtered.length} référence{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''} · quantités, stations et lignes calculées par le moteur d'index du patrimoine.
             </p>
         </div>
     );
@@ -323,17 +330,16 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
 /* ================= Conteneur de section ================= */
 
-type ExistantSubKey = 'references' | 'implantations' | 'inventaire' | 'qualification';
+type ExistantSubKey = 'references' | 'implantations' | 'qualification';
 
 const SUB_SECTIONS: { key: ExistantSubKey; label: string; Icon: LucideIcon }[] = [
     { key: 'references',    label: 'Références',              Icon: BookOpenCheck },
     { key: 'implantations', label: 'Implantations',            Icon: MapPinned },
-    { key: 'inventaire',    label: 'Inventaire réseau',        Icon: Boxes },
     { key: 'qualification', label: 'Qualification référentiel', Icon: Scale },
 ];
 
 const isExistantSubKey = (v: string): v is ExistantSubKey =>
-    v === 'references' || v === 'implantations' || v === 'inventaire' || v === 'qualification';
+    v === 'references' || v === 'implantations' || v === 'qualification';
 
 interface ExistantViewProps {
     lieux: Lieu[];
@@ -345,17 +351,6 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<ExistantSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
-    const [inventoryFocusId, setInventoryFocusId] = useState<string | null>(null);
-
-    // Depuis la fiche : « voir son inventaire réseau » ferme la fiche et
-    // bascule sur le sous-onglet Inventaire réseau, focalisé sur cette
-    // référence — navigation locale à Existant, pas via CockpitNavContext
-    // (fiche et inventaire sont deux sous-vues de la même section).
-    const handleViewInventory = (id: string) => {
-        setOpenReferenceId(null);
-        setInventoryFocusId(id);
-        setSubSection('inventaire');
-    };
 
     // Navigation transverse : une autre section peut demander l'ouverture
     // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
@@ -389,7 +384,6 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
                     index={index}
                     onBack={() => setOpenReferenceId(null)}
                     onOpenReference={setOpenReferenceId}
-                    onViewInventory={handleViewInventory}
                 />
             );
         }
@@ -426,14 +420,6 @@ const ExistantView: React.FC<ExistantViewProps> = ({ lieux }) => {
                 <ImplantationsExplorer
                     references={references}
                     index={index}
-                    onOpenReference={setOpenReferenceId}
-                />
-            )}
-            {subSection === 'inventaire' && (
-                <InventaireReseauView
-                    references={references}
-                    index={index}
-                    focusReferenceId={inventoryFocusId}
                     onOpenReference={setOpenReferenceId}
                 />
             )}
