@@ -7,7 +7,7 @@
 // leurs propres variantes locales.
 // =================================================================
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { Logo } from '../Logo';
 
 export const Container: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -132,4 +132,69 @@ export const StatRow: React.FC<{
   }
 
   return content;
+};
+
+/* =====================
+   Carte compacte « État des anomalies » — une par référentiel autonome
+   (Synthèse et Analyse des anomalies la composent toutes deux, jamais
+   de variante locale). Ne recalcule rien : reçoit un compte déjà
+   produit ailleurs (patrimoineIndex, generateMaintenanceSummary filtré,
+   signaletiqueStationIndex...). Jamais de total fusionné entre cartes.
+   ===================== */
+
+export interface AnomalySummaryCardProps {
+    icon: React.ReactNode;
+    title: string;
+    count: number;
+    subCounts?: { label: string; value: number; tone: 'red' | 'amber' }[];
+    detailLabel: string;
+    detailDisabled?: boolean;
+    onDetail: () => void;
+}
+
+export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, title, count, subCounts, detailLabel, detailDisabled, onDetail }) => {
+    const hasAnomalies = count > 0;
+    return (
+        <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${hasAnomalies ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                        {icon}
+                    </div>
+                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">{title}</span>
+                </div>
+                {hasAnomalies && (
+                    <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-bold bg-red-600 text-white" aria-label={`${count} anomalies`}>
+                        {count}
+                    </span>
+                )}
+            </div>
+
+            <div className="flex items-baseline gap-2">
+                <span className={`text-3xl font-extrabold ${hasAnomalies ? 'text-red-700 dark:text-red-300' : 'text-slate-400 dark:text-slate-500'}`}>{count}</span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">anomalie{count > 1 ? 's' : ''}</span>
+            </div>
+
+            {subCounts && subCounts.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                    {subCounts.map(sc => (
+                        <span
+                            key={sc.label}
+                            className={`text-xs font-semibold px-2 py-0.5 rounded ${sc.tone === 'red' ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'}`}
+                        >
+                            {sc.value} {sc.label}
+                        </span>
+                    ))}
+                </div>
+            )}
+
+            <button
+                onClick={onDetail}
+                disabled={detailDisabled}
+                className="mt-auto inline-flex items-center justify-center gap-1 text-sm font-semibold rounded-lg px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+                {detailLabel} <ChevronRight className="w-4 h-4" />
+            </button>
+        </div>
+    );
 };

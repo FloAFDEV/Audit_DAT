@@ -31,7 +31,8 @@ const AUDIT_TYPE_PRIORITY: AuditModuleType[] = [
     AuditModuleType.ECA,
     AuditModuleType.PMR_FLOOR_ADHESIVE,
     AuditModuleType.COGNITIVE_PICTOGRAMS,
-    AuditModuleType.PR
+    AuditModuleType.PR,
+    AuditModuleType.SIGNALETIQUE,
 ];
 
 type SortMode = 'LINE' | 'AUDIT';
@@ -167,7 +168,10 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                             {sortedItems.map((item, index) => {
                                 const categoryConfig = item.category ? AUDIT_CATEGORIES.find(c => c.key === item.category) : undefined;
                                 const isAbsent = item.status === 'Absent';
-                                
+                                // HS (Équipements Station) : conserve son propre libellé, jamais
+                                // réinterprété en Absent ou À remplacer.
+                                const isHS = item.status === 'HS';
+
                                 return (
                                     <li key={index} className="p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         {/* Header: Badge Ligne + Nom du Lieu + Zone */}
@@ -199,6 +203,10 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                                     {isAbsent ? (
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 uppercase tracking-wide">
                                                             Absent
+                                                        </span>
+                                                    ) : isHS ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 uppercase tracking-wide">
+                                                            HS
                                                         </span>
                                                     ) : (
                                                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 uppercase tracking-wide">
