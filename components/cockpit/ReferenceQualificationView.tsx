@@ -1,15 +1,15 @@
 // components/cockpit/ReferenceQualificationView.tsx
 // =================================================================
-// Sous-vue « Qualification référentiel » de la section Existant
+// Sous-vue « Qualification du référentiel » de la section Référentiel
 // (ex-section racine « Arbitrages » — déplacement + renommage).
 // -----------------------------------------------------------------
 // Portée strictement limitée au CATALOGUE : « cette fiche référence
 // est-elle correcte/complète ? » — jamais un constat terrain (ça, c'est
-// le rôle de la section Anomalies, traité automatiquement, sans
-// décision humaine). C'est pourquoi ce n'est plus une section racine
-// du cockpit : c'est un sous-onglet d'Existant, au même titre que
-// Références et Implantations — une question de qualité de donnée, pas
-// une étape du flux opérationnel.
+// le rôle de la section Analyse des anomalies, traité automatiquement,
+// sans décision humaine). C'est pourquoi ce n'est plus une section
+// racine du cockpit : c'est un sous-onglet de Référentiel, au même
+// titre que Références et Implantations — une question de qualité de
+// donnée, pas une étape du flux opérationnel.
 //
 // Écrit dans signageReferences via useArbitrage (seule mutation de ce
 // module) : sous-objet unique `arbitrage` (R1 : "remove" n'efface

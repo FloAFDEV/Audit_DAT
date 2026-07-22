@@ -2,9 +2,9 @@
 // =================================================================
 // ACTIONS D'INTERVENTION — « ordres de travail patrimoine ».
 // -----------------------------------------------------------------
-// Généalogie respectée : Audit (observation) → Existant (référentiel
-// normalisé + implantations) → Anomalies (ce module : préparation
-// d'action) → SAE (résumé de pose).
+// Généalogie respectée : Audit terrain (observation) → Référentiel
+// (normalisé + implantations) → Analyse des anomalies (ce module :
+// préparation d'action) → SAE (résumé d'intervention).
 //
 // L'entité centrale n'est pas « le défaut » mais l'OBJET POSÉ (la
 // référence) : chaque action répond à « que faut-il faire de cette
@@ -19,8 +19,8 @@
 // Chaque action EST une Selection à part entière (id, source, createdAt —
 // cf. selection.ts) : la prise sur laquelle se brancheront demain
 // campagnes, lots d'intervention et exports chantier/pose — sans
-// redessiner les vues. Anomalies ne possède pas la notion de
-// sélection, elle la consomme comme n'importe quel autre module.
+// redessiner les vues. Analyse des anomalies ne possède pas la notion
+// de sélection, elle la consomme comme n'importe quel autre module.
 // =================================================================
 
 import { AdhesiveStatus, SignageReference } from '../../types';

@@ -10,9 +10,9 @@ export const APP_TAGLINE = 'Plateforme de gestion et d\'analyse de la signaléti
 export const APP_PIPELINE = [
     'Audit terrain',
     'Référentiel signalétique',
-    'Analyse conformité',
-    'Besoins d\'intervention',
-    'Résumés SAE',
+    'Analyse des anomalies',
+    'Résumé d\'intervention',
+    'Historique',
 ];
 
 export const APP_AUTHOR = 'FloAFDEV';

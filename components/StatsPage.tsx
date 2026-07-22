@@ -6,15 +6,16 @@
 // d'entrée du cockpit d'exploitation du patrimoine signalétique
 // (toute la vie de la signalétique après l'audit).
 //
-// Flux métier : Existant signalétique → Anomalie (constat terrain) ou
-// évolution design → Besoin d'intervention → Résumé SAE. Frontière
-// stricte : l'application produit une INFORMATION (item, quantité,
-// implantations, contexte de pose) — jamais la chaîne aval (achat,
-// fabrication, organisation, pose), qui reste du ressort du SAE.
-// « Besoins d'intervention » (sous Anomalies), « Résumés de pose »
-// (section SAE) et « Exports » sont des placeholders qui matérialisent
-// l'arborescence cible, construits un par un dans de futurs commits —
-// jamais tous à la fois.
+// Flux métier : Référentiel signalétique → Analyse des anomalies
+// (constat terrain) ou évolution design → Résumé d'intervention destiné
+// au SAE → Historique. Frontière stricte : l'application produit une
+// INFORMATION (item, quantité, implantations, contexte de pose) —
+// jamais la chaîne aval (achat, fabrication, organisation, pose), qui
+// reste du ressort du SAE.
+// « Résumé d'intervention » (section SAE) reste un placeholder qui
+// matérialise l'arborescence cible, en attente d'un futur commit dédié.
+// Un export est une action locale à la vue qui produit la donnée —
+// jamais une section à part : pas d'onglet « Exports » dans ce cockpit.
 //
 // Architecture : un REGISTRE de sections piloté par les données —
 // ajouter une capacité au cockpit = ajouter une entrée au registre,
@@ -23,22 +24,21 @@
 // depuis n'importe où) passe par CockpitNavContext — sans router.
 //
 // Le contrat de plateforme complet (source de calcul unique via le
-// moteur d'index, fiche unique, sections pas pages, sélection→action)
-// est documenté dans utils/cockpit/patrimoineIndex.ts et
-// utils/cockpit/selection.ts.
+// moteur d'index, fiche unique, sections pas pages, sélection→action,
+// trois mémoires jamais confondues) est documenté dans
+// utils/cockpit/patrimoineIndex.ts et utils/cockpit/selection.ts.
 // =================================================================
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { Building, Archive, Landmark, AlertTriangle, Send, Download, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, AlertTriangle, Send, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
 
 const SyntheseView = lazy(() => import('./cockpit/SyntheseView'));
-const ExistantView = lazy(() => import('./cockpit/ExistantView'));
+const ReferentielView = lazy(() => import('./cockpit/ReferentielView'));
 const AnomaliesView = lazy(() => import('./cockpit/AnomaliesView'));
 const SAEView = lazy(() => import('./cockpit/SAEView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
-const ExportsView = lazy(() => import('./cockpit/ExportsView'));
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -47,16 +47,15 @@ interface StatsPageProps {
 
 /**
  * Registre des sections du cockpit — une entrée par section, aucune
- * modification du rendu pour en ajouter (demain : contenu réel de
- * Préparation, puis validation pose terrain, campagnes...).
+ * modification du rendu pour en ajouter (demain : contenu réel du
+ * Résumé d'intervention SAE).
  */
 const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'synthese',   label: 'Synthèse',   Icon: Building },
-    { key: 'existant',   label: 'Existant',   Icon: Landmark },
-    { key: 'anomalies',  label: 'Anomalies',  Icon: AlertTriangle },
-    { key: 'sae',        label: 'SAE',        Icon: Send },
-    { key: 'historique', label: 'Archives',   Icon: Archive },
-    { key: 'exports',    label: 'Exports',    Icon: Download },
+    { key: 'synthese',   label: 'Synthèse',              Icon: Building },
+    { key: 'referentiel', label: 'Référentiel',          Icon: Landmark },
+    { key: 'audit',      label: 'Analyse des anomalies', Icon: AlertTriangle },
+    { key: 'sae',        label: 'SAE',                   Icon: Send },
+    { key: 'historique', label: 'Archives',              Icon: Archive },
 ];
 
 const SectionLoader: React.FC = () => (
@@ -73,10 +72,10 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const nav = useMemo(() => ({
       navigate: ({ section, subSection, referenceId }: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => {
           if (subSection) setPendingSubSection(subSection);
-          // Une fiche demandée s'ouvre toujours dans Existant (fiche unique).
+          // Une fiche demandée s'ouvre toujours dans Référentiel (fiche unique).
           if (referenceId) {
               setPendingReferenceId(referenceId);
-              setActiveSection('existant');
+              setActiveSection('referentiel');
           } else {
               setActiveSection(section);
           }
@@ -110,11 +109,10 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
 
       <Suspense fallback={<SectionLoader />}>
         {activeSection === 'synthese' && <SyntheseView lieux={lieux} />}
-        {activeSection === 'existant' && <ExistantView lieux={lieux} />}
-        {activeSection === 'anomalies' && <AnomaliesView lieux={lieux} />}
+        {activeSection === 'referentiel' && <ReferentielView lieux={lieux} />}
+        {activeSection === 'audit' && <AnomaliesView lieux={lieux} />}
         {activeSection === 'sae' && <SAEView />}
         {activeSection === 'historique' && <HistoriqueView />}
-        {activeSection === 'exports' && <ExportsView />}
       </Suspense>
     </Container>
     </CockpitNavContext.Provider>
