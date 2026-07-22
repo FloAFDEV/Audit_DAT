@@ -34,6 +34,53 @@
 //  5. LE PATRIMOINE NE CONNAÎT PAS LES FOURNISSEURS — le cockpit
 //     travaille avec la référence métier, jamais avec une ligne de marché.
 //
+//  6. TROIS MÉMOIRES, JAMAIS CONFONDUES — le cockpit distingue trois
+//     natures de données, chacune avec un rôle et un seul :
+//
+//     RÉFÉRENTIEL — source de vérité du patrimoine ACTUEL (catalogue +
+//     implantations telles que connues aujourd'hui). Répond à
+//     « qu'avons-nous, où, en quelle quantité ? ». Pas de dimension
+//     temporelle : c'est un état, pas une trajectoire.
+//
+//     AUDIT — constat terrain de l'état PRÉSENT, comparé au Référentiel.
+//     Répond à « qu'est-ce qui diverge, là, maintenant ? ».
+//     Le modèle courant conserve uniquement le dernier état connu.
+//     La conservation chronologique des évolutions relève exclusivement
+//     du Journal d'événements.
+//
+//     JOURNAL D'ÉVÉNEMENTS (à construire) — mémoire CHRONOLOGIQUE des
+//     changements observés sur une implantation (statut avant/après,
+//     date, identité de l'implantation). Seule structure de tout le
+//     cockpit dont la raison d'être est de se souvenir du passé.
+//     Représente des événements MÉTIER, pas des événements techniques :
+//     une modification de stockage, une migration ou une synchronisation
+//     ne constitue jamais un événement patrimoine. Seuls les changements
+//     observés ou validés sur une implantation appartiennent à cette
+//     mémoire.
+//
+//     Aucune des trois ne peut jouer le rôle d'une autre. Un principe
+//     qui répond à une question temporelle ne doit jamais être construit
+//     en creusant le Référentiel ou l'Audit — il doit s'appuyer sur le
+//     Journal, quand celui-ci existera.
+//
+//     Archives (existant, périmètre actuel conservé) reste dédié aux
+//     snapshots d'état pris lors des remises à zéro d'audit — une photo
+//     ponctuelle et globale, pas un flux d'événements. Archives ne
+//     devient pas le Journal d'événements, mais pourra naturellement
+//     accueillir demain des vues ou analyses alimentées par ce Journal
+//     (vieillissement, récurrence, cycle de vie).
+//
+//     patrimoineIndex reste un moteur de LECTURE DÉRIVÉ : il recalcule
+//     l'état courant à chaque appel, à partir de l'arbre d'audit vivant.
+//     Il ne doit jamais être détourné pour porter une notion d'historique,
+//     de tendance ou de récurrence.
+//
+//     Le contexte historique n'est jamais une priorité : un calcul de
+//     récurrence est une information de contexte, affichée à côté d'une
+//     anomalie — il ne modifie jamais sa qualification, sa bande
+//     d'urgence ni son tri. Même principe que maintenancePriority :
+//     affiché, jamais décideur.
+//
 // R10 : ce moteur est le PREMIER lecteur conforme — la liste des
 // implantations dérive du scope des références (signageReferences),
 // jamais des maps de statuts ; la map adhesives{} ne fournit que les
