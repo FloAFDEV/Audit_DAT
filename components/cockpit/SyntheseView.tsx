@@ -405,11 +405,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </StatCard>
 
-            {/* Grille principale : Aperçu Global (2/3) + Alertes (1/3) */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-                {/* COLONNE GAUCHE (2/3) : Aperçu Global */}
-                <div className="lg:col-span-2 space-y-8">
+            {/* Aperçu Global du Réseau — pleine largeur. La carte « Alertes
+                Anomalies » qui occupait la colonne de droite a été retirée :
+                Synthèse reste une vue d'état, le traitement des anomalies
+                Signalétique IV se fait dans Analyse des anomalies (tuile et
+                boutons ci-dessus), PMR sol/Pictogrammes restent dans leur
+                bannière dédiée ci-dessus — plus d'écran de traitement en
+                double ici. */}
+            <div className="space-y-8">
 
                 <StatCard
                     title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"}
@@ -536,59 +539,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                     </div>
                 </StatCard>
-                </div>
-
-                {/* COLONNE DROITE (1/3) : Alertes Anomalies */}
-                <div className="lg:col-span-1 space-y-8">
-                <StatCard
-                    title="Alertes Anomalies"
-                    icon={<AlertTriangle className="w-6 h-6 text-red-500" />}
-                    className="!border-red-500/10 dark:!border-red-900/50" // Surcharge de la bordure pour l'alerte
-                >
-                    <p className="text-sm text-slate-500 dark:text-slate-400 -mt-3">Aperçu des éléments Signalétique IV signalés comme anomalies.</p>
-                    <div className="space-y-4">
-                    {/* BOUTON UNIQUE PRINCIPAL — source exclusive : patrimoineIndex */}
-                    <StatRow
-                        label="Total Anomalies Signalétique IV"
-                        value={patrimoineIndex.totals.defectCount}
-                        highlight="danger"
-                        onClick={() => setModalContent({ title: 'Anomalies Signalétique IV constatées', items: signaletiqueIvDefectItems })}
-                    />
-
-                    {/* DÉTAILS NON CLIQUABLES (À TITRE INFORMATIF) */}
-                    <div className="grid grid-cols-2 gap-3 pt-2">
-                        <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-100 dark:border-red-900/30 text-center">
-                            <div className="text-2xl font-bold text-red-600 dark:text-red-400">{patrimoineIndex.totals.absentCount}</div>
-                            <div className="text-xs font-semibold text-red-800 dark:text-red-300 uppercase mt-1">Absents</div>
-                        </div>
-                        <div className="bg-amber-50 dark:bg-amber-900/20 p-3 rounded-lg border border-amber-100 dark:border-amber-900/30 text-center">
-                            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{patrimoineIndex.totals.toReplaceCount}</div>
-                            <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 uppercase mt-1">À remplacer</div>
-                        </div>
-                    </div>
-
-                    {/* PMR sol / Pictogrammes — référentiels autonomes, jamais
-                        additionnés au total Signalétique IV ci-dessus, ni entre
-                        eux (règle 7) : un compteur par référentiel. */}
-                    {pmrSolDefectItems.length > 0 && (
-                        <StatRow
-                            label="PMR sol"
-                            value={pmrSolDefectItems.length}
-                            highlight="info"
-                            onClick={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
-                        />
-                    )}
-                    {pictogrammesDefectItems.length > 0 && (
-                        <StatRow
-                            label="Pictogrammes cognitifs"
-                            value={pictogrammesDefectItems.length}
-                            highlight="info"
-                            onClick={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
-                        />
-                    )}
-                    </div>
-                </StatCard>
-                </div>
             </div>
 
             <hr className="border-dashed border-slate-200 dark:border-slate-700 my-4" />
