@@ -159,6 +159,10 @@ const HistoriqueView: React.FC = () => {
                 }];
             }
 
+            // Volontairement non migré vers patrimoineIndex : ce moteur lit un
+            // snapshot archivé, pas l'état courant. Recalculer via le catalogue
+            // signageReferences ACTUEL réinterpréterait l'historique à travers
+            // des références renommées/désactivées/modifiées depuis l'archive.
             const summary = generateMaintenanceSummary(lieuxToAnalyze);
             setModalContent({
                 title: `Détails de l'archive : ${entry.title}`,

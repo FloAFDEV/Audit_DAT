@@ -164,11 +164,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // PMR sol / Pictogrammes cognitifs : référentiels autonomes hors
     // patrimoineIndex (règle 7) — conservés temporairement via le moteur
-    // legacy, jamais additionnés silencieusement au total Signalétique IV.
-    const autresReferentielsDefectItems = useMemo(() => (
-        maintenanceSummary.allDefects.items.filter(item =>
-            item.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE || item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS
-        )
+    // legacy, jamais additionnés silencieusement au total Signalétique IV,
+    // ni fusionnés entre eux : deux référentiels distincts, deux compteurs.
+    const pmrSolDefectItems = useMemo(() => (
+        maintenanceSummary.allDefects.items.filter(item => item.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE)
+    ), [maintenanceSummary]);
+    const pictogrammesDefectItems = useMemo(() => (
+        maintenanceSummary.allDefects.items.filter(item => item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS)
     ), [maintenanceSummary]);
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -307,27 +309,51 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             )}
 
             {/* BANNIÈRE ALERTES PMR SOL / PICTOGRAMMES — référentiels autonomes,
-                jamais additionnés au total Signalétique IV ci-dessus (règle 7). */}
-            {autresReferentielsDefectItems.length > 0 && (
+                jamais additionnés au total Signalétique IV ci-dessus, ni entre
+                eux (règle 7) : chaque référentiel garde son propre compteur et
+                sa propre action « Voir la liste », jamais un total fusionné. */}
+            {(pmrSolDefectItems.length > 0 || pictogrammesDefectItems.length > 0) && (
                 <div className="rounded-xl border border-sky-200 dark:border-sky-900/60 bg-sky-50 dark:bg-sky-950/40 shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:px-6">
-                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
-                                <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                    <div className="p-4 sm:px-6 space-y-3">
+                        <p className="text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wide">
+                            Référentiels autonomes, distincts de la Signalétique IV
+                        </p>
+                        {pmrSolDefectItems.length > 0 && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
+                                        <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                                    </div>
+                                    <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
+                                        {pmrSolDefectItems.length} anomalie{pmrSolDefectItems.length > 1 ? 's' : ''} PMR sol
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
+                                    className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
+                                >
+                                    Voir la liste →
+                                </button>
                             </div>
-                            <div className="min-w-0">
-                                <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
-                                    {autresReferentielsDefectItems.length} anomalie{autresReferentielsDefectItems.length > 1 ? 's' : ''} PMR sol / Pictogrammes cognitifs
-                                </p>
-                                <p className="text-xs text-sky-600 dark:text-sky-400 mt-0.5">Référentiels autonomes, distincts de la Signalétique IV</p>
+                        )}
+                        {pictogrammesDefectItems.length > 0 && (
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-sky-100 dark:bg-sky-900/50">
+                                        <AlertTriangle className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                                    </div>
+                                    <p className="text-sm font-bold text-sky-800 dark:text-sky-200">
+                                        {pictogrammesDefectItems.length} anomalie{pictogrammesDefectItems.length > 1 ? 's' : ''} Pictogrammes cognitifs
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
+                                    className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
+                                >
+                                    Voir la liste →
+                                </button>
                             </div>
-                        </div>
-                        <button
-                            onClick={() => setModalContent({ title: 'Anomalies PMR sol / Pictogrammes cognitifs', items: autresReferentielsDefectItems })}
-                            className="text-sm font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 underline underline-offset-2 transition-colors whitespace-nowrap flex-shrink-0"
-                        >
-                            Voir la liste →
-                        </button>
+                        )}
                     </div>
                 </div>
             )}
@@ -542,13 +568,22 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
 
                     {/* PMR sol / Pictogrammes — référentiels autonomes, jamais
-                        additionnés au total Signalétique IV ci-dessus (règle 7). */}
-                    {autresReferentielsDefectItems.length > 0 && (
+                        additionnés au total Signalétique IV ci-dessus, ni entre
+                        eux (règle 7) : un compteur par référentiel. */}
+                    {pmrSolDefectItems.length > 0 && (
                         <StatRow
-                            label="PMR sol / Pictogrammes cognitifs"
-                            value={autresReferentielsDefectItems.length}
+                            label="PMR sol"
+                            value={pmrSolDefectItems.length}
                             highlight="info"
-                            onClick={() => setModalContent({ title: 'Anomalies PMR sol / Pictogrammes cognitifs', items: autresReferentielsDefectItems })}
+                            onClick={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
+                        />
+                    )}
+                    {pictogrammesDefectItems.length > 0 && (
+                        <StatRow
+                            label="Pictogrammes cognitifs"
+                            value={pictogrammesDefectItems.length}
+                            highlight="info"
+                            onClick={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
                         />
                     )}
                     </div>
