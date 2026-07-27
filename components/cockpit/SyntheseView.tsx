@@ -33,26 +33,6 @@ const ECA_TYPE_ROWS = [
     { label: "PMR vantaux réversible", type: EcaEquipmentType.PMRVantauxReversible },
 ];
 
-const EcaTypeGrid: React.FC<{ byType: Record<string, number> }> = ({ byType }) => (
-    // Nombre de colonnes calé sur la largeur réelle disponible, pour ne jamais
-    // tronquer « PMR vantaux réversible » (le libellé le plus long) :
-    // 1 colonne sur mobile, 2 quand les lignes ECA sont côte à côte par deux,
-    // et de nouveau 1 à partir de xl où chaque ligne n'occupe plus qu'un quart
-    // de la largeur.
-    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-x-4 gap-y-0.5 mt-1.5">
-        {ECA_TYPE_ROWS.map(({ label, type }) => {
-            const count = byType[type] ?? 0;
-            if (count === 0) return null;
-            return (
-                <div key={type} className="flex justify-between items-center py-0.5">
-                    <span className="text-xs text-slate-500 dark:text-slate-400 truncate pr-2">{label}</span>
-                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200 flex-shrink-0">{count}</span>
-                </div>
-            );
-        })}
-    </div>
-);
-
 const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
     const lines = [
@@ -61,29 +41,71 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreak
         { key: 'C',        label: 'Ligne C',          cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
         { key: 'AEROPORT', label: 'Aéroport Express', cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
     ];
-    // UNE COLONNE PAR LIGNE de transport : la grille représente le référentiel
-    // métier, pas l'état courant des données. Les lignes encore à 0 (C,
-    // Aéroport) gardent leur colonne — la lecture reste immédiate et
-    // identique d'une ligne à l'autre quand elles se rempliront.
-    // 4 colonnes seulement à partir de xl : en dessous, la colonne devient
-    // trop étroite pour les libellés de type les plus longs.
+
+    // MATRICE types × lignes plutôt que quatre listes indépendantes.
+    // - Chaque ligne du référentiel garde sa colonne, même si elle est encore
+    //   vide : la disposition ne bougera pas quand la ligne C ouvrira.
+    // - L'espace est uniformément occupé — plus de colonnes hautes face à des
+    //   colonnes vides.
+    // - La lecture qui a du sens métier (comparer les lignes type par type)
+    //   se fait enfin d'un seul balayage horizontal.
+    // Règle d'affichage inchangée : un type absent partout n'apparaît pas ;
+    // absent d'une seule ligne, il s'affiche « — » (le marqueur de valeur nulle
+    // déjà utilisé dans l'Inventaire Détaillé), jamais un zéro inventé.
+    const rows = ECA_TYPE_ROWS.filter(({ type }) => lines.some(l => (l.data.byType?.[type] ?? 0) > 0));
+
+    // Une ligne « non déployée » (aucun équipement recensé) reçoit un fond très
+    // léger sur toute sa colonne : le vide se lit alors comme un état du réseau,
+    // pas comme une donnée manquante. La STRUCTURE ne change pas — même colonne,
+    // même largeur, même position : seule la teinte s'efface quand la ligne
+    // ouvrira.
+    const mutedCell = 'bg-slate-50/70 dark:bg-slate-800/30';
+
     return (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-5">
-            {lines.map(({ key, label, cfg, data }) => (
-                <div key={key} className="pl-4 border-l-2 border-slate-100 dark:border-slate-700">
-                    <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
-                            <CategoryIcon categoryConfig={cfg} size="sm" />
-                            {label}
-                        </span>
-                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100">
-                            {data.total}
-                            <span className="text-xs font-normal text-slate-400 dark:text-slate-500 ml-1">({data.pmr} PMR)</span>
-                        </span>
-                    </div>
-                    {data.total > 0 && <EcaTypeGrid byType={data.byType} />}
-                </div>
-            ))}
+        <div className="mt-4 overflow-x-auto">
+            {/* Largeur plafonnée et colonnes de lignes de largeur identique
+                (table-fixed) : sur toute la largeur de la carte, les valeurs se
+                détachaient de leur libellé, et « Aéroport Express » étirait sa
+                colonne à près du double des autres. */}
+            <table className="w-full max-w-3xl min-w-[34rem] table-fixed text-sm">
+                <thead>
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
+                        <th scope="col" className="w-1/4 py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            Type d'équipement
+                        </th>
+                        {lines.map(({ key, label, cfg, data }) => (
+                            <th key={key} scope="col" className={`w-[18.75%] py-2 px-2 align-bottom ${data.total > 0 ? '' : mutedCell}`}>
+                                {/* Le nom de ligne passe à la ligne plutôt que
+                                    d'être tronqué : « Aéroport Express » doit
+                                    rester lisible en entier. */}
+                                <span className="flex items-center justify-end gap-1.5 text-xs font-semibold leading-tight text-right text-slate-700 dark:text-slate-200">
+                                    <CategoryIcon categoryConfig={cfg} size="sm" />
+                                    <span>{label}</span>
+                                </span>
+                                <span className={`block mt-1 text-right text-sm font-bold tabular-nums ${data.total > 0 ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                    {data.total}
+                                    <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 ml-1">({data.pmr} PMR)</span>
+                                </span>
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+                    {rows.map(({ label, type }) => (
+                        <tr key={type}>
+                            <th scope="row" className="py-1.5 pr-3 text-left text-xs font-normal text-slate-500 dark:text-slate-400 truncate">{label}</th>
+                            {lines.map(({ key, data }) => {
+                                const count = data.byType?.[type] ?? 0;
+                                return (
+                                    <td key={key} className={`py-1.5 px-2 text-right text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100 ${data.total > 0 ? '' : mutedCell}`}>
+                                        {count > 0 ? count : <span className="font-normal text-slate-300 dark:text-slate-600">—</span>}
+                                    </td>
+                                );
+                            })}
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 };
@@ -423,7 +445,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     plutôt qu'empilées. On compare enfin les lignes entre elles
                     type par type, au lieu de faire défiler. */}
                 <div>
-                <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
+                {/* En-tête contraint à la largeur d'une colonne de la rangée 1 :
+                    sur toute la largeur, le total se retrouvait à près de
+                    1 000 px de son libellé et l'œil ne faisait plus le lien.
+                    Seul le détail par ligne ci-dessous exploite la pleine
+                    largeur. */}
+                <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
+                    <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
+                </div>
                 {selectedLieuId ? (
                     <div className="space-y-1 mt-2">
                         <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
