@@ -34,9 +34,12 @@ const ECA_TYPE_ROWS = [
 ];
 
 const EcaTypeGrid: React.FC<{ byType: Record<string, number> }> = ({ byType }) => (
-    // Une seule colonne sur mobile : à 2 colonnes sous 640px, les libellés les
-    // plus longs (« PMR vantaux réversible ») étaient tronqués.
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 mt-1.5">
+    // Nombre de colonnes calé sur la largeur réelle disponible, pour ne jamais
+    // tronquer « PMR vantaux réversible » (le libellé le plus long) :
+    // 1 colonne sur mobile, 2 quand les lignes ECA sont côte à côte par deux,
+    // et de nouveau 1 à partir de xl où chaque ligne n'occupe plus qu'un quart
+    // de la largeur.
+    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-x-4 gap-y-0.5 mt-1.5">
         {ECA_TYPE_ROWS.map(({ label, type }) => {
             const count = byType[type] ?? 0;
             if (count === 0) return null;
@@ -58,12 +61,14 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreak
         { key: 'C',        label: 'Ligne C',          cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
         { key: 'AEROPORT', label: 'Aéroport Express', cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
     ];
-    // Lignes disposées côte à côte (2 colonnes) plutôt qu'empilées : ECA est
-    // le bloc le plus dense de l'Aperçu, et c'est la comparaison ENTRE lignes
-    // qui a du sens métier. Les lignes encore à 0 (C, Aéroport) se regroupent
-    // ainsi sur la même rangée au lieu de trouer la grille.
+    // UNE COLONNE PAR LIGNE de transport : la grille représente le référentiel
+    // métier, pas l'état courant des données. Les lignes encore à 0 (C,
+    // Aéroport) gardent leur colonne — la lecture reste immédiate et
+    // identique d'une ligne à l'autre quand elles se rempliront.
+    // 4 colonnes seulement à partir de xl : en dessous, la colonne devient
+    // trop étroite pour les libellés de type les plus longs.
     return (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-x-8 gap-y-5">
             {lines.map(({ key, label, cfg, data }) => (
                 <div key={key} className="pl-4 border-l-2 border-slate-100 dark:border-slate-700">
                     <div className="flex justify-between items-center">
@@ -393,11 +398,16 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                     </div>
 
-                    {/* Parkings Relais */}
+                    {/* Parkings Relais — même hiérarchie visuelle que DAT et
+                        ECA : plus de titre de regroupement, le bloc est
+                        introduit par son propre libellé principal. */}
                     <div>
-                    <SectionTitle>Parkings Relais (P+R)</SectionTitle>
-                    <div className="space-y-4">
-                        {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
+                    {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
+                    {/* Espacement intermédiaire : ces lignes sont des équipements
+                        distincts (et non une ventilation du total au-dessus),
+                        elles gardent donc leur taille pleine, avec plus d'air
+                        que les sous-listes indentées de DAT ou des stations. */}
+                    <div className="space-y-2 mt-2">
                         <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
                         <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
                         <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
@@ -439,7 +449,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                          </div>
                     ) : (
                         <>
-                        <SectionTitle>Stations par Ligne</SectionTitle>
+                        {/* Même traitement que DAT, P+R et ECA : le bloc est
+                            introduit par son total, sans titre de section.
+                            Seul « Stations avec Audit Spécifique » conserve un
+                            SectionTitle, car il regroupe réellement plusieurs
+                            blocs — information non déductible de leurs seuls
+                            libellés. */}
                         <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
                         <div className="space-y-1 mt-2">
                             <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
