@@ -156,12 +156,14 @@ export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, ti
     const hasAnomalies = count > 0;
     return (
         <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${hasAnomalies ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
                         {icon}
                     </div>
-                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">{title}</span>
+                    {/* Le titre passe à la ligne plutôt que d'être tronqué : en
+                        grille 4 colonnes, un libellé long resterait illisible. */}
+                    <span className="font-semibold text-sm text-slate-700 dark:text-slate-200 leading-tight">{title}</span>
                 </div>
                 {hasAnomalies && (
                     <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1.5 rounded-full text-xs font-bold bg-red-600 text-white" aria-label={`${count} anomalies`}>
