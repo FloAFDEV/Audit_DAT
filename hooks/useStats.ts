@@ -12,6 +12,7 @@ import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
+import { isModuleInAuditScope } from '../utils/moduleScope';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
@@ -62,9 +63,8 @@ export const useStats = (lieux: Lieu[]) => {
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                // For C and AEROPORT, we want to see stats even if isFuture is true
-                if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
-                
+                if (!isModuleInAuditScope(module)) continue;
+
                 switch (module.type) {
                     case AuditModuleType.DAT:
                         const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) => 
@@ -174,7 +174,7 @@ export const useStats = (lieux: Lieu[]) => {
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.type === AuditModuleType.ECA && (!module.isFuture || module.line === 'C' || module.line === 'AEROPORT')) {
+                if (module.type === AuditModuleType.ECA && isModuleInAuditScope(module)) {
                     const data = module.data as EcaData;
                     const ecas = data.ecas || [];
 
@@ -207,10 +207,7 @@ export const useStats = (lieux: Lieu[]) => {
         // but keep auditable future modules (Line C and AEROPORT).
         const activeLieux = lieux.map(lieu => ({
             ...lieu,
-            modules: lieu.modules.filter(m => {
-                const isAuditableFuture = m.isFuture && (m.line === 'C' || m.line === 'AEROPORT');
-                return !m.isFuture || isAuditableFuture;
-            })
+            modules: lieu.modules.filter(isModuleInAuditScope)
         }));
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
@@ -313,7 +310,7 @@ export const useStats = (lieux: Lieu[]) => {
         // --- Compute quantities from lieux ---
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
+                if (!isModuleInAuditScope(module)) continue;
 
                 if (module.type === AuditModuleType.DAT) {
                     const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>

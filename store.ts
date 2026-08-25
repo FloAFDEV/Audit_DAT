@@ -1,7 +1,8 @@
 
 import { create } from 'zustand';
-import { 
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType 
+import toast from 'react-hot-toast';
+import {
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -139,14 +140,25 @@ const useAuditStore = create<AppState>((set, get) => {
 
         const lieuToUpdate = lieux.find(l => l.id === selectedLieuId);
         if (!lieuToUpdate) return;
-        
+
         // Deep clone to avoid direct state mutation
         const clonedLieu = JSON.parse(JSON.stringify(lieuToUpdate));
-        
+
         updateFn(clonedLieu);
-        
-        await db.lieux.put(clonedLieu);
-        
+
+        try {
+            await db.lieux.put(clonedLieu);
+        } catch (error) {
+            // Écriture IndexedDB échouée (ex. quota de stockage dépassé) : on ne
+            // met JAMAIS à jour l'état local dans ce cas, sinon l'écran afficherait
+            // une modification que la base n'a pas réellement enregistrée — un
+            // agent terrain croirait avoir sauvegardé une observation qui serait
+            // perdue au rechargement suivant.
+            console.error("Échec de l'enregistrement en base :", error);
+            toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible. Votre dernière modification n'a pas été sauvegardée, réessayez.", { duration: 8000 });
+            return;
+        }
+
         const updatedLieux = lieux.map(l => l.id === selectedLieuId ? clonedLieu : l);
         set({ lieux: updatedLieux });
     };

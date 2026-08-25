@@ -139,6 +139,7 @@ import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
     SignageReference, SignageSupport,
 } from '../../types';
+import { isModuleInAuditScope } from '../moduleScope';
 
 // -----------------------------------------------------------------
 // Types du contrat (stables : les vues dépendent d'eux, pas de l'arbre)
@@ -263,9 +264,10 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
 
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
-            // Convention d'inclusion identique à useStats : les modules
-            // "futurs" C et AEROPORT restent auditables donc comptés.
-            if (module.isFuture && module.line !== 'C' && module.line !== 'AEROPORT') continue;
+            // Convention d'inclusion partagée avec les autres moteurs de calcul
+            // (useStats, signaletiqueStationIndex) : les modules "futurs" C et
+            // AEROPORT restent auditables donc comptés — cf. utils/moduleScope.ts.
+            if (!isModuleInAuditScope(module)) continue;
 
             switch (module.type) {
                 case AuditModuleType.DAT: {

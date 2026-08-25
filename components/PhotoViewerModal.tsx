@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PMRFloorAdhesive } from '../types';
 import { X, RotateCw, Save } from 'lucide-react';
+
+// Forme minimale réellement consommée par ce composant (affichage, rotation,
+// note) — volontairement plus étroite que PMRFloorAdhesive pour rester
+// utilisable par n'importe quel item photographié de l'app (PMR sol comme
+// Signalétique), qui n'ont pas le même vocabulaire de statut.
+interface ViewablePhoto {
+    photo_base64?: string;
+    photo_note?: string;
+    photo_rotation?: number;
+}
 
 interface PhotoViewerModalProps {
     isOpen: boolean;
     onClose: () => void;
-    photo: PMRFloorAdhesive;
+    photo: ViewablePhoto;
     onRotate: (newRotation: number) => void;
     onNoteChange: (newNote: string) => void;
 }
