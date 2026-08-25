@@ -33,7 +33,7 @@ const ECA_TYPE_ROWS = [
     { label: "PMR vantaux réversible", type: EcaEquipmentType.PMRVantauxReversible },
 ];
 
-const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
+const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }> = ({ ecaBreakdown, configs, total }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
 
     // COLONNES DÉRIVÉES DU PÉRIMÈTRE RÉEL DU RÉFÉRENTIEL ECA, et non de la
@@ -71,15 +71,32 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreak
 
     return (
         <div className="mt-4 overflow-x-auto">
-            {/* Largeur plafonnée, colonne de libellés fixe et colonnes de lignes
-                à part égale (table-fixed) : la largeur d'une colonne ne dépend
-                donc pas de la longueur du nom de ligne, et s'adapte au nombre de
-                lignes réellement dans le périmètre. */}
-            <table className="w-full max-w-3xl min-w-[30rem] table-fixed text-sm">
+            {/* Colonne de libellés fixe et colonnes de lignes à part égale
+                (table-fixed) : la largeur d'une colonne ne dépend donc pas de
+                la longueur du nom de ligne, et s'adapte au nombre de lignes
+                réellement dans le périmètre. Pas de largeur plafonnée : le
+                tableau occupe toute la largeur disponible de la carte (un
+                max-w-3xl fixe laissait ~35 % de la largeur inutilisée sur
+                desktop large, cf. dernière passe corrective ECA) ; seul un
+                plancher (min-w) est conservé pour rester lisible en dessous,
+                quitte à défiler horizontalement dans ce conteneur. */}
+            <table className="w-full min-w-[30rem] table-fixed text-sm">
                 <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th scope="col" className="w-[34%] py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-                            Type d'équipement
+                        <th scope="col" className="w-[34%] py-2 pr-3 align-bottom text-left">
+                            {/* Cellule d'angle : le total global rejoint ici le
+                                même niveau de hiérarchie que les totaux par
+                                ligne (label + grande valeur), pour se lire
+                                sans ambiguïté comme LE total dont les colonnes
+                                suivantes sont la ventilation — pas comme un
+                                nombre isolé au-dessus du tableau. */}
+                            <span className="flex items-center gap-1.5 text-xs font-semibold leading-tight text-slate-700 dark:text-slate-200">
+                                <Fence className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+                                <span>Total ECA</span>
+                            </span>
+                            <span className="block mt-1 text-left text-lg font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">
+                                {total}
+                            </span>
                         </th>
                         {lines.map(({ key, label, cfg, data }) => (
                             <th key={key} scope="col" className={`py-2 px-2 align-bottom ${data.total > 0 ? '' : mutedCell}`}>
@@ -452,23 +469,35 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     plutôt qu'empilées. On compare enfin les lignes entre elles
                     type par type, au lieu de faire défiler. */}
                 <div>
-                {/* En-tête contraint à la largeur d'une colonne de la rangée 1 :
-                    sur toute la largeur, le total se retrouvait à près de
-                    1 000 px de son libellé et l'œil ne faisait plus le lien.
-                    Seul le détail par ligne ci-dessous exploite la pleine
-                    largeur. */}
-                <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
-                    <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
-                </div>
-                {/* Toutes les configs de ligne sont transmises : la matrice
-                    choisit elle-même ses colonnes selon les données ECA, et doit
-                    pouvoir en afficher une nouvelle sans changement ici. */}
                 {selectedLieuId ? (
+                    <>
+                    {/* Vue mono-lieu : pas de tableau multi-lignes en dessous,
+                        le total garde donc son affichage StatRow habituel,
+                        contraint à la largeur d'une colonne de la rangée 1
+                        pour que la valeur reste proche de son libellé. */}
+                    <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
+                        <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
+                    </div>
                     <div className="space-y-1 mt-2">
                         <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
                     </div>
+                    </>
                 ) : (
-                    <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} />
+                    <>
+                    {/* Vue réseau : le total rejoint la cellule d'angle du
+                        tableau (cf. EcaLineDetail) plutôt que d'être répété ici
+                        — un seul affichage du total, au même niveau visuel que
+                        les totaux par ligne. Ce libellé ne fait donc plus que
+                        nommer la section. Toutes les configs de ligne sont
+                        transmises : la matrice choisit elle-même ses colonnes
+                        selon les données ECA, et doit pouvoir en afficher une
+                        nouvelle sans changement ici. */}
+                    <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
+                        <Fence className="w-5 h-5" />
+                        ECA (Valideurs)
+                    </div>
+                    <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} total={globalCounts.ecaCount} />
+                    </>
                 )}
                 </div>
 
