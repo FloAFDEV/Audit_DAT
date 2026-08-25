@@ -134,6 +134,13 @@ export const useStats = (lieux: Lieu[]) => {
 
     const ecaBreakdown = useMemo(() => {
         const makeLineEntry = () => ({
+            // moduleCount : nombre de modules d'audit ECA rattachés à la ligne.
+            // Sert uniquement à distinguer une ligne DANS le périmètre ECA mais
+            // pas encore équipée (modules présents, total à 0 — ligne C
+            // aujourd'hui) d'une ligne HORS périmètre, qui n'a aucun module ECA
+            // (validation ouverte). Compteur additionnel : aucun total, aucun
+            // agrégat existant n'est modifié.
+            moduleCount: 0,
             total: 0, pmr: 0,
             byType: {
                 [EcaEquipmentType.TripodeEntree]: 0,
@@ -176,6 +183,8 @@ export const useStats = (lieux: Lieu[]) => {
                         : module.line === 'C' ? 'C'
                         : module.line === 'AEROPORT' ? 'AEROPORT'
                         : null;
+
+                    if (lineKey) byLine[lineKey].moduleCount++;
 
                     for (const eca of ecas) {
                         if (lineKey) {

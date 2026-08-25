@@ -35,49 +35,56 @@ const ECA_TYPE_ROWS = [
 
 const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any }> = ({ ecaBreakdown, configs }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
+
+    // COLONNES DÉRIVÉES DU PÉRIMÈTRE RÉEL DU RÉFÉRENTIEL ECA, et non de la
+    // liste générale des lignes du réseau. Le critère est l'EXISTENCE D'UN
+    // MODULE D'AUDIT ECA sur la ligne (moduleCount), pas le nombre
+    // d'équipements recensés — ce qui distingue les deux situations :
+    //
+    //   1. ligne DANS le périmètre mais pas encore équipée (des modules ECA
+    //      existent, total à 0) → colonne conservée, atténuée, cellules « — » ;
+    //   2. ligne HORS périmètre, qui relève d'une autre famille de validation
+    //      (validation ouverte : valideurs de type bus, sans bras ni vantaux,
+    //      au quai ou à bord) → aucun module ECA, donc aucune colonne.
+    //
+    // Aucune exclusion en dur : si des ECA sont rattachés demain à une ligne,
+    // sa colonne apparaît automatiquement, sans modification du code.
     const lines = [
-        { key: 'A',        label: 'Ligne A',          cfg: metroAConfig,  data: ecaBreakdown.byLine.A },
-        { key: 'B',        label: 'Ligne B',          cfg: metroBConfig,  data: ecaBreakdown.byLine.B },
-        { key: 'C',        label: 'Ligne C',          cfg: lineCConfig,   data: ecaBreakdown.byLine.C },
-        { key: 'AEROPORT', label: 'Aéroport Express', cfg: laeConfig,     data: ecaBreakdown.byLine.AEROPORT },
-    ];
+        { key: 'A',        label: 'Ligne A',          cfg: metroAConfig, data: ecaBreakdown.byLine.A },
+        { key: 'B',        label: 'Ligne B',          cfg: metroBConfig, data: ecaBreakdown.byLine.B },
+        { key: 'C',        label: 'Ligne C',          cfg: lineCConfig,  data: ecaBreakdown.byLine.C },
+        { key: 'AEROPORT', label: 'Aéroport Express', cfg: laeConfig,    data: ecaBreakdown.byLine.AEROPORT },
+    ].filter(l => (l.data?.moduleCount ?? 0) > 0);
 
-    // MATRICE types × lignes plutôt que quatre listes indépendantes.
-    // - Chaque ligne du référentiel garde sa colonne, même si elle est encore
-    //   vide : la disposition ne bougera pas quand la ligne C ouvrira.
-    // - L'espace est uniformément occupé — plus de colonnes hautes face à des
-    //   colonnes vides.
-    // - La lecture qui a du sens métier (comparer les lignes type par type)
-    //   se fait enfin d'un seul balayage horizontal.
-    // Règle d'affichage inchangée : un type absent partout n'apparaît pas ;
-    // absent d'une seule ligne, il s'affiche « — » (le marqueur de valeur nulle
-    // déjà utilisé dans l'Inventaire Détaillé), jamais un zéro inventé.
-    const rows = ECA_TYPE_ROWS.filter(({ type }) => lines.some(l => (l.data.byType?.[type] ?? 0) > 0));
+    if (lines.length === 0) return null;
 
-    // Une ligne « non déployée » (aucun équipement recensé) reçoit un fond très
-    // léger sur toute sa colonne : le vide se lit alors comme un état du réseau,
-    // pas comme une donnée manquante. La STRUCTURE ne change pas — même colonne,
-    // même largeur, même position : seule la teinte s'efface quand la ligne
-    // ouvrira.
+    // Ligne du périmètre pas encore équipée : fond très léger sur sa colonne et
+    // total atténué — le vide se lit comme un état du réseau, pas comme une
+    // donnée manquante. La teinte disparaît d'elle-même au premier équipement.
     const mutedCell = 'bg-slate-50/70 dark:bg-slate-800/30';
+
+    // Types affichés : ceux présents sur au moins une ligne du périmètre. Un
+    // type absent partout n'apparaît pas ; absent d'une seule ligne, il
+    // s'affiche « — » (le marqueur de valeur nulle déjà utilisé dans
+    // l'Inventaire Détaillé), jamais un zéro inventé.
+    const rows = ECA_TYPE_ROWS.filter(({ type }) => lines.some(l => (l.data.byType?.[type] ?? 0) > 0));
 
     return (
         <div className="mt-4 overflow-x-auto">
-            {/* Largeur plafonnée et colonnes de lignes de largeur identique
-                (table-fixed) : sur toute la largeur de la carte, les valeurs se
-                détachaient de leur libellé, et « Aéroport Express » étirait sa
-                colonne à près du double des autres. */}
-            <table className="w-full max-w-3xl min-w-[34rem] table-fixed text-sm">
+            {/* Largeur plafonnée, colonne de libellés fixe et colonnes de lignes
+                à part égale (table-fixed) : la largeur d'une colonne ne dépend
+                donc pas de la longueur du nom de ligne, et s'adapte au nombre de
+                lignes réellement dans le périmètre. */}
+            <table className="w-full max-w-3xl min-w-[30rem] table-fixed text-sm">
                 <thead>
                     <tr className="border-b border-slate-200 dark:border-slate-700">
-                        <th scope="col" className="w-1/4 py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                        <th scope="col" className="w-[34%] py-2 pr-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
                             Type d'équipement
                         </th>
                         {lines.map(({ key, label, cfg, data }) => (
-                            <th key={key} scope="col" className={`w-[18.75%] py-2 px-2 align-bottom ${data.total > 0 ? '' : mutedCell}`}>
+                            <th key={key} scope="col" className={`py-2 px-2 align-bottom ${data.total > 0 ? '' : mutedCell}`}>
                                 {/* Le nom de ligne passe à la ligne plutôt que
-                                    d'être tronqué : « Aéroport Express » doit
-                                    rester lisible en entier. */}
+                                    d'être tronqué. */}
                                 <span className="flex items-center justify-end gap-1.5 text-xs font-semibold leading-tight text-right text-slate-700 dark:text-slate-200">
                                     <CategoryIcon categoryConfig={cfg} size="sm" />
                                     <span>{label}</span>
@@ -453,6 +460,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
                     <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
                 </div>
+                {/* Toutes les configs de ligne sont transmises : la matrice
+                    choisit elle-même ses colonnes selon les données ECA, et doit
+                    pouvoir en afficher une nouvelle sans changement ici. */}
                 {selectedLieuId ? (
                     <div className="space-y-1 mt-2">
                         <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
