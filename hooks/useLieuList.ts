@@ -35,8 +35,17 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
 
         for (const lieu of lieuxForCategory) {
             for (const module of lieu.modules) {
-                // Include modules if they are not future, OR if they are part of Line C
-                if (!module.isFuture || activeFilter === 'METRO_C') {
+                // Inclut les modules non-futurs, ou tous les modules quand on parcourt
+                // l'onglet Ligne C / Aéroport Express (exemption volontairement plus
+                // large que isModuleInAuditScope : elle s'applique à TOUS les modules
+                // du lieu dans cet onglet, pas seulement à ceux de cette ligne précise
+                // — un lieu de la catégorie peut contenir d'autres modules co-localisés).
+                // Le cas AEROPORT était absent ici sans conséquence observable : chaque
+                // module généré pour cette ligne a déjà isFuture=false de façon
+                // permanente (cf. data/builder.ts::createDatModule/createSignaletiqueModule) ;
+                // ajouté explicitement pour ne plus dépendre silencieusement de cette
+                // invariante distante.
+                if (!module.isFuture || activeFilter === 'METRO_C' || activeFilter === 'AEROPORT') {
                     types.add(module.type);
                 }
             }

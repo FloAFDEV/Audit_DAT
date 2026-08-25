@@ -138,21 +138,19 @@
         animation: fade-out 200ms ease-in forwards;
       }
     </style>
-    <script src="https://cdn.tailwindcss.com"></script>
     <script>
-      // Apply theme from localStorage BEFORE page loads to prevent flash
+      // Apply theme from localStorage BEFORE page loads to prevent flash.
+      // Le style Tailwind réel provient de /index.css (@import "tailwindcss",
+      // compilé par le plugin Vite @tailwindcss/vite) — ce script ne fait que
+      // basculer la classe .dark avant le premier rendu, indépendamment de
+      // la façon dont Tailwind a généré les classes dark:. L'ancien
+      // <script src="https://cdn.tailwindcss.com"> (redondant avec le build
+      // réel, et qui échouait silencieusement hors connexion — contraire au
+      // fonctionnement local/offline attendu d'AuditRef) a été retiré.
       if (localStorage.getItem('tisseo-audit-theme') === 'dark') {
         document.documentElement.classList.add('dark')
       } else {
         document.documentElement.classList.remove('dark')
-      }
-      
-      // Configuration script now runs AFTER the main Tailwind script is loaded.
-      tailwind.config = {
-        darkMode: 'class', // Enable class-based dark mode
-        theme: {
-          extend: {},
-        },
       }
     </script>
   <script type="importmap">
