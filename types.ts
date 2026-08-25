@@ -336,6 +336,47 @@ export interface HistoryEntry {
 }
 
 // =================================================================
+// JOURNAL D'ÉVÉNEMENTS (Lot 3) — trace chronologique et lisible des
+// opérations métier importantes. Volontairement distinct de HistoryEntry
+// ci-dessus : HistoryEntry est un INSTANTANÉ COMPLET (details = arbre de
+// données) pris uniquement aux réinitialisations ; AppEvent est un
+// événement LÉGER (résumé + quelques métadonnées, jamais de copie de
+// données métier), couvrant un périmètre plus large (import/export,
+// ajout/suppression d'éléments d'audit, arbitrage du référentiel,
+// migrations, échecs de persistance). Les deux mécanismes coexistent
+// dans l'onglet Archives, chacun répondant à une question différente :
+// « à quoi ressemblaient les données ? » (HistoryEntry) vs.
+// « que s'est-il passé, et quand ? » (AppEvent).
+// =================================================================
+export type AppEventType =
+    | 'RESET_GLOBAL' | 'RESET_CATEGORY' | 'RESET_MODULE_TYPE' | 'RESET_AUDIT'
+    | 'IMPORT' | 'EXPORT'
+    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED'
+    | 'REFERENCE_ARBITRAGE'
+    | 'DATA_MIGRATION'
+    | 'PERSISTENCE_ERROR';
+
+export interface AppEvent {
+    id?: number; // Auto-incremented by Dexie
+    date: string; // ISO Date
+    type: AppEventType;
+    /** Catégorie de l'entité concernée (ex. 'lieu', 'reference', 'dat', 'eca',
+     *  'pictogram', 'category', 'moduleType') — texte libre, pas une liste
+     *  fermée : ce journal ne doit pas être un nouveau point de couplage
+     *  rigide à chaque type d'audit existant ou futur. */
+    entityType?: string;
+    /** Identifiant de l'entité si disponible (id du lieu, id de la référence...). */
+    entityId?: string;
+    /** Libellé lisible de l'entité (nom du lieu, nom de la référence...). */
+    entityLabel?: string;
+    /** Résumé prêt à afficher tel quel — la phrase que l'UI montre. */
+    summary: string;
+    /** Métadonnées légères optionnelles (ex. { count: 12 }) — jamais une
+     *  copie de données métier. */
+    metadata?: Record<string, string | number | boolean>;
+}
+
+// =================================================================
 // RÉFÉRENTIEL SIGNALÉTIQUE (signageReferences) — spécification commit 1
 // -----------------------------------------------------------------
 // Règle absolue : ce modèle décrit l'objet tel que l'agent terrain

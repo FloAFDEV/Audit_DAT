@@ -14,6 +14,8 @@ import { buildFullExportPayload, parseImportPayload, applyImportPayload } from '
 import { canEcaBeNotApplicable } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
+import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
+import { logEvent } from './utils/eventLog';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -25,6 +27,12 @@ interface AppState {
     lieux: Lieu[];
     isLoading: boolean;
     isAuthenticated: boolean;
+    /** Message affichable si init() a échoué à charger les données — sans lui,
+     *  un échec (ex. IndexedDB inaccessible) passait inaperçu : l'app quittait
+     *  simplement l'écran de chargement, isAuthenticated restait éventuellement
+     *  true, et l'utilisateur atterrissait sur un tableau de bord vide, comme
+     *  si le réseau n'avait aucun lieu — indiscernable d'une vraie base vide. */
+    initError: string | null;
 
     // UI State
     theme: 'light' | 'dark';
@@ -156,7 +164,23 @@ const useAuditStore = create<AppState>((set, get) => {
             // perdue au rechargement suivant.
             console.error("Échec de l'enregistrement en base :", error);
             toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible. Votre dernière modification n'a pas été sauvegardée, réessayez.", { duration: 8000 });
-            return;
+            // Best-effort : journalise l'échec pour le diagnostic ultérieur (ex.
+            // « le stockage a commencé à saturer à partir de telle date »). Ne
+            // doit jamais faire échouer CE bloc catch lui-même si l'écriture du
+            // journal échoue à son tour (logEvent avale déjà ses propres erreurs).
+            await logEvent({
+                type: 'PERSISTENCE_ERROR', entityType: 'lieu', entityId: selectedLieuId, entityLabel: lieuToUpdate.name,
+                summary: `Échec d'enregistrement — ${lieuToUpdate.name}`,
+                metadata: { message: error instanceof Error ? error.message : String(error) },
+            });
+            // On relance l'erreur (en plus du toast déjà affiché ci-dessus) :
+            // plusieurs appelants (les resets DAT/ECA/P+R/Signalétique/Pictos,
+            // via createResetHandler → showPromiseToast) attendent cette promesse
+            // pour savoir si l'opération a réussi. Sans ce throw, _updateLieu
+            // avalait l'échec et resolve() silencieusement — showPromiseToast
+            // affichait alors un second toast « Réinitialisation terminée »,
+            // contradictoire avec l'échec réel qui venait d'être signalé.
+            throw error;
         }
 
         const updatedLieux = lieux.map(l => l.id === selectedLieuId ? clonedLieu : l);
@@ -242,6 +266,7 @@ const useAuditStore = create<AppState>((set, get) => {
     lieux: [],
     isLoading: true,
     isAuthenticated: false,
+    initError: null,
     theme: 'light',
     isStatsViewActive: false,
     auditModeActive: false,
@@ -414,17 +439,34 @@ const useAuditStore = create<AppState>((set, get) => {
 
                 if (dataChanged) {
                     await db.lieux.bulkPut(data);
+                    await logEvent({
+                        type: 'DATA_MIGRATION',
+                        summary: 'Données du réseau migrées vers le format courant au démarrage',
+                    });
                 }
-                
+
                 set({ lieux: data });
             } else {
                 const initialData = await generateInitialLieuxDataAsync();
                 await db.lieux.bulkPut(initialData);
                 set({ lieux: initialData });
             }
+
+            // Reprise de navigation : ne restaure QUE ce qui résout encore
+            // réellement contre les données qui viennent d'être chargées
+            // (cf. utils/navigationPersistence.ts — jamais un identifiant
+            // orphelin après un import/reset survenu entre-temps).
+            const restoredNav = resolveRestoredNavigation(get().lieux);
+            if (Object.keys(restoredNav).length > 0) set(restoredNav);
         } catch (error) {
+            // Auparavant, cette erreur était relancée sans jamais être
+            // interceptée par l'appelant (App.tsx ne fait qu'un fire-and-forget
+            // de store.init()) : un échec de chargement (permissions, migration
+            // en erreur...) passait totalement inaperçu — l'utilisateur
+            // atterrissait sur un tableau de bord vide, indiscernable d'un
+            // réseau réellement sans lieu. `initError` rend cet échec visible.
             console.error("Échec de l'initialisation de l'application :", error);
-            throw new Error("Impossible de charger les données. Vérifiez les permissions de stockage, puis rafraîchissez la page.");
+            set({ initError: "Impossible de charger les données. Vérifiez les permissions de stockage, puis rafraîchissez la page." });
         } finally {
             set({ isLoading: false });
         }
@@ -630,7 +672,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handleAddDat: async () => {
-        const { selectedModuleId, selectedStationId, selectedDirectionId } = get();
+        const { selectedModuleId, selectedStationId, selectedDirectionId, selectedLieuId, lieux } = get();
+        let createdDat: DAT | null = null;
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -644,12 +687,27 @@ const useAuditStore = create<AppState>((set, get) => {
                     comment: ''
                 };
                 direction.dats.push(newDat);
+                createdDat = newDat;
             }
         });
+        if (createdDat) {
+            const lieuName = lieux.find(l => l.id === selectedLieuId)?.name;
+            const dat: DAT = createdDat;
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'dat', entityId: dat.id, entityLabel: dat.name,
+                summary: `DAT ajouté — ${dat.name}${lieuName ? ` (${lieuName})` : ''}`,
+            });
+        }
     },
-    
+
     handleRemoveDat: async (datId) => {
-        const { selectedModuleId, selectedStationId, selectedDirectionId } = get();
+        const { selectedModuleId, selectedStationId, selectedDirectionId, selectedLieuId, lieux } = get();
+        const lieuBefore = lieux.find(l => l.id === selectedLieuId);
+        const moduleBefore = lieuBefore?.modules.find(m => m.id === selectedModuleId);
+        const stationBefore = (moduleBefore?.data as ModeData | undefined)?.stations.find(s => s.id === selectedStationId);
+        const directionBefore = stationBefore?.directions.find(d => d.id === selectedDirectionId);
+        const datName = directionBefore?.dats.find(d => d.id === datId)?.name;
+
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -658,6 +716,13 @@ const useAuditStore = create<AppState>((set, get) => {
                 direction.dats = direction.dats.filter(d => d.id !== datId);
             }
         });
+
+        if (datName) {
+            await logEvent({
+                type: 'AUDIT_ITEM_REMOVED', entityType: 'dat', entityId: datId, entityLabel: datName,
+                summary: `DAT supprimé — ${datName}${lieuBefore ? ` (${lieuBefore.name})` : ''}`,
+            });
+        }
     },
 
     handleUpdateDatName: async (datId, newName) => {
@@ -761,7 +826,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
     
     handleAddEca: async (ecaData) => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        let createdEca: ECA | null = null;
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             if (module) {
@@ -772,8 +838,17 @@ const useAuditStore = create<AppState>((set, get) => {
                     comment: '',
                 };
                 module.data.ecas.push(newEca);
+                createdEca = newEca;
             }
         });
+        if (createdEca) {
+            const lieuName = lieux.find(l => l.id === selectedLieuId)?.name;
+            const eca: ECA = createdEca;
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
+                summary: `ECA ajouté — ${eca.name}${lieuName ? ` (${lieuName})` : ''}`,
+            });
+        }
     },
 
     handleUpdateEca: async (ecaData) => {
@@ -796,13 +871,24 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handleRemoveEca: async (ecaId) => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        const lieuBefore = lieux.find(l => l.id === selectedLieuId);
+        const moduleBefore = lieuBefore?.modules.find(m => m.id === selectedModuleId);
+        const ecaName = (moduleBefore?.data as EcaData | undefined)?.ecas.find(e => e.id === ecaId)?.name;
+
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             if (module) {
                 module.data.ecas = module.data.ecas.filter(e => e.id !== ecaId);
             }
         });
+
+        if (ecaName) {
+            await logEvent({
+                type: 'AUDIT_ITEM_REMOVED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
+                summary: `ECA supprimé — ${ecaName}${lieuBefore ? ` (${lieuBefore.name})` : ''}`,
+            });
+        }
     },
 
     handlePmrFloorAdhesiveStatusChange: async (adhesiveId, status) => {
@@ -837,13 +923,12 @@ const useAuditStore = create<AppState>((set, get) => {
         const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
         if (!moduleToUpdate) return;
 
-        // SNAPSHOT BEFORE RESET
-        await saveHistoryEntry(
-            `Audit Sol PMR - ${lieuToUpdate.name}`, 
-            'SINGLE_AUDIT', 
-            moduleToUpdate, 
-            undefined
-        );
+        // Instantané capturé AVANT la mutation (c'est l'état pré-reset qu'on
+        // veut archiver), mais écrit en base seulement APRÈS confirmation que
+        // le reset a réellement été persisté (voir plus bas) — jamais avant :
+        // si db.lieux.put échouait, l'archive affirmerait à tort qu'un reset
+        // a eu lieu alors que les données n'ont pas bougé.
+        const snapshotBeforeReset = JSON.parse(JSON.stringify(moduleToUpdate));
 
         const currentData = moduleToUpdate.data as PMRFloorAdhesiveData;
         currentData.comment = '';
@@ -854,9 +939,20 @@ const useAuditStore = create<AppState>((set, get) => {
             delete adhesive.photo_note;
             delete adhesive.photo_rotation;
         });
-        
+
         await db.lieux.put(lieuToUpdate);
         set({ lieux: newLieux });
+
+        await saveHistoryEntry(
+            `Audit Sol PMR - ${lieuToUpdate.name}`,
+            'SINGLE_AUDIT',
+            snapshotBeforeReset,
+            undefined
+        );
+        await logEvent({
+            type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToUpdate.id, entityLabel: lieuToUpdate.name,
+            summary: `Audit Sol PMR réinitialisé — ${lieuToUpdate.name}`,
+        });
     },
 
     handlePmrFloorAdhesivePhotoChange: async (adhesiveId, photo_base64) => {
@@ -921,16 +1017,10 @@ const useAuditStore = create<AppState>((set, get) => {
         // Need to fetch the *current* state before reset
         const lieuToSnapshot = lieux.find(l => l.id === selectedLieuId);
         const moduleToSnapshot = lieuToSnapshot?.modules.find(m => m.id === selectedModuleId);
-        
-        if(moduleToSnapshot) {
-             await saveHistoryEntry(
-                `Audit Pictogrammes - ${lieuToSnapshot?.name}`, 
-                'SINGLE_AUDIT', 
-                moduleToSnapshot, 
-                undefined
-            );
-        }
 
+        // _updateLieu D'ABORD : si l'écriture échoue, elle relance désormais
+        // (cf. correctif Lot 2) — on n'atteint jamais l'archivage ci-dessous,
+        // qui n'affirmerait donc jamais à tort qu'un reset a eu lieu.
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
@@ -941,10 +1031,24 @@ const useAuditStore = create<AppState>((set, get) => {
                 delete module.data.completionDate;
             }
         });
+
+        if (moduleToSnapshot) {
+            await saveHistoryEntry(
+                `Audit Pictogrammes - ${lieuToSnapshot?.name}`,
+                'SINGLE_AUDIT',
+                moduleToSnapshot,
+                undefined
+            );
+            await logEvent({
+                type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToSnapshot?.id, entityLabel: lieuToSnapshot?.name,
+                summary: `Audit Pictogrammes réinitialisé — ${lieuToSnapshot?.name}`,
+            });
+        }
     },
     
     handleAddCognitivePictogramAccessPoint: async () => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        let createdPoint: CognitivePictogram | null = null;
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
@@ -955,12 +1059,25 @@ const useAuditStore = create<AppState>((set, get) => {
                 };
                 module.data.pictograms.push(newAccessPoint);
                 delete module.data.completionDate;
+                createdPoint = newAccessPoint;
             }
         });
+        if (createdPoint) {
+            const lieuName = lieux.find(l => l.id === selectedLieuId)?.name;
+            const point: CognitivePictogram = createdPoint;
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'pictogram', entityId: point.id, entityLabel: point.accessPointName,
+                summary: `Accès pictogrammes ajouté — ${point.accessPointName}${lieuName ? ` (${lieuName})` : ''}`,
+            });
+        }
     },
 
     handleRemoveCognitivePictogramAccessPoint: async (pictogramId: string) => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        const lieuBefore = lieux.find(l => l.id === selectedLieuId);
+        const moduleBefore = lieuBefore?.modules.find(m => m.id === selectedModuleId);
+        const pointName = (moduleBefore?.data as CognitivePictogramData | undefined)?.pictograms.find(p => p.id === pictogramId)?.accessPointName;
+
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CognitivePictogramData };
             if (module) {
@@ -970,6 +1087,13 @@ const useAuditStore = create<AppState>((set, get) => {
                 else if (!isComplete && module.data.completionDate) delete module.data.completionDate;
             }
         });
+
+        if (pointName) {
+            await logEvent({
+                type: 'AUDIT_ITEM_REMOVED', entityType: 'pictogram', entityId: pictogramId, entityLabel: pointName,
+                summary: `Accès pictogrammes supprimé — ${pointName}${lieuBefore ? ` (${lieuBefore.name})` : ''}`,
+            });
+        }
     },
     
     handleUpdateCognitivePictogramAccessPointName: async (pictogramId: string, newName: string) => {
@@ -1162,13 +1286,6 @@ const useAuditStore = create<AppState>((set, get) => {
                 modules: lieu.modules.filter(m => categoryConfig.predicate(m))
             })).filter(l => l.modules.length > 0);
 
-            await saveHistoryEntry(
-                `Historique complet - ${categoryConfig.label}`, 
-                'CATEGORY', 
-                snapshotData, 
-                category
-            );
-
             const freshLieux = await generateInitialLieuxDataAsync();
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
@@ -1179,11 +1296,25 @@ const useAuditStore = create<AppState>((set, get) => {
                 const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)) : [];
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
-            
+
+            // Écriture réelle D'ABORD : l'archive ci-dessous ne doit jamais
+            // affirmer qu'une réinitialisation a eu lieu si bulkPut a échoué.
             await db.lieux.bulkPut(updatedLieux);
             set({
                 lieux: updatedLieux,
                 activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
+            });
+
+            await saveHistoryEntry(
+                `Historique complet - ${categoryConfig.label}`,
+                'CATEGORY',
+                snapshotData,
+                category
+            );
+            await logEvent({
+                type: 'RESET_CATEGORY', entityType: 'category', entityId: category, entityLabel: categoryConfig.label,
+                summary: `Catégorie « ${categoryConfig.label} » réinitialisée`,
+                metadata: { lieuxConcernes: lieuxToSnapshot.length },
             });
 
         } catch (error) {
@@ -1201,19 +1332,9 @@ const useAuditStore = create<AppState>((set, get) => {
                 modules: lieu.modules.filter(m => m.type === moduleType)
             })).filter(l => l.modules.length > 0);
 
-            // Find label
-            const config = AUDIT_CATEGORIES.flatMap(c => c).find(x => false) || { label: moduleType }; // Fallback
-            
-            await saveHistoryEntry(
-                `Historique - ${moduleType}`, 
-                'MODULE_TYPE', 
-                snapshotData, 
-                undefined
-            );
-
             const freshLieux = await generateInitialLieuxDataAsync();
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
-            const updatedLieux = JSON.parse(JSON.stringify(currentLieux)); 
+            const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
 
             for (const lieu of updatedLieux) {
                 const modulesToKeep = lieu.modules.filter((m: AuditModule) => m.type !== moduleType);
@@ -1221,9 +1342,22 @@ const useAuditStore = create<AppState>((set, get) => {
                 const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => m.type === moduleType) : [];
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
-            
+
+            // Écriture réelle D'ABORD (même raison que handleResetCategory).
             await db.lieux.bulkPut(updatedLieux);
             set({ lieux: updatedLieux });
+
+            await saveHistoryEntry(
+                `Historique - ${moduleType}`,
+                'MODULE_TYPE',
+                snapshotData,
+                undefined
+            );
+            await logEvent({
+                type: 'RESET_MODULE_TYPE', entityType: 'moduleType', entityId: moduleType, entityLabel: moduleType,
+                summary: `Type d'audit « ${moduleType} » réinitialisé`,
+                metadata: { lieuxConcernes: snapshotData.length },
+            });
 
         } catch (error) {
             console.error(`Failed to reset module type ${moduleType}:`, error);
@@ -1245,14 +1379,10 @@ const useAuditStore = create<AppState>((set, get) => {
     
     handleResetAll: async () => {
         try {
-            // SNAPSHOT GLOBAL HISTORY
+            // Instantané capturé maintenant (avant effacement), écrit en
+            // archive seulement après confirmation que le reset a réellement
+            // eu lieu (voir plus bas) — même raison que handleResetCategory.
             const currentLieux = get().lieux;
-            await saveHistoryEntry(
-                `Historique Complet Réseau`,
-                'GLOBAL',
-                currentLieux,
-                undefined
-            );
 
             // Sauvegarde automatique avant effacement.
             await _backupBeforeReset('reset-all');
@@ -1262,6 +1392,18 @@ const useAuditStore = create<AppState>((set, get) => {
             set({
                 lieux: initialData,
                 activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
+            });
+
+            await saveHistoryEntry(
+                `Historique Complet Réseau`,
+                'GLOBAL',
+                currentLieux,
+                undefined
+            );
+            await logEvent({
+                type: 'RESET_GLOBAL',
+                summary: 'Réinitialisation complète du réseau',
+                metadata: { lieuxConcernes: currentLieux.length },
             });
         } catch (error) {
             console.error("Failed to reset all data:", error);
@@ -1283,11 +1425,40 @@ const useAuditStore = create<AppState>((set, get) => {
                 lieux: payload.lieux,
                 selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
+            await logEvent({
+                type: 'IMPORT',
+                summary: `Import d'une sauvegarde — ${payload.lieux.length} lieu${payload.lieux.length > 1 ? 'x' : ''}`,
+                metadata: {
+                    lieux: payload.lieux.length,
+                    referentiel: payload.signageReferences !== undefined,
+                },
+            });
         } catch (error) {
             console.error("Échec de l'importation :", error);
             throw error;
         }
     },
 }});
+
+// Persistance de la position de navigation (reprise après interruption,
+// Lot 2.4) : enregistrée dès qu'un des 8 identifiants de sélection change —
+// jamais à chaque frappe (les mutations de champs, via _updateLieu, ne
+// touchent aucune de ces clés). Abonnement unique, module-level : le store
+// est un singleton importé une seule fois, cette souscription vit donc
+// pendant toute la durée de vie de l'application.
+useAuditStore.subscribe((state, prevState) => {
+    const navChanged = NAV_KEYS.some(key => state[key] !== prevState[key]);
+    if (!navChanged) return;
+    saveNavigationSelection({
+        selectedLieuId: state.selectedLieuId,
+        selectedModuleId: state.selectedModuleId,
+        selectedStationId: state.selectedStationId,
+        selectedDirectionId: state.selectedDirectionId,
+        selectedDatId: state.selectedDatId,
+        selectedPrZoneId: state.selectedPrZoneId,
+        selectedEquipmentId: state.selectedEquipmentId,
+        selectedEcaId: state.selectedEcaId,
+    });
+});
 
 export default useAuditStore;

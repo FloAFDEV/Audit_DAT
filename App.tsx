@@ -20,6 +20,24 @@ const Loader: React.FC = () => (
   </div>
 );
 
+// Écran affiché quand store.init() a échoué à charger les données — sans lui,
+// cet échec passait inaperçu et l'utilisateur atterrissait sur un tableau de
+// bord vide, indiscernable d'un réseau réellement sans lieu (cf. store.ts::init).
+const InitErrorScreen: React.FC<{ message: string }> = ({ message }) => (
+  <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-8" role="alert">
+    <div className="max-w-md text-center">
+      <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">Chargement impossible</h1>
+      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{message}</p>
+      <button
+        onClick={() => window.location.reload()}
+        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+      >
+        Réessayer
+      </button>
+    </div>
+  </div>
+);
+
 // New success animation component as requested by the user.
 const SuccessAnimation: React.FC = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
@@ -147,6 +165,10 @@ const App: React.FC = () => {
     // --- Render logic ---
     if (store.isLoading) {
         return <Loader />;
+    }
+
+    if (store.initError) {
+        return <InitErrorScreen message={store.initError} />;
     }
 
     if (!store.isAuthenticated) {

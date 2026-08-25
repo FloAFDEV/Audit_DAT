@@ -356,7 +356,17 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
         />;
     }
 
-    return null; // Should be handled by forms above
+    // Aucune branche ci-dessus n'a matché (ex. type de module inconnu/corrompu,
+    // reçu depuis un import). Avant ce correctif, ceci rendait un écran
+    // totalement vide et silencieux — sans exception, donc invisible même
+    // pour l'ErrorBoundary — laissant l'utilisateur bloqué sans recours.
+    console.error('AppRouter : aucun écran ne correspond à la sélection courante.', { selectedModule, selectedStation, selectedDirection });
+    return (
+        <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+            <p className="text-red-500 mb-4 font-medium">Cet élément n'est pas reconnu par l'application.</p>
+            <button onClick={() => handlers.selectLieu(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Retour à l'accueil</button>
+        </div>
+    );
 };
 
 export default AppRouter;

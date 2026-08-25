@@ -1,23 +1,34 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry, SignageReference, SignageAsset } from './types';
+import { Lieu, HistoryEntry, SignageReference, SignageAsset, AppEvent } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
 
-// FIX: Switched from a subclassing pattern to a typed Dexie instance.
-export const db = new Dexie('TisseoAuditDB') as Dexie & {
+export type AuditDb = Dexie & {
     lieux: EntityTable<Lieu, 'id'>;
     history: EntityTable<HistoryEntry, 'id'>;
     signageReferences: EntityTable<SignageReference, 'id'>;
     signageAssets: EntityTable<SignageAsset, 'id'>;
+    events: EntityTable<AppEvent, 'id'>;
 };
 
-// V5: introduction de la table history.
+/**
+ * Construit une instance Dexie complète (schéma + chaîne de migrations
+ * v5→v12) sous le nom donné. Extrait en factory (Lot 2.3) uniquement pour
+ * permettre aux tests d'ouvrir une base isolée sous un autre nom et de
+ * vérifier une VRAIE migration d'anciennes données — aucun changement de
+ * comportement pour `db`, toujours le même singleton 'TisseoAuditDB'.
+ */
+export const createAuditDb = (name: string): AuditDb => {
+    // FIX: Switched from a subclassing pattern to a typed Dexie instance.
+    const instance = new Dexie(name) as AuditDb;
+
+    // V5: introduction de la table history.
 // NOTE historique : cette version utilisait tx.table('lieux').clear() pour forcer un refresh
 // du regroupement des modules Signalétique. Ce comportement destructif est conservé uniquement
 // pour les utilisateurs qui migrent encore depuis la v4.
 // ⛔ Ne JAMAIS reproduire ce pattern (clear) dans les versions suivantes.
-db.version(5).stores({
+    instance.version(5).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -28,7 +39,7 @@ db.version(5).stores({
 // Sert de point de départ propre pour toutes les futures migrations.
 // Règle pour les versions ≥ 6 : utiliser .upgrade() pour patcher les enregistrements existants
 // (ajout de champs manquants, renommages), JAMAIS pour les effacer.
-db.version(6).stores({
+    instance.version(6).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 });
@@ -37,7 +48,7 @@ db.version(6).stores({
 //   - totem : { meett: TotemStatus[], pdj: TotemStatus[] } → { direction1: TotemStatus, direction2: TotemStatus }
 //   - bandeauStation (nouveau) : { direction1: BandeauStationStatus, direction2: BandeauStationStatus }
 //   - planQuartier : suppression des champs terminusCase et relayInfo
-db.version(7).stores({
+    instance.version(7).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -91,7 +102,7 @@ db.version(7).stores({
 //     afin d'afficher les labels corrects d'extrémité dans SignaletiqueAuditForm.
 //     ⚠ Les noms de direction LAE de cette version étaient incorrects ("Direction Palais de Justice").
 //       Corrigés en V9.
-db.version(8).stores({
+    instance.version(8).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -140,7 +151,7 @@ db.version(8).stores({
 //   - Blagnac est le terminus LAE côté ville → 1 seule direction "Direction Aéroport Toulouse Blagnac"
 //   - ATB est le terminus LAE côté aéroport → direction renommée en "Direction Blagnac"
 //   - NAD/DAU (intermédiaires) → direction 2 renommée "Direction Blagnac" (était "Direction Palais de Justice")
-db.version(9).stores({
+    instance.version(9).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -178,7 +189,7 @@ db.version(9).stores({
 // V10: supprimer isFuture sur les stations B ext. (Parc du Canal sta-b-21, Labège Madron sta-b-22)
 //      → DAT, ECA, PMR et Picto. Cognitifs ouverts, identiques aux autres stations Ligne B.
 //      Pour les DAT : initialise les directions (Borderouge / Ramonville) avec 4 DATs et adhésifs.
-db.version(10).stores({
+    instance.version(10).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -220,7 +231,7 @@ db.version(10).stores({
 //      adhesiveIds + nettoyage de sa map d'adhésifs (on conserve le statut déjà saisi sur adbe3).
 //   3) Toutes les bornes de sortie (BS) : ajout du « Repère 2 - Information Ticket » (adbs2)
 //      s'il est absent (NotChecked), sans écraser un statut existant.
-db.version(11).stores({
+    instance.version(11).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
 }).upgrade(tx => {
@@ -277,7 +288,7 @@ db.version(11).stores({
 //   - signageAssets : médias terrain légers (Blob image compressée uniquement,
 //     règle R6). Vide au seed — aucun fichier de production n'entre ici (R5).
 //   ⚠ Aucune modification de la table lieux : l'arbre d'audit reste intact (R9).
-db.version(12).stores({
+    instance.version(12).stores({
     lieux: 'id, name',
     history: '++id, date, type, categoryKey',
     signageReferences: 'id, auditType',
@@ -286,8 +297,29 @@ db.version(12).stores({
     return tx.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
 });
 
+// V13: création du journal d'événements (Lot 3, utils/eventLog.ts).
+//   - events : trace chronologique légère des opérations métier importantes
+//     (import/export, réinitialisations, ajout/suppression d'éléments
+//     d'audit, arbitrage du référentiel, migrations, échecs critiques de
+//     persistance) — jamais une copie de données métier (à la différence
+//     de `history`, qui reste inchangée et continue de servir les
+//     instantanés complets).
+//   ⚠ Table neuve uniquement : aucune modification des tables existantes.
+    instance.version(13).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    signageAssets: 'id, referenceId',
+    events: '++id, date, type, entityType',
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
-db.on('populate', (tx) => {
-    tx.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
-});
+    instance.on('populate', (tx) => {
+        tx.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
+    });
+
+    return instance;
+};
+
+export const db = createAuditDb('TisseoAuditDB');

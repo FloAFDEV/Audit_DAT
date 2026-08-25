@@ -5,6 +5,7 @@ import { getLieuxForCategory } from '../data/builder';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { exportLieuxToCsv, exportLieuxToJson, generateAndDownloadIcsFile, calculateInitialReminderDate, slugify } from '../utils/csvExporter';
 import { showPromiseToast, showSuccessToast, showErrorToast, showInfoToast } from '../components/ToastManager';
+import { logEvent } from '../utils/eventLog';
 import { CheckCircle, RefreshCw, XCircle, Download } from 'lucide-react';
 import { CategoryIcon } from '../components/CategoryIcon';
 import { ModuleIcon } from '../components/ModuleIcon';
@@ -71,6 +72,11 @@ export const useAppHandlers = () => {
 
         if (result.success) {
             showExportSuccessToast(successMessage, categoryConfig?.key);
+            logEvent({
+                type: 'EXPORT', entityType: 'export', entityLabel: fileName,
+                summary: `Export CSV — ${fileName} (${lieux.length} lieu${lieux.length > 1 ? 'x' : ''})`,
+                metadata: { format: 'csv', lieux: lieux.length },
+            });
         } else {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
             showErrorToast({ icon, title: 'Exportation Échouée', message: result.error || "Une erreur est survenue lors de la génération du fichier CSV." });
@@ -156,6 +162,7 @@ export const useAppHandlers = () => {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
             showSuccessToast({ icon, title: 'Exportation JSON réussie', message: 'Le fichier de données a été téléchargé.' });
             triggerSuccessAnimation();
+            logEvent({ type: 'EXPORT', entityType: 'export', summary: 'Export JSON complet (sauvegarde)', metadata: { format: 'json' } });
         } else {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-red-500 flex items-center justify-center" }, React.createElement(XCircle, { className: "h-6 w-6 text-white" }));
             showErrorToast({ icon, title: 'Erreur', message: "Échec de l'exportation JSON." });

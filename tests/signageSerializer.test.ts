@@ -17,6 +17,7 @@ import {
     blobToBase64,
     base64ToBlob,
     validateSignageReferences,
+    validateLieuxData,
 } from '../utils/signageSerializer';
 import { SignageReference } from '../types';
 
@@ -78,6 +79,45 @@ describe('Seed et validation', () => {
     it('rejette un référentiel où auditType diverge du scope (R11)', () => {
         const bad = [{ id: 'x', name: 'X', version: 1, support: 'adhesif', auditType: 'DAT', scope: { auditType: 'PR' } }];
         expect(validateSignageReferences(bad)).toBe(false);
+    });
+});
+
+describe('validateLieuxData — chaque lieu du tableau est contrôlé (P0.4)', () => {
+    const valid = (id: string): any => ({ id, name: `Lieu ${id}`, modules: [] });
+    const invalid: any = { name: 'Sans id', modules: [] }; // id manquant
+
+    it('un fichier entièrement valide passe', () => {
+        expect(validateLieuxData([valid('a'), valid('b'), valid('c')])).toBe(true);
+    });
+
+    it('un tableau vide est accepté (contrat existant, inchangé)', () => {
+        expect(validateLieuxData([])).toBe(true);
+    });
+
+    it('rejette si le PREMIER lieu est invalide', () => {
+        expect(validateLieuxData([invalid, valid('b'), valid('c')])).toBe(false);
+    });
+
+    it('rejette si un lieu AU MILIEU est invalide (c\'était accepté avant le correctif P0.4)', () => {
+        expect(validateLieuxData([valid('a'), invalid, valid('c')])).toBe(false);
+    });
+
+    it('rejette si le DERNIER lieu est invalide', () => {
+        expect(validateLieuxData([valid('a'), valid('b'), invalid])).toBe(false);
+    });
+
+    it('rejette si PLUSIEURS lieux sont invalides', () => {
+        expect(validateLieuxData([invalid, valid('b'), invalid])).toBe(false);
+    });
+
+    it('rejette un id vide ou un modules absent, même avec un id/name présents', () => {
+        expect(validateLieuxData([{ id: '', name: 'X', modules: [] }])).toBe(false);
+        expect(validateLieuxData([{ id: 'x', name: 'X' }])).toBe(false);
+    });
+
+    it('rejette une valeur qui n\'est pas un tableau', () => {
+        expect(validateLieuxData({ id: 'x', name: 'X', modules: [] })).toBe(false);
+        expect(validateLieuxData(null)).toBe(false);
     });
 });
 
