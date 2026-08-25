@@ -74,11 +74,18 @@ export interface ParsedImportPayload {
 // Validation
 // -----------------------------------------------------------------
 
+/** Valide CHAQUE lieu du tableau, pas seulement le premier — un fichier
+ *  partiellement corrompu (un lieu valide en tête, un autre altéré plus
+ *  loin) ne doit jamais passer la validation puis remplacer silencieusement
+ *  toute la table lieux (db.lieux.clear() + bulkPut dans applyImportPayload). */
 export const validateLieuxData = (data: any): data is Lieu[] => {
     if (!Array.isArray(data)) return false;
-    if (data.length === 0) return true;
-    const firstLieu = data[0];
-    return 'id' in firstLieu && 'name' in firstLieu && 'modules' in firstLieu && Array.isArray(firstLieu.modules);
+    return data.every(lieu =>
+        lieu && typeof lieu === 'object' &&
+        typeof lieu.id === 'string' && lieu.id.length > 0 &&
+        typeof lieu.name === 'string' &&
+        Array.isArray(lieu.modules)
+    );
 };
 
 const AUDIT_TYPES = ['DAT', 'PR', 'ECA'];

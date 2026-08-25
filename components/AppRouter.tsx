@@ -344,11 +344,12 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             module={selectedModule}
             station={station}
             direction={selectedDirection}
-            onSelectDirection={handlers.selectDirection}
             onStatusChange={handlers.handleSignaletiqueStatusChange}
             onFieldChange={handlers.onFieldChange}
             onCommentChange={handlers.handleSignaletiqueCommentChange}
             onPhotoChange={handlers.handleSignaletiquePhotoChange}
+            onPhotoNoteChange={handlers.onPhotoNoteChange}
+            onPhotoRotationChange={handlers.onPhotoRotationChange}
             onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
             onReset={handlers.handleResetSignaletiqueRequest}
             onBack={backFromDirectionLevel}

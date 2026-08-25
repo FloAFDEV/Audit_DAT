@@ -9,6 +9,7 @@ import { AuditModuleType, Pr, EcaData, ModeData, Lieu, AuditModule, Station, Dir
 import ConfirmationModal from './components/ConfirmationModal';
 import ReminderModal from './components/ReminderModal';
 import AboutModal from './components/AboutModal';
+import ErrorBoundary from './components/ErrorBoundary';
 import { Toaster } from 'react-hot-toast';
 import { useAppHandlers } from './hooks/useAppHandlers';
 
@@ -157,6 +158,7 @@ const App: React.FC = () => {
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 flex-grow">
+              <ErrorBoundary>
                 <div className="mb-6">
                     <Breadcrumbs
                         isStatsPage={store.isStatsViewActive}
@@ -224,6 +226,7 @@ const App: React.FC = () => {
                     </motion.div>
                   </AnimatePresence>
                 </Suspense>
+              </ErrorBoundary>
             </div>
       <footer className="text-center py-8 text-slate-500 dark:text-slate-400 text-[10px] font-light tracking-wider uppercase">
         <p>

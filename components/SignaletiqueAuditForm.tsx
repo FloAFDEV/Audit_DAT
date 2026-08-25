@@ -37,6 +37,8 @@ interface SignaletiqueAuditFormProps {
   onStatusChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, status: EquipmentStatusType | 'NotChecked') => void;
   onCommentChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, comment: string) => void;
   onPhotoChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, photo_base64: string | null) => void;
+  onPhotoNoteChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, note: string) => void;
+  onPhotoRotationChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, rotation: number) => void;
   onFieldChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, field: string, value: any) => void;
   onReset: () => void;
   onStationCommentChange: (comment: string) => void;
@@ -110,6 +112,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   onStatusChange,
   onCommentChange,
   onPhotoChange,
+  onPhotoNoteChange,
+  onPhotoRotationChange,
   onFieldChange,
   onReset,
   onStationCommentChange,
@@ -546,16 +550,12 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           isOpen={!!viewingPhoto}
           onClose={() => setViewingPhoto(null)}
           photo={{
-            id: `${viewingPhoto.category}-${viewingPhoto.direction}-${viewingPhoto.index}`,
-            name: `${CATEGORY_LABELS[viewingPhoto.category]} - ${
-              viewingPhoto.direction === 'direction1' ? endpointLabel1
-              : viewingPhoto.direction === 'direction2' ? endpointLabel2
-              : viewingPhoto.direction === 'meett' ? 'MEETT' : 'PDJ'
-            } #${viewingPhoto.index + 1}`,
             photo_base64: viewingPhoto.item.photo_base64 || '',
             photo_note: viewingPhoto.item.photo_note,
             photo_rotation: viewingPhoto.item.photo_rotation
           }}
+          onRotate={(rotation) => onPhotoRotationChange(viewingPhoto.category, viewingPhoto.direction, viewingPhoto.index, rotation)}
+          onNoteChange={(note) => onPhotoNoteChange(viewingPhoto.category, viewingPhoto.direction, viewingPhoto.index, note)}
         />
       )}
     </>
