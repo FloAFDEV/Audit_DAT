@@ -1,15 +1,19 @@
 // components/cockpit/HistoriqueView.tsx
-// Section « Historique » du cockpit — archives des audits.
+// Section « Historique » du cockpit — archives des audits + journal d'événements.
 // Contenu déplacé depuis StatsPage (onglet history), fonctionnellement identique.
 import React, { useState, useEffect } from 'react';
-import { Archive, History, Trash2 } from 'lucide-react';
-import { Lieu, AuditModule, HistoryEntry, MaintenanceItem } from '../../types';
+import {
+    Archive, History, Trash2, ScrollText, RotateCcw, Upload, Download,
+    PlusCircle, MinusCircle, Scale, Database, AlertTriangle, LucideIcon,
+} from 'lucide-react';
+import { Lieu, AuditModule, HistoryEntry, MaintenanceItem, AppEvent, AppEventType } from '../../types';
 import { db } from '../../db';
 import { StatCard } from './primitives';
 import ConfirmationModal from '../ConfirmationModal';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { generateMaintenanceSummary } from '../../utils/maintenanceGenerator';
 import { HistoryChart } from '../HistoryChart';
+import toast from 'react-hot-toast';
 
 interface HistoryListProps {
     onViewSnapshot: (entry: HistoryEntry) => void;
@@ -29,9 +33,15 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
 
     const handleDelete = async () => {
         if (entryToDelete && entryToDelete.id) {
-            await db.history.delete(entryToDelete.id);
-            setEntryToDelete(null);
-            loadHistory();
+            try {
+                await db.history.delete(entryToDelete.id);
+                loadHistory();
+            } catch (error) {
+                console.error("Échec de la suppression de l'archive :", error);
+                toast.error("Échec de la suppression — réessayez.");
+            } finally {
+                setEntryToDelete(null);
+            }
         }
     };
 
@@ -136,6 +146,110 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
     );
 };
 
+// =================================================================
+// JOURNAL D'ÉVÉNEMENTS (Lot 3) — trace chronologique et lisible des
+// opérations métier importantes (import/export, réinitialisations,
+// ajout/suppression d'éléments d'audit, arbitrage du référentiel,
+// migrations, échecs critiques de persistance). Volontairement distinct
+// des Archives ci-dessus (des instantanés complets, pas un journal) —
+// cf. types.ts::AppEvent pour la distinction. Lecture seule : consulter,
+// filtrer par catégorie — aucune suppression individuelle inventée, la
+// rétention n'a pas été demandée à ce stade.
+// =================================================================
+const EVENT_TYPE_GROUPS: { key: string; label: string; types: AppEventType[] }[] = [
+    { key: 'ALL', label: 'Tout', types: [] },
+    { key: 'RESET', label: 'Réinitialisations', types: ['RESET_GLOBAL', 'RESET_CATEGORY', 'RESET_MODULE_TYPE', 'RESET_AUDIT'] },
+    { key: 'IO', label: 'Import / Export', types: ['IMPORT', 'EXPORT'] },
+    { key: 'AUDIT', label: "Éléments d'audit", types: ['AUDIT_ITEM_ADDED', 'AUDIT_ITEM_REMOVED'] },
+    { key: 'REF', label: 'Référentiel', types: ['REFERENCE_ARBITRAGE'] },
+    { key: 'SYSTEM', label: 'Système', types: ['DATA_MIGRATION', 'PERSISTENCE_ERROR'] },
+];
+
+const EVENT_ICON: Record<AppEventType, LucideIcon> = {
+    RESET_GLOBAL: RotateCcw, RESET_CATEGORY: RotateCcw, RESET_MODULE_TYPE: RotateCcw, RESET_AUDIT: RotateCcw,
+    IMPORT: Upload, EXPORT: Download,
+    AUDIT_ITEM_ADDED: PlusCircle, AUDIT_ITEM_REMOVED: MinusCircle,
+    REFERENCE_ARBITRAGE: Scale,
+    DATA_MIGRATION: Database,
+    PERSISTENCE_ERROR: AlertTriangle,
+};
+
+const formatEventDate = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} · ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+};
+
+const EventJournal: React.FC = () => {
+    const [events, setEvents] = useState<AppEvent[]>([]);
+    const [filter, setFilter] = useState<string>('ALL');
+
+    useEffect(() => {
+        db.events.orderBy('date').reverse().toArray().then(setEvents).catch(err => {
+            console.error("Échec de lecture du journal d'événements :", err);
+            setEvents([]);
+        });
+    }, []);
+
+    if (events.length === 0) {
+        return (
+            <div className="text-center py-12 text-gray-500 dark:text-slate-400">
+                <ScrollText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Aucun événement enregistré.</p>
+                <p className="text-sm mt-1">Le journal se remplit automatiquement lors des opérations importantes (import, export, réinitialisation, ajout/suppression d'éléments d'audit, arbitrage du référentiel...).</p>
+            </div>
+        );
+    }
+
+    const activeGroup = EVENT_TYPE_GROUPS.find(g => g.key === filter);
+    const filtered = !activeGroup || activeGroup.key === 'ALL' ? events : events.filter(e => activeGroup.types.includes(e.type));
+
+    return (
+        <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+                {EVENT_TYPE_GROUPS.map(g => (
+                    <button
+                        key={g.key}
+                        onClick={() => setFilter(g.key)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                            filter === g.key
+                                ? 'bg-teal-600 text-white'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                        }`}
+                    >
+                        {g.label}
+                    </button>
+                ))}
+            </div>
+
+            {filtered.length === 0 ? (
+                <p className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">Aucun événement dans cette catégorie.</p>
+            ) : (
+                <ul className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
+                    {filtered.map(event => {
+                        const Icon = EVENT_ICON[event.type] ?? ScrollText;
+                        const isError = event.type === 'PERSISTENCE_ERROR';
+                        return (
+                            <li key={event.id} className="flex items-start gap-3 p-3">
+                                <div className={`flex-shrink-0 mt-0.5 h-7 w-7 rounded-full flex items-center justify-center ${
+                                    isError
+                                        ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                                        : 'bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400'
+                                }`}>
+                                    <Icon className="w-3.5 h-3.5" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="text-sm text-slate-800 dark:text-slate-100 leading-snug">{event.summary}</p>
+                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatEventDate(event.date)}</p>
+                                </div>
+                            </li>
+                        );
+                    })}
+                </ul>
+            )}
+        </div>
+    );
+};
+
 const HistoriqueView: React.FC = () => {
     const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
@@ -178,6 +292,9 @@ const HistoriqueView: React.FC = () => {
         <>
             <StatCard title="Archives des Audits" icon={<Archive className="w-6 h-6" />}>
                 <HistoryList onViewSnapshot={handleViewSnapshot} />
+            </StatCard>
+            <StatCard title="Journal d'événements" icon={<ScrollText className="w-6 h-6" />}>
+                <EventJournal />
             </StatCard>
             <MaintenanceListModal
                 isOpen={!!modalContent}
