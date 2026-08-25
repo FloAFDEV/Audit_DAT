@@ -49,6 +49,13 @@ export interface SignaletiqueStationItemRef {
     /** Point de contrôle précis (ex. "Totem — Odyssud (direction1)"). */
     label: string;
     status: EquipmentStatusType | 'NotChecked';
+    /** Photo du relevé terrain sur l'équipement porteur de ce statut (ex.
+     *  le Totem, le BIV) — absente pour les champs qui n'en capturent pas
+     *  eux-mêmes (ex. sous-statuts comme « adhésifs blancs »), auquel cas
+     *  la photo de l'équipement porteur est reprise (même point de
+     *  contrôle physique, une seule photo). */
+    photo_base64?: string | null;
+    photo_rotation?: number;
 }
 
 export interface SignaletiqueStationTotals {
@@ -83,15 +90,21 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
     const items: SignaletiqueStationItemRef[] = [];
 
     const push = (
-        base: Omit<SignaletiqueStationItemRef, 'status'>,
+        base: Omit<SignaletiqueStationItemRef, 'status' | 'photo_base64' | 'photo_rotation'>,
         status: EquipmentStatusType | 'NotChecked' | undefined,
+        photoSource?: { photo_base64?: string | null; photo_rotation?: number },
     ) => {
         const resolved = status ?? 'NotChecked';
         // Non installé à cet emplacement — jamais réellement produit par le
         // formulaire actuel, mais traité par cohérence (même convention que
         // AdhesiveStatus.NotApplicable ailleurs dans le cockpit).
         if (resolved === EquipmentStatusType.NOT_APPLICABLE) return;
-        items.push({ ...base, status: resolved });
+        items.push({
+            ...base,
+            status: resolved,
+            photo_base64: photoSource?.photo_base64,
+            photo_rotation: photoSource?.photo_rotation,
+        });
     };
 
     for (const lieu of lieux) {
@@ -113,46 +126,46 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
 
                 DIRECTIONS.forEach(dir => {
                     const t = sig.totem?.[dir];
-                    if (t) push({ ...base, category: CATEGORY_LABELS.totem, label: `Totem — ${station.name} (${dir})` }, t.status);
+                    if (t) push({ ...base, category: CATEGORY_LABELS.totem, label: `Totem — ${station.name} (${dir})` }, t.status, t);
 
                     const bd = sig.bandeauStation?.[dir];
                     if (bd) {
                         const label = `Bandeau Station — ${station.name} (${dir})`;
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label }, bd.status);
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · contenu direction` }, bd.directionContent);
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · nom station` }, bd.stationNameContent);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label }, bd.status, bd);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · contenu direction` }, bd.directionContent, bd);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · nom station` }, bd.stationNameContent, bd);
                     }
                 });
 
                 SIGN_DIRS.forEach(dir => {
                     (sig.biv?.[dir] ?? []).forEach((b, i) => {
                         const label = `BIV ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.biv, label }, b.status);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · fonctionnement écran` }, b.screenFunctioning);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · adhésifs blancs` }, b.whiteTextAdhesives);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · ligne caisson` }, b.ligneCaisson);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · destination caisson` }, b.destinationCaisson);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · attente min. caisson` }, b.attenteMinCaisson);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · durée approx. caisson` }, b.dureeApproxCaisson);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · quai caisson` }, b.quaiCaisson);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label }, b.status, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · fonctionnement écran` }, b.screenFunctioning, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · adhésifs blancs` }, b.whiteTextAdhesives, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · ligne caisson` }, b.ligneCaisson, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · destination caisson` }, b.destinationCaisson, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · attente min. caisson` }, b.attenteMinCaisson, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · durée approx. caisson` }, b.dureeApproxCaisson, b);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · quai caisson` }, b.quaiCaisson, b);
                     });
 
                     (sig.planReseau?.[dir] ?? []).forEach((p, i) => {
                         const label = `Plan Réseau ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label }, p.status);
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · nom station bannière` }, p.bannerStationName);
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · HAP` }, p.hap);
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label }, p.status, p);
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · nom station bannière` }, p.bannerStationName, p);
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · HAP` }, p.hap, p);
                     });
 
                     (sig.planQuartier?.[dir] ?? []).forEach((p, i) => {
                         const label = `Plan Quartier ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label }, p.status);
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · direction bannière` }, p.bannerDirection);
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · HAP` }, p.hap);
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label }, p.status, p);
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · direction bannière` }, p.bannerDirection, p);
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · HAP` }, p.hap, p);
                     });
 
                     (sig.hap?.[dir] ?? []).forEach((h, i) => {
-                        push({ ...base, category: CATEGORY_LABELS.hap, label: `HAP ${dir} #${i + 1} — ${station.name}` }, h.status);
+                        push({ ...base, category: CATEGORY_LABELS.hap, label: `HAP ${dir} #${i + 1} — ${station.name}` }, h.status, h);
                     });
                 });
             }
@@ -203,5 +216,7 @@ export const signaletiqueStationDefectsToMaintenanceItems = (items: Signaletique
             : 'ToBeReplaced',
         category: LINE_TO_CATEGORY[i.line],
         auditType: AuditModuleType.SIGNALETIQUE,
+        photo_base64: i.photo_base64,
+        photo_rotation: i.photo_rotation,
     }))
 );

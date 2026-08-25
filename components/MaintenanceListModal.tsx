@@ -215,6 +215,14 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                                     )}
                                                     <span>{item.adhesiveName}</span>
                                                 </div>
+                                                {item.photo_base64 && (
+                                                    <img
+                                                        src={item.photo_base64}
+                                                        alt={`Photo du relevé — ${item.elementName}`}
+                                                        className="mt-2 w-24 h-24 rounded-md object-cover shadow-sm border border-gray-200 dark:border-slate-700"
+                                                        style={{ transform: `rotate(${item.photo_rotation || 0}deg)` }}
+                                                    />
+                                                )}
                                             </div>
                                         </div>
                                     </li>

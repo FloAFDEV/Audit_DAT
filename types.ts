@@ -320,6 +320,11 @@ export interface MaintenanceItem {
   status: string;
   category?: AuditCategory;
   auditType?: AuditModuleType;
+  /** Photo du relevé terrain, si l'audit source en capture une (PMR sol,
+   *  Équipements Station) — absente sinon (ex. Pictogrammes cognitifs,
+   *  DAT/PR/ECA, qui ne capturent pas de photo). */
+  photo_base64?: string | null;
+  photo_rotation?: number;
 }
 
 // =================================================================

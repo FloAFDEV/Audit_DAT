@@ -110,6 +110,8 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                             context: pmrContext,
                             adhesiveName: ad.name,
                             status: ad.status as string,
+                            photo_base64: ad.photo_base64,
+                            photo_rotation: ad.photo_rotation,
                         };
                         if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
                         if (ad.status === FloorAdhesiveStatus.OK) okCount++;
