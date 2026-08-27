@@ -126,6 +126,24 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         expect(r1.material).toBe('Adhésif');
     });
 
+    it('R10 : un module fraîchement propagé (items: {}) compte immédiatement une implantation Non contrôlée par référence résolvable — même convention que DAT/PR/ECA (bug réel trouvé en vérification navigateur, corrigé ici)', async () => {
+        const freshlyPropagated: Lieu = {
+            id: 's-fresh', name: 'Station Fraîche',
+            modules: [{
+                id: 'mod-fresh', type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
+                data: { id: 'c-fresh', definitionId: 'def-pdq', stationName: 'Station Fraîche', stationCode: '', items: {}, comment: '' },
+            }],
+        };
+        const inventory = computeAdhesiveInventory([freshlyPropagated], [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+
+        // Les 4 variantes sont résolvables pour cette définition → 4 implantations
+        // "Non contrôlé", même si items est vide (aucune saisie terrain pour l'instant).
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
+        expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(1);
+        expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(1);
+        expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(1);
+    });
+
     it('quantité calculée depuis les audits réels — 42 stations avec la variante 1 → quantité 42, jamais saisie', async () => {
         const lieux: Lieu[] = Array.from({ length: 42 }, (_, i) => customStation(`s${i}`, { 'pdq-1': AdhesiveStatus.OK, 'pdq-2': AdhesiveStatus.NotApplicable, 'pdq-3': AdhesiveStatus.NotApplicable, 'pdq-4': AdhesiveStatus.NotApplicable }));
         const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);

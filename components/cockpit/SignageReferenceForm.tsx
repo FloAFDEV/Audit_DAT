@@ -16,6 +16,10 @@ export interface SignageReferenceFormProps {
     onSubmit: (fields: SignageReferenceEditableFields, changeReason?: string) => void;
     onCancel: () => void;
     submitLabel: string;
+    /** Partie 2 : rattache la référence créée/modifiée à CET audit
+     *  configurable — verrouille le scope sur CUSTOM (pas de sélecteur de
+     *  famille DAT/PR/ECA, pas de types d'équipements, aucun rapport). */
+    customDefinitionId?: string;
 }
 
 type Family = 'DAT' | 'PR' | 'ECA';
@@ -26,7 +30,7 @@ const DEFAULT_SCOPE: Record<Family, SignageScope> = {
     ECA: { auditType: 'ECA' },
 };
 
-const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFields, mode, onSubmit, onCancel, submitLabel }) => {
+const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFields, mode, onSubmit, onCancel, submitLabel, customDefinitionId }) => {
     const [name, setName] = useState(initialFields?.name ?? '');
     const [code, setCode] = useState(initialFields?.code ?? '');
     const [family, setFamily] = useState<Family>(
@@ -76,7 +80,9 @@ const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFiel
         }
         setError(null);
 
-        const scope: SignageScope = family === 'DAT'
+        const scope: SignageScope = customDefinitionId
+            ? { auditType: 'CUSTOM', definitionId: customDefinitionId }
+            : family === 'DAT'
             ? { auditType: 'DAT' }
             : family === 'PR'
             ? { auditType: 'PR', equipmentTypes: equipmentTypes.length > 0 ? equipmentTypes as EquipmentType[] : undefined }
@@ -125,25 +131,27 @@ const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFiel
                 </div>
             </div>
 
-            <div>
-                <label className={labelClass}>Famille</label>
-                <div className="flex gap-2">
-                    {(['DAT', 'PR', 'ECA'] as Family[]).map(f => (
-                        <button
-                            key={f}
-                            type="button"
-                            onClick={() => handleFamilyChange(f)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                family === f ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
-                            }`}
-                        >
-                            {f === 'PR' ? 'P+R' : f}
-                        </button>
-                    ))}
+            {!customDefinitionId && (
+                <div>
+                    <label className={labelClass}>Famille</label>
+                    <div className="flex gap-2">
+                        {(['DAT', 'PR', 'ECA'] as Family[]).map(f => (
+                            <button
+                                key={f}
+                                type="button"
+                                onClick={() => handleFamilyChange(f)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                    family === f ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
+                                }`}
+                            >
+                                {f === 'PR' ? 'P+R' : f}
+                            </button>
+                        ))}
+                    </div>
                 </div>
-            </div>
+            )}
 
-            {equipmentOptions.length > 0 && (
+            {!customDefinitionId && equipmentOptions.length > 0 && (
                 <div>
                     <label className={labelClass}>Types d'équipements concernés (aucun = tous)</label>
                     <div className="flex flex-wrap gap-2">

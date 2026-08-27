@@ -410,10 +410,21 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.CUSTOM && referencesReady) {
+                    // R10 (même convention que DAT/PR/ECA, cf. patrimoineIndex.ts) :
+                    // on résout les références APPLICABLES depuis le référentiel,
+                    // pas depuis les seules clés déjà présentes dans items — une
+                    // clé absente vaut Non contrôlé, PAS "n'existe pas". Un module
+                    // fraîchement propagé (items: {}) doit donc immédiatement
+                    // compter une implantation Non contrôlée par référence
+                    // résolvable, exactement comme buildPatrimoineIndex.
                     const data = module.data as CustomAuditData;
-                    for (const [refId, item] of Object.entries(data.items ?? {})) {
-                        if (item.status === AdhesiveStatus.NotApplicable) continue; // jamais compté comme posé
-                        addQty(refId, 1);
+                    const defRefs = references.filter(
+                        r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === data.definitionId && !r.archivedAt
+                    );
+                    for (const ref of defRefs) {
+                        const status = data.items?.[ref.id]?.status ?? AdhesiveStatus.NotChecked;
+                        if (status === AdhesiveStatus.NotApplicable) continue; // jamais compté comme posé
+                        addQty(ref.id, 1);
                     }
                 }
 

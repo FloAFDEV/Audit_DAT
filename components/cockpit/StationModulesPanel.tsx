@@ -8,14 +8,15 @@
 // réellement (attacher un module, CRUD zones/bornes P+R, périmètre
 // adhesiveIds d'une borne).
 // =================================================================
-import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, PencilLine, ListFilter, RotateCcw } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Plus, Trash2, PencilLine, ListFilter, RotateCcw, Link2Off } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType } from '../../types';
+import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType, CustomAuditData } from '../../types';
 import useAuditStore from '../../store';
 import {
-    AttachableModuleType, ModuleLine, ATTACHABLE_MODULE_LINES, isModuleTypeAttachable,
+    AttachableModuleType, ModuleLine, ATTACHABLE_MODULE_LINES, isModuleTypeAttachable, isCustomAuditAttachable,
 } from '../../utils/cockpit/moduleAdmin';
+import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
 import { getEffectiveEquipmentAdhesives } from '../../utils/effectiveAdhesives';
 import ConfirmationModal from '../ConfirmationModal';
 import { LineIcon } from '../LineIcon';
@@ -59,6 +60,7 @@ const ALL_ATTACHABLE_TYPES: AttachableModuleType[] = ['DAT', 'ECA', 'PR', 'PMR_F
 
 const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const attachModuleAdmin = useAuditStore(s => s.attachModuleAdmin);
+    const { definitions } = useAuditDefinitions();
 
     // Filtrage réel (données de la station), pas une liste figée dans l'UI :
     // un type unique déjà présent sur cette station n'est plus proposé.
@@ -66,13 +68,39 @@ const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
         () => ALL_ATTACHABLE_TYPES.filter(t => isModuleTypeAttachable(lieu.modules, ATTACHABLE_TYPE_TO_AUDIT_TYPE[t])),
         [lieu.modules]
     );
+    // Audits configurables (Partie 2) : une définition active pas encore
+    // présente sur CETTE station — jamais un module déjà présent proposé
+    // à nouveau (même règle que pour DAT/Signalétique...).
+    const availableDefinitions = useMemo(
+        () => definitions.filter(d => !d.archivedAt && isCustomAuditAttachable(lieu.modules, d.id)),
+        [definitions, lieu.modules]
+    );
+    const allTypes = useMemo(
+        () => (availableDefinitions.length > 0 ? [...availableTypes, 'CUSTOM' as AttachableModuleType] : availableTypes),
+        [availableTypes, availableDefinitions]
+    );
 
-    const [moduleType, setModuleType] = useState<AttachableModuleType>(availableTypes[0] ?? 'ECA');
+    const [moduleType, setModuleType] = useState<AttachableModuleType>(allTypes[0] ?? 'ECA');
     const lineOptions = ATTACHABLE_MODULE_LINES[moduleType];
     const [line, setLine] = useState<ModuleLine>(lineOptions[0] ?? 'A');
     const [accessPointLabel, setAccessPointLabel] = useState('');
+    const [definitionId, setDefinitionId] = useState(availableDefinitions[0]?.id ?? '');
     const [isOpen, setIsOpen] = useState(false);
     const needsLine = lineOptions.length > 0;
+
+    // Les définitions se chargent de façon asynchrone (useAuditDefinitions,
+    // lecture Dexie) : à l'ouverture du formulaire, la liste peut encore
+    // être vide au premier rendu. Sans cette synchronisation, definitionId
+    // resterait figé à '' même une fois les définitions chargées — le
+    // <select> afficherait visuellement la première option (comportement
+    // par défaut du navigateur pour une value non trouvée) sans que l'état
+    // réel corresponde, et la soumission refuserait à tort « Choisissez un
+    // audit configurable. ».
+    useEffect(() => {
+        if (!availableDefinitions.some(d => d.id === definitionId)) {
+            setDefinitionId(availableDefinitions[0]?.id ?? '');
+        }
+    }, [availableDefinitions, definitionId]);
 
     const handleTypeChange = (t: AttachableModuleType) => {
         setModuleType(t);
@@ -83,17 +111,23 @@ const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await attachModuleAdmin(lieu.id, moduleType, needsLine ? line : undefined, accessPointLabel || undefined);
+            if (moduleType === 'CUSTOM') {
+                const def = availableDefinitions.find(d => d.id === definitionId);
+                if (!def) { toast.error('Choisissez un audit configurable.'); return; }
+                await attachModuleAdmin(lieu.id, 'CUSTOM', line, undefined, { definitionId: def.id, definitionName: def.name });
+            } else {
+                await attachModuleAdmin(lieu.id, moduleType, needsLine ? line : undefined, accessPointLabel || undefined);
+            }
             toast.success('Module ajouté');
             setAccessPointLabel('');
             setIsOpen(false);
         } catch (error) {
             console.error("Échec de l'ajout du module :", error);
-            toast.error("Échec de l'ajout du module — réessayez.");
+            toast.error(error instanceof Error ? error.message : "Échec de l'ajout du module — réessayez.");
         }
     };
 
-    if (availableTypes.length === 0 && !isOpen) {
+    if (allTypes.length === 0 && !isOpen) {
         return <p className="text-xs text-slate-400 italic">Tous les modules uniques disponibles sont déjà présents sur cette station.</p>;
     }
 
@@ -110,9 +144,17 @@ const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
             <div>
                 <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Type</label>
                 <select value={moduleType} onChange={e => handleTypeChange(e.target.value as AttachableModuleType)} className={fieldClass}>
-                    {availableTypes.map(t => <option key={t} value={t}>{MODULE_TYPE_LABEL[t]}</option>)}
+                    {allTypes.map(t => <option key={t} value={t}>{MODULE_TYPE_LABEL[t]}</option>)}
                 </select>
             </div>
+            {moduleType === 'CUSTOM' && (
+                <div>
+                    <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Audit configurable</label>
+                    <select value={definitionId} onChange={e => setDefinitionId(e.target.value)} className={fieldClass}>
+                        {availableDefinitions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+                    </select>
+                </div>
+            )}
             {needsLine && (
                 <div>
                     <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Ligne</label>
@@ -466,25 +508,56 @@ interface StationModulesPanelProps {
     lieu: Lieu;
 }
 
+/** Détachement générique (Partie 2) — visible pour tout module, refuse
+ *  côté store si le module n'est pas strictement vide (message explicite
+ *  remonté tel quel, jamais de suppression forcée). */
+const DetachModuleButton: React.FC<{ lieuId: string; module: AuditModule }> = ({ lieuId, module }) => {
+    const detachModuleAdmin = useAuditStore(s => s.detachModuleAdmin);
+    const handleDetach = async () => {
+        try {
+            await detachModuleAdmin(lieuId, module.id);
+            toast.success('Module détaché');
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec du détachement — réessayez.');
+        }
+    };
+    return (
+        <button onClick={handleDetach} className="p-1 rounded text-slate-300 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0" aria-label="Détacher (uniquement si vide)" title="Détacher — uniquement si aucune donnée d'audit n'a été saisie">
+            <Link2Off className="w-3.5 h-3.5" />
+        </button>
+    );
+};
+
 const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
+    const { definitions } = useAuditDefinitions();
+
     return (
         <div className="space-y-3 mt-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             {lieu.modules.length === 0 && <p className="text-sm text-slate-400 italic">Aucun module — ajoutez-en un pour commencer.</p>}
-            {lieu.modules.map(module => (
-                <div key={module.id} className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <LineIcon module={module} size="sm" />
-                        <ModuleIcon type={module.type} className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                            {module.name}
-                        </p>
+            {lieu.modules.map(module => {
+                const customIconKey = module.type === AuditModuleType.CUSTOM
+                    ? definitions.find(d => d.id === (module.data as CustomAuditData).definitionId)?.icon
+                    : undefined;
+                return (
+                    <div key={module.id} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                            <LineIcon module={module} size="sm" />
+                            <ModuleIcon type={module.type} className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" customAuditIconKey={customIconKey} />
+                            <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 flex-1">
+                                {module.name}
+                            </p>
+                            <DetachModuleButton lieuId={lieu.id} module={module} />
+                        </div>
+                        {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
+                        {module.type === AuditModuleType.CUSTOM && (
+                            <p className="text-xs text-slate-400 italic pl-4">Audit configurable — {Object.keys((module.data as CustomAuditData).items ?? {}).length} référence(s) statuée(s).</p>
+                        )}
+                        {module.type !== AuditModuleType.PR && module.type !== AuditModuleType.CUSTOM && (
+                            <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / un ECA / un point d'accès...).</p>
+                        )}
                     </div>
-                    {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
-                    {module.type !== AuditModuleType.PR && (
-                        <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / un ECA / un point d'accès...).</p>
-                    )}
-                </div>
-            ))}
+                );
+            })}
             <AddModuleForm lieu={lieu} />
         </div>
     );
