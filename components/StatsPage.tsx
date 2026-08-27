@@ -29,7 +29,7 @@
 // utils/cockpit/patrimoineIndex.ts et utils/cockpit/selection.ts.
 // =================================================================
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { Building, Archive, Landmark, AlertTriangle, Send, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, AlertTriangle, Send, ShieldCheck, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
@@ -39,6 +39,7 @@ const ReferentielView = lazy(() => import('./cockpit/ReferentielView'));
 const AnomaliesView = lazy(() => import('./cockpit/AnomaliesView'));
 const SAEView = lazy(() => import('./cockpit/SAEView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
+const AdminView = lazy(() => import('./cockpit/AdminView'));
 
 interface StatsPageProps {
   lieux: Lieu[];
@@ -56,6 +57,7 @@ const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIco
     { key: 'audit',      label: 'Analyse des anomalies', Icon: AlertTriangle },
     { key: 'sae',        label: 'SAE',                   Icon: Send },
     { key: 'historique', label: 'Archives',              Icon: Archive },
+    { key: 'admin',      label: 'Admin',                 Icon: ShieldCheck },
 ];
 
 const SectionLoader: React.FC = () => (
@@ -113,6 +115,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
         {activeSection === 'audit' && <AnomaliesView lieux={lieux} />}
         {activeSection === 'sae' && <SAEView />}
         {activeSection === 'historique' && <HistoriqueView />}
+        {activeSection === 'admin' && <AdminView />}
       </Suspense>
     </Container>
     </CockpitNavContext.Provider>

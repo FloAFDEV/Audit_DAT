@@ -1,0 +1,436 @@
+// components/cockpit/StationModulesPanel.tsx
+// =================================================================
+// ADMIN — attacher un module à une station, gérer les zones/bornes P+R
+// (Lot 2c), et corriger le périmètre adhesiveIds d'une borne existante
+// (Lot 2d). DAT/ECA gardent leurs mécanismes terrain existants (Ajouter
+// un DAT / Ajouter un ECA, déjà non gated Admin) — ce panneau ne
+// duplique pas ce qui fonctionne déjà, il ne comble que ce qui manquait
+// réellement (attacher un module, CRUD zones/bornes P+R, périmètre
+// adhesiveIds d'une borne).
+// =================================================================
+import React, { useMemo, useState } from 'react';
+import { Plus, Trash2, PencilLine, ListFilter, RotateCcw } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType } from '../../types';
+import useAuditStore from '../../store';
+import { AttachableModuleType, ModuleLine, MODULE_LINES } from '../../utils/cockpit/moduleAdmin';
+import { getEffectiveEquipmentAdhesives } from '../../utils/effectiveAdhesives';
+import ConfirmationModal from '../ConfirmationModal';
+
+const LINE_LABEL: Record<ModuleLine, string> = {
+    A: 'Ligne A', B: 'Ligne B', C: 'Ligne C', TRAM: 'Tram', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
+};
+
+const MODULE_TYPE_LABEL: Record<AttachableModuleType, string> = {
+    DAT: 'DAT', ECA: 'ECA (valideurs)', PR: 'P+R (bornes)',
+};
+
+const EQUIPMENT_TYPE_LABEL: Record<EquipmentType, string> = {
+    [EquipmentType.BE]: 'Borne Entrée (BE)',
+    [EquipmentType.BS]: 'Borne Sortie (BS)',
+    [EquipmentType.CA]: 'Caisse Auto (CA)',
+};
+
+const fieldClass = "rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-2 text-sm text-slate-900 dark:text-slate-50";
+
+/* ---------------- Ajout de module ---------------- */
+
+const AddModuleForm: React.FC<{ lieuId: string }> = ({ lieuId }) => {
+    const attachModuleAdmin = useAuditStore(s => s.attachModuleAdmin);
+    const [moduleType, setModuleType] = useState<AttachableModuleType>('DAT');
+    const [line, setLine] = useState<ModuleLine>('A');
+    const [isOpen, setIsOpen] = useState(false);
+    const needsLine = moduleType !== 'PR';
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await attachModuleAdmin(lieuId, moduleType, needsLine ? line : undefined);
+            toast.success('Module ajouté');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout du module :", error);
+            toast.error("Échec de l'ajout du module — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
+                <Plus className="w-4 h-4" /> Ajouter un module
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+            <div>
+                <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Type</label>
+                <select value={moduleType} onChange={e => setModuleType(e.target.value as AttachableModuleType)} className={fieldClass}>
+                    {(['DAT', 'ECA', 'PR'] as AttachableModuleType[]).map(t => <option key={t} value={t}>{MODULE_TYPE_LABEL[t]}</option>)}
+                </select>
+            </div>
+            {needsLine && (
+                <div>
+                    <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Ligne</label>
+                    <select value={line} onChange={e => setLine(e.target.value as ModuleLine)} className={fieldClass}>
+                        {MODULE_LINES.map(l => <option key={l} value={l}>{LINE_LABEL[l]}</option>)}
+                    </select>
+                </div>
+            )}
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">Annuler</button>
+        </form>
+    );
+};
+
+/* ---------------- Périmètre adhesiveIds d'une borne (Lot 2d) ---------------- */
+
+const EquipmentScopeEditor: React.FC<{
+    lieuId: string; moduleId: string; zoneId: string; equipment: Equipment; onClose: () => void;
+}> = ({ lieuId, moduleId, zoneId, equipment, onClose }) => {
+    const signageReferences = useAuditStore(s => s.signageReferences);
+    const setPrEquipmentScopeAdmin = useAuditStore(s => s.setPrEquipmentScopeAdmin);
+    // Périmètre STANDARD (sans surcharge) du type de borne — les candidats
+    // proposés à la coche. Une référence déjà sélectionnée mais absente de
+    // cette liste (ex. archivée depuis) reste dans `selected` et sera
+    // réenregistrée telle quelle : aucune perte silencieuse de sélection.
+    const standard = useMemo(() => getEffectiveEquipmentAdhesives(signageReferences, equipment.type), [signageReferences, equipment.type]);
+    const [selected, setSelected] = useState<Set<string>>(() => new Set(equipment.adhesiveIds ?? standard.map(a => a.id)));
+    const [isSaving, setIsSaving] = useState(false);
+
+    const toggle = (id: string) => {
+        setSelected(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await setPrEquipmentScopeAdmin(lieuId, moduleId, zoneId, equipment.id, Array.from(selected));
+            toast.success('Périmètre enregistré');
+            onClose();
+        } catch (error) {
+            console.error("Échec de l'enregistrement du périmètre :", error);
+            toast.error("Échec de l'enregistrement — réessayez.");
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleResetToStandard = async () => {
+        setIsSaving(true);
+        try {
+            await setPrEquipmentScopeAdmin(lieuId, moduleId, zoneId, equipment.id, undefined);
+            toast.success('Périmètre standard restauré');
+            onClose();
+        } catch (error) {
+            console.error('Échec de la restauration du périmètre standard :', error);
+            toast.error('Échec de la restauration — réessayez.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="mt-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 space-y-3">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+                Références applicables à cette borne — décochez celles qui ne s'appliquent pas ici, sans modifier le catalogue global.
+            </p>
+            <div className="space-y-1.5 max-h-64 overflow-auto">
+                {standard.map(a => (
+                    <label key={a.id} className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-200">
+                        <input type="checkbox" checked={selected.has(a.id)} onChange={() => toggle(a.id)} className="rounded border-slate-300" />
+                        {a.name}
+                    </label>
+                ))}
+                {standard.length === 0 && <p className="text-sm text-slate-400 italic">Aucune référence dans le périmètre standard de ce type.</p>}
+            </div>
+            <div className="flex flex-wrap gap-2">
+                <button onClick={handleSave} disabled={isSaving} className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50">
+                    Enregistrer
+                </button>
+                {equipment.adhesiveIds && (
+                    <button onClick={handleResetToStandard} disabled={isSaving} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200">
+                        <RotateCcw className="w-3.5 h-3.5" /> Revenir au périmètre standard
+                    </button>
+                )}
+                <button onClick={onClose} disabled={isSaving} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    );
+};
+
+/* ---------------- Borne (ligne) ---------------- */
+
+const EquipmentRow: React.FC<{ lieuId: string; moduleId: string; zoneId: string; equipment: Equipment }> = ({ lieuId, moduleId, zoneId, equipment }) => {
+    const renamePrEquipmentAdmin = useAuditStore(s => s.renamePrEquipmentAdmin);
+    const removePrEquipmentAdmin = useAuditStore(s => s.removePrEquipmentAdmin);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [name, setName] = useState(equipment.name);
+    const [isScopeOpen, setIsScopeOpen] = useState(false);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+
+    const handleRename = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await renamePrEquipmentAdmin(lieuId, moduleId, zoneId, equipment.id, name);
+            setIsRenaming(false);
+        } catch (error) {
+            console.error('Échec du renommage :', error);
+            toast.error('Échec du renommage — réessayez.');
+        }
+    };
+
+    const handleRemove = async () => {
+        try {
+            await removePrEquipmentAdmin(lieuId, moduleId, zoneId, equipment.id);
+            toast.success('Borne supprimée');
+        } catch (error) {
+            console.error('Échec de la suppression :', error);
+            toast.error('Échec de la suppression — réessayez.');
+        } finally {
+            setConfirmRemove(false);
+        }
+    };
+
+    return (
+        <div className="p-2.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                {isRenaming ? (
+                    <form onSubmit={handleRename} className="flex items-center gap-2 flex-1 min-w-[180px]">
+                        <input value={name} onChange={e => setName(e.target.value)} className={`flex-1 ${fieldClass}`} autoFocus />
+                        <button type="submit" className="text-xs font-semibold text-teal-600">OK</button>
+                        <button type="button" onClick={() => { setIsRenaming(false); setName(equipment.name); }} className="text-xs text-slate-400">Annuler</button>
+                    </form>
+                ) : (
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                        {equipment.name} <span className="text-xs text-slate-400 font-normal">({equipment.type})</span>
+                    </span>
+                )}
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={() => setIsScopeOpen(v => !v)}
+                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold ${equipment.adhesiveIds ? 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'}`}
+                    >
+                        <ListFilter className="w-3.5 h-3.5" />
+                        {equipment.adhesiveIds ? `Périmètre (${equipment.adhesiveIds.length} personnalisé${equipment.adhesiveIds.length > 1 ? 's' : ''})` : 'Périmètre standard'}
+                    </button>
+                    <button onClick={() => setIsRenaming(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Renommer la borne">
+                        <PencilLine className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setConfirmRemove(true)} className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Supprimer la borne">
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+            {isScopeOpen && (
+                <EquipmentScopeEditor lieuId={lieuId} moduleId={moduleId} zoneId={zoneId} equipment={equipment} onClose={() => setIsScopeOpen(false)} />
+            )}
+            <ConfirmationModal
+                isOpen={confirmRemove}
+                onClose={() => setConfirmRemove(false)}
+                onConfirm={handleRemove}
+                title="Supprimer la borne"
+                message={`Êtes-vous sûr de vouloir supprimer « ${equipment.name} » ? Les données d'audit associées seront perdues.`}
+                isDestructive
+            />
+        </div>
+    );
+};
+
+/* ---------------- Ajout de borne ---------------- */
+
+const AddEquipmentForm: React.FC<{ lieuId: string; moduleId: string; zoneId: string }> = ({ lieuId, moduleId, zoneId }) => {
+    const createPrEquipmentAdmin = useAuditStore(s => s.createPrEquipmentAdmin);
+    const [name, setName] = useState('');
+    const [type, setType] = useState<EquipmentType>(EquipmentType.BE);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await createPrEquipmentAdmin(lieuId, moduleId, zoneId, name, type);
+            setName('');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout de la borne :", error);
+            toast.error("Échec de l'ajout — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline">
+                <Plus className="w-3.5 h-3.5" /> Ajouter une borne
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom de la borne" className={fieldClass} autoFocus />
+            <select value={type} onChange={e => setType(e.target.value as EquipmentType)} className={fieldClass}>
+                {Object.values(EquipmentType).map(t => <option key={t} value={t}>{EQUIPMENT_TYPE_LABEL[t]}</option>)}
+            </select>
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500">Annuler</button>
+        </form>
+    );
+};
+
+/* ---------------- Zone P+R ---------------- */
+
+const ZoneBlock: React.FC<{ lieuId: string; moduleId: string; zone: PrZone }> = ({ lieuId, moduleId, zone }) => {
+    const renamePrZoneAdmin = useAuditStore(s => s.renamePrZoneAdmin);
+    const removePrZoneAdmin = useAuditStore(s => s.removePrZoneAdmin);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [name, setName] = useState(zone.name);
+    const [confirmRemove, setConfirmRemove] = useState(false);
+
+    const handleRename = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await renamePrZoneAdmin(lieuId, moduleId, zone.id, name);
+            setIsRenaming(false);
+        } catch (error) {
+            console.error('Échec du renommage :', error);
+            toast.error('Échec du renommage — réessayez.');
+        }
+    };
+
+    const handleRemove = async () => {
+        try {
+            await removePrZoneAdmin(lieuId, moduleId, zone.id);
+            toast.success('Zone supprimée');
+        } catch (error) {
+            console.error('Échec de la suppression :', error);
+            toast.error('Échec de la suppression — réessayez.');
+        } finally {
+            setConfirmRemove(false);
+        }
+    };
+
+    return (
+        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                {isRenaming ? (
+                    <form onSubmit={handleRename} className="flex items-center gap-2 flex-1 min-w-[180px]">
+                        <input value={name} onChange={e => setName(e.target.value)} className={`flex-1 ${fieldClass}`} autoFocus />
+                        <button type="submit" className="text-xs font-semibold text-teal-600">OK</button>
+                        <button type="button" onClick={() => { setIsRenaming(false); setName(zone.name); }} className="text-xs text-slate-400">Annuler</button>
+                    </form>
+                ) : (
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">{zone.name}</h4>
+                )}
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setIsRenaming(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Renommer la zone">
+                        <PencilLine className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setConfirmRemove(true)} className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Supprimer la zone">
+                        <Trash2 className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+            <div className="space-y-1.5 pl-1">
+                {zone.equipments.map(eq => (
+                    <EquipmentRow key={eq.id} lieuId={lieuId} moduleId={moduleId} zoneId={zone.id} equipment={eq} />
+                ))}
+                {zone.equipments.length === 0 && <p className="text-xs text-slate-400 italic">Aucune borne dans cette zone.</p>}
+            </div>
+            <AddEquipmentForm lieuId={lieuId} moduleId={moduleId} zoneId={zone.id} />
+            <ConfirmationModal
+                isOpen={confirmRemove}
+                onClose={() => setConfirmRemove(false)}
+                onConfirm={handleRemove}
+                title="Supprimer la zone"
+                message={
+                    zone.equipments.length > 0
+                        ? `« ${zone.name} » contient ${zone.equipments.length} borne(s). Les supprimer avec la zone est irréversible. Continuer ?`
+                        : `Êtes-vous sûr de vouloir supprimer la zone « ${zone.name} » ?`
+                }
+                isDestructive
+            />
+        </div>
+    );
+};
+
+const AddZoneForm: React.FC<{ lieuId: string; moduleId: string }> = ({ lieuId, moduleId }) => {
+    const createPrZoneAdmin = useAuditStore(s => s.createPrZoneAdmin);
+    const [name, setName] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await createPrZoneAdmin(lieuId, moduleId, name);
+            setName('');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout de la zone :", error);
+            toast.error("Échec de l'ajout — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
+                <Plus className="w-4 h-4" /> Ajouter une zone
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom de la zone" className={fieldClass} autoFocus />
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500">Annuler</button>
+        </form>
+    );
+};
+
+const PrZonesEditor: React.FC<{ lieuId: string; module: AuditModule }> = ({ lieuId, module }) => {
+    const prData = module.data as Pr;
+    return (
+        <div className="space-y-2 pl-4 border-l-2 border-teal-100 dark:border-teal-900/40">
+            {prData.zones.map(zone => (
+                <ZoneBlock key={zone.id} lieuId={lieuId} moduleId={module.id} zone={zone} />
+            ))}
+            <AddZoneForm lieuId={lieuId} moduleId={module.id} />
+        </div>
+    );
+};
+
+/* ---------------- Conteneur ---------------- */
+
+interface StationModulesPanelProps {
+    lieu: Lieu;
+}
+
+const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
+    return (
+        <div className="space-y-3 mt-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            {lieu.modules.length === 0 && <p className="text-sm text-slate-400 italic">Aucun module — ajoutez-en un pour commencer.</p>}
+            {lieu.modules.map(module => (
+                <div key={module.id} className="space-y-1">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                        {(MODULE_TYPE_LABEL as Record<string, string>)[module.type] ?? module.type}
+                        {module.line && <span className="text-xs font-normal text-slate-400 ml-1">({LINE_LABEL[module.line as ModuleLine] ?? module.line})</span>}
+                    </p>
+                    {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
+                    {module.type !== AuditModuleType.PR && (
+                        <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / Ajouter un ECA).</p>
+                    )}
+                </div>
+            ))}
+            <AddModuleForm lieuId={lieu.id} />
+        </div>
+    );
+};
+
+export default StationModulesPanel;

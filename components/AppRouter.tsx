@@ -1,5 +1,5 @@
 import React, { lazy, useEffect } from 'react';
-import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone } from '../types';
+import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone, SignageReference } from '../types';
 import LieuSelector from './LieuSelector';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
 
@@ -24,6 +24,7 @@ interface AppRouterProps {
     isStatsViewActive: boolean;
     // Data props
     lieux: Lieu[];
+    signageReferences: SignageReference[];
     selectedLieu: Lieu | null | undefined;
     selectedModule: AuditModule | null | undefined;
     selectedStation: Station | null | undefined;
@@ -106,7 +107,7 @@ interface AppRouterProps {
 
 const AppRouter: React.FC<AppRouterProps> = (props) => {
     const {
-        isStatsViewActive, isSignaletiqueActive, lieux, selectedLieu, selectedModule, selectedStation, selectedDirection,
+        isStatsViewActive, isSignaletiqueActive, lieux, signageReferences, selectedLieu, selectedModule, selectedStation, selectedDirection,
         selectedDat, selectedPrZone, selectedEquipment, selectedEca, ...handlers
     } = props;
 
@@ -137,6 +138,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             module={selectedModule}
             equipment={selectedEquipment}
             prName={(selectedModule.data as Pr).name}
+            signageReferences={signageReferences}
             onStatusChange={handlers.handlePrAdhesiveStatusChange}
             onCommentChange={handlers.handlePrAdhesiveCommentChange}
             onReset={handlers.handleResetPrAdhesiveRequest}
@@ -161,6 +163,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             module={selectedModule}
             eca={selectedEca}
             stationName={(selectedModule.data as EcaData).stationName}
+            signageReferences={signageReferences}
             onStatusChange={handlers.handleEcaAdhesiveStatusChange}
             onCommentChange={handlers.handleEcaAdhesiveCommentChange}
             onReset={handlers.handleResetEcaAdhesiveRequest}
@@ -175,6 +178,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             dat={selectedDat}
             station={selectedStation}
             direction={selectedDirection}
+            signageReferences={signageReferences}
             onStatusChange={handlers.handleDatStatusChange}
             onCommentChange={handlers.handleDatCommentChange}
             onReset={handlers.handleResetDatRequest}
@@ -222,7 +226,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
                 handlers.selectModule(null); // Go back to module selector for single-zone P+R
             }
         };
-        return <EquipmentSelector lieu={selectedLieu!} prData={prData} zone={selectedPrZone} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
+        return <EquipmentSelector lieu={selectedLieu!} prData={prData} zone={selectedPrZone} signageReferences={signageReferences} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
     }
     
     // P+R Zone Selector
@@ -259,7 +263,9 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     // --- TOP LEVEL: LIEU SELECTOR (DASHBOARD) ---
     if (!selectedLieu) {
         return <LieuSelector
-            lieux={lieux}
+            // Lot 2b : une station archivée disparaît des écrans terrain (mais reste
+            // consultable/restaurable depuis l'Admin), sans jamais toucher aux données.
+            lieux={lieux.filter(l => !l.archivedAt)}
             onSelectLieu={handlers.selectLieu}
             activeFilter={handlers.activeFilter}
             onFilterChange={handlers.setActiveFilter}

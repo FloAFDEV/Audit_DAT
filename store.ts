@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -16,6 +16,11 @@ import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
+import { createStation, withStationRenamed, withStationArchived, withStationRestored } from './utils/cockpit/stationAdmin';
+import {
+    AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
+    createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
+} from './utils/cockpit/moduleAdmin';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -25,6 +30,18 @@ const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: Adhesiv
 interface AppState {
     // Data
     lieux: Lieu[];
+    /** Référentiel signalétique (Dexie, table signageReferences) — chargé une
+     *  fois à init() et tenu à jour par les actions Admin (Lot 2a). Source
+     *  effective consommée par les formulaires terrain (utils/effectiveAdhesives.ts),
+     *  qui préserve l'ordre et l'appartenance historiques tout en résolvant le
+     *  contenu depuis cette liste (R1 : aucune régression sur les ids existants). */
+    signageReferences: SignageReference[];
+    /** Zone Admin du cockpit (Lot 2a) déverrouillée pour la session en
+     *  cours — volontairement NON persistée (contrairement à
+     *  isAuthenticated) : se réinitialise à chaque rechargement complet,
+     *  couche de protection supplémentaire contre une exposition
+     *  accidentelle, en plus du code à 4 chiffres. */
+    isAdminUnlocked: boolean;
     isLoading: boolean;
     isAuthenticated: boolean;
     /** Message affichable si init() a échoué à charger les données — sans lui,
@@ -57,7 +74,26 @@ interface AppState {
     init: () => Promise<void>;
     login: () => void;
     logout: () => void;
-    
+    unlockAdmin: () => void;
+    lockAdmin: () => void;
+
+    // Admin — stations (Lot 2b)
+    createStationAdmin: (name: string) => Promise<Lieu>;
+    renameStationAdmin: (id: string, newName: string) => Promise<Lieu>;
+    archiveStationAdmin: (id: string) => Promise<void>;
+    restoreStationAdmin: (id: string) => Promise<void>;
+    deleteStationForever: (id: string) => Promise<void>;
+
+    // Admin — attacher un module à une station, gérer zones/bornes P+R (Lot 2c)
+    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine) => Promise<AuditModule>;
+    createPrZoneAdmin: (lieuId: string, moduleId: string, zoneName: string) => Promise<PrZone>;
+    renamePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string, newName: string) => Promise<void>;
+    removePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string) => Promise<void>;
+    createPrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, name: string, type: EquipmentType) => Promise<Equipment>;
+    renamePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => Promise<void>;
+    setPrEquipmentScopeAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => Promise<void>;
+    removePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => Promise<void>;
+
     // UI Actions
     setTheme: (theme: 'light' | 'dark') => void;
     setIsStatsViewActive: (isActive: boolean) => void;
@@ -186,7 +222,40 @@ const useAuditStore = create<AppState>((set, get) => {
         const updatedLieux = lieux.map(l => l.id === selectedLieuId ? clonedLieu : l);
         set({ lieux: updatedLieux });
     };
-    
+
+    /**
+     * Même patron que _updateLieu, mais pour une station arbitraire (pas
+     * nécessairement get().selectedLieuId) — utilisé par les actions Admin
+     * du Lot 2b, qui opèrent sur une station choisie dans un panneau
+     * d'administration, jamais forcément la station « ouverte » côté terrain.
+     */
+    const _updateLieuById = async (id: string, updateFn: (lieu: Lieu) => void): Promise<Lieu> => {
+        const { lieux } = get();
+        const lieuToUpdate = lieux.find(l => l.id === id);
+        if (!lieuToUpdate) throw new Error(`Station introuvable : ${id}`);
+
+        const clonedLieu = JSON.parse(JSON.stringify(lieuToUpdate));
+        updateFn(clonedLieu);
+
+        try {
+            await db.lieux.put(clonedLieu);
+        } catch (error) {
+            console.error("Échec de l'enregistrement en base :", error);
+            toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible. Votre dernière modification n'a pas été sauvegardée, réessayez.", { duration: 8000 });
+            await logEvent({
+                type: 'PERSISTENCE_ERROR', entityType: 'lieu', entityId: id, entityLabel: lieuToUpdate.name,
+                summary: `Échec d'enregistrement — ${lieuToUpdate.name}`,
+                metadata: { message: error instanceof Error ? error.message : String(error) },
+            });
+            throw error;
+        }
+
+        const updatedLieux = lieux.map(l => l.id === id ? clonedLieu : l);
+        set({ lieux: updatedLieux });
+        return clonedLieu;
+    };
+
+
     const applyTheme = (theme: 'light' | 'dark') => {
         localStorage.setItem('tisseo-audit-theme', theme);
         if (theme === 'dark') {
@@ -264,6 +333,8 @@ const useAuditStore = create<AppState>((set, get) => {
     // Initial State
     // =================================================================
     lieux: [],
+    signageReferences: [],
+    isAdminUnlocked: false,
     isLoading: true,
     isAuthenticated: false,
     initError: null,
@@ -452,6 +523,13 @@ const useAuditStore = create<AppState>((set, get) => {
                 set({ lieux: initialData });
             }
 
+            // Référentiel signalétique (Lot 1) : chargé une fois ici, tenu à jour
+            // ensuite en mémoire par les actions Admin (Lot 2a) — jamais rechargé
+            // par polling. C'est la même table que useSignageReferences (Cockpit),
+            // simplement aussi exposée aux formulaires terrain via le store.
+            const references = await db.signageReferences.toArray();
+            set({ signageReferences: references });
+
             // Reprise de navigation : ne restaure QUE ce qui résout encore
             // réellement contre les données qui viennent d'être chargées
             // (cf. utils/navigationPersistence.ts — jamais un identifiant
@@ -477,10 +555,233 @@ const useAuditStore = create<AppState>((set, get) => {
         set({ isAuthenticated: true });
     },
 
+    unlockAdmin: () => set({ isAdminUnlocked: true }),
+    lockAdmin: () => set({ isAdminUnlocked: false }),
+
+    // =================================================================
+    // Admin — stations (Lot 2b)
+    // -----------------------------------------------------------------
+    // Même patron que les actions Admin du référentiel (hooks/useAdminReferences.ts) :
+    // écrit Dexie PUIS synchronise `lieux` en mémoire dans le même geste
+    // (via _updateLieuById / set direct), pour une propagation immédiate
+    // et cohérente dans toute l'application (terrain ET cockpit lisent
+    // tous deux get().lieux). AUCUNE CASCADE : archiver/restaurer une
+    // station ne touche jamais son tableau `modules` — équipements et
+    // données d'audit déjà saisies strictement inchangés.
+    // =================================================================
+    createStationAdmin: async (name: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const created = createStation(name);
+        try {
+            await db.lieux.put(created);
+        } catch (error) {
+            console.error("Échec de l'enregistrement en base :", error);
+            toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible.", { duration: 8000 });
+            throw error;
+        }
+        set({ lieux: [...get().lieux, created] });
+        await logEvent({
+            type: 'STATION_CREATED', entityType: 'lieu', entityId: created.id, entityLabel: created.name,
+            summary: `Station « ${created.name} » créée`,
+        });
+        return created;
+    },
+
+    renameStationAdmin: async (id: string, newName: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const previousName = get().lieux.find(l => l.id === id)?.name;
+        const updated = await _updateLieuById(id, (clone) => {
+            clone.name = withStationRenamed(clone, newName).name;
+        });
+        await logEvent({
+            type: 'STATION_RENAMED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
+            summary: `Station renommée — ${previousName ?? id} → ${updated.name}`,
+        });
+        return updated;
+    },
+
+    archiveStationAdmin: async (id: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const updated = await _updateLieuById(id, (clone) => {
+            clone.archivedAt = withStationArchived(clone).archivedAt;
+        });
+        await logEvent({
+            type: 'STATION_ARCHIVED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
+            summary: `Station « ${updated.name} » archivée`,
+        });
+    },
+
+    restoreStationAdmin: async (id: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const updated = await _updateLieuById(id, (clone) => {
+            delete clone.archivedAt;
+        });
+        await logEvent({
+            type: 'STATION_RESTORED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
+            summary: `Station « ${updated.name} » restaurée`,
+        });
+    },
+
+    deleteStationForever: async (id: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const current = get().lieux.find(l => l.id === id);
+        if (!current) throw new Error(`Station introuvable : ${id}`);
+        if (!current.archivedAt) throw new Error('Seule une station archivée peut être supprimée définitivement.');
+        await db.lieux.delete(id);
+        set({ lieux: get().lieux.filter(l => l.id !== id) });
+        await logEvent({
+            type: 'STATION_DELETED', entityType: 'lieu', entityId: id, entityLabel: current.name,
+            summary: `Station « ${current.name} » supprimée définitivement`,
+        });
+    },
+
+    // =================================================================
+    // Admin — attacher un module, gérer zones/bornes P+R (Lot 2c)
+    // -----------------------------------------------------------------
+    // Comble le manque identifié : une station créée en Admin (Lot 2b)
+    // démarrait sans aucun moyen d'y attacher un module ; les zones et
+    // bornes P+R (BE/BS/CA) n'avaient, elles, AUCUN CRUD nulle part dans
+    // l'application (contrairement aux DAT/ECA, gérables côté terrain).
+    // Même patron que les actions ci-dessus : écrit Dexie PUIS synchronise
+    // `lieux` dans le même geste (_updateLieuById / set direct), gated
+    // isAdminUnlocked. Réutilise AUDIT_ITEM_ADDED/AUDIT_ITEM_REMOVED (déjà
+    // utilisés par handleAddDat/handleRemoveDat) plutôt que de nouveaux
+    // types d'événements — même nature d'opération, entityType distingue.
+    // =================================================================
+    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const lieu = get().lieux.find(l => l.id === lieuId);
+        if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
+
+        let created: AuditModule;
+        if (moduleType === 'DAT') {
+            if (!line) throw new Error('Une ligne est requise pour un module DAT.');
+            created = createBlankDatModule(lieu.name, line);
+        } else if (moduleType === 'ECA') {
+            if (!line) throw new Error('Une ligne est requise pour un module ECA.');
+            created = createBlankEcaModule(lieu.name, line);
+        } else {
+            created = createBlankPrModule(lieu.name);
+        }
+
+        await _updateLieuById(lieuId, (clone) => { clone.modules.push(created); });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'module', entityId: created.id, entityLabel: created.name,
+            summary: `Module ${moduleType} ajouté — ${lieu.name}`,
+        });
+        return created;
+    },
+
+    createPrZoneAdmin: async (lieuId: string, moduleId: string, zoneName: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const zone = createPrZone(zoneName);
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            if (!module) throw new Error('Module P+R introuvable.');
+            module.data.zones.push(zone);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'przone', entityId: zone.id, entityLabel: zone.name,
+            summary: `Zone P+R ajoutée — ${zone.name}`,
+        });
+        return zone;
+    },
+
+    renamePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string, newName: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            const zone = module?.data.zones.find(z => z.id === zoneId);
+            if (!zone) throw new Error('Zone P+R introuvable.');
+            zone.name = withZoneRenamed(zone, newName).name;
+        });
+    },
+
+    removePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let zoneName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            if (!module) throw new Error('Module P+R introuvable.');
+            const zone = module.data.zones.find(z => z.id === zoneId);
+            if (!zone) throw new Error('Zone P+R introuvable.');
+            zoneName = zone.name;
+            module.data.zones = module.data.zones.filter(z => z.id !== zoneId);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_REMOVED', entityType: 'przone', entityId: zoneId, entityLabel: zoneName,
+            summary: `Zone P+R supprimée — ${zoneName}`,
+        });
+    },
+
+    createPrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, name: string, type: EquipmentType) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const equipment = createPrEquipment(name, type, get().signageReferences);
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            const zone = module?.data.zones.find(z => z.id === zoneId);
+            if (!zone) throw new Error('Zone P+R introuvable.');
+            zone.equipments.push(equipment);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'przone-equipment', entityId: equipment.id, entityLabel: equipment.name,
+            summary: `Borne ${equipment.type} ajoutée — ${equipment.name}`,
+        });
+        return equipment;
+    },
+
+    renamePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            const zone = module?.data.zones.find(z => z.id === zoneId);
+            const equipment = zone?.equipments.find(e => e.id === equipmentId);
+            if (!equipment) throw new Error('Équipement P+R introuvable.');
+            equipment.name = withEquipmentRenamed(equipment, newName).name;
+        });
+    },
+
+    // Lot 2d : surcharge (ou retrait de surcharge) du périmètre adhesiveIds
+    // d'une borne existante. Ne touche JAMAIS equipment.adhesives (les
+    // statuts déjà saisis) — withEquipmentScopeOverride ne modifie que le
+    // champ adhesiveIds, en le supprimant si adhesiveIds est vide/undefined
+    // (retour au périmètre standard du type de borne).
+    setPrEquipmentScopeAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            const zone = module?.data.zones.find(z => z.id === zoneId);
+            const equipment = zone?.equipments.find(e => e.id === equipmentId);
+            if (!equipment) throw new Error('Équipement P+R introuvable.');
+            const updated = withEquipmentScopeOverride(equipment, adhesiveIds);
+            Object.assign(equipment, updated);
+            if (!('adhesiveIds' in updated)) delete equipment.adhesiveIds;
+        });
+    },
+
+    removePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let equipmentName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
+            const zone = module?.data.zones.find(z => z.id === zoneId);
+            if (!zone) throw new Error('Zone P+R introuvable.');
+            const equipment = zone.equipments.find(e => e.id === equipmentId);
+            if (!equipment) throw new Error('Équipement P+R introuvable.');
+            equipmentName = equipment.name;
+            zone.equipments = zone.equipments.filter(e => e.id !== equipmentId);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_REMOVED', entityType: 'przone-equipment', entityId: equipmentId, entityLabel: equipmentName,
+            summary: `Borne supprimée — ${equipmentName}`,
+        });
+    },
+
     logout: () => {
         localStorage.removeItem('tisseo-audit-auth');
         set({
             isAuthenticated: false,
+            isAdminUnlocked: false,
             activeFilter: 'ALL',
             activeAuditFilters: [],
             selectedLieuId: null,
@@ -1423,6 +1724,14 @@ const useAuditStore = create<AppState>((set, get) => {
             await applyImportPayload(payload);
             set({
                 lieux: payload.lieux,
+                // Un import v2 remplace aussi signageReferences en base
+                // (applyImportPayload) — sans cette ligne, le store restait sur
+                // l'ancien référentiel jusqu'au prochain rechargement complet,
+                // et les formulaires terrain (utils/effectiveAdhesives.ts) en
+                // divergeaient silencieusement de ce qui venait d'être écrit
+                // dans Dexie. Un import v1 (signageReferences absent) laisse
+                // le référentiel courant strictement intact, comme prévu.
+                ...(payload.signageReferences !== undefined ? { signageReferences: payload.signageReferences } : {}),
                 selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
             });
             await logEvent({

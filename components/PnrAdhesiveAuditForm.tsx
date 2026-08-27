@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { Equipment, AdhesiveStatus, AuditModule, EquipmentType } from '../types';
-import { getEquipmentAdhesives } from '../data/adhesives';
+import { Equipment, AdhesiveStatus, AuditModule, EquipmentType, SignageReference } from '../types';
+import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
 import { MapPin, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
 
@@ -8,15 +8,19 @@ interface PrAdhesiveAuditFormProps {
   module: AuditModule;
   equipment: Equipment;
   prName: string;
+  signageReferences: SignageReference[];
   onStatusChange: (adhesiveId: string, status: AdhesiveStatus) => void;
   onBack: () => void;
   onCommentChange: (comment: string) => void;
   onReset: () => void;
 }
 
-const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equipment, prName, onStatusChange, onBack, onCommentChange, onReset }) => {
-    const adhesives = getEquipmentAdhesives(equipment.type, equipment.adhesiveIds);
-    
+const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equipment, prName, signageReferences, onStatusChange, onBack, onCommentChange, onReset }) => {
+    const adhesives = useMemo(
+        () => getEffectiveEquipmentAdhesives(signageReferences, equipment.type, equipment.adhesiveIds),
+        [signageReferences, equipment.type, equipment.adhesiveIds]
+    );
+
     const equipmentLabel = useMemo(() => {
         return equipment.type === EquipmentType.CA ? 'la caisse' : 'la borne';
     }, [equipment.type]);

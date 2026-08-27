@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { ECA, AdhesiveStatus, AuditModule, Adhesive } from '../types';
-import { getEcaAdhesives } from '../data/adhesives';
+import { ECA, AdhesiveStatus, AuditModule, Adhesive, SignageReference } from '../types';
+import { getEffectiveEcaAdhesives } from '../utils/effectiveAdhesives';
 import { CheckCircle2, XCircle, AlertTriangle, Ban, MapPin, Accessibility, Fence } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import { getEcaProgress } from '../utils/progressCalculators';
@@ -11,15 +11,21 @@ interface EcaAdhesiveAuditFormProps {
   module: AuditModule;
   eca: ECA;
   stationName: string;
+  signageReferences: SignageReference[];
   onStatusChange: (adhesiveId: string, status: AdhesiveStatus) => void;
   onBack: () => void;
   onCommentChange: (comment: string) => void;
   onReset: () => void;
 }
 
-const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca, stationName, onStatusChange, onBack, onCommentChange, onReset }) => {
-  const adhesives = getEcaAdhesives(eca.type);
-  
+const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca, stationName, signageReferences, onStatusChange, onBack, onCommentChange, onReset }) => {
+  const adhesives = useMemo(() => getEffectiveEcaAdhesives(signageReferences, eca.type), [signageReferences, eca.type]);
+
+  // Progression : conserve délibérément le calcul historique (catalogue
+  // statique, utils/progressCalculators.ts), identique à EcaSelector — une
+  // référence ECA additionnelle créée en Admin apparaît dans la liste
+  // ci-dessous mais n'entre pas (encore) dans ce pourcentage, pour ne pas
+  // faire diverger le pourcentage affiché ici de celui du sélecteur.
   const progressData = useMemo(() => getEcaProgress(eca), [eca]);
   const progress = progressData.percentage;
 

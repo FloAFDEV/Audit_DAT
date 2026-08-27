@@ -15,4 +15,4 @@
 import { AuditModule } from '../types';
 
 export const isModuleInAuditScope = (module: Pick<AuditModule, 'isFuture' | 'line'>): boolean =>
-    !module.isFuture || module.line === 'C' || module.line === 'AEROPORT';
+    !module.isFuture || module.line === 'B' || module.line === 'C' || module.line === 'AEROPORT';

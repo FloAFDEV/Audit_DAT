@@ -24,11 +24,14 @@ describe('isModuleInAuditScope', () => {
         expect(isModuleInAuditScope({ line: 'B' })).toBe(true); // isFuture absent des données
     });
 
-    it('un module futur sur une ligne normale (A, B, TRAM, TELEO) est hors périmètre', () => {
+    it('un module futur sur une ligne normale (hors B/C/AEROPORT) est hors périmètre', () => {
         expect(isModuleInAuditScope({ isFuture: true, line: 'A' })).toBe(false);
-        expect(isModuleInAuditScope({ isFuture: true, line: 'B' })).toBe(false);
         expect(isModuleInAuditScope({ isFuture: true, line: 'TRAM' })).toBe(false);
         expect(isModuleInAuditScope({ isFuture: true, line: 'TELEO' })).toBe(false);
+    });
+
+    it('un module futur sur la ligne B reste dans le périmètre (auditable par anticipation)', () => {
+        expect(isModuleInAuditScope({ isFuture: true, line: 'B' })).toBe(true);
     });
 
     it('un module futur sur la ligne C reste dans le périmètre (auditable par anticipation)', () => {
@@ -83,16 +86,30 @@ describe('isModuleInAuditScope — appliqué aux Stations (DatGroupSelector), su
         expect(isModuleInAuditScope({ isFuture: station.isFuture, line: datAero.line })).toBe(true);
     });
 
-    it('cas limite réel : une station future sur une ligne normale (Ligne B) reste hors périmètre (bouton grisé)', async () => {
+    it('cas limite réel : une station future sur une ligne normale (Ligne A) reste hors périmètre (bouton grisé)', async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const datA = lieux.flatMap(l => l.modules).find(m => m.type === AuditModuleType.DAT && m.line === 'A');
+        const futureStationA = datA && (datA.data as ModeData).stations.find(s => s.isFuture);
+
+        if (futureStationA) {
+            expect(isModuleInAuditScope({ isFuture: futureStationA.isFuture, line: 'A' })).toBe(false);
+        } else {
+            // Aucune station A future dans le jeu de données actuel : rien à vérifier de plus,
+            // le cas standard (non-future) suffit à couvrir la Ligne A aujourd'hui.
+            expect(true).toBe(true);
+        }
+    });
+
+    it('exception Ligne B réelle : une station future de la Ligne B reste dans le périmètre (bouton actif, pas grisé)', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const datB = lieux.flatMap(l => l.modules).find(m => m.type === AuditModuleType.DAT && m.line === 'B');
         const futureStationB = datB && (datB.data as ModeData).stations.find(s => s.isFuture);
 
         if (futureStationB) {
-            expect(isModuleInAuditScope({ isFuture: futureStationB.isFuture, line: 'B' })).toBe(false);
+            expect(isModuleInAuditScope({ isFuture: futureStationB.isFuture, line: 'B' })).toBe(true);
         } else {
-            // Aucune station B future dans le jeu de données actuel : rien à vérifier de plus,
-            // le cas standard (non-future) suffit à couvrir la Ligne B aujourd'hui.
+            // Aucune station B future dans le jeu de données actuel : la règle est déjà
+            // couverte par les tests unitaires ci-dessus (isFuture:true, line:'B').
             expect(true).toBe(true);
         }
     });

@@ -94,9 +94,9 @@ const ecaLieu = (): Lieu => ({
 const futureLieu = (): Lieu => ({
     id: 'lieu-futur', name: 'Station Future',
     modules: [{
-        id: 'module-dat-futur', type: AuditModuleType.DAT, name: 'DAT', line: 'B', isFuture: true,
+        id: 'module-dat-futur', type: AuditModuleType.DAT, name: 'DAT', line: 'A', isFuture: true,
         data: {
-            id: 'mode-futur', name: 'Station Future', type: TransportMode.METRO, line: 'B',
+            id: 'mode-futur', name: 'Station Future', type: TransportMode.METRO, line: 'A',
             stations: [{
                 id: 'sta-futur', name: 'Station Future', directions: [{
                     id: 'dir-futur', name: 'Direction X',
@@ -184,9 +184,28 @@ describe('buildPatrimoineIndex', () => {
         expect(index.implantations.some(i => i.equipmentLabel === 'Tripode NA')).toBe(false);
     });
 
-    it('module isFuture (hors C/AEROPORT) ignoré', () => {
+    it('module isFuture (hors B/C/AEROPORT) ignoré', () => {
         const index = buildPatrimoineIndex([futureLieu()], REFERENCES);
         expect(index.totals.implantationCount).toBe(0);
+    });
+
+    it('Lot 0 : module isFuture sur la Ligne B reste dans le périmètre (extension de l\'exception C/AEROPORT)', () => {
+        const futureLieuB: Lieu = {
+            ...futureLieu(),
+            modules: [{ ...futureLieu().modules[0], line: 'B' }],
+        };
+        const index = buildPatrimoineIndex([futureLieuB], REFERENCES);
+        expect(index.totals.implantationCount).toBeGreaterThan(0);
+    });
+
+    it("Lot 2a : resolveReferencesForEquipment exclut une référence archivée (archivedAt), même si elle est dans le scope", () => {
+        const baseline = resolveReferencesForEquipment(REFERENCES, 'PR', EquipmentType.BE);
+        expect(baseline.length).toBeGreaterThan(0);
+        const target = baseline[0];
+        const withArchived = REFERENCES.map(r => r.id === target.id ? { ...r, archivedAt: '2026-01-01T00:00:00.000Z' } : r);
+        const resolved = resolveReferencesForEquipment(withArchived, 'PR', EquipmentType.BE);
+        expect(resolved.some(r => r.id === target.id)).toBe(false);
+        expect(resolved.length).toBe(baseline.length - 1);
     });
 
     it("« où cette référence est-elle utilisée ? » : agrégats par référence", () => {
