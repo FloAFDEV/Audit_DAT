@@ -284,3 +284,97 @@ describe('buildPatrimoineIndex', () => {
         expect(sum).toBe(index.totals.implantationCount);
     });
 });
+
+// ------------------------------------------------------------------
+// Partie 2 — audits configurables (type CUSTOM)
+// ------------------------------------------------------------------
+describe('buildPatrimoineIndex — module CUSTOM (audits configurables)', () => {
+    const DEF_ID = 'def-pdq';
+    const CUSTOM_REFS = [
+        { id: 'pdq-100-adh', name: 'PdQ 80x100 adhésif', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'adhesif' as const, placement: {} },
+        { id: 'pdq-100-pla', name: 'PdQ 80x100 plastifié', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'pvc' as const, placement: {} },
+        // Référence d'une AUTRE définition — ne doit jamais se mélanger.
+        { id: 'other-def-ref', name: 'Autre audit', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-autre' }, version: 1, support: 'adhesif' as const, placement: {} },
+        // Référence archivée — ne doit jamais apparaître.
+        { id: 'pdq-archived', name: 'PdQ archivée', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'adhesif' as const, placement: {}, archivedAt: '2026-01-01T00:00:00.000Z' },
+    ];
+
+    const customLieu = (id: string, items: Record<string, AdhesiveStatus>): Lieu => ({
+        id, name: `Station ${id}`,
+        modules: [{
+            id: `module-custom-${id}`,
+            type: AuditModuleType.CUSTOM,
+            name: 'Plans de quartier',
+            line: 'A',
+            data: {
+                id: `custom-${id}`, definitionId: DEF_ID, stationName: `Station ${id}`, stationCode: '',
+                items: Object.fromEntries(Object.entries(items).map(([refId, status]) => [refId, { status }])),
+                comment: '',
+            },
+        }],
+    });
+
+    it('une variante marquée OK est comptée, la variante NotApplicable ne l\'est pas', () => {
+        const lieux = [customLieu('c1', { 'pdq-100-adh': AdhesiveStatus.OK, 'pdq-100-pla': AdhesiveStatus.NotApplicable })];
+        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+
+        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(1);
+        expect(index.byReference.get('pdq-100-pla')).toBeUndefined(); // NotApplicable → jamais une implantation
+    });
+
+    it('une référence CUSTOM archivée n\'est jamais résolue, même avec un statut saisi', () => {
+        const lieux = [customLieu('c1', { 'pdq-archived': AdhesiveStatus.OK })];
+        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+        expect(index.byReference.get('pdq-archived')).toBeUndefined();
+    });
+
+    it('les références de DEUX définitions différentes ne se mélangent jamais', () => {
+        const lieux = [customLieu('c1', { 'pdq-100-adh': AdhesiveStatus.OK, 'other-def-ref': AdhesiveStatus.OK })];
+        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+
+        // other-def-ref n'appartient pas à DEF_ID : le module ne peut pas le
+        // faire apparaître même si un statut est saisi sous cette clé.
+        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(1);
+        expect(index.byReference.get('other-def-ref')).toBeUndefined();
+    });
+
+    it('agrège correctement sur plusieurs stations (chaque variante explicitement statuée, cas terrain réel)', () => {
+        const lieux = [
+            customLieu('c1', { 'pdq-100-adh': AdhesiveStatus.OK, 'pdq-100-pla': AdhesiveStatus.NotApplicable }),
+            customLieu('c2', { 'pdq-100-adh': AdhesiveStatus.ToBeReplaced, 'pdq-100-pla': AdhesiveStatus.NotApplicable }),
+            customLieu('c3', { 'pdq-100-adh': AdhesiveStatus.NotApplicable, 'pdq-100-pla': AdhesiveStatus.OK }),
+        ];
+        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+
+        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(2); // c1 + c2, pas c3 (NotApplicable)
+        expect(index.byReference.get('pdq-100-adh')?.defectCount).toBe(1);
+        expect(index.byReference.get('pdq-100-pla')?.installedCount).toBe(1); // c3 seulement
+    });
+
+    it('R10 : une clé de référence ABSENTE de items (module fraîchement propagé, non encore audité) compte comme Non contrôlé — même convention que DAT.adhesives', () => {
+        // Comportement volontaire, identique au reste de l'app (cf. R10 dans
+        // l'en-tête de ce fichier) : un module CUSTOM tout juste matérialisé
+        // par « Appliquer au réseau » (items: {}) affiche donc IMMÉDIATEMENT
+        // une implantation « Non contrôlé » pour chaque référence résolvable
+        // de sa définition, tant que le terrain n'a pas encore statué —
+        // conséquence directe à connaître pour lire la Nomenclature juste
+        // après une propagation en masse.
+        const lieux = [customLieu('c1', {})];
+        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+        expect(index.totals.implantationCount).toBe(2); // pdq-100-adh + pdq-100-pla, toutes deux NotChecked
+        expect(index.byReference.get('pdq-100-adh')?.uncheckedCount).toBe(1);
+        expect(index.byReference.get('pdq-100-pla')?.uncheckedCount).toBe(1);
+    });
+
+    it('n\'affecte STRICTEMENT AUCUNE implantation DAT/PR/ECA existante (non-régression)', () => {
+        const lieux = [
+            datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK }),
+            customLieu('c1', { 'pdq-100-adh': AdhesiveStatus.OK, 'pdq-100-pla': AdhesiveStatus.NotApplicable }),
+        ];
+        const withoutCustom = buildPatrimoineIndex([datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK })], REFERENCES);
+        const withCustom = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
+
+        expect(withCustom.byReference.get('ad1')?.installedCount).toBe(withoutCustom.byReference.get('ad1')?.installedCount);
+        expect(withCustom.totals.implantationCount).toBe(withoutCustom.totals.implantationCount + 1); // + pdq-100-adh (pla est NotApplicable)
+    });
+});

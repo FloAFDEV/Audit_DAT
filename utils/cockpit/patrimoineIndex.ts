@@ -137,7 +137,7 @@
 
 import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
-    SignageReference, SignageSupport,
+    SignageReference, SignageSupport, CustomAuditData,
 } from '../../types';
 import { isModuleInAuditScope } from '../moduleScope';
 
@@ -220,7 +220,7 @@ export interface PatrimoineIndex {
 
 export const resolveReferencesForEquipment = (
     references: SignageReference[],
-    auditType: 'DAT' | 'PR' | 'ECA',
+    auditType: 'DAT' | 'PR' | 'ECA' | 'CUSTOM',
     equipmentType?: string,
     surchargeIds?: string[],
 ): SignageReference[] => {
@@ -317,6 +317,27 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                             equipmentType: eca.type,
                         });
                     }
+                    break;
+                }
+                case AuditModuleType.CUSTOM: {
+                    // Audit configurable (Partie 2) : les références sont
+                    // scopées à CETTE définition (scope.definitionId) — le
+                    // filtre par définition est appliqué ICI, en plus du
+                    // scope générique, sans jamais modifier
+                    // resolveReferencesForEquipment (qui reste scope-only,
+                    // réutilisé tel quel pour DAT/PR/ECA/CUSTOM).
+                    const data = module.data as CustomAuditData;
+                    const refs = resolveReferencesForEquipment(references, 'CUSTOM')
+                        .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === data.definitionId);
+                    const statuses: { [key: string]: AdhesiveStatus } = {};
+                    for (const [refId, item] of Object.entries(data.items ?? {})) statuses[refId] = item.status;
+                    pushImplantations(refs, statuses, {
+                        lieuId: lieu.id, lieuName: lieu.name,
+                        line: module.line || '?',
+                        moduleId: module.id, moduleName: module.name,
+                        context: data.stationName,
+                        equipmentLabel: module.name,
+                    });
                     break;
                 }
                 // PMR sol / pictos / signalétique : hors patrimoine référencé (cf. en-tête).
