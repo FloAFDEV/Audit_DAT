@@ -10,6 +10,7 @@ import React, { useMemo, useState } from 'react';
 import { BookPlus, Archive, Building, ArchiveRestore, Trash2, PencilLine, LucideIcon, Search, LayoutList } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Lieu } from '../../types';
+import { LieuBadges } from '../Icons';
 import useAuditStore from '../../store';
 import { useAdminReferences } from '../../hooks/useAdminReferences';
 import { referenceToEditableFields } from '../../utils/cockpit/signageReferenceEditor';
@@ -161,7 +162,10 @@ const StationRow: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
                         <button type="button" onClick={() => { setIsRenaming(false); setName(lieu.name); }} className="text-xs text-slate-400">Annuler</button>
                     </form>
                 ) : (
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{lieu.name} <span className="text-xs font-normal text-slate-400">({lieu.modules.length} module{lieu.modules.length !== 1 ? 's' : ''})</span></p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <LieuBadges lieu={lieu} />
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{lieu.name} <span className="text-xs font-normal text-slate-400">({lieu.modules.length} module{lieu.modules.length !== 1 ? 's' : ''})</span></p>
+                    </div>
                 )}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                     <button onClick={() => setShowModules(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200">
@@ -278,7 +282,10 @@ const StationArchivesPanel: React.FC = () => {
         <div className="space-y-2">
             {archived.map(lieu => (
                 <div key={lieu.id} className="flex items-center justify-between gap-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{lieu.name}</p>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <LieuBadges lieu={lieu} />
+                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">{lieu.name}</p>
+                    </div>
                     <div className="flex items-center gap-1.5 flex-shrink-0">
                         <button onClick={() => handleRestore(lieu)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
                             <ArchiveRestore className="w-4 h-4" /> Restaurer

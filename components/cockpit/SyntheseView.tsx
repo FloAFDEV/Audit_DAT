@@ -179,12 +179,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
         );
     }, [lieux, filterQuery]);
 
-    // Use filtered lieux for stats calculation
-    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux);
-
-    // Référentiel signalétique : moteur d'index réseau (source unique).
+    // Référentiel signalétique : moteur d'index réseau (source unique) —
+    // lu AVANT useStats, dont la Nomenclature (adhesiveInventory) en dépend
+    // désormais directement (mêmes références, jamais une deuxième source).
     const { references, isLoading: refsLoading } = useSignageReferences();
     const patrimoineIndex = usePatrimoineIndex(filteredLieux, references);
+
+    // Use filtered lieux for stats calculation
+    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 

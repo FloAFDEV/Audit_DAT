@@ -19,6 +19,7 @@ import { logEvent } from './utils/eventLog';
 import { createStation, withStationRenamed, withStationArchived, withStationRestored } from './utils/cockpit/stationAdmin';
 import {
     AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
+    createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
     createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
 } from './utils/cockpit/moduleAdmin';
 
@@ -85,7 +86,7 @@ interface AppState {
     deleteStationForever: (id: string) => Promise<void>;
 
     // Admin — attacher un module à une station, gérer zones/bornes P+R (Lot 2c)
-    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine) => Promise<AuditModule>;
+    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string) => Promise<AuditModule>;
     createPrZoneAdmin: (lieuId: string, moduleId: string, zoneName: string) => Promise<PrZone>;
     renamePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string, newName: string) => Promise<void>;
     removePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string) => Promise<void>;
@@ -648,7 +649,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // utilisés par handleAddDat/handleRemoveDat) plutôt que de nouveaux
     // types d'événements — même nature d'opération, entityType distingue.
     // =================================================================
-    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine) => {
+    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string) => {
         if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
         const lieu = get().lieux.find(l => l.id === lieuId);
         if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
@@ -659,7 +660,16 @@ const useAuditStore = create<AppState>((set, get) => {
             created = createBlankDatModule(lieu.name, line);
         } else if (moduleType === 'ECA') {
             if (!line) throw new Error('Une ligne est requise pour un module ECA.');
-            created = createBlankEcaModule(lieu.name, line);
+            created = createBlankEcaModule(lieu.name, line, accessPointLabel);
+        } else if (moduleType === 'PMR_FLOOR_ADHESIVE') {
+            if (!line) throw new Error('Une ligne est requise pour un module PMR au sol.');
+            created = createBlankPmrFloorModule(lieu.name, line, accessPointLabel);
+        } else if (moduleType === 'COGNITIVE_PICTOGRAMS') {
+            if (!line) throw new Error('Une ligne est requise pour un module Pictogrammes cognitifs.');
+            created = createBlankCognitivePictogramModule(lieu.name, line);
+        } else if (moduleType === 'SIGNALETIQUE') {
+            if (line !== 'TRAM' && line !== 'AEROPORT') throw new Error('Signalétique est réservée aux lignes Tram et Aéroport Express.');
+            created = createBlankSignaletiqueModule(lieu.name, line);
         } else {
             created = createBlankPrModule(lieu.name);
         }

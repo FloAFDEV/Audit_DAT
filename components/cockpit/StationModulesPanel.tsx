@@ -13,9 +13,13 @@ import { Plus, Trash2, PencilLine, ListFilter, RotateCcw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType } from '../../types';
 import useAuditStore from '../../store';
-import { AttachableModuleType, ModuleLine, MODULE_LINES } from '../../utils/cockpit/moduleAdmin';
+import {
+    AttachableModuleType, ModuleLine, ATTACHABLE_MODULE_LINES, isModuleTypeAttachable,
+} from '../../utils/cockpit/moduleAdmin';
 import { getEffectiveEquipmentAdhesives } from '../../utils/effectiveAdhesives';
 import ConfirmationModal from '../ConfirmationModal';
+import { LineIcon } from '../LineIcon';
+import { ModuleIcon } from '../ModuleIcon';
 
 const LINE_LABEL: Record<ModuleLine, string> = {
     A: 'Ligne A', B: 'Ligne B', C: 'Ligne C', TRAM: 'Tram', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
@@ -23,7 +27,18 @@ const LINE_LABEL: Record<ModuleLine, string> = {
 
 const MODULE_TYPE_LABEL: Record<AttachableModuleType, string> = {
     DAT: 'DAT', ECA: 'ECA (valideurs)', PR: 'P+R (bornes)',
+    PMR_FLOOR_ADHESIVE: 'PMR au sol', COGNITIVE_PICTOGRAMS: 'Pictogrammes cognitifs', SIGNALETIQUE: 'Signalétique (Équipements Station)',
 };
+
+const ATTACHABLE_TYPE_TO_AUDIT_TYPE: Record<AttachableModuleType, AuditModuleType> = {
+    DAT: AuditModuleType.DAT, ECA: AuditModuleType.ECA, PR: AuditModuleType.PR,
+    PMR_FLOOR_ADHESIVE: AuditModuleType.PMR_FLOOR_ADHESIVE, COGNITIVE_PICTOGRAMS: AuditModuleType.COGNITIVE_PICTOGRAMS,
+    SIGNALETIQUE: AuditModuleType.SIGNALETIQUE,
+};
+
+/** Un point d'accès nommable a du sens uniquement pour les types qui
+ *  peuvent légitimement exister plusieurs fois sur une même station. */
+const SUPPORTS_ACCESS_POINT_LABEL: ReadonlySet<AttachableModuleType> = new Set(['ECA', 'PMR_FLOOR_ADHESIVE']);
 
 const EQUIPMENT_TYPE_LABEL: Record<EquipmentType, string> = {
     [EquipmentType.BE]: 'Borne Entrée (BE)',
@@ -35,24 +50,47 @@ const fieldClass = "rounded-lg border border-slate-200 dark:border-slate-700 bg-
 
 /* ---------------- Ajout de module ---------------- */
 
-const AddModuleForm: React.FC<{ lieuId: string }> = ({ lieuId }) => {
+const ALL_ATTACHABLE_TYPES: AttachableModuleType[] = ['DAT', 'ECA', 'PR', 'PMR_FLOOR_ADHESIVE', 'COGNITIVE_PICTOGRAMS', 'SIGNALETIQUE'];
+
+const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const attachModuleAdmin = useAuditStore(s => s.attachModuleAdmin);
-    const [moduleType, setModuleType] = useState<AttachableModuleType>('DAT');
-    const [line, setLine] = useState<ModuleLine>('A');
+
+    // Filtrage réel (données de la station), pas une liste figée dans l'UI :
+    // un type unique déjà présent sur cette station n'est plus proposé.
+    const availableTypes = useMemo(
+        () => ALL_ATTACHABLE_TYPES.filter(t => isModuleTypeAttachable(lieu.modules, ATTACHABLE_TYPE_TO_AUDIT_TYPE[t])),
+        [lieu.modules]
+    );
+
+    const [moduleType, setModuleType] = useState<AttachableModuleType>(availableTypes[0] ?? 'ECA');
+    const lineOptions = ATTACHABLE_MODULE_LINES[moduleType];
+    const [line, setLine] = useState<ModuleLine>(lineOptions[0] ?? 'A');
+    const [accessPointLabel, setAccessPointLabel] = useState('');
     const [isOpen, setIsOpen] = useState(false);
-    const needsLine = moduleType !== 'PR';
+    const needsLine = lineOptions.length > 0;
+
+    const handleTypeChange = (t: AttachableModuleType) => {
+        setModuleType(t);
+        const nextLines = ATTACHABLE_MODULE_LINES[t];
+        if (nextLines.length > 0 && !nextLines.includes(line)) setLine(nextLines[0]);
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         try {
-            await attachModuleAdmin(lieuId, moduleType, needsLine ? line : undefined);
+            await attachModuleAdmin(lieu.id, moduleType, needsLine ? line : undefined, accessPointLabel || undefined);
             toast.success('Module ajouté');
+            setAccessPointLabel('');
             setIsOpen(false);
         } catch (error) {
             console.error("Échec de l'ajout du module :", error);
             toast.error("Échec de l'ajout du module — réessayez.");
         }
     };
+
+    if (availableTypes.length === 0 && !isOpen) {
+        return <p className="text-xs text-slate-400 italic">Tous les modules uniques disponibles sont déjà présents sur cette station.</p>;
+    }
 
     if (!isOpen) {
         return (
@@ -66,16 +104,27 @@ const AddModuleForm: React.FC<{ lieuId: string }> = ({ lieuId }) => {
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
             <div>
                 <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Type</label>
-                <select value={moduleType} onChange={e => setModuleType(e.target.value as AttachableModuleType)} className={fieldClass}>
-                    {(['DAT', 'ECA', 'PR'] as AttachableModuleType[]).map(t => <option key={t} value={t}>{MODULE_TYPE_LABEL[t]}</option>)}
+                <select value={moduleType} onChange={e => handleTypeChange(e.target.value as AttachableModuleType)} className={fieldClass}>
+                    {availableTypes.map(t => <option key={t} value={t}>{MODULE_TYPE_LABEL[t]}</option>)}
                 </select>
             </div>
             {needsLine && (
                 <div>
                     <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Ligne</label>
                     <select value={line} onChange={e => setLine(e.target.value as ModuleLine)} className={fieldClass}>
-                        {MODULE_LINES.map(l => <option key={l} value={l}>{LINE_LABEL[l]}</option>)}
+                        {lineOptions.map(l => <option key={l} value={l}>{LINE_LABEL[l]}</option>)}
                     </select>
+                </div>
+            )}
+            {SUPPORTS_ACCESS_POINT_LABEL.has(moduleType) && (
+                <div>
+                    <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Point d'accès (si plusieurs)</label>
+                    <input
+                        value={accessPointLabel}
+                        onChange={e => setAccessPointLabel(e.target.value)}
+                        placeholder="ex. Accès Nord"
+                        className={fieldClass}
+                    />
                 </div>
             )}
             <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
@@ -418,17 +467,20 @@ const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
             {lieu.modules.length === 0 && <p className="text-sm text-slate-400 italic">Aucun module — ajoutez-en un pour commencer.</p>}
             {lieu.modules.map(module => (
                 <div key={module.id} className="space-y-1">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-                        {(MODULE_TYPE_LABEL as Record<string, string>)[module.type] ?? module.type}
-                        {module.line && <span className="text-xs font-normal text-slate-400 ml-1">({LINE_LABEL[module.line as ModuleLine] ?? module.line})</span>}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <LineIcon module={module} size="sm" />
+                        <ModuleIcon type={module.type} className="w-5 h-5 text-gray-500 dark:text-slate-400 flex-shrink-0" />
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                            {module.name}
+                        </p>
+                    </div>
                     {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
                     {module.type !== AuditModuleType.PR && (
-                        <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / Ajouter un ECA).</p>
+                        <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / un ECA / un point d'accès...).</p>
                     )}
                 </div>
             ))}
-            <AddModuleForm lieuId={lieu.id} />
+            <AddModuleForm lieu={lieu} />
         </div>
     );
 };
