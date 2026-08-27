@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference,
+    SignageReference, AuditDefinition, CustomAuditData, AdhesiveStatus,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
@@ -25,7 +25,7 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
-export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
+export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], auditDefinitions: AuditDefinition[] = []) => {
 
     const globalCounts = useMemo(() => {
         let datCount = 0;
@@ -214,7 +214,10 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
 
-    const adhesiveInventory = useMemo(() => computeAdhesiveInventory(lieux, signageReferences), [lieux, signageReferences]);
+    const adhesiveInventory = useMemo(
+        () => computeAdhesiveInventory(lieux, signageReferences, auditDefinitions),
+        [lieux, signageReferences, auditDefinitions]
+    );
 
     return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
 };
@@ -244,8 +247,21 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
  * déjà utilisé par les formulaires terrain) au lieu des listes statiques —
  * une référence Admin ajoutée au périmètre DAT/P+R/ECA compte donc aussi
  * dans la quantité réseau, sans code spécifique par référence.
+ *
+ * Audits configurables (Partie 2, `auditDefinitions`) : une définition
+ * ACTIVE (non archivée) produit une ligne par référence CUSTOM lui
+ * appartenant — le nom de la définition sert de colonne « Type » (pas un
+ * shortLabel figé : plusieurs définitions coexistent). Une définition
+ * archivée disparaît de la Nomenclature courante (même règle que pour une
+ * référence archivée) SANS toucher aux modules déjà matérialisés — leurs
+ * statuts restent en base, simplement non agrégés ici. Quantité : compte
+ * chaque item dont le statut n'est PAS NotApplicable (aucun bridge
+ * getEffective* nécessaire, CUSTOM n'a pas de catalogue historique — les
+ * clés de `items` désignent directement des ids de signageReferences).
  */
-export const computeAdhesiveInventory = (lieux: Lieu[], references: SignageReference[]): AdhesiveInventoryItem[] => {
+export const computeAdhesiveInventory = (
+    lieux: Lieu[], references: SignageReference[], auditDefinitions: AuditDefinition[] = [],
+): AdhesiveInventoryItem[] => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
         const quantityMap = new Map<string, number>();
         const auditModules = AUDIT_MODULES_CONFIG;
@@ -300,6 +316,18 @@ export const computeAdhesiveInventory = (lieux: Lieu[], references: SignageRefer
 
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
         if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
+
+        // Audits configurables (Partie 2) — une ligne par définition ACTIVE,
+        // jamais un libellé générique : chaque audit garde son identité
+        // dans la colonne « Type ».
+        if (referencesReady) {
+            auditDefinitions.filter(def => !def.archivedAt).forEach(def => {
+                const defRefs = references.filter(
+                    r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === def.id
+                );
+                buildRowsFromReferences(defRefs, def.name, false);
+            });
+        }
 
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
         if (pmrModule) {
@@ -378,6 +406,14 @@ export const computeAdhesiveInventory = (lieux: Lieu[], references: SignageRefer
                 if (module.type === AuditModuleType.ECA && referencesReady) {
                     for (const eca of ((module.data as EcaData).ecas || [])) {
                         getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
+                    }
+                }
+
+                if (module.type === AuditModuleType.CUSTOM && referencesReady) {
+                    const data = module.data as CustomAuditData;
+                    for (const [refId, item] of Object.entries(data.items ?? {})) {
+                        if (item.status === AdhesiveStatus.NotApplicable) continue; // jamais compté comme posé
+                        addQty(refId, 1);
                     }
                 }
 

@@ -8,6 +8,7 @@ import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, X, Fil
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
+import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { useSignaletiqueStationIndex } from '../../hooks/useSignaletiqueStationIndex';
 import { signaletiqueStationDefectsToMaintenanceItems } from '../../utils/cockpit/signaletiqueStationIndex';
@@ -183,10 +184,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     // lu AVANT useStats, dont la Nomenclature (adhesiveInventory) en dépend
     // désormais directement (mêmes références, jamais une deuxième source).
     const { references, isLoading: refsLoading } = useSignageReferences();
+    const { definitions: auditDefinitions } = useAuditDefinitions();
     const patrimoineIndex = usePatrimoineIndex(filteredLieux, references);
 
     // Use filtered lieux for stats calculation
-    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
+    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references, auditDefinitions);
     const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
