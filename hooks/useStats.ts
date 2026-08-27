@@ -1,10 +1,10 @@
 
 import { useMemo } from 'react';
 import {
-    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData
+    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
+    SignageReference, AuditDefinition, CustomAuditData, AdhesiveStatus,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
-import { getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives, ADHESIVES } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
@@ -13,6 +13,8 @@ import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInAuditScope } from '../utils/moduleScope';
+import { getEffectiveAdhesives, getEffectiveEcaAdhesives, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
+import { formatDimensions } from '../components/cockpit/labels';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
@@ -23,7 +25,7 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
-export const useStats = (lieux: Lieu[]) => {
+export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], auditDefinitions: AuditDefinition[] = []) => {
 
     const globalCounts = useMemo(() => {
         let datCount = 0;
@@ -212,43 +214,118 @@ export const useStats = (lieux: Lieu[]) => {
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
 
-    const adhesiveInventory = useMemo(() => {
+    const adhesiveInventory = useMemo(
+        () => computeAdhesiveInventory(lieux, signageReferences, auditDefinitions),
+        [lieux, signageReferences, auditDefinitions]
+    );
+
+    return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
+};
+
+/**
+ * Extrait de useStats (useMemo) en fonction pure exportée — même patron
+ * que utils/cockpit/moduleAdmin.ts / stationAdmin.ts : testable sans
+ * harnais de rendu (ce projet n'a pas de dépendance jsdom/testing-library).
+ *
+ * Source des lignes DAT/P+R/ECA : signageReferences (référentiel
+ * administrable), pas les catalogues statiques — une référence créée,
+ * renommée ou dont les dimensions/matière ont été corrigées en Admin
+ * apparaît donc automatiquement ici ; une référence archivée disparaît.
+ * PMR au sol / Pictogrammes cognitifs / Signalétique restent sur leurs
+ * catalogues statiques existants (hors périmètre du référentiel
+ * administrable — inchangé, aucune régression possible sur ces trois-là).
+ *
+ * Contenu (dimensions/matière) : pour une référence qui porte encore son
+ * texte historique (legacyDescription), on réutilise EXACTEMENT l'ancien
+ * découpage (« | » pour DAT, « // » pour P+R/ECA) — comportement identique
+ * aux 38 références historiques, garanti par le test de caractérisation.
+ * Une référence Admin sans texte historique (nouvelle création) utilise
+ * directement ses champs structurés (dimensions/material) — c'est la
+ * seule situation nouvelle, qui n'existait simplement pas avant.
+ *
+ * Quantités : dérivées de getEffective*Adhesives (utils/effectiveAdhesives.ts,
+ * déjà utilisé par les formulaires terrain) au lieu des listes statiques —
+ * une référence Admin ajoutée au périmètre DAT/P+R/ECA compte donc aussi
+ * dans la quantité réseau, sans code spécifique par référence.
+ *
+ * Audits configurables (Partie 2, `auditDefinitions`) : une définition
+ * ACTIVE (non archivée) produit une ligne par référence CUSTOM lui
+ * appartenant — le nom de la définition sert de colonne « Type » (pas un
+ * shortLabel figé : plusieurs définitions coexistent). Une définition
+ * archivée disparaît de la Nomenclature courante (même règle que pour une
+ * référence archivée) SANS toucher aux modules déjà matérialisés — leurs
+ * statuts restent en base, simplement non agrégés ici. Quantité : compte
+ * chaque item dont le statut n'est PAS NotApplicable (aucun bridge
+ * getEffective* nécessaire, CUSTOM n'a pas de catalogue historique — les
+ * clés de `items` désignent directement des ids de signageReferences).
+ */
+export const computeAdhesiveInventory = (
+    lieux: Lieu[], references: SignageReference[], auditDefinitions: AuditDefinition[] = [],
+): AdhesiveInventoryItem[] => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
         const quantityMap = new Map<string, number>();
         const auditModules = AUDIT_MODULES_CONFIG;
 
         const addQty = (id: string, n: number) => quantityMap.set(id, (quantityMap.get(id) || 0) + n);
 
-        const processAdhesiveList = (adList: any[], auditType: string) => {
-            adList.forEach(ad => {
-                const { repere, name } = parseAdhesiveName(ad.name);
+        /** Découpe legacyDescription EXACTEMENT comme l'ancien code découpait
+         *  ad.description — zéro écart pour les références historiques.
+         *  Cas P+R : legacyDescription porte AUSSI la localisation, ajoutée
+         *  au seed via PR_LOCATION_SEPARATOR (splitLegacyPrDescription) —
+         *  il faut la retirer d'abord pour retrouver le texte original
+         *  (ad.description) que l'ancien code découpait réellement. */
+        const buildRowsFromReferences = (refs: SignageReference[], auditType: string, isPr: boolean) => {
+            refs.filter(ref => !ref.archivedAt).forEach(ref => {
+                if (inventoryMap.has(ref.id)) return;
+                const { repere, name } = parseAdhesiveName(ref.name);
+                const legacyText = isPr
+                    ? splitLegacyPrDescription(ref.legacyDescription, '', '').description
+                    : (ref.legacyDescription ?? '');
                 let dimensions = '';
-                let material = ad.description || '';
-                if(material.includes('|')) {
-                    [dimensions, material] = material.split('|').map(s => s.trim());
-                } else if (material.includes('//')) {
-                     [material, dimensions] = material.split('//').map(s => s.trim());
+                let material = legacyText;
+                if (legacyText.includes('|')) {
+                    [dimensions, material] = legacyText.split('|').map(s => s.trim());
+                } else if (legacyText.includes('//')) {
+                    [material, dimensions] = legacyText.split('//').map(s => s.trim());
                 }
-                if (!inventoryMap.has(ad.id)) {
-                    inventoryMap.set(ad.id, { id: ad.id, auditType, repere, name, dimensions, material, quantity: 0 });
+                if (!dimensions && !material) {
+                    // Aucun texte historique (référence créée en Admin) :
+                    // les champs structurés réels du référentiel.
+                    dimensions = formatDimensions(ref.dimensions);
+                    material = ref.material ?? '';
                 }
+                inventoryMap.set(ref.id, { id: ref.id, auditType, repere, name, dimensions, material, quantity: 0 });
             });
         };
 
+        // signageReferences peut être momentanément vide pendant le chargement
+        // asynchrone du hook appelant (ex. useSignageReferences dans
+        // SyntheseView, avant sa première résolution Dexie) — jamais en usage
+        // normal (le seed garantit toujours les ids historiques). Dans cette
+        // fenêtre transitoire, on n'appelle pas getEffective*Adhesives (qui
+        // lèverait sur un id historique manquant, garde-fou volontaire) et on
+        // laisse simplement la Nomenclature se compléter au rendu suivant,
+        // quand useMemo recalcule avec les références réellement chargées.
+        const referencesReady = references.length > 0;
+
         const datConfig = auditModules.find(c=>c.type === AuditModuleType.DAT);
-        if (datConfig) processAdhesiveList(ADHESIVES, datConfig.shortLabel);
+        if (datConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'DAT'), datConfig.shortLabel, false);
 
         const prConfig = auditModules.find(c=>c.type === AuditModuleType.PR);
-        if (prConfig) {
-            processAdhesiveList(getPrAdhesives(EquipmentType.BE), prConfig.shortLabel);
-            processAdhesiveList(getPrAdhesives(EquipmentType.BS), prConfig.shortLabel);
-            processAdhesiveList(getPrAdhesives(EquipmentType.CA), prConfig.shortLabel);
-        }
+        if (prConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'PR'), prConfig.shortLabel, true);
 
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
-        if (ecaConfig) {
-            Object.values(EcaEquipmentType).forEach(type => {
-                processAdhesiveList(getEcaAdhesives(type), ecaConfig.shortLabel);
+        if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
+
+        // Audits configurables (Partie 2) — une ligne par définition ACTIVE,
+        // jamais un libellé générique : chaque audit garde son identité
+        // dans la colonne « Type ».
+        if (referencesReady) {
+            auditDefinitions.filter(def => !def.archivedAt).forEach(def => {
+                const defRefs = references.filter(
+                    r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === def.id
+                );
+                buildRowsFromReferences(defRefs, def.name, false);
             });
         }
 
@@ -312,23 +389,42 @@ export const useStats = (lieux: Lieu[]) => {
             for (const module of lieu.modules) {
                 if (!isModuleInAuditScope(module)) continue;
 
-                if (module.type === AuditModuleType.DAT) {
+                if (module.type === AuditModuleType.DAT && referencesReady) {
                     const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>
                         sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
-                    ADHESIVES.forEach(ad => addQty(ad.id, datsCount));
+                    getEffectiveAdhesives(references).forEach(ad => addQty(ad.id, datsCount));
                 }
 
-                if (module.type === AuditModuleType.PR) {
+                if (module.type === AuditModuleType.PR && referencesReady) {
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
-                            getEquipmentAdhesives(equip.type, equip.adhesiveIds).forEach(ad => addQty(ad.id, 1));
+                            getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => addQty(ad.id, 1));
                         }
                     }
                 }
 
-                if (module.type === AuditModuleType.ECA) {
+                if (module.type === AuditModuleType.ECA && referencesReady) {
                     for (const eca of ((module.data as EcaData).ecas || [])) {
-                        getEcaAdhesives(eca.type).forEach(ad => addQty(ad.id, 1));
+                        getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
+                    }
+                }
+
+                if (module.type === AuditModuleType.CUSTOM && referencesReady) {
+                    // R10 (même convention que DAT/PR/ECA, cf. patrimoineIndex.ts) :
+                    // on résout les références APPLICABLES depuis le référentiel,
+                    // pas depuis les seules clés déjà présentes dans items — une
+                    // clé absente vaut Non contrôlé, PAS "n'existe pas". Un module
+                    // fraîchement propagé (items: {}) doit donc immédiatement
+                    // compter une implantation Non contrôlée par référence
+                    // résolvable, exactement comme buildPatrimoineIndex.
+                    const data = module.data as CustomAuditData;
+                    const defRefs = references.filter(
+                        r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === data.definitionId && !r.archivedAt
+                    );
+                    for (const ref of defRefs) {
+                        const status = data.items?.[ref.id]?.status ?? AdhesiveStatus.NotChecked;
+                        if (status === AdhesiveStatus.NotApplicable) continue; // jamais compté comme posé
+                        addQty(ref.id, 1);
                     }
                 }
 
@@ -384,8 +480,4 @@ export const useStats = (lieux: Lieu[]) => {
             }
             return a.name.localeCompare(b.name);
         });
-
-    }, [lieux]);
-
-    return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
 };

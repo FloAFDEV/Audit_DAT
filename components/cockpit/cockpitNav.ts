@@ -8,15 +8,15 @@
 import { createContext, useContext } from 'react';
 
 // Généalogie du cockpit : Référentiel signalétique → Analyse des
-// anomalies (constat terrain) ou évolution design → Résumé
-// d'intervention destiné au SAE. Frontière stricte : l'application
-// produit une INFORMATION (item, quantité, implantations, contexte de
-// pose) — jamais la chaîne aval (achat, fabrication, organisation,
-// pose), qui reste du ressort du SAE. La qualification du catalogue
-// (ex-Arbitrages) n'est pas un étage du flux opérationnel : c'est un
-// sous-onglet de Référentiel, réservé aux questions de qualité de
-// donnée (le référentiel est-il correct ?), jamais aux constats terrain.
-export type CockpitSectionKey = 'synthese' | 'referentiel' | 'audit' | 'sae' | 'historique' | 'admin';
+// anomalies (constat terrain) ou évolution design. Frontière stricte :
+// l'application produit une INFORMATION (item, quantité, implantations,
+// contexte de pose) — jamais la chaîne aval (achat, fabrication,
+// organisation, pose), qui reste du ressort du SAE (hors application).
+// La qualification du catalogue (ex-Arbitrages) n'est pas un étage du
+// flux opérationnel : c'est un sous-onglet de Référentiel, réservé aux
+// questions de qualité de donnée (le référentiel est-il correct ?),
+// jamais aux constats terrain.
+export type CockpitSectionKey = 'synthese' | 'referentiel' | 'audit' | 'historique' | 'admin';
 
 export interface CockpitNavigation {
     /** Change de section ; `subSection` cible un onglet interne à la

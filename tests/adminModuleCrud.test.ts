@@ -213,3 +213,114 @@ describe('setPrEquipmentScopeAdmin — Lot 2d : ne touche JAMAIS les statuts dé
         ).rejects.toThrow(/introuvable/);
     });
 });
+
+describe('attachModuleAdmin — CUSTOM (Partie 2 : audits configurables)', () => {
+    it('attache un module CUSTOM minimal, persiste en base', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        const created = await useAuditStore.getState().attachModuleAdmin(
+            lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' }
+        );
+
+        expect(created.type).toBe(AuditModuleType.CUSTOM);
+        expect(created.name).toBe('Plans de quartier');
+        const stored = await db.lieux.get(lieu.id);
+        expect(stored!.modules).toHaveLength(1);
+        expect((stored!.modules[0].data as any).definitionId).toBe('def-pdq');
+    });
+
+    it('refuse un second module CUSTOM de la MÊME définition sur la même station (idempotence à l\'attache)', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        await useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' });
+        const reloaded = (await db.lieux.get(lieu.id))!;
+        useAuditStore.setState({ lieux: [reloaded] });
+
+        await expect(
+            useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' })
+        ).rejects.toThrow(/déjà présent/);
+        expect((await db.lieux.get(lieu.id))!.modules).toHaveLength(1); // aucun doublon créé
+    });
+
+    it('accepte une définition DIFFÉRENTE sur la même station (deux audits configurables coexistent)', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        await useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' });
+        const reloaded = (await db.lieux.get(lieu.id))!;
+        useAuditStore.setState({ lieux: [reloaded] });
+        await useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-autre', definitionName: 'Autre audit' });
+
+        expect((await db.lieux.get(lieu.id))!.modules).toHaveLength(2);
+    });
+
+    it('exige line et une définition', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        await expect(useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', undefined, undefined, { definitionId: 'd', definitionName: 'X' }))
+            .rejects.toThrow(/ligne/);
+        await expect(useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A'))
+            .rejects.toThrow(/définition/);
+    });
+});
+
+describe('detachModuleAdmin — détacher ≠ supprimer des données', () => {
+    it('refuse si non déverrouillé', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: false });
+        await expect(useAuditStore.getState().detachModuleAdmin(lieu.id, 'mod-x')).rejects.toThrow(/Admin refusée/);
+    });
+
+    it('détache un module strictement vide (DAT fraîchement créé)', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        const created = await useAuditStore.getState().attachModuleAdmin(lieu.id, 'DAT', 'A');
+        const reloaded = (await db.lieux.get(lieu.id))!;
+        useAuditStore.setState({ lieux: [reloaded] });
+
+        await useAuditStore.getState().detachModuleAdmin(lieu.id, created.id);
+
+        expect((await db.lieux.get(lieu.id))!.modules).toHaveLength(0);
+    });
+
+    it('refuse de détacher un module CUSTOM qui contient déjà un statut saisi — aucune suppression, message explicite', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        const created = await useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' });
+        let reloaded = (await db.lieux.get(lieu.id))!;
+        // Simule une saisie terrain réelle (statut sur une référence).
+        (reloaded.modules[0].data as any).items['ref-1'] = { status: AdhesiveStatus.OK };
+        await db.lieux.put(reloaded);
+        useAuditStore.setState({ lieux: [reloaded] });
+
+        await expect(useAuditStore.getState().detachModuleAdmin(lieu.id, created.id)).rejects.toThrow(/données d'audit/);
+        expect((await db.lieux.get(lieu.id))!.modules).toHaveLength(1); // rien supprimé
+    });
+
+    it('refuse de détacher un module P+R qui a déjà une zone créée', async () => {
+        const lieu = seededPrStation(); // possède déjà zone-1 avec un équipement
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+
+        await expect(useAuditStore.getState().detachModuleAdmin(lieu.id, 'module-pr-1')).rejects.toThrow(/données d'audit/);
+    });
+
+    it('lève une erreur explicite si le module est introuvable', async () => {
+        const lieu = seededStation();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], isAdminUnlocked: true });
+        await expect(useAuditStore.getState().detachModuleAdmin(lieu.id, 'id-inexistant')).rejects.toThrow(/introuvable/);
+    });
+});

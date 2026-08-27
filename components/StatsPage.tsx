@@ -7,13 +7,13 @@
 // (toute la vie de la signalétique après l'audit).
 //
 // Flux métier : Référentiel signalétique → Analyse des anomalies
-// (constat terrain) ou évolution design → Résumé d'intervention destiné
-// au SAE → Historique. Frontière stricte : l'application produit une
-// INFORMATION (item, quantité, implantations, contexte de pose) —
-// jamais la chaîne aval (achat, fabrication, organisation, pose), qui
-// reste du ressort du SAE.
-// « Résumé d'intervention » (section SAE) reste un placeholder qui
-// matérialise l'arborescence cible, en attente d'un futur commit dédié.
+// (constat terrain) ou évolution design → Historique. Frontière stricte :
+// l'application produit une INFORMATION (item, quantité, implantations,
+// contexte de pose) — jamais la chaîne aval (achat, fabrication,
+// organisation, pose), qui reste du ressort du SAE (hors application).
+// L'onglet SAE (placeholder) a été retiré : aucune donnée ni fonctionnalité
+// réelle n'en dépendait. Si un besoin réel apparaît, il repartira des
+// données existantes (Synthèse / Nomenclature), pas d'un onglet vide.
 // Un export est une action locale à la vue qui produit la donnée —
 // jamais une section à part : pas d'onglet « Exports » dans ce cockpit.
 //
@@ -29,7 +29,7 @@
 // utils/cockpit/patrimoineIndex.ts et utils/cockpit/selection.ts.
 // =================================================================
 import React, { lazy, Suspense, useMemo, useState } from 'react';
-import { Building, Archive, Landmark, AlertTriangle, Send, ShieldCheck, LucideIcon } from 'lucide-react';
+import { Building, Archive, Landmark, AlertTriangle, ShieldCheck, LucideIcon } from 'lucide-react';
 import { Lieu } from '../types';
 import { Container, Header } from './cockpit/primitives';
 import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
@@ -37,7 +37,6 @@ import { CockpitNavContext, CockpitSectionKey } from './cockpit/cockpitNav';
 const SyntheseView = lazy(() => import('./cockpit/SyntheseView'));
 const ReferentielView = lazy(() => import('./cockpit/ReferentielView'));
 const AnomaliesView = lazy(() => import('./cockpit/AnomaliesView'));
-const SAEView = lazy(() => import('./cockpit/SAEView'));
 const HistoriqueView = lazy(() => import('./cockpit/HistoriqueView'));
 const AdminView = lazy(() => import('./cockpit/AdminView'));
 
@@ -48,14 +47,12 @@ interface StatsPageProps {
 
 /**
  * Registre des sections du cockpit — une entrée par section, aucune
- * modification du rendu pour en ajouter (demain : contenu réel du
- * Résumé d'intervention SAE).
+ * modification du rendu pour en ajouter.
  */
 const COCKPIT_SECTIONS: { key: CockpitSectionKey; label: string; Icon: LucideIcon }[] = [
     { key: 'synthese',   label: 'Synthèse',              Icon: Building },
     { key: 'referentiel', label: 'Référentiel',          Icon: Landmark },
     { key: 'audit',      label: 'Analyse des anomalies', Icon: AlertTriangle },
-    { key: 'sae',        label: 'SAE',                   Icon: Send },
     { key: 'historique', label: 'Archives',              Icon: Archive },
     { key: 'admin',      label: 'Admin',                 Icon: ShieldCheck },
 ];
@@ -113,7 +110,6 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
         {activeSection === 'synthese' && <SyntheseView lieux={lieux} />}
         {activeSection === 'referentiel' && <ReferentielView lieux={lieux} />}
         {activeSection === 'audit' && <AnomaliesView lieux={lieux} />}
-        {activeSection === 'sae' && <SAEView />}
         {activeSection === 'historique' && <HistoriqueView />}
         {activeSection === 'admin' && <AdminView />}
       </Suspense>
