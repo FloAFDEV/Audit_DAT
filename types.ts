@@ -6,6 +6,10 @@ export enum AuditModuleType {
     PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
     COGNITIVE_PICTOGRAMS = 'COGNITIVE_PICTOGRAMS',
     SIGNALETIQUE = 'SIGNALETIQUE',
+    /** Audit configurable (Partie 2) — brique générique pour tout audit
+     *  défini en Admin (ex. Plans de quartier), à côté des types métier
+     *  fixes ci-dessus, jamais à leur place. */
+    CUSTOM = 'CUSTOM',
 }
 
 export enum TransportMode {
@@ -256,6 +260,65 @@ export interface CognitivePictogramData {
     completionDate?: string;
 }
 
+// =================================================================
+// AUDITS CONFIGURABLES (Partie 2) — brique générique à côté des types
+// métier fixes ci-dessus, jamais à leur place (R : ne pas refactoriser
+// DAT/ECA/P+R/PMR/Signalétique/Pictogrammes pour les rendre génériques).
+// -----------------------------------------------------------------
+// Trois niveaux strictement séparés :
+//   AuditDefinition   — le PROJET d'audit : nom, icône, ciblage réseau.
+//   SignageReference  — les objets contrôlés (scope.auditType === 'CUSTOM'),
+//                        même table, même CRUD, même versioning/archivage
+//                        que le reste du référentiel — AUCUNE donnée
+//                        physique (dimensions/matière) dupliquée ici.
+//   AuditModule (type CUSTOM) — l'existence de l'audit sur une station +
+//                        les statuts RÉELLEMENT saisis, rien d'autre.
+// =================================================================
+
+/** Ciblage réseau d'un audit configurable — délibérément plat et lisible :
+ *  lignes ciblées + exceptions. Pas de moteur de règles : la propagation
+ *  (« Appliquer au réseau ») lit ces trois listes une fois, au moment où
+ *  l'admin déclenche l'action — ce ne sont pas des règles réévaluées en
+ *  permanence, jamais une source de suppression automatique. */
+export interface AuditDefinition {
+    id: string;                 // uuid technique (R1, comme SignageReference.id)
+    name: string;                // "Plans de quartier"
+    icon: string;                 // clé d'icône (data/customAuditIcons.ts, lucide-react)
+    targetLines: (MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT')[];
+    excludedLieuIds: string[];   // stations explicitement exclues du ciblage par ligne
+    includedLieuIds: string[];   // stations explicitement ajoutées hors ciblage par ligne
+    /** Retirée des futurs déploiements et de la Nomenclature courante —
+     *  JAMAIS des modules déjà matérialisés (aucune cascade, R8). */
+    archivedAt?: string; // ISO
+}
+
+/** Statut d'UNE référence CUSTOM sur UN module station — même forme que
+ *  EquipmentStatus (photo/commentaire), status réutilise AdhesiveStatus
+ *  (incl. NotApplicable, pour les variantes mutuellement exclusives :
+ *  ex. une station n'a qu'UNE des 4 variantes de Plan de quartier). */
+export interface CustomAuditItemStatus {
+    status: AdhesiveStatus;
+    comment?: string;
+    photo_base64?: string | null;
+    photo_note?: string;
+    photo_rotation?: number;
+}
+
+/** Données d'un module CUSTOM — aucune donnée physique (dimensions,
+ *  matière...) : uniquement le lien vers la définition, l'identité de la
+ *  station (dénormalisée, même convention que EcaData/PMRFloorAdhesiveData)
+ *  et les statuts réellement saisis, indexés par SignageReference.id. Une
+ *  clé absente de `items` = non contrôlé (même convention R10 que
+ *  DAT.adhesives) — le module est créé avec `items: {}`, jamais pré-rempli. */
+export interface CustomAuditData {
+    id: string;
+    definitionId: string;   // AuditDefinition.id — jamais copié au-delà de cet id
+    stationName: string;
+    stationCode: string;
+    items: { [referenceId: string]: CustomAuditItemStatus };
+    comment: string;
+    completionDate?: string;
+}
 
 // =================================================================
 // MODULES & ROOT STRUCTURE
@@ -273,7 +336,7 @@ export interface AuditModule {
     id: string;
     type: AuditModuleType;
     name: string;
-    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
+    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData | CustomAuditData;
     isFuture?: boolean;
     line?: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT' | '';
 }
@@ -370,6 +433,12 @@ export type AppEventType =
     | 'REFERENCE_CREATED' | 'REFERENCE_UPDATED' | 'REFERENCE_ARCHIVED' | 'REFERENCE_RESTORED' | 'REFERENCE_DELETED'
     // Lot 2b : CRUD Admin des stations (Lieu) — jamais de cascade sur modules.
     | 'STATION_CREATED' | 'STATION_RENAMED' | 'STATION_ARCHIVED' | 'STATION_RESTORED' | 'STATION_DELETED'
+    // Partie 2 : CRUD Admin des audits configurables (AuditDefinition),
+    // même famille que REFERENCE_* ci-dessus. APPLIED = un seul événement
+    // consolidé par exécution de « Appliquer au réseau » (jamais un par
+    // station créée, pour ne pas noyer le journal à l'échelle du réseau).
+    | 'AUDIT_DEFINITION_CREATED' | 'AUDIT_DEFINITION_UPDATED' | 'AUDIT_DEFINITION_ARCHIVED'
+    | 'AUDIT_DEFINITION_RESTORED' | 'AUDIT_DEFINITION_DELETED' | 'AUDIT_DEFINITION_APPLIED'
     | 'DATA_MIGRATION'
     | 'PERSISTENCE_ERROR';
 
@@ -424,7 +493,11 @@ export interface SignageDimensions {
 export type SignageScope =
     | { auditType: 'DAT' }
     | { auditType: 'PR'; equipmentTypes?: EquipmentType[] }
-    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] };
+    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] }
+    /** Audit configurable (Partie 2) : la référence appartient à UNE
+     *  définition précise (AuditDefinition.id) — jamais résolue par famille
+     *  d'équipement comme PR/ECA, une définition n'a pas de sous-familles. */
+    | { auditType: 'CUSTOM'; definitionId: string };
 
 /** Localisation recommandée + consignes. `zone` est un texte court
  *  administrable (suggestions issues des valeurs existantes), pas une
@@ -504,7 +577,7 @@ export interface SignageReference {
     // --- Implantation ---
     /** R11 : dérivé de scope.auditType (dénormalisé pour index Dexie).
      *  Jamais édité indépendamment du scope. */
-    auditType: 'DAT' | 'PR' | 'ECA';
+    auditType: 'DAT' | 'PR' | 'ECA' | 'CUSTOM';
     scope: SignageScope;
 
     // --- Caractéristiques physiques ACTIVES (à plat — la lecture courante ne

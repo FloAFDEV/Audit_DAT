@@ -29,7 +29,12 @@ const DEFAULT_SCOPE: Record<Family, SignageScope> = {
 const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFields, mode, onSubmit, onCancel, submitLabel }) => {
     const [name, setName] = useState(initialFields?.name ?? '');
     const [code, setCode] = useState(initialFields?.code ?? '');
-    const [family, setFamily] = useState<Family>(initialFields?.scope.auditType ?? 'DAT');
+    const [family, setFamily] = useState<Family>(
+        // Ce formulaire ne gère que DAT/PR/ECA — les références CUSTOM
+        // (Partie 2, audits configurables) passent par leur propre écran,
+        // rattaché à leur définition (jamais ce formulaire générique).
+        (initialFields && initialFields.scope.auditType !== 'CUSTOM') ? initialFields.scope.auditType : 'DAT'
+    );
     const [equipmentTypes, setEquipmentTypes] = useState<string[]>(
         (initialFields?.scope.auditType === 'PR' || initialFields?.scope.auditType === 'ECA')
             ? (initialFields.scope.equipmentTypes ?? [])
