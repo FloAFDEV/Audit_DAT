@@ -67,9 +67,9 @@ const stationLieu = (): Lieu => ({
 const futureLieu = (): Lieu => ({
     id: 'lieu-futur', name: 'Station Future',
     modules: [{
-        id: 'module-signaletique-futur', type: AuditModuleType.SIGNALETIQUE, name: 'Équipements Station', line: 'B', isFuture: true,
+        id: 'module-signaletique-futur', type: AuditModuleType.SIGNALETIQUE, name: 'Équipements Station', line: 'A', isFuture: true,
         data: {
-            id: 'mode-futur', name: 'Station Future', type: TransportMode.METRO, line: 'B',
+            id: 'mode-futur', name: 'Station Future', type: TransportMode.METRO, line: 'A',
             stations: [{
                 id: 'sta-futur', name: 'Station Future', directions: [],
                 signaletique: {
@@ -118,10 +118,19 @@ describe('buildSignaletiqueStationIndex', () => {
         );
     });
 
-    it('module isFuture (hors C/AEROPORT) ignoré', () => {
+    it('module isFuture sur une ligne normale (hors B/C/AEROPORT) ignoré', () => {
         const index = buildSignaletiqueStationIndex([futureLieu()]);
         expect(index.items).toHaveLength(0);
         expect(index.totals.implantationCount).toBe(0);
+    });
+
+    it("Lot 0 : module isFuture sur la Ligne B reste dans le périmètre (extension de l'exception C/AEROPORT)", () => {
+        const futureLieuB: Lieu = {
+            ...futureLieu(),
+            modules: [{ ...futureLieu().modules[0], line: 'B' }],
+        };
+        const index = buildSignaletiqueStationIndex([futureLieuB]);
+        expect(index.items.length).toBeGreaterThan(0);
     });
 
     it('réseau vide -> index vide cohérent', () => {

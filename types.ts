@@ -282,6 +282,14 @@ export interface Lieu {
     id: string;
     name: string;
     modules: AuditModule[];
+    /** Lot 2b : archivage Admin d'une station — réservé aux stations
+     *  réellement abandonnées (rare). AUCUNE cascade : `modules` reste
+     *  strictement inchangé (équipements et données d'audit déjà saisies
+     *  intacts). Une station archivée disparaît du tableau de bord terrain
+     *  (LieuSelector) mais reste consultable/restaurable depuis Admin —
+     *  jamais supprimée tant qu'elle n'est pas explicitement effacée
+     *  définitivement (garde-fou séparé). */
+    archivedAt?: string; // ISO
 }
 
 export interface AuditCategoryConfig {
@@ -358,6 +366,10 @@ export type AppEventType =
     | 'IMPORT' | 'EXPORT'
     | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED'
     | 'REFERENCE_ARBITRAGE'
+    // Lot 2a : CRUD Admin du référentiel signalétique (source unique, R1).
+    | 'REFERENCE_CREATED' | 'REFERENCE_UPDATED' | 'REFERENCE_ARCHIVED' | 'REFERENCE_RESTORED' | 'REFERENCE_DELETED'
+    // Lot 2b : CRUD Admin des stations (Lieu) — jamais de cascade sur modules.
+    | 'STATION_CREATED' | 'STATION_RENAMED' | 'STATION_ARCHIVED' | 'STATION_RESTORED' | 'STATION_DELETED'
     | 'DATA_MIGRATION'
     | 'PERSISTENCE_ERROR';
 
@@ -468,9 +480,16 @@ export interface ArbitrageState {
  *  concerne que l'objet posé — jamais le marché, le prix ou le prestataire). */
 export interface SignageReferenceVersion {
     version: number;
+    /** Nom au moment de cette version — Lot 2a : un renommage fait aussi
+     *  partie de « ce qui était posé », pas seulement le support/dimensions. */
+    name?: string;
     support: SignageSupport;
     material?: string;
     dimensions?: SignageDimensions;
+    /** Pose recommandée au moment de cette version — Lot 2a. */
+    placement?: SignagePlacement;
+    /** Description d'origine (texte libre) au moment de cette version — Lot 2a. */
+    legacyDescription?: string;
     label?: string;
     effectiveTo: string; // ISO date de fin de validité
     changeReason?: string;
@@ -510,6 +529,14 @@ export interface SignageReference {
     /** Arbitrage métier — sous-objet unique (statut, motif, historique). */
     arbitrage?: ArbitrageState;
     legacyDescription?: string; // texte d'origine intégral — filet de sécurité
+    /** Lot 2a : archivage Admin — DISTINCT d'isDisabled (qui exclut des
+     *  calculs mais reste visible/grisée au terrain). Une référence
+     *  archivée est un objet abandonné, réservé aux cas rares (R8) ; elle
+     *  disparaît des listes actives et du résolveur d'implantation
+     *  (resolveReferencesForEquipment), mais reste consultable dans les
+     *  Archives Admin — jamais supprimée tant qu'elle n'est pas
+     *  explicitement effacée définitivement (garde-fou séparé, R1). */
+    archivedAt?: string; // ISO
 }
 
 /** Assets terrain légers uniquement (R6) : image compressée, jamais un

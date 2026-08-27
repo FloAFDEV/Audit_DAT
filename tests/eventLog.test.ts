@@ -103,6 +103,43 @@ describe('Intégration handleImportJsonData — IMPORT', () => {
         await expect(useAuditStore.getState().handleImportJsonData('pas du json')).rejects.toThrow();
         expect(await db.events.count()).toBe(0);
     });
+
+    const staleRef: SignageReference = {
+        id: 'stale-ref', name: 'Référence obsolète', auditType: 'DAT', scope: { auditType: 'DAT' },
+        version: 1, support: 'adhesif', placement: {},
+    };
+    const currentRef: SignageReference = {
+        id: 'current-ref', name: 'Référence à jour', auditType: 'DAT', scope: { auditType: 'DAT' },
+        version: 1, support: 'adhesif', placement: {},
+    };
+
+    it('un import v2 (avec signageReferences) synchronise immédiatement store.signageReferences — sans reload complet', async () => {
+        useAuditStore.setState({ signageReferences: [staleRef] });
+        const payload = JSON.stringify({
+            exportDate: new Date().toISOString(),
+            formatVersion: 2,
+            data: [{ id: 'l1', name: 'L1', modules: [] }],
+            signageReferences: [currentRef],
+            signageAssets: [],
+        });
+
+        await useAuditStore.getState().handleImportJsonData(payload);
+
+        expect(useAuditStore.getState().signageReferences).toEqual([currentRef]);
+        expect(await db.signageReferences.toArray()).toEqual([currentRef]);
+    });
+
+    it("un import v1 (sans signageReferences) ne touche jamais store.signageReferences — le référentiel administré survit à un vieux backup", async () => {
+        useAuditStore.setState({ signageReferences: [staleRef] });
+        const payload = JSON.stringify({
+            exportDate: new Date().toISOString(),
+            data: [{ id: 'l1', name: 'L1', modules: [] }],
+        });
+
+        await useAuditStore.getState().handleImportJsonData(payload);
+
+        expect(useAuditStore.getState().signageReferences).toEqual([staleRef]);
+    });
 });
 
 describe('Intégration resets — RESET_* uniquement sur succès réel', () => {

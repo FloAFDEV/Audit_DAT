@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
-import { DAT, AdhesiveStatus, Station, Direction, AuditModule } from '../types';
-import { ADHESIVES } from '../data/adhesives';
+import { DAT, AdhesiveStatus, Station, Direction, AuditModule, SignageReference } from '../types';
+import { getEffectiveAdhesives } from '../utils/effectiveAdhesives';
 import { CheckCircle2, XCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { DatIcon } from './DatIcon';
 import AuditFormLayout from './AuditFormLayout';
@@ -10,22 +10,31 @@ interface AdhesiveAuditFormProps {
   dat: DAT;
   station: Station;
   direction: Direction;
+  signageReferences: SignageReference[];
   onStatusChange: (adhesiveId: string, status: AdhesiveStatus) => void;
   onBack: () => void;
   onCommentChange: (comment: string) => void;
   onReset: () => void;
 }
 
-const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, station, direction, onStatusChange, onBack, onCommentChange, onReset }) => {
+const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, station, direction, signageReferences, onStatusChange, onBack, onCommentChange, onReset }) => {
   const directionName = useMemo(() => direction.name.replace(/^Direction\s/i, ''), [direction.name]);
 
+  const ADHESIVES = useMemo(() => getEffectiveAdhesives(signageReferences), [signageReferences]);
+
   const progress = useMemo(() => {
-    const statuses = Object.values(dat.adhesives);
     const total = ADHESIVES.length;
     if (total === 0) return 0;
-    const checked = statuses.filter(s => s !== AdhesiveStatus.NotChecked).length;
+    // Ne compte que les statuts des références ACTUELLEMENT effectives (comme
+    // PnrAdhesiveAuditForm/EquipmentSelector) : une clé orpheline dans
+    // dat.adhesives (référence depuis archivée/supprimée) ne doit jamais
+    // gonfler artificiellement la progression affichée.
+    const checked = ADHESIVES.filter(a => {
+      const status = dat.adhesives[a.id];
+      return status !== undefined && status !== AdhesiveStatus.NotChecked;
+    }).length;
     return (checked / total) * 100;
-  }, [dat.adhesives]);
+  }, [dat.adhesives, ADHESIVES]);
 
   return (
     <AuditFormLayout

@@ -1,22 +1,23 @@
 import React from 'react';
-import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone } from '../types';
+import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone, SignageReference } from '../types';
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
 import { LieuBadges } from './Icons';
 
-import { getEquipmentAdhesives } from '../data/adhesives';
+import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
 
 interface EquipmentSelectorProps {
   lieu: Lieu;
   prData: Pr;
   zone: PrZone;
+  signageReferences: SignageReference[];
   onSelectEquipment: (equipmentId: string) => void;
   onBack: () => void;
 }
 
-const getEquipmentProgress = (equipment: Equipment): number => {
+const getEquipmentProgress = (equipment: Equipment, signageReferences: SignageReference[]): number => {
     if (!equipment || !equipment.adhesives) return 0;
-    
-    const adhesiveDefinitions = getEquipmentAdhesives(equipment.type, equipment.adhesiveIds);
+
+    const adhesiveDefinitions = getEffectiveEquipmentAdhesives(signageReferences, equipment.type, equipment.adhesiveIds);
     const activeAdhesives = adhesiveDefinitions.filter(ad => !ad.isDisabled);
     
     if (activeAdhesives.length === 0) return 100;
@@ -39,7 +40,7 @@ const getEquipmentIcon = (type: EquipmentType) => {
     }
 }
 
-const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zone, onSelectEquipment, onBack }) => {
+const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zone, signageReferences, onSelectEquipment, onBack }) => {
 
     return (
         <div>
@@ -71,7 +72,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
             ) : (
                 <div className="space-y-4">
                     {zone.equipments.map((equipment) => {
-                        const progress = getEquipmentProgress(equipment);
+                        const progress = getEquipmentProgress(equipment, signageReferences);
                         const isComplete = progress === 100;
                         const isInProgress = progress > 0 && !isComplete;
                         const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';

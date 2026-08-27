@@ -226,6 +226,7 @@ export const resolveReferencesForEquipment = (
 ): SignageReference[] => {
     let list = references.filter(ref => {
         if (ref.isDisabled) return false;
+        if (ref.archivedAt) return false; // Lot 2a : archivée = objet abandonné, hors résolution terrain.
         if (ref.scope.auditType !== auditType) return false;
         const scopeTypes = (ref.scope as { equipmentTypes?: string[] }).equipmentTypes;
         // equipmentTypes absent = toute la famille ; présent = liste blanche.

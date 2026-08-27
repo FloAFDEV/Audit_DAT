@@ -8,6 +8,7 @@ const getCategoryForModule = (module: AuditModule): AuditCategory | undefined =>
     if (module.line === 'A') return 'METRO_A';
     if (module.line === 'B') return 'METRO_B';
     if (module.line === 'C') return 'METRO_C';
+    if (module.line === 'AEROPORT') return 'AEROPORT';
     if (module.line === 'TRAM') return 'TRAM';
     if (module.line === 'TELEO') return 'TELEO';
     return undefined;
