@@ -20,6 +20,7 @@ import { createStation, withStationRenamed, withStationArchived, withStationRest
 import {
     AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
     createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
+    createBlankCustomModule, isModuleBlank, isCustomAuditAttachable,
     createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
 } from './utils/cockpit/moduleAdmin';
 
@@ -86,7 +87,12 @@ interface AppState {
     deleteStationForever: (id: string) => Promise<void>;
 
     // Admin — attacher un module à une station, gérer zones/bornes P+R (Lot 2c)
-    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string) => Promise<AuditModule>;
+    // customAudit : requis uniquement pour moduleType === 'CUSTOM' (Partie 2).
+    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => Promise<AuditModule>;
+    // Détachement générique (Partie 2) — refuse si le module n'est pas
+    // strictement vide (cf. isModuleBlank) : jamais de suppression de
+    // données d'audit, jamais de nouveau système d'archivage de module.
+    detachModuleAdmin: (lieuId: string, moduleId: string) => Promise<void>;
     createPrZoneAdmin: (lieuId: string, moduleId: string, zoneName: string) => Promise<PrZone>;
     renamePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string, newName: string) => Promise<void>;
     removePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string) => Promise<void>;
@@ -649,7 +655,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // utilisés par handleAddDat/handleRemoveDat) plutôt que de nouveaux
     // types d'événements — même nature d'opération, entityType distingue.
     // =================================================================
-    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string) => {
+    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => {
         if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
         const lieu = get().lieux.find(l => l.id === lieuId);
         if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
@@ -670,6 +676,13 @@ const useAuditStore = create<AppState>((set, get) => {
         } else if (moduleType === 'SIGNALETIQUE') {
             if (line !== 'TRAM' && line !== 'AEROPORT') throw new Error('Signalétique est réservée aux lignes Tram et Aéroport Express.');
             created = createBlankSignaletiqueModule(lieu.name, line);
+        } else if (moduleType === 'CUSTOM') {
+            if (!line) throw new Error('Une ligne est requise pour un audit configurable.');
+            if (!customAudit) throw new Error('Une définition est requise pour un audit configurable.');
+            if (!isCustomAuditAttachable(lieu.modules, customAudit.definitionId)) {
+                throw new Error(`« ${customAudit.definitionName} » est déjà présent sur ${lieu.name}.`);
+            }
+            created = createBlankCustomModule(lieu.name, line, customAudit.definitionId, customAudit.definitionName);
         } else {
             created = createBlankPrModule(lieu.name);
         }
@@ -680,6 +693,31 @@ const useAuditStore = create<AppState>((set, get) => {
             summary: `Module ${moduleType} ajouté — ${lieu.name}`,
         });
         return created;
+    },
+
+    // Détachement générique (tous types) — règle absolue : détacher un
+    // module ≠ supprimer ses données. Refuse si le module contient déjà un
+    // statut, un commentaire ou une photo (cf. isModuleBlank) ; aucune
+    // suppression forcée, aucun nouveau système d'archivage de module. Sert
+    // avant tout à annuler une propagation « Appliquer au réseau » mal
+    // ciblée avant que le terrain n'ait commencé l'audit.
+    detachModuleAdmin: async (lieuId: string, moduleId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const lieu = get().lieux.find(l => l.id === lieuId);
+        if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
+        const module = lieu.modules.find(m => m.id === moduleId);
+        if (!module) throw new Error('Module introuvable.');
+        if (!isModuleBlank(module)) {
+            throw new Error(`Impossible de détacher « ${module.name} » : ce module contient déjà des données d'audit (statut, commentaire ou photo).`);
+        }
+
+        await _updateLieuById(lieuId, (clone) => {
+            clone.modules = clone.modules.filter(m => m.id !== moduleId);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_REMOVED', entityType: 'module', entityId: moduleId, entityLabel: module.name,
+            summary: `Module ${module.type} détaché (vide) — ${lieu.name}`,
+        });
     },
 
     createPrZoneAdmin: async (lieuId: string, moduleId: string, zoneName: string) => {

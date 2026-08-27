@@ -28,14 +28,14 @@ import { v4 as uuidv4 } from 'uuid';
 import {
     AuditModule, AuditModuleType, TransportMode, MetroLine, ModeData, Pr, PrZone, Equipment,
     EcaData, EquipmentType, SignageReference, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus,
-    CognitivePictogramData,
+    CognitivePictogramData, CustomAuditData,
 } from '../../types';
 import { getEffectiveEquipmentAdhesives } from '../effectiveAdhesives';
 import { createInitialAdhesiveStatus } from '../../data/builder';
 import { getInitialSignaletiqueData } from '../../data/signaletique_config';
 
 export type ModuleLine = MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT';
-export type AttachableModuleType = 'DAT' | 'ECA' | 'PR' | 'PMR_FLOOR_ADHESIVE' | 'COGNITIVE_PICTOGRAMS' | 'SIGNALETIQUE';
+export type AttachableModuleType = 'DAT' | 'ECA' | 'PR' | 'PMR_FLOOR_ADHESIVE' | 'COGNITIVE_PICTOGRAMS' | 'SIGNALETIQUE' | 'CUSTOM';
 
 export const MODULE_LINES: ModuleLine[] = ['A', 'B', 'C', 'TRAM', 'TELEO', 'AEROPORT'];
 
@@ -53,6 +53,11 @@ export const ATTACHABLE_MODULE_LINES: Record<AttachableModuleType, ModuleLine[]>
     COGNITIVE_PICTOGRAMS: ['A', 'B'],
     // builder.ts : createSignaletiqueModule appelé uniquement pour TRAM_STATIONS et AEROPORT_EXPRESS_STATIONS.
     SIGNALETIQUE: ['TRAM', 'AEROPORT'],
+    // Audit configurable (Partie 2) : aucun registre historique équivalent —
+    // le ciblage réel est celui de l'AuditDefinition elle-même (targetLines),
+    // pas une restriction de ce module. Ensemble complet ici uniquement pour
+    // l'ajout manuel ponctuel (un module par un module, hors propagation).
+    CUSTOM: MODULE_LINES,
 };
 
 /** Types dont AU PLUS UN module peut exister par station — reflète les ids
@@ -237,6 +242,91 @@ export const createBlankSignaletiqueModule = (stationName: string, line: 'TRAM' 
         isFuture: false,
         line,
     };
+};
+
+/** Audit configurable (Partie 2) — module CUSTOM : `items: {}` (vide,
+ *  jamais pré-rempli — même convention R10 que DAT.adhesives, une clé
+ *  n'existe que lorsqu'un statut a réellement été saisi). Aucune donnée
+ *  physique (dimensions/matière) ici : uniquement le lien vers la
+ *  définition. `name` est dénormalisé au nom de la définition AU MOMENT
+ *  de l'attache (même convention que tous les autres constructeurs
+ *  ci-dessus) — un renommage ultérieur de la définition ne renomme pas
+ *  rétroactivement les modules déjà posés. */
+export const createBlankCustomModule = (
+    stationName: string, line: ModuleLine, definitionId: string, definitionName: string,
+): AuditModule => {
+    assertNonEmpty(stationName, 'Le nom de la station');
+    const data: CustomAuditData = {
+        id: uuidv4(), definitionId, stationName, stationCode: '', items: {}, comment: '',
+    };
+    return {
+        id: uuidv4(),
+        type: AuditModuleType.CUSTOM,
+        name: definitionName,
+        data,
+        isFuture: false,
+        line,
+    };
+};
+
+/** Une définition d'audit configurable est portée AU PLUS UNE FOIS par
+ *  station (fixture station, comme DAT/Signalétique — pas un point d'accès
+ *  physique comme ECA/PMR au sol). Distinct de isModuleTypeAttachable : la
+ *  contrainte porte sur (type CUSTOM + definitionId), pas seulement sur le
+ *  type — plusieurs définitions différentes peuvent légitimement coexister
+ *  sur une même station. C'est aussi la clé d'idempotence de « Appliquer
+ *  au réseau » (cf. computeMissingLieuIds, qui applique la même règle). */
+export const isCustomAuditAttachable = (existingModules: AuditModule[], definitionId: string): boolean =>
+    !existingModules.some(m => m.type === AuditModuleType.CUSTOM && (m.data as CustomAuditData).definitionId === definitionId);
+
+/**
+ * Détachement (Partie 2) — règle absolue : détacher un module ≠ supprimer
+ * ses données. Un module ne peut être détaché QUE s'il est strictement
+ * vide (état identique à sa création : aucun statut saisi, aucun
+ * commentaire, aucune photo) — sinon refus explicite, jamais de
+ * suppression forcée ni de nouveau mécanisme d'archivage de module.
+ * Couvre tous les types attachables : le detach est une action générique
+ * (store.ts::detachModuleAdmin), pas réservée à CUSTOM.
+ */
+export const isModuleBlank = (module: AuditModule): boolean => {
+    switch (module.type) {
+        case AuditModuleType.DAT:
+            return ((module.data as ModeData).stations ?? []).every(
+                s => (s.directions ?? []).every(d => (d.dats ?? []).length === 0)
+            );
+        case AuditModuleType.ECA:
+            return ((module.data as EcaData).ecas ?? []).length === 0;
+        case AuditModuleType.PR:
+            return ((module.data as Pr).zones ?? []).length === 0;
+        case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+            const data = module.data as PMRFloorAdhesiveData;
+            if (data.comment) return false;
+            return (data.adhesives ?? []).every(
+                a => a.status === FloorAdhesiveStatus.NotChecked && !a.photo_base64 && !a.photo_note
+            );
+        }
+        case AuditModuleType.COGNITIVE_PICTOGRAMS: {
+            const data = module.data as CognitivePictogramData;
+            return !data.comment && (data.pictograms ?? []).length === 0;
+        }
+        case AuditModuleType.SIGNALETIQUE: {
+            const data = module.data as ModeData;
+            const station = data.stations?.[0];
+            if (!station) return true;
+            if ((station.directions ?? []).some(d => (d.dats ?? []).length > 0)) return false;
+            if (!station.signaletique) return true;
+            // Comparaison structurelle contre l'état de création — aucun id
+            // dans SignaletiqueData, une comparaison JSON suffit et reste
+            // déterministe (getInitialSignaletiqueData ne dépend que du nom).
+            return JSON.stringify(station.signaletique) === JSON.stringify(getInitialSignaletiqueData(station.name));
+        }
+        case AuditModuleType.CUSTOM: {
+            const data = module.data as CustomAuditData;
+            return !data.comment && Object.keys(data.items ?? {}).length === 0;
+        }
+        default:
+            return false;
+    }
 };
 
 // -----------------------------------------------------------------

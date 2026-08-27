@@ -7,10 +7,15 @@
 import { describe, it, expect } from 'vitest';
 import {
     createBlankDatModule, createBlankEcaModule, createBlankPrModule,
+    createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
+    createBlankCustomModule, isModuleBlank, isCustomAuditAttachable,
     createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
 } from '../utils/cockpit/moduleAdmin';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
-import { AuditModuleType, EquipmentType, ModeData, EcaData, Pr, Equipment, AdhesiveStatus } from '../types';
+import {
+    AuditModuleType, EquipmentType, ModeData, EcaData, Pr, Equipment, AdhesiveStatus,
+    PMRFloorAdhesiveData, CognitivePictogramData, CustomAuditData, FloorAdhesiveStatus,
+} from '../types';
 
 const REFERENCES = buildSignageReferencesSeed();
 
@@ -139,5 +144,97 @@ describe('withEquipmentScopeOverride — Lot 2d : ne touche JAMAIS equipment.adh
     it('ne mute jamais l\'équipement original', () => {
         withEquipmentScopeOverride(baseEquipment, ['adbe3']);
         expect(baseEquipment.adhesiveIds).toBeUndefined();
+    });
+});
+
+describe('createBlankCustomModule (Partie 2 — audits configurables)', () => {
+    it('produit un module CUSTOM minimal : items vide, aucune donnée physique', () => {
+        const module = createBlankCustomModule('Nouvelle Station', 'A', 'def-pdq', 'Plans de quartier');
+        expect(module.type).toBe(AuditModuleType.CUSTOM);
+        expect(module.name).toBe('Plans de quartier'); // dénormalisé au nom de la définition à l'instant T
+        expect(module.line).toBe('A');
+        const data = module.data as CustomAuditData;
+        expect(data.definitionId).toBe('def-pdq');
+        expect(data.stationName).toBe('Nouvelle Station');
+        expect(data.items).toEqual({});
+    });
+
+    it('rejette un nom de station vide', () => {
+        expect(() => createBlankCustomModule('  ', 'A', 'def-pdq', 'X')).toThrow();
+    });
+});
+
+describe('isCustomAuditAttachable', () => {
+    it('vrai si aucun module CUSTOM de cette définition n\'existe déjà sur la station', () => {
+        expect(isCustomAuditAttachable([], 'def-pdq')).toBe(true);
+    });
+
+    it('faux si un module CUSTOM de la MÊME définition existe déjà', () => {
+        const module = createBlankCustomModule('S', 'A', 'def-pdq', 'X');
+        expect(isCustomAuditAttachable([module], 'def-pdq')).toBe(false);
+    });
+
+    it('vrai pour une définition DIFFÉRENTE — deux audits configurables coexistent sans conflit', () => {
+        const module = createBlankCustomModule('S', 'A', 'def-pdq', 'X');
+        expect(isCustomAuditAttachable([module], 'def-autre')).toBe(true);
+    });
+});
+
+describe('isModuleBlank — règle du détachement (Partie 2) : jamais de perte silencieuse', () => {
+    it('DAT : vide sans DAT saisi, non vide dès qu\'un DAT existe', () => {
+        const blank = createBlankDatModule('S', 'A');
+        expect(isModuleBlank(blank)).toBe(true);
+        const withDat: typeof blank = { ...blank, data: { ...(blank.data as ModeData), stations: [{ ...(blank.data as ModeData).stations[0], directions: [{ ...(blank.data as ModeData).stations[0].directions[0], dats: [{ id: 'd1', name: 'DAT 01', adhesives: {}, comment: '' }] }] }] } };
+        expect(isModuleBlank(withDat)).toBe(false);
+    });
+
+    it('ECA : vide sans valideur, non vide dès qu\'un ECA existe', () => {
+        const blank = createBlankEcaModule('S', 'A');
+        expect(isModuleBlank(blank)).toBe(true);
+        const withEca: typeof blank = { ...blank, data: { ...(blank.data as EcaData), ecas: [{ id: 'e1', name: 'V1', accessPoint: 'A', type: 'Tripode d\'entrée' as any, number: 1, adhesives: {}, comment: '' }] } };
+        expect(isModuleBlank(withEca)).toBe(false);
+    });
+
+    it('P+R : vide sans zone, non vide dès qu\'une zone existe', () => {
+        const blank = createBlankPrModule('S');
+        expect(isModuleBlank(blank)).toBe(true);
+        const withZone: typeof blank = { ...blank, data: { ...(blank.data as Pr), zones: [createPrZone('Zone 1')] } };
+        expect(isModuleBlank(withZone)).toBe(false);
+    });
+
+    it('PMR au sol : vide tant que NotChecked sans photo/commentaire, non vide dès qu\'un statut est saisi', () => {
+        const blank = createBlankPmrFloorModule('S', 'A');
+        expect(isModuleBlank(blank)).toBe(true);
+        const data = blank.data as PMRFloorAdhesiveData;
+        const withStatus = { ...blank, data: { ...data, adhesives: [{ ...data.adhesives[0], status: FloorAdhesiveStatus.OK }] } };
+        expect(isModuleBlank(withStatus)).toBe(false);
+        const withComment = { ...blank, data: { ...data, comment: 'Vu sur place' } };
+        expect(isModuleBlank(withComment)).toBe(false);
+    });
+
+    it('Pictogrammes cognitifs : vide sans pictogramme, non vide dès qu\'un pictogramme existe', () => {
+        const blank = createBlankCognitivePictogramModule('S', 'A');
+        expect(isModuleBlank(blank)).toBe(true);
+        const withPicto: typeof blank = { ...blank, data: { ...(blank.data as CognitivePictogramData), pictograms: [{ id: 'p1', accessPointName: 'Accès', status: FloorAdhesiveStatus.NotChecked }] } };
+        expect(isModuleBlank(withPicto)).toBe(false);
+    });
+
+    it('Signalétique : vide à la création (état identique à getInitialSignaletiqueData), non vide dès qu\'un champ change', () => {
+        const blank = createBlankSignaletiqueModule('S', 'TRAM');
+        expect(isModuleBlank(blank)).toBe(true);
+        const data = blank.data as ModeData;
+        const station = data.stations[0];
+        const touched = { ...blank, data: { ...data, stations: [{ ...station, signaletique: { ...station.signaletique!, totem: { ...station.signaletique!.totem, direction1: { ...station.signaletique!.totem.direction1, status: 'OK' as any } } } }] } };
+        expect(isModuleBlank(touched)).toBe(false);
+    });
+
+    it('CUSTOM : vide tant que items est vide et sans commentaire, non vide dès qu\'un statut est saisi', () => {
+        const blank = createBlankCustomModule('S', 'A', 'def-pdq', 'X');
+        expect(isModuleBlank(blank)).toBe(true);
+        const data = blank.data as CustomAuditData;
+        const withStatus = { ...blank, data: { ...data, items: { 'ref-1': { status: AdhesiveStatus.OK } } } };
+        expect(isModuleBlank(withStatus)).toBe(false);
+        const withComment = { ...blank, data: { ...data, comment: 'Vu' } };
+        expect(isModuleBlank(withComment)).toBe(false);
     });
 });

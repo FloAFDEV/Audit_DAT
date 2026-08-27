@@ -28,12 +28,17 @@ const LINE_LABEL: Record<ModuleLine, string> = {
 const MODULE_TYPE_LABEL: Record<AttachableModuleType, string> = {
     DAT: 'DAT', ECA: 'ECA (valideurs)', PR: 'P+R (bornes)',
     PMR_FLOOR_ADHESIVE: 'PMR au sol', COGNITIVE_PICTOGRAMS: 'Pictogrammes cognitifs', SIGNALETIQUE: 'Signalétique (Équipements Station)',
+    // Non proposé par ce formulaire générique (cf. ALL_ATTACHABLE_TYPES
+    // ci-dessous) : un audit configurable se choisit par définition, pas
+    // seulement par type — écran dédié dans Admin (onglet Audits
+    // configurables). Valeur présente uniquement pour rester exhaustif.
+    CUSTOM: 'Audit configurable',
 };
 
 const ATTACHABLE_TYPE_TO_AUDIT_TYPE: Record<AttachableModuleType, AuditModuleType> = {
     DAT: AuditModuleType.DAT, ECA: AuditModuleType.ECA, PR: AuditModuleType.PR,
     PMR_FLOOR_ADHESIVE: AuditModuleType.PMR_FLOOR_ADHESIVE, COGNITIVE_PICTOGRAMS: AuditModuleType.COGNITIVE_PICTOGRAMS,
-    SIGNALETIQUE: AuditModuleType.SIGNALETIQUE,
+    SIGNALETIQUE: AuditModuleType.SIGNALETIQUE, CUSTOM: AuditModuleType.CUSTOM,
 };
 
 /** Un point d'accès nommable a du sens uniquement pour les types qui
