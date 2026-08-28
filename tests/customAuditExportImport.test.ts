@@ -1,20 +1,19 @@
 // tests/customAuditExportImport.test.ts
 // =================================================================
-// Partie 2 — audits configurables : test d'intégration bout-en-bout
-// export/import (Commit 6). Aucun code produit modifié dans ce commit —
-// uniquement ce test, sur une base Dexie réelle (fake-indexeddb, comme
-// le reste de la suite).
+// Audits configurables (registre en dur, data/customAudits.ts) : test
+// d'intégration bout-en-bout export/import, sur une base Dexie réelle
+// (fake-indexeddb, comme le reste de la suite).
 //
-// Scénario complet exigé : création → propagation → saisie de données
-// (statuts, commentaire, photo) → versioning d'une référence → archivage
-// (d'une référence ET de la définition elle-même) → export JSON → base
-// vidée intégralement (équivalent fonctionnel d'une base Dexie vierge :
-// mêmes tables, zéro donnée) → import → comparaison stricte.
+// Scénario complet : références créées → versioning d'une référence →
+// archivage d'une référence → module CUSTOM attaché à une station →
+// saisie terrain réelle (occurrences, historique de constats, photo) →
+// export JSON → base vidée intégralement (équivalent fonctionnel d'une
+// base Dexie vierge : mêmes tables, zéro donnée) → import → comparaison
+// stricte.
 //
-// Comparé explicitement : définition (nom/icône/ciblage/exclusions/
-// inclusions/archivage), références (dimensions/matière/version/
-// previousVersions/archivage), modules (statuts/commentaires/photos),
-// station, et non-régression du référentiel historique (38 refs) déjà
+// Comparé explicitement : références (dimensions/matière/version/
+// previousVersions/archivage), module (statuts/commentaires/photos),
+// station. Non-régression du référentiel historique (38 refs) déjà
 // couvert par signageSerializer.test.ts — non dupliqué ici.
 // =================================================================
 import { describe, it, expect, beforeEach } from 'vitest';
@@ -22,17 +21,19 @@ import { db } from '../db';
 import useAuditStore from '../store';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from '../utils/signageSerializer';
-import { createAuditDefinition, withDefinitionArchived, computeMissingLieuIds } from '../utils/cockpit/auditDefinitionAdmin';
 import { createSignageReference, applyReferenceEdit, withArchived } from '../utils/cockpit/signageReferenceEditor';
 import { createBlankCustomModule } from '../utils/cockpit/moduleAdmin';
-import { AuditDefinition, AuditModuleType, AdhesiveStatus, Lieu, CustomAuditData } from '../types';
+import { CUSTOM_AUDIT_TYPES } from '../data/customAudits';
+import { AuditModuleType, AdhesiveStatus, Lieu, CustomAuditData } from '../types';
+
+const PDQ_ID = CUSTOM_AUDIT_TYPES.find(a => a.name === 'Plans de quartier')!.id;
+const PDQ_NAME = 'Plans de quartier';
 
 const resetDb = async () => {
-    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets, db.auditDefinitions, db.events], async () => {
+    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets, db.events], async () => {
         await db.lieux.clear();
         await db.signageReferences.clear();
         await db.signageAssets.clear();
-        await db.auditDefinitions.clear();
         await db.events.clear();
         await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
     });
@@ -41,31 +42,24 @@ const resetDb = async () => {
 
 beforeEach(resetDb);
 
-describe('Export/import bout-en-bout — audits configurables (Partie 2)', () => {
-    it('création → propagation → saisie → versioning → archivage → export → base vidée intégralement → import → comparaison stricte', async () => {
-        // --- 1. Création de la définition « Plans de quartier » ---
-        const definition = createAuditDefinition({
-            name: 'Plans de quartier', icon: 'MapPin',
-            targetLines: ['A'], excludedLieuIds: ['lieu-excluded'], includedLieuIds: ['lieu-included'],
-        });
-        await db.auditDefinitions.add(definition);
-
-        // --- 2. Création des 4 références (variantes) ---
+describe('Export/import bout-en-bout — audits configurables (registre en dur)', () => {
+    it('création de références → versioning → archivage → module attaché → saisie → export → base vidée intégralement → import → comparaison stricte', async () => {
+        // --- 1. Création des 2 références (variantes) ---
         const ref80x100Adh = createSignageReference({
             name: 'Repère 1 - 80x100 adhésif',
-            scope: { auditType: 'CUSTOM', definitionId: definition.id },
+            scope: { auditType: 'CUSTOM', definitionId: PDQ_ID },
             support: 'adhesif', material: 'Adhésif', dimensions: { width: 80, height: 100, unit: 'cm' },
             placement: { zone: 'Abords station' },
         });
         const ref80x120Pla = createSignageReference({
             name: 'Repère 2 - 80x120 plastifié',
-            scope: { auditType: 'CUSTOM', definitionId: definition.id },
+            scope: { auditType: 'CUSTOM', definitionId: PDQ_ID },
             support: 'pvc', material: 'Plastification', dimensions: { width: 80, height: 120, unit: 'cm' },
             placement: {},
         });
         await db.signageReferences.bulkAdd([ref80x100Adh, ref80x120Pla]);
 
-        // --- 3. Versioning d'une référence (dimension corrigée) — previousVersions doit survivre ---
+        // --- 2. Versioning d'une référence (dimension corrigée) — previousVersions doit survivre ---
         const editedRef = applyReferenceEdit(
             ref80x100Adh,
             {
@@ -79,31 +73,23 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         expect(editedRef.version).toBe(2);
         expect(editedRef.previousVersions).toHaveLength(1);
 
-        // --- 4. Archivage de la 2e référence (reste exportable/consultable, disparaît des listes actives) ---
+        // --- 3. Archivage de la 2e référence (reste exportable/consultable, disparaît des listes actives) ---
         const archivedRef = withArchived(ref80x120Pla, '2026-06-15T00:00:00.000Z');
         await db.signageReferences.put(archivedRef);
 
-        // --- 5. Deux stations réelles (une ciblée par la ligne A, une exclue explicitement) ---
+        // --- 4. Une station réelle, avec le module CUSTOM attaché à la main
+        // (pas de propagation réseau : un audit s'attache station par
+        // station, comme n'importe quel autre module). ---
         const stationCible: Lieu = {
             id: 'lieu-a-1', name: 'Station Cible',
             modules: [{ id: 'mod-dat-a1', type: AuditModuleType.DAT, name: 'DAT', line: 'A', data: { id: 'm', name: 'Station Cible', type: 'METRO' as any, line: 'A', stations: [] } }],
         };
-        const stationExclue: Lieu = {
-            id: 'lieu-excluded', name: 'Station Exclue',
-            modules: [{ id: 'mod-dat-ex', type: AuditModuleType.DAT, name: 'DAT', line: 'A', data: { id: 'm', name: 'Station Exclue', type: 'METRO' as any, line: 'A', stations: [] } }],
-        };
-        await db.lieux.bulkPut([stationCible, stationExclue]);
-        useAuditStore.setState({ lieux: [stationCible, stationExclue] });
-
-        // --- 6. Propagation (idempotente) : seule la station ciblée reçoit le module (l'exclue jamais) ---
-        const missing = computeMissingLieuIds(definition, useAuditStore.getState().lieux);
-        expect(missing).toEqual(['lieu-a-1']); // exclue absente, incluse absente (n'existe pas dans lieux → ignorée)
-
-        const customModule = createBlankCustomModule(stationCible.name, 'A', definition.id, definition.name);
+        const customModule = createBlankCustomModule(stationCible.name, 'A', PDQ_ID, PDQ_NAME);
         stationCible.modules.push(customModule);
         await db.lieux.put(stationCible);
+        useAuditStore.setState({ lieux: [stationCible] });
 
-        // --- 7. Saisie terrain réelle : DEUX occurrences de la même référence
+        // --- 5. Saisie terrain réelle : DEUX occurrences de la même référence
         // (patrimoine, pas une checklist), l'une avec un historique de
         // constats (« Nouveau constat » déjà utilisé une fois), photo sur
         // l'occurrence courante, une troisième occurrence Non applicable. ---
@@ -127,17 +113,12 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         (customModule.data as CustomAuditData).lastCheckedAt = '2027-02-15T00:00:00.000Z';
         await db.lieux.put(stationCible);
 
-        // --- 8. Archivage de la DÉFINITION elle-même (le module matérialisé doit rester intact) ---
-        const archivedDefinition = withDefinitionArchived(definition, '2026-07-01T00:00:00.000Z');
-        await db.auditDefinitions.put(archivedDefinition);
-
         // ================================================================
         // EXPORT
         // ================================================================
         const payload = await buildFullExportPayload();
         const backupJson = JSON.stringify(payload);
 
-        expect(payload.customAuditDefinitions).toHaveLength(1);
         expect(payload.signageReferences.filter(r => r.scope.auditType === 'CUSTOM')).toHaveLength(2);
 
         // ================================================================
@@ -148,8 +129,6 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         await db.lieux.clear();
         await db.signageReferences.clear();
         await db.signageAssets.clear();
-        await db.auditDefinitions.clear();
-        expect(await db.auditDefinitions.count()).toBe(0);
         expect(await db.lieux.count()).toBe(0);
         expect(await db.signageReferences.count()).toBe(0);
 
@@ -157,16 +136,6 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         // IMPORT
         // ================================================================
         await applyImportPayload(parseImportPayload(backupJson));
-
-        // --- Comparaison stricte : DÉFINITION (nom, icône, ciblage, exclusions, inclusions, archivage) ---
-        const restoredDef = await db.auditDefinitions.get(definition.id);
-        expect(restoredDef).toEqual(archivedDefinition);
-        expect(restoredDef!.name).toBe('Plans de quartier');
-        expect(restoredDef!.icon).toBe('MapPin');
-        expect(restoredDef!.targetLines).toEqual(['A']);
-        expect(restoredDef!.excludedLieuIds).toEqual(['lieu-excluded']);
-        expect(restoredDef!.includedLieuIds).toEqual(['lieu-included']);
-        expect(restoredDef!.archivedAt).toBe('2026-07-01T00:00:00.000Z');
 
         // --- Comparaison stricte : RÉFÉRENCES (dimensions, matière, VERSIONING, archivage) ---
         const restoredRef1 = await db.signageReferences.get(ref80x100Adh.id);
@@ -187,9 +156,9 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         expect(restoredStation).toEqual(stationCible);
         expect(restoredStation!.name).toBe('Station Cible');
         const restoredModule = restoredStation!.modules.find(m => m.type === AuditModuleType.CUSTOM)!;
-        expect(restoredModule.name).toBe('Plans de quartier'); // dénormalisé à la création, conservé tel quel
+        expect(restoredModule.name).toBe(PDQ_NAME); // dénormalisé à la création, conservé tel quel
         const restoredData = restoredModule.data as CustomAuditData;
-        expect(restoredData.definitionId).toBe(definition.id);
+        expect(restoredData.definitionId).toBe(PDQ_ID);
         expect(restoredData.lastCheckedAt).toBe('2027-02-15T00:00:00.000Z');
         expect(restoredData.occurrences).toHaveLength(3);
 
@@ -215,27 +184,7 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         expect(na.referenceId).toBe(ref80x120Pla.id);
         expect(na.status).toBe(AdhesiveStatus.NotApplicable);
 
-        // --- La station EXCLUE n'a reçu aucun module CUSTOM, avant comme après restauration ---
-        const restoredExcluded = await db.lieux.get('lieu-excluded');
-        expect(restoredExcluded!.modules.every(m => m.type !== AuditModuleType.CUSTOM)).toBe(true);
-
         // --- Non-régression : le référentiel historique (38 refs) est intact ---
         expect(await db.signageReferences.count()).toBe(40); // 38 historiques + 2 CUSTOM
-    });
-
-    it('un import v1 (ancien format, sans customAuditDefinitions) laisse la table auditDefinitions locale strictement intacte', async () => {
-        const definition = createAuditDefinition({ name: 'Plans de quartier', icon: 'MapPin', targetLines: ['A'], excludedLieuIds: [], includedLieuIds: [] });
-        await db.auditDefinitions.add(definition);
-
-        const oldFormat = JSON.stringify({ exportDate: '2020-01-01', data: [{ id: 'lieu-x', name: 'X', modules: [] }] });
-        await applyImportPayload(parseImportPayload(oldFormat));
-
-        expect(await db.auditDefinitions.get(definition.id)).toEqual(definition);
-    });
-
-    it('un import v2 dont customAuditDefinitions est invalide refuse tout l\'import (aucune restauration partielle)', async () => {
-        const payload: any = await buildFullExportPayload();
-        payload.customAuditDefinitions = [{ id: '', broken: true }];
-        expect(() => parseImportPayload(JSON.stringify(payload))).toThrow(/Définitions d'audits configurables invalides/);
     });
 });

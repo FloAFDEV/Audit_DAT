@@ -6,6 +6,7 @@
 // (n'a de sens qu'en modification).
 // =================================================================
 import React, { useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { EquipmentType, EcaEquipmentType, SignageScope, SignageSupport, SignageDimensions, SignagePlacement } from '../../types';
 import { SignageReferenceEditableFields } from '../../utils/cockpit/signageReferenceEditor';
 import { SUPPORT_LABELS } from './labels';
@@ -115,6 +116,97 @@ const SignageReferenceForm: React.FC<SignageReferenceFormProps> = ({ initialFiel
 
     const inputClass = "block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 px-3 text-sm text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600";
     const labelClass = "text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1 block";
+    const [showAdvanced, setShowAdvanced] = useState(false);
+
+    // Audit configurable : formulaire réduit aux 4 informations qui
+    // suffisent à identifier l'objet sur le terrain (nom, dimensions,
+    // support, où/comment c'est posé). Les champs restants du modèle
+    // (code, matière détaillée, description libre, motif) existent
+    // toujours — repliés dans « Plus d'informations », jamais supprimés.
+    if (customDefinitionId) {
+        return (
+            <form onSubmit={handleSubmit} className="space-y-4">
+                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+
+                <div>
+                    <label className={labelClass}>Nom *</label>
+                    <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} placeholder="Ex. : PdQ-01" required autoFocus />
+                </div>
+
+                <div className="flex flex-wrap items-end gap-3">
+                    <div className="w-24">
+                        <label className={labelClass}>Largeur</label>
+                        <input type="number" step="0.1" value={width} onChange={e => setWidth(e.target.value)} className={inputClass} />
+                    </div>
+                    <span className="pb-2.5 text-slate-400">×</span>
+                    <div className="w-24">
+                        <label className={labelClass}>Hauteur</label>
+                        <input type="number" step="0.1" value={height} onChange={e => setHeight(e.target.value)} className={inputClass} />
+                    </div>
+                    <div className="w-20">
+                        <label className={labelClass}>Unité</label>
+                        <select value={unit} onChange={e => setUnit(e.target.value as 'cm' | 'mm')} className={inputClass}>
+                            <option value="cm">cm</option>
+                            <option value="mm">mm</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label className={labelClass}>Support</label>
+                    <select value={support} onChange={e => setSupport(e.target.value as SignageSupport)} className={inputClass}>
+                        {(Object.keys(SUPPORT_LABELS) as SignageSupport[]).map(s => (
+                            <option key={s} value={s}>{SUPPORT_LABELS[s]}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className={labelClass}>Où et comment c'est posé</label>
+                    <textarea value={installationGuidance} onChange={e => setInstallationGuidance(e.target.value)} rows={2} className={inputClass} placeholder="Ex. : Totem entrée station" />
+                </div>
+
+                <div>
+                    <button type="button" onClick={() => setShowAdvanced(v => !v)} className="flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                        {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />} Plus d'informations
+                    </button>
+                    {showAdvanced && (
+                        <div className="mt-3 space-y-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div>
+                                    <label className={labelClass}>Code (nomenclature Tisséo)</label>
+                                    <input type="text" value={code} onChange={e => setCode(e.target.value)} className={inputClass} />
+                                </div>
+                                <div>
+                                    <label className={labelClass}>Matière (précision)</label>
+                                    <input type="text" value={material} onChange={e => setMaterial(e.target.value)} className={inputClass} />
+                                </div>
+                            </div>
+                            <div>
+                                <label className={labelClass}>Description libre</label>
+                                <textarea value={legacyDescription} onChange={e => setLegacyDescription(e.target.value)} rows={2} className={inputClass} />
+                            </div>
+                            {mode === 'edit' && (
+                                <div>
+                                    <label className={labelClass}>Motif du changement (si support/matière/dimensions/pose modifiés)</label>
+                                    <input type="text" value={changeReason} onChange={e => setChangeReason(e.target.value)} className={inputClass} placeholder="Ex. : mise à jour du visuel BPU 2026" />
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex gap-3 justify-end pt-2">
+                    <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">
+                        Annuler
+                    </button>
+                    <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">
+                        {submitLabel}
+                    </button>
+                </div>
+            </form>
+        );
+    }
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">

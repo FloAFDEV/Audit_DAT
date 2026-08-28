@@ -2,12 +2,13 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference, AuditDefinition, CustomAuditData, AdhesiveStatus,
+    SignageReference, CustomAuditData, AdhesiveStatus,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { CUSTOM_AUDIT_TYPES } from '../data/customAudits';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
@@ -25,7 +26,7 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
-export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], auditDefinitions: AuditDefinition[] = []) => {
+export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
 
     const globalCounts = useMemo(() => {
         let datCount = 0;
@@ -215,8 +216,8 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
     }, [lieux]);
 
     const adhesiveInventory = useMemo(
-        () => computeAdhesiveInventory(lieux, signageReferences, auditDefinitions),
-        [lieux, signageReferences, auditDefinitions]
+        () => computeAdhesiveInventory(lieux, signageReferences),
+        [lieux, signageReferences]
     );
 
     return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
@@ -248,19 +249,18 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
  * une référence Admin ajoutée au périmètre DAT/P+R/ECA compte donc aussi
  * dans la quantité réseau, sans code spécifique par référence.
  *
- * Audits configurables (Partie 2, `auditDefinitions`) : une définition
- * ACTIVE (non archivée) produit une ligne par référence CUSTOM lui
- * appartenant — le nom de la définition sert de colonne « Type » (pas un
- * shortLabel figé : plusieurs définitions coexistent). Une définition
- * archivée disparaît de la Nomenclature courante (même règle que pour une
- * référence archivée) SANS toucher aux modules déjà matérialisés — leurs
- * statuts restent en base, simplement non agrégés ici. Quantité : compte
- * chaque item dont le statut n'est PAS NotApplicable (aucun bridge
- * getEffective* nécessaire, CUSTOM n'a pas de catalogue historique — les
- * clés de `items` désignent directement des ids de signageReferences).
+ * Audits configurables (`data/customAudits.ts`, registre en dur) : chaque
+ * audit du registre produit une ligne par référence CUSTOM lui appartenant
+ * — le nom de l'audit sert de colonne « Type » (pas un shortLabel figé :
+ * plusieurs audits coexistent). Retirer un audit du registre le fait
+ * disparaître de la Nomenclature courante SANS toucher aux modules déjà
+ * matérialisés — leurs statuts restent en base, simplement non agrégés
+ * ici. Quantité : compte chaque occurrence dont le statut n'est PAS
+ * NotApplicable (CUSTOM n'a pas de catalogue historique — referenceId
+ * désigne directement un id de signageReferences).
  */
 export const computeAdhesiveInventory = (
-    lieux: Lieu[], references: SignageReference[], auditDefinitions: AuditDefinition[] = [],
+    lieux: Lieu[], references: SignageReference[],
 ): AdhesiveInventoryItem[] => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
         const quantityMap = new Map<string, number>();
@@ -317,11 +317,11 @@ export const computeAdhesiveInventory = (
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
         if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
 
-        // Audits configurables (Partie 2) — une ligne par définition ACTIVE,
+        // Audits configurables — une ligne par audit du registre en dur,
         // jamais un libellé générique : chaque audit garde son identité
         // dans la colonne « Type ».
         if (referencesReady) {
-            auditDefinitions.filter(def => !def.archivedAt).forEach(def => {
+            CUSTOM_AUDIT_TYPES.forEach(def => {
                 const defRefs = references.filter(
                     r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === def.id
                 );

@@ -16,7 +16,8 @@ import { describe, it, expect } from 'vitest';
 import { computeAdhesiveInventory } from '../hooks/useStats';
 import { generateInitialLieuxDataAsync } from '../data/builder';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
-import { AuditDefinition, AuditModuleType, AdhesiveStatus, Lieu, CustomAuditOccurrence } from '../types';
+import { CUSTOM_AUDIT_TYPES } from '../data/customAudits';
+import { AuditModuleType, AdhesiveStatus, Lieu, CustomAuditOccurrence } from '../types';
 
 describe('Nomenclature — caractérisation (non-régression signageReferences)', () => {
     it('produit EXACTEMENT le même contenu et les mêmes quantités qu\'avant la migration (snapshot gelé)', async () => {
@@ -85,20 +86,17 @@ describe('Nomenclature — caractérisation (non-régression signageReferences)'
 });
 
 // =================================================================
-// Partie 2 — audits configurables : Nomenclature (Commit 4).
-// Cas de référence : « Plans de quartier », 4 variantes.
+// Audits configurables (registre en dur, data/customAudits.ts) —
+// Nomenclature. Cas de référence : « Plans de quartier », 4 variantes.
 // =================================================================
 describe('Nomenclature — audits configurables (CUSTOM)', () => {
-    const DEF: AuditDefinition = {
-        id: 'def-pdq', name: 'Plans de quartier', icon: 'MapPin',
-        targetLines: ['A'], excludedLieuIds: [], includedLieuIds: [],
-    };
+    const PDQ_ID = CUSTOM_AUDIT_TYPES.find(a => a.name === 'Plans de quartier')!.id;
 
     const PDQ_REFS = [
-        { id: 'pdq-1', name: 'Repère 1 - 80x100', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-pdq' }, version: 1, support: 'adhesif' as const, material: 'Adhésif', dimensions: { width: 80, height: 100, unit: 'cm' as const }, placement: {} },
-        { id: 'pdq-2', name: 'Repère 2 - 80x100', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-pdq' }, version: 1, support: 'pvc' as const, material: 'Plastification', dimensions: { width: 80, height: 100, unit: 'cm' as const }, placement: {} },
-        { id: 'pdq-3', name: 'Repère 3 - 80x120', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-pdq' }, version: 1, support: 'adhesif' as const, material: 'Adhésif', dimensions: { width: 80, height: 120, unit: 'cm' as const }, placement: {} },
-        { id: 'pdq-4', name: 'Repère 4 - 80x120', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-pdq' }, version: 1, support: 'pvc' as const, material: 'Plastification', dimensions: { width: 80, height: 120, unit: 'cm' as const }, placement: {} },
+        { id: 'pdq-1', name: 'Repère 1 - 80x100', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: PDQ_ID }, version: 1, support: 'adhesif' as const, material: 'Adhésif', dimensions: { width: 80, height: 100, unit: 'cm' as const }, placement: {} },
+        { id: 'pdq-2', name: 'Repère 2 - 80x100', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: PDQ_ID }, version: 1, support: 'pvc' as const, material: 'Plastification', dimensions: { width: 80, height: 100, unit: 'cm' as const }, placement: {} },
+        { id: 'pdq-3', name: 'Repère 3 - 80x120', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: PDQ_ID }, version: 1, support: 'adhesif' as const, material: 'Adhésif', dimensions: { width: 80, height: 120, unit: 'cm' as const }, placement: {} },
+        { id: 'pdq-4', name: 'Repère 4 - 80x120', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: PDQ_ID }, version: 1, support: 'pvc' as const, material: 'Plastification', dimensions: { width: 80, height: 120, unit: 'cm' as const }, placement: {} },
     ];
 
     let occCounter = 0;
@@ -111,16 +109,16 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         modules: [{
             id: `mod-${id}`, type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
             data: {
-                id: `c-${id}`, definitionId: 'def-pdq', stationName: `Station ${id}`, stationCode: '',
+                id: `c-${id}`, definitionId: PDQ_ID, stationName: `Station ${id}`, stationCode: '',
                 occurrences, comment: '',
             },
         }],
     });
 
-    it('les 4 variantes apparaissent comme 4 lignes DISTINCTES, avec le nom de la définition en colonne Type', async () => {
+    it('les 4 variantes apparaissent comme 4 lignes DISTINCTES, avec le nom de l\'audit en colonne Type', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const references = [...buildSignageReferencesSeed(), ...PDQ_REFS];
-        const inventory = computeAdhesiveInventory(lieux, references, [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, references);
 
         const rows = inventory.filter(i => i.auditType === 'Plans de quartier');
         expect(rows).toHaveLength(4);
@@ -142,10 +140,10 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
             id: 's-fresh', name: 'Station Fraîche',
             modules: [{
                 id: 'mod-fresh', type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
-                data: { id: 'c-fresh', definitionId: 'def-pdq', stationName: 'Station Fraîche', stationCode: '', occurrences: [], comment: '' },
+                data: { id: 'c-fresh', definitionId: PDQ_ID, stationName: 'Station Fraîche', stationCode: '', occurrences: [], comment: '' },
             }],
         };
-        const inventory = computeAdhesiveInventory([freshlyPropagated], [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory([freshlyPropagated], [...buildSignageReferencesSeed(), ...PDQ_REFS]);
 
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(0);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(0);
@@ -155,13 +153,13 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
 
     it('un objet recensé mais jamais constaté (statut encore Non contrôlé) compte quand même — il a été vu et ajouté au patrimoine', async () => {
         const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.NotChecked)])];
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS]);
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
     });
 
     it('Absent compte AUSSI dans la quantité recensée — un objet constaté disparu reste un élément du patrimoine suivi, pas exclu du compte', async () => {
         const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.Absent), occ('pdq-2', AdhesiveStatus.OK), occ('pdq-3', AdhesiveStatus.ToBeReplaced)])];
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS]);
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(1);
         expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(1);
@@ -171,14 +169,14 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         const lieux = [customStation('jean-jaures', [
             occ('pdq-1', AdhesiveStatus.OK), occ('pdq-1', AdhesiveStatus.OK), occ('pdq-4', AdhesiveStatus.ToBeReplaced),
         ])];
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS]);
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(2);
         expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(1);
     });
 
     it('quantité calculée depuis les audits réels — 42 stations avec un objet de la variante 1 → quantité 42, jamais saisie', async () => {
         const lieux: Lieu[] = Array.from({ length: 42 }, (_, i) => customStation(`s${i}`, [occ('pdq-1', AdhesiveStatus.OK)]));
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS]);
 
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(42);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(0);
@@ -190,7 +188,7 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
             customStation('s2', [occ('pdq-3', AdhesiveStatus.OK), occ('pdq-1', AdhesiveStatus.NotApplicable)]),
             customStation('s3', [occ('pdq-1', AdhesiveStatus.ToBeReplaced), occ('pdq-3', AdhesiveStatus.NotApplicable)]),
         ];
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS]);
 
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(2); // s1 + s3, pas s2 (NotApplicable)
         expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(1); // s2 seulement
@@ -199,32 +197,22 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
     it('une référence CUSTOM archivée disparaît de la Nomenclature courante', async () => {
         const references = [...buildSignageReferencesSeed(), ...PDQ_REFS.map(r => r.id === 'pdq-2' ? { ...r, archivedAt: '2026-01-01T00:00:00.000Z' } : r)];
         const lieux = [customStation('s1', [occ('pdq-2', AdhesiveStatus.OK)])];
-        const inventory = computeAdhesiveInventory(lieux, references, [DEF]);
+        const inventory = computeAdhesiveInventory(lieux, references);
 
         expect(inventory.some(i => i.id === 'pdq-2')).toBe(false);
     });
 
-    it('une définition archivée disparaît de la Nomenclature — les modules déjà matérialisés restent inchangés', async () => {
-        const archivedDef: AuditDefinition = { ...DEF, archivedAt: '2026-01-01T00:00:00.000Z' };
-        const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.OK)])];
-        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [archivedDef]);
-
-        expect(inventory.some(i => i.auditType === 'Plans de quartier')).toBe(false);
-        // Les données du module lui-même ne sont jamais touchées par ce calcul (lecture seule).
-        expect((lieux[0].modules[0].data as any).occurrences[0].status).toBe(AdhesiveStatus.OK);
-    });
-
     it('un module CUSTOM sans référence connue ne plante pas (definitionId inconnu)', async () => {
         const orphanStation = customStation('orphan', [occ('ref-inconnue', AdhesiveStatus.OK)]);
-        (orphanStation.modules[0].data as any).definitionId = 'def-inexistante';
-        expect(() => computeAdhesiveInventory([orphanStation], buildSignageReferencesSeed(), [DEF])).not.toThrow();
+        (orphanStation.modules[0].data as any).definitionId = 'audit-inexistant';
+        expect(() => computeAdhesiveInventory([orphanStation], buildSignageReferencesSeed())).not.toThrow();
     });
 
     it('n\'affecte AUCUNE quantité DAT/PR/ECA existante (non-régression stricte)', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const references = buildSignageReferencesSeed();
-        const withoutCustom = computeAdhesiveInventory(lieux, references, []);
-        const withCustom = computeAdhesiveInventory(lieux, [...references, ...PDQ_REFS], [DEF]);
+        const withoutCustom = computeAdhesiveInventory(lieux, references);
+        const withCustom = computeAdhesiveInventory(lieux, [...references, ...PDQ_REFS]);
 
         const datPrEca = ['DAT', 'Bornes P+R', 'Valideurs (ECA)'];
         withoutCustom.filter(i => datPrEca.includes(i.auditType)).forEach(item => {

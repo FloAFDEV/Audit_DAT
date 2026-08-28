@@ -7,7 +7,7 @@ import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
 import { getEffectiveCustomReferences, getCustomAuditProgress } from '../utils/effectiveAdhesives';
 import { formatDimensions, STATUS_LABELS } from './cockpit/labels';
-import { useAuditDefinitions } from '../hooks/useAuditDefinitions';
+import { getCustomAuditType } from '../data/customAudits';
 
 interface CustomAuditFormProps {
   module: AuditModule;
@@ -86,16 +86,12 @@ const CustomAuditForm: React.FC<CustomAuditFormProps> = (props) => {
   } = props;
   const data = module.data as CustomAuditData;
 
-  // L'icône de la définition n'est pas dénormalisée sur le module (seul
-  // son nom l'est, cf. createBlankCustomModule) : lue à la demande via le
-  // même hook déjà utilisé par Admin/Nomenclature (useAuditDefinitions),
-  // aucun nouvel état global — une définition introuvable (import ancien,
-  // définition supprimée) retombe simplement sur l'icône générique CUSTOM.
-  const { definitions } = useAuditDefinitions();
-  const definition = useMemo(
-    () => definitions.find(d => d.id === data.definitionId),
-    [definitions, data.definitionId]
-  );
+  // L'icône de l'audit n'est pas dénormalisée sur le module (seul son nom
+  // l'est, cf. createBlankCustomModule) : lue à la demande dans le
+  // registre en dur (data/customAudits.ts) — un audit introuvable
+  // (import ancien, audit retiré du registre) retombe simplement sur
+  // l'icône générique CUSTOM.
+  const definition = useMemo(() => getCustomAuditType(data.definitionId), [data.definitionId]);
 
   // Références réellement effectives pour CETTE définition (archivées/
   // désactivées déjà exclues) — c'est la liste des TYPES d'objets

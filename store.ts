@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition, CustomAuditData, CustomAuditOccurrence, CustomAuditConstat
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, CustomAuditData, CustomAuditOccurrence, CustomAuditConstat
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -17,7 +17,6 @@ import { sanitizeDataForHistory, calculateComplianceScore } from './utils/histor
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
 import { createStation, withStationRenamed, withStationArchived, withStationRestored } from './utils/cockpit/stationAdmin';
-import { computeMissingLieuIds, computeDeployedCount } from './utils/cockpit/auditDefinitionAdmin';
 import {
     AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
     createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
@@ -88,16 +87,13 @@ interface AppState {
     deleteStationForever: (id: string) => Promise<void>;
 
     // Admin — attacher un module à une station, gérer zones/bornes P+R (Lot 2c)
-    // customAudit : requis uniquement pour moduleType === 'CUSTOM' (Partie 2).
+    // customAudit : requis uniquement pour moduleType === 'CUSTOM' — audit
+    // choisi dans le registre en dur (data/customAudits.ts).
     attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => Promise<AuditModule>;
-    // Détachement générique (Partie 2) — refuse si le module n'est pas
-    // strictement vide (cf. isModuleBlank) : jamais de suppression de
-    // données d'audit, jamais de nouveau système d'archivage de module.
+    // Détachement générique — refuse si le module n'est pas strictement
+    // vide (cf. isModuleBlank) : jamais de suppression de données
+    // d'audit, jamais de nouveau système d'archivage de module.
     detachModuleAdmin: (lieuId: string, moduleId: string) => Promise<void>;
-    // « Appliquer au réseau » (Partie 2) — matérialise les modules
-    // manquants pour une définition, idempotent (cf. computeMissingLieuIds).
-    // N'écrase et ne supprime jamais un module existant.
-    applyAuditDefinitionToNetwork: (definition: AuditDefinition) => Promise<{ created: number; unresolved: number }>;
     createPrZoneAdmin: (lieuId: string, moduleId: string, zoneName: string) => Promise<PrZone>;
     renamePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string, newName: string) => Promise<void>;
     removePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string) => Promise<void>;
@@ -737,46 +733,6 @@ const useAuditStore = create<AppState>((set, get) => {
             type: 'AUDIT_ITEM_REMOVED', entityType: 'module', entityId: moduleId, entityLabel: module.name,
             summary: `Module ${module.type} détaché (vide) — ${lieu.name}`,
         });
-    },
-
-    // « Appliquer au réseau » (Partie 2) — ajout pur, jamais une synchronisation
-    // destructive : ne matérialise QUE les modules manquants (computeMissingLieuIds,
-    // idempotent par construction), ne touche jamais un module déjà présent,
-    // n'en supprime jamais. Un SEUL événement consolidé par exécution (pas un
-    // par station) pour ne pas noyer le journal à l'échelle du réseau.
-    applyAuditDefinitionToNetwork: async (definition: AuditDefinition) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        if (definition.archivedAt) throw new Error(`« ${definition.name} » est archivé : impossible de l'appliquer au réseau.`);
-
-        const missingIds = computeMissingLieuIds(definition, get().lieux);
-        let created = 0;
-        let unresolved = 0;
-
-        for (const lieuId of missingIds) {
-            const lieu = get().lieux.find(l => l.id === lieuId);
-            if (!lieu) continue;
-            // Ligne du module créé : la première ligne ciblée que la station
-            // possède déjà (cohérent avec le calcul de ciblage lui-même), sinon
-            // repli sur la première ligne d'un module existant de la station.
-            // Aucune ligne résolvable (station sans aucun module existant ET
-            // definition.targetLines vide) → ignorée ici, reste matérialisable
-            // à la main via « Ajouter un module » sur la station.
-            const line = definition.targetLines.find(l => lieu.modules.some(m => m.type !== AuditModuleType.CUSTOM && m.line === l))
-                ?? lieu.modules.find(m => m.type !== AuditModuleType.CUSTOM && m.line)?.line
-                ?? definition.targetLines[0];
-            if (!line) { unresolved++; continue; }
-
-            await get().attachModuleAdmin(lieuId, 'CUSTOM', line as ModuleLine, undefined, { definitionId: definition.id, definitionName: definition.name });
-            created++;
-        }
-
-        await logEvent({
-            type: 'AUDIT_DEFINITION_APPLIED', entityType: 'auditDefinition', entityId: definition.id, entityLabel: definition.name,
-            summary: `« ${definition.name} » appliqué au réseau — ${created} module(s) créé(s)${unresolved > 0 ? `, ${unresolved} station(s) ignorée(s) (aucune ligne résolvable)` : ''}`,
-            metadata: { created, unresolved, alreadyPresent: computeDeployedCount(definition, get().lieux) - created },
-        });
-
-        return { created, unresolved };
     },
 
     createPrZoneAdmin: async (lieuId: string, moduleId: string, zoneName: string) => {

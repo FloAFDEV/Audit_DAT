@@ -261,36 +261,22 @@ export interface CognitivePictogramData {
 }
 
 // =================================================================
-// AUDITS CONFIGURABLES (Partie 2) — brique générique à côté des types
-// métier fixes ci-dessus, jamais à leur place (R : ne pas refactoriser
-// DAT/ECA/P+R/PMR/Signalétique/Pictogrammes pour les rendre génériques).
+// AUDITS CONFIGURABLES — brique générique à côté des types métier fixes
+// ci-dessus, jamais à leur place (R : ne pas refactoriser DAT/ECA/P+R/
+// PMR/Signalétique/Pictogrammes pour les rendre génériques).
 // -----------------------------------------------------------------
-// Trois niveaux strictement séparés :
-//   AuditDefinition   — le PROJET d'audit : nom, icône, ciblage réseau.
-//   SignageReference  — les objets contrôlés (scope.auditType === 'CUSTOM'),
+// Le PROJET d'audit (identité, nom, icône) est défini EN DUR dans le code
+// (data/customAudits.ts) — délibérément pas de table Dexie ni de CRUD
+// Admin pour le créer : ajouter un audit = ajouter une entrée au fichier.
+// Deux niveaux restent des données réelles, persistées :
+//   SignageReference  — les objets contrôlés (scope.auditType === 'CUSTOM',
+//                        scope.definitionId = id du registre en dur),
 //                        même table, même CRUD, même versioning/archivage
 //                        que le reste du référentiel — AUCUNE donnée
 //                        physique (dimensions/matière) dupliquée ici.
 //   AuditModule (type CUSTOM) — l'existence de l'audit sur une station +
-//                        les statuts RÉELLEMENT saisis, rien d'autre.
+//                        les objets RÉELLEMENT recensés, rien d'autre.
 // =================================================================
-
-/** Ciblage réseau d'un audit configurable — délibérément plat et lisible :
- *  lignes ciblées + exceptions. Pas de moteur de règles : la propagation
- *  (« Appliquer au réseau ») lit ces trois listes une fois, au moment où
- *  l'admin déclenche l'action — ce ne sont pas des règles réévaluées en
- *  permanence, jamais une source de suppression automatique. */
-export interface AuditDefinition {
-    id: string;                 // uuid technique (R1, comme SignageReference.id)
-    name: string;                // "Plans de quartier"
-    icon: string;                 // clé d'icône (data/customAuditIcons.ts, lucide-react)
-    targetLines: (MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT')[];
-    excludedLieuIds: string[];   // stations explicitement exclues du ciblage par ligne
-    includedLieuIds: string[];   // stations explicitement ajoutées hors ciblage par ligne
-    /** Retirée des futurs déploiements et de la Nomenclature courante —
-     *  JAMAIS des modules déjà matérialisés (aucune cascade, R8). */
-    archivedAt?: string; // ISO
-}
 
 /** Un constat ARCHIVÉ d'une occurrence — ce qu'elle était lors d'un relevé
  *  antérieur. Créé UNIQUEMENT par l'action explicite « Nouveau constat »
@@ -341,7 +327,7 @@ export interface CustomAuditOccurrence {
  *  fictif pour représenter « rien trouvé ». */
 export interface CustomAuditData {
     id: string;
-    definitionId: string;   // AuditDefinition.id — jamais copié au-delà de cet id
+    definitionId: string;   // id du registre en dur (data/customAudits.ts)
     stationName: string;
     stationCode: string;
     occurrences: CustomAuditOccurrence[];
@@ -465,12 +451,6 @@ export type AppEventType =
     | 'REFERENCE_CREATED' | 'REFERENCE_UPDATED' | 'REFERENCE_ARCHIVED' | 'REFERENCE_RESTORED' | 'REFERENCE_DELETED'
     // Lot 2b : CRUD Admin des stations (Lieu) — jamais de cascade sur modules.
     | 'STATION_CREATED' | 'STATION_RENAMED' | 'STATION_ARCHIVED' | 'STATION_RESTORED' | 'STATION_DELETED'
-    // Partie 2 : CRUD Admin des audits configurables (AuditDefinition),
-    // même famille que REFERENCE_* ci-dessus. APPLIED = un seul événement
-    // consolidé par exécution de « Appliquer au réseau » (jamais un par
-    // station créée, pour ne pas noyer le journal à l'échelle du réseau).
-    | 'AUDIT_DEFINITION_CREATED' | 'AUDIT_DEFINITION_UPDATED' | 'AUDIT_DEFINITION_ARCHIVED'
-    | 'AUDIT_DEFINITION_RESTORED' | 'AUDIT_DEFINITION_DELETED' | 'AUDIT_DEFINITION_APPLIED'
     | 'DATA_MIGRATION'
     | 'PERSISTENCE_ERROR';
 
@@ -526,9 +506,9 @@ export type SignageScope =
     | { auditType: 'DAT' }
     | { auditType: 'PR'; equipmentTypes?: EquipmentType[] }
     | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] }
-    /** Audit configurable (Partie 2) : la référence appartient à UNE
-     *  définition précise (AuditDefinition.id) — jamais résolue par famille
-     *  d'équipement comme PR/ECA, une définition n'a pas de sous-familles. */
+    /** Audit configurable : la référence appartient à UN audit précis du
+     *  registre en dur (data/customAudits.ts) — jamais résolue par famille
+     *  d'équipement comme PR/ECA, un audit n'a pas de sous-familles. */
     | { auditType: 'CUSTOM'; definitionId: string };
 
 /** Localisation recommandée + consignes. `zone` est un texte court
