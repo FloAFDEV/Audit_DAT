@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition, CustomAuditData, CustomAuditOccurrence, CustomAuditConstat
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -153,6 +153,20 @@ interface AppState {
     handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
     handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
     handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
+
+    // Custom Audit Actions (Partie 2 — recensement patrimonial dans le temps)
+    handleAddCustomAuditOccurrence: (referenceId: string, location?: string) => Promise<CustomAuditOccurrence>;
+    handleRemoveCustomAuditOccurrence: (occurrenceId: string) => Promise<void>;
+    handleCustomAuditOccurrenceStatusChange: (occurrenceId: string, status: AdhesiveStatus) => Promise<void>;
+    handleCustomAuditOccurrenceCommentChange: (occurrenceId: string, comment: string) => Promise<void>;
+    handleCustomAuditOccurrenceLocationChange: (occurrenceId: string, location: string) => Promise<void>;
+    handleCustomAuditNewConstat: (occurrenceId: string) => Promise<void>;
+    handleCustomAuditPhotoChange: (occurrenceId: string, photo_base64: string | null) => Promise<void>;
+    handleCustomAuditPhotoNoteChange: (occurrenceId: string, note: string) => Promise<void>;
+    handleCustomAuditPhotoRotationChange: (occurrenceId: string, rotation: number) => Promise<void>;
+    handleCustomAuditMarkChecked: () => Promise<void>;
+    handleCustomAuditCommentChange: (comment: string) => Promise<void>;
+    handleResetCustomAudit: () => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -1380,6 +1394,217 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) adhesive.photo_rotation = rotation;
+        });
+    },
+
+    // -----------------------------------------------------------------
+    // Custom Audit (Partie 2) — saisie terrain d'un module CUSTOM.
+    // -----------------------------------------------------------------
+    // Recensement patrimonial dans le temps, pas une checklist par
+    // station : `occurrences` (CustomAuditOccurrence[]) sont des objets
+    // physiques individuels — plusieurs occurrences peuvent partager la
+    // même référence sur une même station (ex. 4 Plans de quartier
+    // 80×100 adhésifs à Jean-Jaurès). Chaque occurrence garde un constat
+    // COURANT (status/comment/photo/constatedAt) modifiable librement —
+    // corriger le constat courant ne crée JAMAIS d'historique. Seule
+    // l'action explicite handleCustomAuditNewConstat archive le constat
+    // courant dans previousConstats avant de repartir sur une saisie
+    // vierge : previousConstats représente des relevés passés, jamais
+    // les actions de correction de l'utilisateur.
+    //
+    // `lastCheckedAt` (au niveau du module, pas de l'occurrence) permet
+    // de distinguer « jamais vérifié » de « vérifié, aucun objet trouvé »
+    // sans occurrence fictive — mis à jour à chaque écriture terrain sur
+    // ce module (ajout d'occurrence, constat) et par l'action explicite
+    // handleCustomAuditMarkChecked.
+    // -----------------------------------------------------------------
+    handleAddCustomAuditOccurrence: async (referenceId, location) => {
+        const { selectedModuleId } = get();
+        let created: CustomAuditOccurrence | undefined;
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (!module) return;
+            const now = new Date().toISOString();
+            created = {
+                id: uuidv4(), referenceId, location: location?.trim() || undefined,
+                status: AdhesiveStatus.NotChecked, constatedAt: now,
+            };
+            module.data.occurrences.push(created);
+            module.data.lastCheckedAt = now;
+        });
+        if (created) {
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'customAuditOccurrence', entityId: created.id,
+                entityLabel: location?.trim() || undefined,
+                summary: `Objet recensé — ${location?.trim() || 'sans emplacement précisé'}`,
+            });
+        }
+        return created!;
+    },
+
+    // Retrait — règle absolue identique à detachModuleAdmin : uniquement
+    // si l'occurrence n'a JAMAIS reçu de constat réel (encore Non
+    // contrôlée, aucun historique, aucune photo/commentaire) — sinon
+    // refus explicite. Corrige une erreur de saisie (ajout accidentel),
+    // ne supprime jamais un objet réellement recensé.
+    handleRemoveCustomAuditOccurrence: async (occurrenceId) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (!module) return;
+            const occ = module.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ) return;
+            const isBlank = occ.status === AdhesiveStatus.NotChecked && !occ.comment && !occ.photo_base64
+                && (occ.previousConstats ?? []).length === 0;
+            if (!isBlank) {
+                throw new Error('Impossible de retirer cet objet : un constat a déjà été saisi (utilisez le statut Absent si l\'objet a disparu).');
+            }
+            module.data.occurrences = module.data.occurrences.filter(o => o.id !== occurrenceId);
+        });
+    },
+
+    handleCustomAuditOccurrenceStatusChange: async (occurrenceId, status) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ) return;
+            occ.status = status;
+            occ.constatedAt = new Date().toISOString();
+            module!.data.lastCheckedAt = occ.constatedAt;
+        });
+    },
+
+    handleCustomAuditOccurrenceCommentChange: async (occurrenceId, comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.comment = comment;
+        });
+    },
+
+    handleCustomAuditOccurrenceLocationChange: async (occurrenceId, location) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.location = location.trim() || undefined;
+        });
+    },
+
+    // « Nouveau constat » — SEUL point d'écriture de previousConstats.
+    // Sans effet si le constat courant est encore Non contrôlé (rien à
+    // archiver). Après archivage, le constat courant repart vierge
+    // (photo comprise — une ancienne photo ne documente pas l'état
+    // actuel) pour forcer une vraie nouvelle observation, pas une
+    // correction déguisée en nouveau relevé.
+    handleCustomAuditNewConstat: async (occurrenceId) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ || occ.status === AdhesiveStatus.NotChecked) return;
+            const archived: CustomAuditConstat = { status: occ.status, comment: occ.comment, constatedAt: occ.constatedAt };
+            occ.previousConstats = [...(occ.previousConstats ?? []), archived];
+            occ.status = AdhesiveStatus.NotChecked;
+            occ.comment = undefined;
+            occ.photo_base64 = undefined;
+            occ.photo_note = undefined;
+            occ.photo_rotation = undefined;
+            occ.constatedAt = new Date().toISOString();
+        });
+    },
+
+    handleCustomAuditPhotoChange: async (occurrenceId, photo_base64) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ) return;
+            if (photo_base64) {
+                occ.photo_base64 = photo_base64;
+            } else {
+                occ.photo_base64 = undefined;
+                occ.photo_note = undefined;
+                occ.photo_rotation = undefined;
+            }
+        });
+    },
+
+    handleCustomAuditPhotoNoteChange: async (occurrenceId, note) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.photo_note = note;
+        });
+    },
+
+    handleCustomAuditPhotoRotationChange: async (occurrenceId, rotation) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.photo_rotation = rotation;
+        });
+    },
+
+    // « Aucun objet trouvé » — action explicite, uniquement pertinente
+    // quand occurrences est vide : marque le module comme vérifié sans
+    // créer d'occurrence fictive. Distingue « jamais vérifié » de
+    // « vérifié, rien trouvé ».
+    handleCustomAuditMarkChecked: async () => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (module) module.data.lastCheckedAt = new Date().toISOString();
+        });
+    },
+
+    handleCustomAuditCommentChange: async (comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (module) module.data.comment = comment;
+        });
+    },
+
+    handleResetCustomAudit: async () => {
+        const { selectedLieuId, selectedModuleId, lieux } = get();
+        if (!selectedLieuId || !selectedModuleId) return;
+
+        const newLieux = JSON.parse(JSON.stringify(lieux));
+        const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
+        if (!lieuToUpdate) return;
+        const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
+        if (!moduleToUpdate) return;
+
+        // Instantané AVANT la mutation, écrit en base seulement APRÈS
+        // confirmation de la persistance — même règle que
+        // handleResetPmrFloorAdhesive (Lot 2, ne jamais archiver un reset
+        // qui n'a pas réellement eu lieu). Ici, l'instantané conserve
+        // l'intégralité des occurrences ET de leur historique avant remise
+        // à zéro — la seule trace qui en subsiste après reset.
+        const snapshotBeforeReset = JSON.parse(JSON.stringify(moduleToUpdate));
+
+        const currentData = moduleToUpdate.data as CustomAuditData;
+        currentData.occurrences = [];
+        currentData.comment = '';
+        delete currentData.lastCheckedAt;
+
+        await db.lieux.put(lieuToUpdate);
+        set({ lieux: newLieux });
+
+        await saveHistoryEntry(
+            `${moduleToUpdate.name} - ${lieuToUpdate.name}`,
+            'SINGLE_AUDIT',
+            snapshotBeforeReset,
+            undefined
+        );
+        await logEvent({
+            type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToUpdate.id, entityLabel: lieuToUpdate.name,
+            summary: `${moduleToUpdate.name} réinitialisé — ${lieuToUpdate.name}`,
         });
     },
 

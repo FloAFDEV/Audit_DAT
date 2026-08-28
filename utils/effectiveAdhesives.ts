@@ -194,3 +194,35 @@ export const getEffectiveEquipmentAdhesives = (
         .map(additionToPrAdhesive);
     return [...historical, ...additions];
 };
+
+// -----------------------------------------------------------------
+// Audit configurable (Partie 2) — pas de catalogue historique : une
+// référence CUSTOM n'existe QUE dans signageReferences (jamais
+// data/adhesives.ts), donc pas de fusion historique+additions à faire
+// comme ci-dessus pour DAT/ECA/P+R.
+// -----------------------------------------------------------------
+
+/** Toutes les références actives d'UNE définition (scope.auditType ===
+ *  'CUSTOM' && scope.definitionId), déjà filtrées par
+ *  resolveReferencesForEquipment (archivées/désactivées exclues) — juste
+ *  le filtre générique déjà partagé par le reste du référentiel. */
+export const getEffectiveCustomReferences = (
+    references: SignageReference[],
+    definitionId: string,
+): SignageReference[] =>
+    resolveReferencesForEquipment(references, 'CUSTOM')
+        .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === definitionId);
+
+/** Progression (barre affichée) d'un module CUSTOM — un audit configurable
+ *  n'est pas une checklist à taille fixe (le nombre d'occurrences attendu
+ *  n'est jamais connu à l'avance, c'est justement ce que le relevé
+ *  terrain découvre), donc pas de pourcentage de couverture comme
+ *  DAT/PR/ECA. La seule question binaire pertinente est l'état de
+ *  vérification du MODULE lui-même : 100% si la station a été vérifiée
+ *  (au moins une occurrence recensée, ou explicitement marquée « aucun
+ *  objet trouvé » via lastCheckedAt), 0% si jamais vérifiée — même
+ *  distinction que CustomAuditData (cf. types.ts). Utils partagé ici
+ *  pour rester testable sans harnais de rendu (tests/customAuditTerrain.test.ts). */
+export const getCustomAuditProgress = (
+    data: { occurrences: { id: string }[]; lastCheckedAt?: string },
+): number => (data.occurrences.length > 0 || !!data.lastCheckedAt) ? 100 : 0;

@@ -125,7 +125,7 @@ describe('computeTargetLieuIds — fonction pure, testable sans persistance', ()
     });
 
     it('un module CUSTOM existant ne compte jamais comme preuve d\'appartenance à une ligne', () => {
-        const custom = { id: 'm', type: AuditModuleType.CUSTOM, name: 'X', line: 'A' as any, data: { id: 'm', definitionId: 'other', stationName: 'S', stationCode: '', items: {}, comment: '' } };
+        const custom = { id: 'm', type: AuditModuleType.CUSTOM, name: 'X', line: 'A' as any, data: { id: 'm', definitionId: 'other', stationName: 'S', stationCode: '', occurrences: [], comment: '' } };
         const onlyCustom: Lieu = { id: 'sta-only-custom', name: 'S', modules: [custom] };
         const def: AuditDefinition = { id: 'd', name: 'X', icon: 'MapPin', targetLines: ['A'], excludedLieuIds: [], includedLieuIds: [] };
         expect(computeTargetLieuIds(def, [onlyCustom])).toEqual([]);
@@ -140,7 +140,7 @@ describe('computeTargetLieuIds — fonction pure, testable sans persistance', ()
 describe('computeDeployedCount / computeMissingLieuIds', () => {
     const customModule = (definitionId: string): Lieu['modules'][number] => ({
         id: `mod-${Math.random()}`, type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A' as any,
-        data: { id: 'c', definitionId, stationName: 'S', stationCode: '', items: {}, comment: '' },
+        data: { id: 'c', definitionId, stationName: 'S', stationCode: '', occurrences: [], comment: '' },
     });
 
     it('compte les modules déjà déployés pour cette définition, ignore les autres définitions', () => {

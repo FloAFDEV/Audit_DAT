@@ -320,24 +320,39 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     break;
                 }
                 case AuditModuleType.CUSTOM: {
-                    // Audit configurable (Partie 2) : les références sont
-                    // scopées à CETTE définition (scope.definitionId) — le
-                    // filtre par définition est appliqué ICI, en plus du
-                    // scope générique, sans jamais modifier
-                    // resolveReferencesForEquipment (qui reste scope-only,
-                    // réutilisé tel quel pour DAT/PR/ECA/CUSTOM).
+                    // Audit configurable (Partie 2) : contrairement à
+                    // DAT/PR/ECA (un slot structurel par référence, cf.
+                    // pushImplantations/R10), un audit configurable n'a
+                    // AUCUN nombre d'emplacements présupposé par référence —
+                    // c'est justement ce que le relevé terrain découvre. Une
+                    // implantation = UNE occurrence réellement recensée, pas
+                    // une référence résolvable. Les références sont
+                    // scopées à CETTE définition (scope.definitionId).
                     const data = module.data as CustomAuditData;
-                    const refs = resolveReferencesForEquipment(references, 'CUSTOM')
-                        .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === data.definitionId);
-                    const statuses: { [key: string]: AdhesiveStatus } = {};
-                    for (const [refId, item] of Object.entries(data.items ?? {})) statuses[refId] = item.status;
-                    pushImplantations(refs, statuses, {
-                        lieuId: lieu.id, lieuName: lieu.name,
-                        line: module.line || '?',
-                        moduleId: module.id, moduleName: module.name,
-                        context: data.stationName,
-                        equipmentLabel: module.name,
-                    });
+                    const refIds = new Set(
+                        resolveReferencesForEquipment(references, 'CUSTOM')
+                            .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === data.definitionId)
+                            .map(ref => ref.id)
+                    );
+                    for (const occ of data.occurrences ?? []) {
+                        // Référence depuis archivée/désactivée : plus résolvable,
+                        // disparaît du patrimoine (même règle que le reste de ce
+                        // fichier) — l'occurrence elle-même reste intacte dans
+                        // CustomAuditData (aucune suppression).
+                        if (!refIds.has(occ.referenceId)) continue;
+                        // Non applicable = non installé à cet emplacement (même
+                        // convention que pushImplantations ci-dessus).
+                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
+                        implantations.push({
+                            lieuId: lieu.id, lieuName: lieu.name,
+                            line: module.line || '?',
+                            moduleId: module.id, moduleName: module.name,
+                            context: occ.location || data.stationName,
+                            equipmentLabel: module.name,
+                            referenceId: occ.referenceId,
+                            status: occ.status,
+                        });
+                    }
                     break;
                 }
                 // PMR sol / pictos / signalétique : hors patrimoine référencé (cf. en-tête).

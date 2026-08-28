@@ -16,7 +16,7 @@ import { describe, it, expect } from 'vitest';
 import { computeAdhesiveInventory } from '../hooks/useStats';
 import { generateInitialLieuxDataAsync } from '../data/builder';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
-import { AuditDefinition, AuditModuleType, AdhesiveStatus, Lieu } from '../types';
+import { AuditDefinition, AuditModuleType, AdhesiveStatus, Lieu, CustomAuditOccurrence } from '../types';
 
 describe('Nomenclature — caractérisation (non-régression signageReferences)', () => {
     it('produit EXACTEMENT le même contenu et les mêmes quantités qu\'avant la migration (snapshot gelé)', async () => {
@@ -101,14 +101,18 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         { id: 'pdq-4', name: 'Repère 4 - 80x120', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-pdq' }, version: 1, support: 'pvc' as const, material: 'Plastification', dimensions: { width: 80, height: 120, unit: 'cm' as const }, placement: {} },
     ];
 
-    const customStation = (id: string, items: Record<string, AdhesiveStatus>): Lieu => ({
+    let occCounter = 0;
+    const occ = (referenceId: string, status: AdhesiveStatus): CustomAuditOccurrence => ({
+        id: `occ-${++occCounter}`, referenceId, status, constatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    const customStation = (id: string, occurrences: CustomAuditOccurrence[]): Lieu => ({
         id, name: `Station ${id}`,
         modules: [{
             id: `mod-${id}`, type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
             data: {
                 id: `c-${id}`, definitionId: 'def-pdq', stationName: `Station ${id}`, stationCode: '',
-                items: Object.fromEntries(Object.entries(items).map(([k, v]) => [k, { status: v }])),
-                comment: '',
+                occurrences, comment: '',
             },
         }],
     });
@@ -126,37 +130,65 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         expect(r1.material).toBe('Adhésif');
     });
 
-    it('R10 : un module fraîchement propagé (items: {}) compte immédiatement une implantation Non contrôlée par référence résolvable — même convention que DAT/PR/ECA (bug réel trouvé en vérification navigateur, corrigé ici)', async () => {
+    // Quantité RECENSÉE = nombre d'OBJETS PHYSIQUES suivis (occurrences),
+    // pas une notion de « posé »/« conforme » — exigence explicite de
+    // l'utilisateur (un objet constaté Absent lors du dernier passage
+    // reste un élément du patrimoine suivi, il continue de compter). Une
+    // station sans AUCUNE occurrence (fraîchement propagée, ou vérifiée
+    // sans rien trouver) ne compte donc rien — il n'y a simplement rien à
+    // recenser, ce n'est pas une exclusion par statut.
+    it('un module fraîchement propagé (occurrences: [], aucun objet recensé) ne compte AUCUNE quantité', async () => {
         const freshlyPropagated: Lieu = {
             id: 's-fresh', name: 'Station Fraîche',
             modules: [{
                 id: 'mod-fresh', type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
-                data: { id: 'c-fresh', definitionId: 'def-pdq', stationName: 'Station Fraîche', stationCode: '', items: {}, comment: '' },
+                data: { id: 'c-fresh', definitionId: 'def-pdq', stationName: 'Station Fraîche', stationCode: '', occurrences: [], comment: '' },
             }],
         };
         const inventory = computeAdhesiveInventory([freshlyPropagated], [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
 
-        // Les 4 variantes sont résolvables pour cette définition → 4 implantations
-        // "Non contrôlé", même si items est vide (aucune saisie terrain pour l'instant).
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(0);
+    });
+
+    it('un objet recensé mais jamais constaté (statut encore Non contrôlé) compte quand même — il a été vu et ajouté au patrimoine', async () => {
+        const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.NotChecked)])];
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
+    });
+
+    it('Absent compte AUSSI dans la quantité recensée — un objet constaté disparu reste un élément du patrimoine suivi, pas exclu du compte', async () => {
+        const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.Absent), occ('pdq-2', AdhesiveStatus.OK), occ('pdq-3', AdhesiveStatus.ToBeReplaced)])];
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(1);
         expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(1);
+    });
+
+    it('plusieurs occurrences de la même référence sur la même station comptent chacune séparément', async () => {
+        const lieux = [customStation('jean-jaures', [
+            occ('pdq-1', AdhesiveStatus.OK), occ('pdq-1', AdhesiveStatus.OK), occ('pdq-4', AdhesiveStatus.ToBeReplaced),
+        ])];
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(2);
         expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(1);
     });
 
-    it('quantité calculée depuis les audits réels — 42 stations avec la variante 1 → quantité 42, jamais saisie', async () => {
-        const lieux: Lieu[] = Array.from({ length: 42 }, (_, i) => customStation(`s${i}`, { 'pdq-1': AdhesiveStatus.OK, 'pdq-2': AdhesiveStatus.NotApplicable, 'pdq-3': AdhesiveStatus.NotApplicable, 'pdq-4': AdhesiveStatus.NotApplicable }));
+    it('quantité calculée depuis les audits réels — 42 stations avec un objet de la variante 1 → quantité 42, jamais saisie', async () => {
+        const lieux: Lieu[] = Array.from({ length: 42 }, (_, i) => customStation(`s${i}`, [occ('pdq-1', AdhesiveStatus.OK)]));
         const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
 
         expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(42);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(0);
     });
 
-    it('NotApplicable n\'est jamais compté comme posé — agrégation correcte sur plusieurs stations avec des variantes différentes', async () => {
+    it('NotApplicable n\'est jamais compté — agrégation correcte sur plusieurs stations avec des variantes différentes', async () => {
         const lieux: Lieu[] = [
-            customStation('s1', { 'pdq-1': AdhesiveStatus.OK, 'pdq-3': AdhesiveStatus.NotApplicable }),
-            customStation('s2', { 'pdq-3': AdhesiveStatus.OK, 'pdq-1': AdhesiveStatus.NotApplicable }),
-            customStation('s3', { 'pdq-1': AdhesiveStatus.ToBeReplaced, 'pdq-3': AdhesiveStatus.NotApplicable }),
+            customStation('s1', [occ('pdq-1', AdhesiveStatus.OK), occ('pdq-3', AdhesiveStatus.NotApplicable)]),
+            customStation('s2', [occ('pdq-3', AdhesiveStatus.OK), occ('pdq-1', AdhesiveStatus.NotApplicable)]),
+            customStation('s3', [occ('pdq-1', AdhesiveStatus.ToBeReplaced), occ('pdq-3', AdhesiveStatus.NotApplicable)]),
         ];
         const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
 
@@ -166,7 +198,7 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
 
     it('une référence CUSTOM archivée disparaît de la Nomenclature courante', async () => {
         const references = [...buildSignageReferencesSeed(), ...PDQ_REFS.map(r => r.id === 'pdq-2' ? { ...r, archivedAt: '2026-01-01T00:00:00.000Z' } : r)];
-        const lieux = [customStation('s1', { 'pdq-2': AdhesiveStatus.OK })];
+        const lieux = [customStation('s1', [occ('pdq-2', AdhesiveStatus.OK)])];
         const inventory = computeAdhesiveInventory(lieux, references, [DEF]);
 
         expect(inventory.some(i => i.id === 'pdq-2')).toBe(false);
@@ -174,16 +206,16 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
 
     it('une définition archivée disparaît de la Nomenclature — les modules déjà matérialisés restent inchangés', async () => {
         const archivedDef: AuditDefinition = { ...DEF, archivedAt: '2026-01-01T00:00:00.000Z' };
-        const lieux = [customStation('s1', { 'pdq-1': AdhesiveStatus.OK })];
+        const lieux = [customStation('s1', [occ('pdq-1', AdhesiveStatus.OK)])];
         const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [archivedDef]);
 
         expect(inventory.some(i => i.auditType === 'Plans de quartier')).toBe(false);
         // Les données du module lui-même ne sont jamais touchées par ce calcul (lecture seule).
-        expect((lieux[0].modules[0].data as any).items['pdq-1'].status).toBe(AdhesiveStatus.OK);
+        expect((lieux[0].modules[0].data as any).occurrences[0].status).toBe(AdhesiveStatus.OK);
     });
 
     it('un module CUSTOM sans référence connue ne plante pas (definitionId inconnu)', async () => {
-        const orphanStation = customStation('orphan', { 'ref-inconnue': AdhesiveStatus.OK });
+        const orphanStation = customStation('orphan', [occ('ref-inconnue', AdhesiveStatus.OK)]);
         (orphanStation.modules[0].data as any).definitionId = 'def-inexistante';
         expect(() => computeAdhesiveInventory([orphanStation], buildSignageReferencesSeed(), [DEF])).not.toThrow();
     });

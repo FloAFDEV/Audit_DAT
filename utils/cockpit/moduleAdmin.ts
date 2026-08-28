@@ -244,20 +244,20 @@ export const createBlankSignaletiqueModule = (stationName: string, line: 'TRAM' 
     };
 };
 
-/** Audit configurable (Partie 2) — module CUSTOM : `items: {}` (vide,
- *  jamais pré-rempli — même convention R10 que DAT.adhesives, une clé
- *  n'existe que lorsqu'un statut a réellement été saisi). Aucune donnée
- *  physique (dimensions/matière) ici : uniquement le lien vers la
- *  définition. `name` est dénormalisé au nom de la définition AU MOMENT
- *  de l'attache (même convention que tous les autres constructeurs
- *  ci-dessus) — un renommage ultérieur de la définition ne renomme pas
- *  rétroactivement les modules déjà posés. */
+/** Audit configurable (Partie 2) — module CUSTOM : `occurrences: []`
+ *  (vide, jamais pré-rempli — un objet n'existe que lorsqu'il a
+ *  réellement été recensé sur le terrain), `lastCheckedAt` absent (pas
+ *  encore vérifié). Aucune donnée physique (dimensions/matière) ici :
+ *  uniquement le lien vers la définition. `name` est dénormalisé au nom
+ *  de la définition AU MOMENT de l'attache (même convention que tous les
+ *  autres constructeurs ci-dessus) — un renommage ultérieur de la
+ *  définition ne renomme pas rétroactivement les modules déjà posés. */
 export const createBlankCustomModule = (
     stationName: string, line: ModuleLine, definitionId: string, definitionName: string,
 ): AuditModule => {
     assertNonEmpty(stationName, 'Le nom de la station');
     const data: CustomAuditData = {
-        id: uuidv4(), definitionId, stationName, stationCode: '', items: {}, comment: '',
+        id: uuidv4(), definitionId, stationName, stationCode: '', occurrences: [], comment: '',
     };
     return {
         id: uuidv4(),
@@ -322,7 +322,11 @@ export const isModuleBlank = (module: AuditModule): boolean => {
         }
         case AuditModuleType.CUSTOM: {
             const data = module.data as CustomAuditData;
-            return !data.comment && Object.keys(data.items ?? {}).length === 0;
+            // Un module « vérifié, rien trouvé » (lastCheckedAt posé, aucune
+            // occurrence) EST une donnée réelle — pas un état vide : jamais
+            // détachable silencieusement, même règle que pour un commentaire
+            // ou une occurrence.
+            return !data.comment && !data.lastCheckedAt && (data.occurrences ?? []).length === 0;
         }
         default:
             return false;

@@ -17,6 +17,7 @@ const EcaAdhesiveAuditForm = lazy(() => import('./EcaAdhesiveAuditForm'));
 const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision'));
 const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
 const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
+const CustomAuditForm = lazy(() => import('./CustomAuditForm'));
 const StatsPage = lazy(() => import('./StatsPage'));
 
 
@@ -74,6 +75,18 @@ interface AppRouterProps {
     handlePmrFloorAdhesivePhotoNoteChange: any;
     handlePmrFloorAdhesivePhotoRotationChange: any;
     handleResetPmrFloorAdhesiveRequest: any;
+    handleAddCustomAuditOccurrence: any;
+    handleRemoveCustomAuditOccurrence: any;
+    handleCustomAuditOccurrenceStatusChange: any;
+    handleCustomAuditOccurrenceCommentChange: any;
+    handleCustomAuditOccurrenceLocationChange: any;
+    handleCustomAuditNewConstat: any;
+    handleCustomAuditPhotoChange: any;
+    handleCustomAuditPhotoNoteChange: any;
+    handleCustomAuditPhotoRotationChange: any;
+    handleCustomAuditMarkChecked: any;
+    handleCustomAuditCommentChange: any;
+    handleResetCustomAuditRequest: any;
 
     handleCognitivePictogramStatusChange: any;
     handleCognitivePictogramCommentChange: any;
@@ -196,6 +209,27 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onPhotoNoteChange={handlers.handlePmrFloorAdhesivePhotoNoteChange}
             onPhotoRotationChange={handlers.handlePmrFloorAdhesivePhotoRotationChange}
             onReset={handlers.handleResetPmrFloorAdhesiveRequest}
+            onBack={() => handlers.selectModule(null)}
+        />
+    }
+
+    // Custom Audit Form (Partie 2 — recensement patrimonial dans le temps)
+    if (selectedModule?.type === AuditModuleType.CUSTOM) {
+        return <CustomAuditForm
+            module={selectedModule}
+            signageReferences={signageReferences}
+            onAddOccurrence={handlers.handleAddCustomAuditOccurrence}
+            onRemoveOccurrence={handlers.handleRemoveCustomAuditOccurrence}
+            onStatusChange={handlers.handleCustomAuditOccurrenceStatusChange}
+            onOccurrenceCommentChange={handlers.handleCustomAuditOccurrenceCommentChange}
+            onLocationChange={handlers.handleCustomAuditOccurrenceLocationChange}
+            onNewConstat={handlers.handleCustomAuditNewConstat}
+            onPhotoChange={handlers.handleCustomAuditPhotoChange}
+            onPhotoNoteChange={handlers.handleCustomAuditPhotoNoteChange}
+            onPhotoRotationChange={handlers.handleCustomAuditPhotoRotationChange}
+            onMarkChecked={handlers.handleCustomAuditMarkChecked}
+            onCommentChange={handlers.handleCustomAuditCommentChange}
+            onReset={handlers.handleResetCustomAuditRequest}
             onBack={() => handlers.selectModule(null)}
         />
     }
