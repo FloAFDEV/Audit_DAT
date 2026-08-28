@@ -27,8 +27,13 @@ interface PendingExport {
 const hasPhotos = (lieux: Lieu[]): boolean => {
     return lieux.some(lieu =>
         lieu.modules.some(module =>
-            module.type === AuditModuleType.PMR_FLOOR_ADHESIVE &&
-            (module.data as any).adhesives.some((a: any) => a.photo_base64)
+            (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE &&
+                (module.data as any).adhesives.some((a: any) => a.photo_base64)) ||
+            // Audits configurables (Partie 2) : mêmes photos terrain que PMR
+            // au sol, même risque de perte si seul le CSV (sans photos) est
+            // exporté — même rappel, pas un nouveau mécanisme.
+            (module.type === AuditModuleType.CUSTOM &&
+                Object.values((module.data as any).items ?? {}).some((item: any) => item.photo_base64))
         )
     );
 };
@@ -243,6 +248,12 @@ export const useAppHandlers = () => {
             handleResetPmrFloorAdhesiveRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Adhésifs Sol PMR', selectedModule?.data, store.handleResetPmrFloorAdhesive),
             handleResetCognitivePictogramRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Pictogrammes', selectedModule?.data, store.handleResetCognitivePictogram),
             handleResetSignaletiqueRequest: (station: Station | null | undefined) => createResetHandler('Signalétique', station, store.handleResetSignaletique),
+            handleResetCustomAuditRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Audit configurable', selectedModule?.data, store.handleResetCustomAudit),
+            handleCustomAuditStatusChange: store.handleCustomAuditStatusChange,
+            handleCustomAuditCommentChange: store.handleCustomAuditCommentChange,
+            handleCustomAuditPhotoChange: store.handleCustomAuditPhotoChange,
+            handleCustomAuditPhotoNoteChange: store.handleCustomAuditPhotoNoteChange,
+            handleCustomAuditPhotoRotationChange: store.handleCustomAuditPhotoRotationChange,
             handleSignaletiqueStatusChange: store.handleSignaletiqueStatusChange,
             handleSignaletiqueCommentChange: store.handleSignaletiqueCommentChange,
             handleSignaletiquePhotoChange: store.handleSignaletiquePhotoChange,

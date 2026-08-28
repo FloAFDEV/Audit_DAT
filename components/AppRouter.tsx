@@ -17,6 +17,7 @@ const EcaAdhesiveAuditForm = lazy(() => import('./EcaAdhesiveAuditForm'));
 const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision'));
 const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
 const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
+const CustomAuditForm = lazy(() => import('./CustomAuditForm'));
 const StatsPage = lazy(() => import('./StatsPage'));
 
 
@@ -74,6 +75,12 @@ interface AppRouterProps {
     handlePmrFloorAdhesivePhotoNoteChange: any;
     handlePmrFloorAdhesivePhotoRotationChange: any;
     handleResetPmrFloorAdhesiveRequest: any;
+    handleCustomAuditStatusChange: any;
+    handleCustomAuditCommentChange: any;
+    handleCustomAuditPhotoChange: any;
+    handleCustomAuditPhotoNoteChange: any;
+    handleCustomAuditPhotoRotationChange: any;
+    handleResetCustomAuditRequest: any;
 
     handleCognitivePictogramStatusChange: any;
     handleCognitivePictogramCommentChange: any;
@@ -196,6 +203,21 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onPhotoNoteChange={handlers.handlePmrFloorAdhesivePhotoNoteChange}
             onPhotoRotationChange={handlers.handlePmrFloorAdhesivePhotoRotationChange}
             onReset={handlers.handleResetPmrFloorAdhesiveRequest}
+            onBack={() => handlers.selectModule(null)}
+        />
+    }
+
+    // Custom Audit Form (Partie 2 — audits configurables)
+    if (selectedModule?.type === AuditModuleType.CUSTOM) {
+        return <CustomAuditForm
+            module={selectedModule}
+            signageReferences={signageReferences}
+            onStatusChange={handlers.handleCustomAuditStatusChange}
+            onCommentChange={handlers.handleCustomAuditCommentChange}
+            onPhotoChange={handlers.handleCustomAuditPhotoChange}
+            onPhotoNoteChange={handlers.handleCustomAuditPhotoNoteChange}
+            onPhotoRotationChange={handlers.handleCustomAuditPhotoRotationChange}
+            onReset={handlers.handleResetCustomAuditRequest}
             onBack={() => handlers.selectModule(null)}
         />
     }

@@ -126,7 +126,18 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         expect(r1.material).toBe('Adhésif');
     });
 
-    it('R10 : un module fraîchement propagé (items: {}) compte immédiatement une implantation Non contrôlée par référence résolvable — même convention que DAT/PR/ECA (bug réel trouvé en vérification navigateur, corrigé ici)', async () => {
+    // NB : contrairement à buildPatrimoineIndex (qui compte une implantation
+    // "Non contrôlée" pour toute référence résolvable, même jamais relevée —
+    // convention R10, légitime pour le suivi de couverture/anomalies), la
+    // quantité de CETTE table (Inventaire Détaillé / Nomenclature) répond à
+    // une question différente : « combien d'exemplaires existent RÉELLEMENT
+    // sur le réseau », pour préparer une commande prestataire fiable. Un
+    // module fraîchement propagé (items: {}, aucun relevé terrain saisi) ne
+    // doit donc PAS gonfler cette quantité — un bug antérieur comptait ici
+    // aussi "Non contrôlé" comme posé (18 stations déployées → quantité 18,
+    // même sans aucun relevé réel), détecté lors du parcours navigateur de
+    // bout en bout de la saisie terrain.
+    it('un module fraîchement propagé (items: {}, aucun relevé) ne compte AUCUNE quantité — Non contrôlé ≠ posé', async () => {
         const freshlyPropagated: Lieu = {
             id: 's-fresh', name: 'Station Fraîche',
             modules: [{
@@ -136,12 +147,27 @@ describe('Nomenclature — audits configurables (CUSTOM)', () => {
         };
         const inventory = computeAdhesiveInventory([freshlyPropagated], [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
 
-        // Les 4 variantes sont résolvables pour cette définition → 4 implantations
-        // "Non contrôlé", même si items est vide (aucune saisie terrain pour l'instant).
-        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(1);
+        // Les 4 variantes restent bien 4 lignes distinctes (résolubles pour
+        // cette définition) mais leur quantité reste à 0 tant qu'aucun
+        // relevé terrain n'a confirmé leur présence.
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(0);
+        expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(0);
+    });
+
+    it('un statut Non contrôlé explicitement stocké (clé présente, jamais togglée depuis) ne compte pas non plus', async () => {
+        const lieux = [customStation('s1', { 'pdq-1': AdhesiveStatus.NotChecked })];
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(0);
+    });
+
+    it('Absent (constaté non présent) ne compte pas dans la quantité, contrairement à OK et À remplacer', async () => {
+        const lieux = [customStation('s1', { 'pdq-1': AdhesiveStatus.Absent, 'pdq-2': AdhesiveStatus.OK, 'pdq-3': AdhesiveStatus.ToBeReplaced })];
+        const inventory = computeAdhesiveInventory(lieux, [...buildSignageReferencesSeed(), ...PDQ_REFS], [DEF]);
+        expect(inventory.find(i => i.id === 'pdq-1')!.quantity).toBe(0);
         expect(inventory.find(i => i.id === 'pdq-2')!.quantity).toBe(1);
         expect(inventory.find(i => i.id === 'pdq-3')!.quantity).toBe(1);
-        expect(inventory.find(i => i.id === 'pdq-4')!.quantity).toBe(1);
     });
 
     it('quantité calculée depuis les audits réels — 42 stations avec la variante 1 → quantité 42, jamais saisie', async () => {

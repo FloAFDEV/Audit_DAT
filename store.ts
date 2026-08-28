@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition, CustomAuditData
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -18,6 +18,7 @@ import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './
 import { logEvent } from './utils/eventLog';
 import { createStation, withStationRenamed, withStationArchived, withStationRestored } from './utils/cockpit/stationAdmin';
 import { computeMissingLieuIds, computeDeployedCount } from './utils/cockpit/auditDefinitionAdmin';
+import { getCustomAuditProgress } from './utils/effectiveAdhesives';
 import {
     AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
     createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
@@ -153,6 +154,14 @@ interface AppState {
     handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
     handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
     handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
+
+    // Custom Audit Actions (Partie 2 — saisie terrain des audits configurables)
+    handleCustomAuditStatusChange: (referenceId: string, status: AdhesiveStatus) => Promise<void>;
+    handleCustomAuditCommentChange: (comment: string) => Promise<void>;
+    handleResetCustomAudit: () => Promise<void>;
+    handleCustomAuditPhotoChange: (referenceId: string, photo_base64: string | null) => Promise<void>;
+    handleCustomAuditPhotoNoteChange: (referenceId: string, note: string) => Promise<void>;
+    handleCustomAuditPhotoRotationChange: (referenceId: string, rotation: number) => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -1380,6 +1389,112 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) adhesive.photo_rotation = rotation;
+        });
+    },
+
+    // -----------------------------------------------------------------
+    // Custom Audit (Partie 2) — saisie terrain d'un module CUSTOM.
+    // `items` est un dictionnaire creux (clé absente = non contrôlé,
+    // jamais pré-rempli, cf. types.ts) : contrairement à DAT/PMR, une
+    // référence peut n'avoir AUCUNE entrée tant qu'elle n'a jamais été
+    // touchée — chaque écriture ci-dessous doit donc créer l'entrée si
+    // absente plutôt que supposer un .find() sur un tableau pré-rempli.
+    // La complétude (isComplete/completionDate) est calculée contre
+    // getCustomAuditProgress (signageReferences réellement actives pour
+    // cette définition), jamais contre Object.keys(items) seul : un
+    // items sparse ne doit jamais paraître complet simplement parce que
+    // les quelques clés déjà présentes sont toutes cochées (même classe
+    // de bug que la progression affichée dans le formulaire).
+    // -----------------------------------------------------------------
+    handleCustomAuditStatusChange: async (referenceId, status) => {
+        const { selectedModuleId, signageReferences } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (!module) return;
+            module.data.items[referenceId] = { ...module.data.items[referenceId], status };
+            // Même fonction que CustomAuditForm.tsx (getCustomAuditProgress) :
+            // la complétude persistée ne doit jamais diverger de la
+            // progression affichée à l'écran.
+            const isComplete = getCustomAuditProgress(signageReferences, module.data.definitionId, module.data.items) === 100;
+            if (isComplete && !module.data.completionDate) module.data.completionDate = new Date().toISOString();
+            else if (!isComplete && module.data.completionDate) delete module.data.completionDate;
+        });
+    },
+
+    handleCustomAuditCommentChange: async (comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (module) module.data.comment = comment;
+        });
+    },
+
+    handleResetCustomAudit: async () => {
+        const { selectedLieuId, selectedModuleId, lieux } = get();
+        if (!selectedLieuId || !selectedModuleId) return;
+
+        const newLieux = JSON.parse(JSON.stringify(lieux));
+        const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
+        if (!lieuToUpdate) return;
+        const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
+        if (!moduleToUpdate) return;
+
+        // Instantané AVANT la mutation, écrit en base seulement APRÈS
+        // confirmation de la persistance — même règle que
+        // handleResetPmrFloorAdhesive (Lot 2, ne jamais archiver un reset
+        // qui n'a pas réellement eu lieu).
+        const snapshotBeforeReset = JSON.parse(JSON.stringify(moduleToUpdate));
+
+        const currentData = moduleToUpdate.data as CustomAuditData;
+        currentData.items = {};
+        currentData.comment = '';
+        delete currentData.completionDate;
+
+        await db.lieux.put(lieuToUpdate);
+        set({ lieux: newLieux });
+
+        await saveHistoryEntry(
+            `${moduleToUpdate.name} - ${lieuToUpdate.name}`,
+            'SINGLE_AUDIT',
+            snapshotBeforeReset,
+            undefined
+        );
+        await logEvent({
+            type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToUpdate.id, entityLabel: lieuToUpdate.name,
+            summary: `${moduleToUpdate.name} réinitialisé — ${lieuToUpdate.name}`,
+        });
+    },
+
+    handleCustomAuditPhotoChange: async (referenceId, photo_base64) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            if (!module) return;
+            const existing = module.data.items[referenceId] ?? { status: AdhesiveStatus.NotChecked };
+            if (photo_base64) {
+                module.data.items[referenceId] = { ...existing, photo_base64 };
+            } else {
+                const { photo_base64: _p, photo_note: _n, photo_rotation: _r, ...rest } = existing;
+                module.data.items[referenceId] = rest;
+            }
+        });
+    },
+
+    handleCustomAuditPhotoNoteChange: async (referenceId, note) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const item = module?.data.items[referenceId];
+            if (item) item.photo_note = note;
+        });
+    },
+
+    handleCustomAuditPhotoRotationChange: async (referenceId, rotation) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
+            const item = module?.data.items[referenceId];
+            if (item) item.photo_rotation = rotation;
         });
     },
 

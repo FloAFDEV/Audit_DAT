@@ -25,7 +25,7 @@
 // du patrimoine (resolveReferencesForEquipment), aucune logique de
 // scope dupliquée ici.
 // =================================================================
-import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType } from '../types';
+import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType, AdhesiveStatus } from '../types';
 import {
     ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives as getLegacyEquipmentAdhesives,
 } from '../data/adhesives';
@@ -193,4 +193,44 @@ export const getEffectiveEquipmentAdhesives = (
         .filter(ref => !historicalIds.has(ref.id))
         .map(additionToPrAdhesive);
     return [...historical, ...additions];
+};
+
+// -----------------------------------------------------------------
+// Audit configurable (Partie 2) — pas de catalogue historique : une
+// référence CUSTOM n'existe QUE dans signageReferences (jamais
+// data/adhesives.ts), donc pas de fusion historique+additions à faire
+// comme ci-dessus pour DAT/ECA/P+R.
+// -----------------------------------------------------------------
+
+/** Toutes les références actives d'UNE définition (scope.auditType ===
+ *  'CUSTOM' && scope.definitionId), déjà filtrées par
+ *  resolveReferencesForEquipment (archivées/désactivées exclues) — juste
+ *  le filtre générique déjà partagé par le reste du référentiel. */
+export const getEffectiveCustomReferences = (
+    references: SignageReference[],
+    definitionId: string,
+): SignageReference[] =>
+    resolveReferencesForEquipment(references, 'CUSTOM')
+        .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === definitionId);
+
+/** Progression d'un module CUSTOM — même règle que AdhesiveAuditForm/
+ *  PnrAdhesiveAuditForm (utils partagé ici pour rester testable sans
+ *  harnais de rendu, cf. tests/customAuditTerrain.test.ts) : ne compte
+ *  que les références ACTUELLEMENT effectives. Une clé de `items` dont la
+ *  référence a depuis été archivée ne doit jamais gonfler la progression ;
+ *  une référence effective jamais touchée (absente de `items`) compte
+ *  comme non contrôlée, jamais comme acquise. */
+export const getCustomAuditProgress = (
+    references: SignageReference[],
+    definitionId: string,
+    items: { [referenceId: string]: { status: AdhesiveStatus } },
+): number => {
+    const effective = getEffectiveCustomReferences(references, definitionId);
+    const total = effective.length;
+    if (total === 0) return 0;
+    const checked = effective.filter(ref => {
+        const item = items[ref.id];
+        return !!item && item.status !== AdhesiveStatus.NotChecked;
+    }).length;
+    return (checked / total) * 100;
 };

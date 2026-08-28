@@ -226,6 +226,12 @@ const App: React.FC = () => {
                         handleResetPmrFloorAdhesiveRequest={() => handlers.handleResetPmrFloorAdhesiveRequest(selectedModule)}
                         handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
                         handleResetSignaletiqueRequest={() => handlers.handleResetSignaletiqueRequest(selectedStation)}
+                        handleResetCustomAuditRequest={() => handlers.handleResetCustomAuditRequest(selectedModule)}
+                        handleCustomAuditStatusChange={handlers.handleCustomAuditStatusChange}
+                        handleCustomAuditCommentChange={handlers.handleCustomAuditCommentChange}
+                        handleCustomAuditPhotoChange={handlers.handleCustomAuditPhotoChange}
+                        handleCustomAuditPhotoNoteChange={handlers.handleCustomAuditPhotoNoteChange}
+                        handleCustomAuditPhotoRotationChange={handlers.handleCustomAuditPhotoRotationChange}
                         handleSignaletiqueStatusChange={handlers.handleSignaletiqueStatusChange}
                         handleSignaletiqueCommentChange={handlers.handleSignaletiqueCommentChange}
                         handleSignaletiquePhotoChange={handlers.handleSignaletiquePhotoChange}
