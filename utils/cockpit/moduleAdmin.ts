@@ -50,7 +50,10 @@ export const ATTACHABLE_MODULE_LINES: Record<AttachableModuleType, ModuleLine[]>
     // builder.ts : allStationsForPmr = LIGNE A + B + C uniquement.
     PMR_FLOOR_ADHESIVE: ['A', 'B', 'C'],
     // builder.ts : généré uniquement pour LINE_A_STATIONS et LINE_B_STATIONS.
-    COGNITIVE_PICTOGRAMS: ['A', 'B'],
+    // 'C' ajoutée pour les stations créées via l'Admin (nouvelles lignes/
+    // extensions n'existant pas dans le générateur historique) : les
+    // pictogrammes cognitifs y sont attendus au même titre qu'A/B.
+    COGNITIVE_PICTOGRAMS: ['A', 'B', 'C'],
     // builder.ts : createSignaletiqueModule appelé uniquement pour TRAM_STATIONS et AEROPORT_EXPRESS_STATIONS.
     SIGNALETIQUE: ['TRAM', 'AEROPORT'],
     // Audit configurable (Partie 2) : aucun registre historique équivalent —
