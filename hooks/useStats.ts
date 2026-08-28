@@ -410,30 +410,31 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.CUSTOM && referencesReady) {
-                    // Quantité = relevés RÉELLEMENT saisis, jamais un nombre de
-                    // stations ni une constante (exigence explicite : ces
-                    // quantités doivent pouvoir préparer une commande
-                    // prestataire fiable). Contrairement à DAT/PR/ECA
-                    // ci-dessus (comptage STRUCTUREL : un équipement physique
-                    // porte par construction tous ses adhésifs effectifs), un
-                    // audit configurable ne présume RIEN sur ce qu'une
-                    // station porte réellement — c'est précisément ce que le
-                    // relevé terrain découvre. Seul un statut affirmativement
-                    // constaté PRÉSENT compte donc ici : OK (conforme) ou
-                    // À remplacer (présent mais dégradé — compte quand même,
-                    // c'est justement ce qui doit être recommandé). Absent
-                    // (constaté non présent), Non applicable (variante non
-                    // concernée) et Non contrôlé/clé absente (jamais relevé,
-                    // donc jamais confirmé) ne comptent jamais.
+                    // Quantité RECENSÉE = nombre d'objets physiques réellement
+                    // suivis (occurrences) pour cette référence — PAS une
+                    // notion de « posé »/« conforme ». Un objet constaté
+                    // Absent lors du dernier passage reste un élément du
+                    // patrimoine suivi (son historique, son emplacement, son
+                    // format restent exploitables) : il continue de compter
+                    // ici. Contrairement à DAT/PR/ECA ci-dessus (comptage
+                    // STRUCTUREL : un équipement physique porte par
+                    // construction tous ses adhésifs effectifs), un audit
+                    // configurable ne présume RIEN sur ce qu'une station
+                    // porte — c'est justement ce que le relevé terrain
+                    // découvre : la quantité est donc le nombre d'occurrences
+                    // réellement recensées, ni plus ni moins. Seul un statut
+                    // Non applicable (variante non concernée) exclut
+                    // l'occurrence, par cohérence avec le reste du fichier.
                     const data = module.data as CustomAuditData;
-                    const defRefs = references.filter(
-                        r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === data.definitionId && !r.archivedAt
+                    const defRefIds = new Set(
+                        references
+                            .filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === data.definitionId && !r.archivedAt)
+                            .map(r => r.id)
                     );
-                    for (const ref of defRefs) {
-                        const status = data.items?.[ref.id]?.status;
-                        if (status === AdhesiveStatus.OK || status === AdhesiveStatus.ToBeReplaced) {
-                            addQty(ref.id, 1);
-                        }
+                    for (const occ of data.occurrences ?? []) {
+                        if (!defRefIds.has(occ.referenceId)) continue; // référence depuis archivée : sort de l'inventaire courant
+                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
+                        addQty(occ.referenceId, 1);
                     }
                 }
 

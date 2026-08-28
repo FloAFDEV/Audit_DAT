@@ -25,7 +25,7 @@
 // du patrimoine (resolveReferencesForEquipment), aucune logique de
 // scope dupliquée ici.
 // =================================================================
-import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType, AdhesiveStatus } from '../types';
+import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType } from '../types';
 import {
     ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives as getLegacyEquipmentAdhesives,
 } from '../data/adhesives';
@@ -213,24 +213,16 @@ export const getEffectiveCustomReferences = (
     resolveReferencesForEquipment(references, 'CUSTOM')
         .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === definitionId);
 
-/** Progression d'un module CUSTOM — même règle que AdhesiveAuditForm/
- *  PnrAdhesiveAuditForm (utils partagé ici pour rester testable sans
- *  harnais de rendu, cf. tests/customAuditTerrain.test.ts) : ne compte
- *  que les références ACTUELLEMENT effectives. Une clé de `items` dont la
- *  référence a depuis été archivée ne doit jamais gonfler la progression ;
- *  une référence effective jamais touchée (absente de `items`) compte
- *  comme non contrôlée, jamais comme acquise. */
+/** Progression (barre affichée) d'un module CUSTOM — un audit configurable
+ *  n'est pas une checklist à taille fixe (le nombre d'occurrences attendu
+ *  n'est jamais connu à l'avance, c'est justement ce que le relevé
+ *  terrain découvre), donc pas de pourcentage de couverture comme
+ *  DAT/PR/ECA. La seule question binaire pertinente est l'état de
+ *  vérification du MODULE lui-même : 100% si la station a été vérifiée
+ *  (au moins une occurrence recensée, ou explicitement marquée « aucun
+ *  objet trouvé » via lastCheckedAt), 0% si jamais vérifiée — même
+ *  distinction que CustomAuditData (cf. types.ts). Utils partagé ici
+ *  pour rester testable sans harnais de rendu (tests/customAuditTerrain.test.ts). */
 export const getCustomAuditProgress = (
-    references: SignageReference[],
-    definitionId: string,
-    items: { [referenceId: string]: { status: AdhesiveStatus } },
-): number => {
-    const effective = getEffectiveCustomReferences(references, definitionId);
-    const total = effective.length;
-    if (total === 0) return 0;
-    const checked = effective.filter(ref => {
-        const item = items[ref.id];
-        return !!item && item.status !== AdhesiveStatus.NotChecked;
-    }).length;
-    return (checked / total) * 100;
-};
+    data: { occurrences: { id: string }[]; lastCheckedAt?: string },
+): number => (data.occurrences.length > 0 || !!data.lastCheckedAt) ? 100 : 0;

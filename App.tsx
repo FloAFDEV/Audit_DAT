@@ -227,11 +227,17 @@ const App: React.FC = () => {
                         handleResetCognitivePictogramRequest={() => handlers.handleResetCognitivePictogramRequest(selectedModule)}
                         handleResetSignaletiqueRequest={() => handlers.handleResetSignaletiqueRequest(selectedStation)}
                         handleResetCustomAuditRequest={() => handlers.handleResetCustomAuditRequest(selectedModule)}
-                        handleCustomAuditStatusChange={handlers.handleCustomAuditStatusChange}
-                        handleCustomAuditCommentChange={handlers.handleCustomAuditCommentChange}
+                        handleAddCustomAuditOccurrence={handlers.handleAddCustomAuditOccurrence}
+                        handleRemoveCustomAuditOccurrence={handlers.handleRemoveCustomAuditOccurrence}
+                        handleCustomAuditOccurrenceStatusChange={handlers.handleCustomAuditOccurrenceStatusChange}
+                        handleCustomAuditOccurrenceCommentChange={handlers.handleCustomAuditOccurrenceCommentChange}
+                        handleCustomAuditOccurrenceLocationChange={handlers.handleCustomAuditOccurrenceLocationChange}
+                        handleCustomAuditNewConstat={handlers.handleCustomAuditNewConstat}
                         handleCustomAuditPhotoChange={handlers.handleCustomAuditPhotoChange}
                         handleCustomAuditPhotoNoteChange={handlers.handleCustomAuditPhotoNoteChange}
                         handleCustomAuditPhotoRotationChange={handlers.handleCustomAuditPhotoRotationChange}
+                        handleCustomAuditMarkChecked={handlers.handleCustomAuditMarkChecked}
+                        handleCustomAuditCommentChange={handlers.handleCustomAuditCommentChange}
                         handleSignaletiqueStatusChange={handlers.handleSignaletiqueStatusChange}
                         handleSignaletiqueCommentChange={handlers.handleSignaletiqueCommentChange}
                         handleSignaletiquePhotoChange={handlers.handleSignaletiquePhotoChange}

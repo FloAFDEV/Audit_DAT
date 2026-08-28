@@ -300,8 +300,8 @@ describe('detachModuleAdmin — détacher ≠ supprimer des données', () => {
 
         const created = await useAuditStore.getState().attachModuleAdmin(lieu.id, 'CUSTOM', 'A', undefined, { definitionId: 'def-pdq', definitionName: 'Plans de quartier' });
         let reloaded = (await db.lieux.get(lieu.id))!;
-        // Simule une saisie terrain réelle (statut sur une référence).
-        (reloaded.modules[0].data as any).items['ref-1'] = { status: AdhesiveStatus.OK };
+        // Simule un recensement terrain réel (une occurrence constatée).
+        (reloaded.modules[0].data as any).occurrences.push({ id: 'occ-1', referenceId: 'ref-1', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z' });
         await db.lieux.put(reloaded);
         useAuditStore.setState({ lieux: [reloaded] });
 

@@ -148,7 +148,7 @@ describe('withEquipmentScopeOverride — Lot 2d : ne touche JAMAIS equipment.adh
 });
 
 describe('createBlankCustomModule (Partie 2 — audits configurables)', () => {
-    it('produit un module CUSTOM minimal : items vide, aucune donnée physique', () => {
+    it('produit un module CUSTOM minimal : occurrences vide, jamais vérifié, aucune donnée physique', () => {
         const module = createBlankCustomModule('Nouvelle Station', 'A', 'def-pdq', 'Plans de quartier');
         expect(module.type).toBe(AuditModuleType.CUSTOM);
         expect(module.name).toBe('Plans de quartier'); // dénormalisé au nom de la définition à l'instant T
@@ -156,7 +156,8 @@ describe('createBlankCustomModule (Partie 2 — audits configurables)', () => {
         const data = module.data as CustomAuditData;
         expect(data.definitionId).toBe('def-pdq');
         expect(data.stationName).toBe('Nouvelle Station');
-        expect(data.items).toEqual({});
+        expect(data.occurrences).toEqual([]);
+        expect(data.lastCheckedAt).toBeUndefined();
     });
 
     it('rejette un nom de station vide', () => {
@@ -228,13 +229,16 @@ describe('isModuleBlank — règle du détachement (Partie 2) : jamais de perte 
         expect(isModuleBlank(touched)).toBe(false);
     });
 
-    it('CUSTOM : vide tant que items est vide et sans commentaire, non vide dès qu\'un statut est saisi', () => {
+    it('CUSTOM : vide tant qu\'aucune occurrence, aucun commentaire, jamais vérifié — non vide dès qu\'un de ces trois change', () => {
         const blank = createBlankCustomModule('S', 'A', 'def-pdq', 'X');
         expect(isModuleBlank(blank)).toBe(true);
         const data = blank.data as CustomAuditData;
-        const withStatus = { ...blank, data: { ...data, items: { 'ref-1': { status: AdhesiveStatus.OK } } } };
-        expect(isModuleBlank(withStatus)).toBe(false);
+        const withOccurrence = { ...blank, data: { ...data, occurrences: [{ id: 'occ-1', referenceId: 'ref-1', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z' }] } };
+        expect(isModuleBlank(withOccurrence)).toBe(false);
         const withComment = { ...blank, data: { ...data, comment: 'Vu' } };
         expect(isModuleBlank(withComment)).toBe(false);
+        // « Vérifié, rien trouvé » EST une donnée réelle — jamais détachable silencieusement.
+        const withLastChecked = { ...blank, data: { ...data, lastCheckedAt: '2026-01-01T00:00:00.000Z' } };
+        expect(isModuleBlank(withLastChecked)).toBe(false);
     });
 });

@@ -95,7 +95,7 @@ describe('deleteDefinitionForever — protégée tant qu\'un module CUSTOM l\'ut
             id: 'l1', name: 'Station Test',
             modules: [{
                 id: 'm1', type: AuditModuleType.CUSTOM, name: created.name, line: 'A',
-                data: { id: 'c1', definitionId: created.id, stationName: 'Station Test', stationCode: '', items: {}, comment: '' },
+                data: { id: 'c1', definitionId: created.id, stationName: 'Station Test', stationCode: '', occurrences: [], comment: '' },
             }],
         };
         useAuditStore.setState({ lieux: [lieuWithModule] });
@@ -115,7 +115,7 @@ describe('deleteDefinitionForever — protégée tant qu\'un module CUSTOM l\'ut
             id: 'l1', name: 'Station Test',
             modules: [{
                 id: 'm1', type: AuditModuleType.CUSTOM, name: created.name, line: 'A',
-                data: { id: 'c1', definitionId: created.id, stationName: 'Station Test', stationCode: '', items: {}, comment: '' },
+                data: { id: 'c1', definitionId: created.id, stationName: 'Station Test', stationCode: '', occurrences: [], comment: '' },
             }],
         };
         useAuditStore.setState({ lieux: [{ ...lieuWithModule, modules: [] }] }); // module retiré (détaché)

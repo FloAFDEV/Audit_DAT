@@ -103,12 +103,28 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         stationCible.modules.push(customModule);
         await db.lieux.put(stationCible);
 
-        // --- 7. Saisie terrain réelle : statut + commentaire + photo (base64) sur une référence, l'autre NotApplicable ---
+        // --- 7. Saisie terrain réelle : DEUX occurrences de la même référence
+        // (patrimoine, pas une checklist), l'une avec un historique de
+        // constats (« Nouveau constat » déjà utilisé une fois), photo sur
+        // l'occurrence courante, une troisième occurrence Non applicable. ---
         const photoBase64 = 'ZmFrZS1qcGVnLWJ5dGVzLXBvdXItbGUtdGVzdA=='; // "fake-jpeg-bytes-pour-le-test" en base64
-        (customModule.data as CustomAuditData).items = {
-            [ref80x100Adh.id]: { status: AdhesiveStatus.OK, comment: 'Panneau neuf, bon état', photo_base64: photoBase64, photo_rotation: 90 },
-            [ref80x120Pla.id]: { status: AdhesiveStatus.NotApplicable },
-        };
+        (customModule.data as CustomAuditData).occurrences = [
+            {
+                id: 'occ-entree', referenceId: ref80x100Adh.id, location: 'Entrée rue X',
+                status: AdhesiveStatus.ToBeReplaced, comment: 'Dégradé depuis le dernier passage',
+                photo_base64: photoBase64, photo_rotation: 90, constatedAt: '2027-02-15T00:00:00.000Z',
+                previousConstats: [{ status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z' }],
+            },
+            {
+                id: 'occ-quai1', referenceId: ref80x100Adh.id, location: 'Quai 1',
+                status: AdhesiveStatus.OK, constatedAt: '2027-02-15T00:00:00.000Z',
+            },
+            {
+                id: 'occ-na', referenceId: ref80x120Pla.id,
+                status: AdhesiveStatus.NotApplicable, constatedAt: '2027-02-15T00:00:00.000Z',
+            },
+        ];
+        (customModule.data as CustomAuditData).lastCheckedAt = '2027-02-15T00:00:00.000Z';
         await db.lieux.put(stationCible);
 
         // --- 8. Archivage de la DÉFINITION elle-même (le module matérialisé doit rester intact) ---
@@ -174,10 +190,30 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         expect(restoredModule.name).toBe('Plans de quartier'); // dénormalisé à la création, conservé tel quel
         const restoredData = restoredModule.data as CustomAuditData;
         expect(restoredData.definitionId).toBe(definition.id);
-        expect(restoredData.items[ref80x100Adh.id]).toEqual({
-            status: AdhesiveStatus.OK, comment: 'Panneau neuf, bon état', photo_base64: photoBase64, photo_rotation: 90,
-        });
-        expect(restoredData.items[ref80x120Pla.id]).toEqual({ status: AdhesiveStatus.NotApplicable });
+        expect(restoredData.lastCheckedAt).toBe('2027-02-15T00:00:00.000Z');
+        expect(restoredData.occurrences).toHaveLength(3);
+
+        // Deux occurrences de LA MÊME référence, chacune son identité, son
+        // emplacement, son constat courant — jamais fusionnées.
+        const entree = restoredData.occurrences.find(o => o.id === 'occ-entree')!;
+        expect(entree.referenceId).toBe(ref80x100Adh.id);
+        expect(entree.location).toBe('Entrée rue X');
+        expect(entree.status).toBe(AdhesiveStatus.ToBeReplaced);
+        expect(entree.photo_base64).toBe(photoBase64);
+        expect(entree.photo_rotation).toBe(90);
+        // L'historique du constat précédent (« Nouveau constat ») survit intact.
+        expect(entree.previousConstats).toHaveLength(1);
+        expect(entree.previousConstats![0]).toEqual({ status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z' });
+
+        const quai1 = restoredData.occurrences.find(o => o.id === 'occ-quai1')!;
+        expect(quai1.referenceId).toBe(ref80x100Adh.id); // même référence que « entree », objet distinct
+        expect(quai1.location).toBe('Quai 1');
+        expect(quai1.status).toBe(AdhesiveStatus.OK);
+        expect(quai1.previousConstats ?? []).toHaveLength(0);
+
+        const na = restoredData.occurrences.find(o => o.id === 'occ-na')!;
+        expect(na.referenceId).toBe(ref80x120Pla.id);
+        expect(na.status).toBe(AdhesiveStatus.NotApplicable);
 
         // --- La station EXCLUE n'a reçu aucun module CUSTOM, avant comme après restauration ---
         const restoredExcluded = await db.lieux.get('lieu-excluded');

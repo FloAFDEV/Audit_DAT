@@ -549,9 +549,14 @@ const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
                             <DetachModuleButton lieuId={lieu.id} module={module} />
                         </div>
                         {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
-                        {module.type === AuditModuleType.CUSTOM && (
-                            <p className="text-xs text-slate-400 italic pl-4">Audit configurable — {Object.keys((module.data as CustomAuditData).items ?? {}).length} référence(s) statuée(s).</p>
-                        )}
+                        {module.type === AuditModuleType.CUSTOM && (() => {
+                            const data = module.data as CustomAuditData;
+                            const count = (data.occurrences ?? []).length;
+                            const label = count > 0
+                                ? `${count} objet${count > 1 ? 's' : ''} recensé${count > 1 ? 's' : ''}`
+                                : data.lastCheckedAt ? 'vérifié, aucun objet trouvé' : 'pas encore vérifié';
+                            return <p className="text-xs text-slate-400 italic pl-4">Audit configurable — {label}.</p>;
+                        })()}
                         {module.type !== AuditModuleType.PR && module.type !== AuditModuleType.CUSTOM && (
                             <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / un ECA / un point d'accès...).</p>
                         )}

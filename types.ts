@@ -292,32 +292,64 @@ export interface AuditDefinition {
     archivedAt?: string; // ISO
 }
 
-/** Statut d'UNE référence CUSTOM sur UN module station — même forme que
- *  EquipmentStatus (photo/commentaire), status réutilise AdhesiveStatus
- *  (incl. NotApplicable, pour les variantes mutuellement exclusives :
- *  ex. une station n'a qu'UNE des 4 variantes de Plan de quartier). */
-export interface CustomAuditItemStatus {
+/** Un constat ARCHIVÉ d'une occurrence — ce qu'elle était lors d'un relevé
+ *  antérieur. Créé UNIQUEMENT par l'action explicite « Nouveau constat »
+ *  (jamais par une correction du constat courant) : previousConstats
+ *  représente des relevés passés, pas les actions de saisie de
+ *  l'utilisateur. Pas de photo conservée ici (même principe que
+ *  SignageReferenceVersion : le contenu volumineux ne se duplique pas à
+ *  chaque version — seul le constat courant garde une photo vivante). */
+export interface CustomAuditConstat {
+    status: AdhesiveStatus;
+    comment?: string;
+    constatedAt: string; // ISO
+}
+
+/** UN objet physique réellement recensé sur le terrain — son identité
+ *  (`id`) est celle de L'OBJET, distincte de `referenceId` (le TYPE,
+ *  cf. SignageReference). Plusieurs occurrences peuvent partager la même
+ *  référence sur une même station (ex. 4 Plans de quartier 80×100
+ *  adhésifs à Jean-Jaurès, chacun son emplacement). status/comment/
+ *  photo/constatedAt forment le constat COURANT ; previousConstats
+ *  l'historique des constats antérieurs (jamais des corrections en
+ *  cours de saisie — cf. CustomAuditConstat). */
+export interface CustomAuditOccurrence {
+    id: string;
+    referenceId: string;
+    /** Emplacement précis, texte libre (« Entrée rue X », « Quai 1 »). */
+    location?: string;
     status: AdhesiveStatus;
     comment?: string;
     photo_base64?: string | null;
     photo_note?: string;
     photo_rotation?: number;
+    constatedAt: string; // ISO — date du constat COURANT
+    previousConstats?: CustomAuditConstat[];
 }
 
 /** Données d'un module CUSTOM — aucune donnée physique (dimensions,
  *  matière...) : uniquement le lien vers la définition, l'identité de la
- *  station (dénormalisée, même convention que EcaData/PMRFloorAdhesiveData)
- *  et les statuts réellement saisis, indexés par SignageReference.id. Une
- *  clé absente de `items` = non contrôlé (même convention R10 que
- *  DAT.adhesives) — le module est créé avec `items: {}`, jamais pré-rempli. */
+ *  station (dénormalisée, même convention que EcaData/PMRFloorAdhesiveData),
+ *  les objets physiques réellement recensés (`occurrences`, jamais
+ *  pré-remplis — un module fraîchement propagé démarre à `[]`) et l'état
+ *  de vérification du module lui-même. Trois états distincts, jamais
+ *  confondus :
+ *    - occurrences: [] et lastCheckedAt absent   → jamais vérifié
+ *    - occurrences: [...]                        → objet(s) constaté(s)
+ *    - occurrences: [] et lastCheckedAt présent   → vérifié, rien trouvé
+ *  `lastCheckedAt` est indépendant des occurrences : jamais un objet
+ *  fictif pour représenter « rien trouvé ». */
 export interface CustomAuditData {
     id: string;
     definitionId: string;   // AuditDefinition.id — jamais copié au-delà de cet id
     stationName: string;
     stationCode: string;
-    items: { [referenceId: string]: CustomAuditItemStatus };
+    occurrences: CustomAuditOccurrence[];
+    /** Dernière visite de vérification de ce module, avec ou sans objet
+     *  trouvé — mise à jour à chaque écriture terrain (ajout d'occurrence,
+     *  constat) ET par l'action explicite « Aucun objet trouvé ». */
+    lastCheckedAt?: string; // ISO
     comment: string;
-    completionDate?: string;
 }
 
 // =================================================================

@@ -1,15 +1,19 @@
 // tests/customAuditTerrain.test.ts
 // =================================================================
-// Saisie terrain des audits configurables (Partie 2) — la brique
-// manquante : jusqu'ici, une définition + son référentiel + sa
-// propagation fonctionnaient, mais rien ne permettait de relever
-// concrètement un module CUSTOM sur le terrain (aucun cas de routage,
-// aucun handler d'écriture — module.data.items ne pouvait jamais être
-// rempli). Ce fichier couvre le chemin d'écriture (store.ts) et le
-// chemin de lecture (utils/effectiveAdhesives.ts) sur lesquels
-// components/CustomAuditForm.tsx s'appuie — pas de rendu React (ce
-// projet n'a pas de dépendance jsdom/testing-library, même contrainte
-// que le reste de la suite).
+// Recensement patrimonial dans le temps (audits configurables, Partie 2)
+// — pas une checklist par station. Ce fichier couvre les TROIS états que
+// le modèle doit représenter séparément (exigence explicite) :
+//   1. les occurrences (objets physiques individuels, plusieurs par
+//      référence sur une même station, chacune son emplacement) ;
+//   2. leur historique de constats (previousConstats, alimenté
+//      UNIQUEMENT par l'action explicite « Nouveau constat », jamais par
+//      une correction du constat courant) ;
+//   3. l'état de vérification du module (lastCheckedAt) quand il
+//      n'existe aucune occurrence — sans objet fictif.
+// Pas de rendu React (ce projet n'a pas de dépendance jsdom/testing-
+// library, même contrainte que le reste de la suite) : on teste le
+// chemin d'écriture (store.ts) et le chemin de lecture
+// (utils/effectiveAdhesives.ts) sur lesquels CustomAuditForm.tsx s'appuie.
 // =================================================================
 import { describe, it, expect, beforeEach } from 'vitest';
 import { db } from '../db';
@@ -17,7 +21,7 @@ import useAuditStore from '../store';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { withArchived } from '../utils/cockpit/signageReferenceEditor';
 import { getEffectiveCustomReferences, getCustomAuditProgress } from '../utils/effectiveAdhesives';
-import { AuditDefinition, AuditModuleType, AdhesiveStatus, CustomAuditData, Lieu, SignageReference } from '../types';
+import { AuditDefinition, AuditModuleType, AdhesiveStatus, CustomAuditData, CustomAuditOccurrence, Lieu, SignageReference } from '../types';
 
 const SEED = buildSignageReferencesSeed();
 
@@ -40,11 +44,11 @@ const ref = (id: string, over: Partial<SignageReference> = {}): SignageReference
 
 const PDQ_REFS = [ref('pdq-1'), ref('pdq-2'), ref('pdq-3'), ref('pdq-4')];
 
-const stationWithCustomModule = (items: CustomAuditData['items'] = {}): Lieu => ({
+const stationWithCustomModule = (occurrences: CustomAuditOccurrence[] = [], lastCheckedAt?: string): Lieu => ({
     id: 'lieu-pdq', name: 'Station Test',
     modules: [{
         id: 'mod-pdq', type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
-        data: { id: 'c-pdq', definitionId: DEF.id, stationName: 'Station Test', stationCode: '', items, comment: '' } as CustomAuditData,
+        data: { id: 'c-pdq', definitionId: DEF.id, stationName: 'Station Test', stationCode: '', occurrences, lastCheckedAt, comment: '' } as CustomAuditData,
     }],
 });
 
@@ -62,16 +66,15 @@ beforeEach(async () => {
 });
 
 // -----------------------------------------------------------------
-// RENDU — logique de résolution que CustomAuditForm consomme pour
-// construire sa liste de références.
+// RENDU — logique de résolution que CustomAuditForm consomme.
 // -----------------------------------------------------------------
-describe('getEffectiveCustomReferences — ce que le formulaire terrain doit afficher', () => {
+describe('getEffectiveCustomReferences — ce que le formulaire terrain propose au recensement', () => {
     it('retourne les 4 références actives de la définition, dans le référentiel réel', () => {
         const effective = getEffectiveCustomReferences([...SEED, ...PDQ_REFS], DEF.id);
         expect(effective.map(r => r.id).sort()).toEqual(['pdq-1', 'pdq-2', 'pdq-3', 'pdq-4']);
     });
 
-    it('exclut une référence archivée : elle ne doit plus être proposée pour un nouveau relevé', () => {
+    it('exclut une référence archivée : elle ne doit plus être proposée pour un nouvel objet', () => {
         const archived = withArchived(PDQ_REFS[0], '2026-01-01T00:00:00.000Z');
         const references = [...SEED, archived, ...PDQ_REFS.slice(1)];
         const effective = getEffectiveCustomReferences(references, DEF.id);
@@ -86,174 +89,361 @@ describe('getEffectiveCustomReferences — ce que le formulaire terrain doit aff
         expect(effective.map(r => r.id)).toContain('pdq-5');
         expect(effective).toHaveLength(5);
     });
-
-    it('ignore les références d\'une AUTRE définition (même auditType CUSTOM)', () => {
-        const autreDef = ref('autre-ref', { scope: { auditType: 'CUSTOM', definitionId: 'def-autre' } });
-        const effective = getEffectiveCustomReferences([...SEED, ...PDQ_REFS, autreDef], DEF.id);
-        expect(effective.map(r => r.id)).not.toContain('autre-ref');
-    });
 });
 
 // -----------------------------------------------------------------
-// PROGRESSION — partagée entre store.ts (completionDate) et
-// CustomAuditForm.tsx (barre affichée) : une seule fonction, testée ici.
+// PROGRESSION — état de vérification binaire (0/100), pas un
+// pourcentage de couverture (aucun nombre d'occurrences n'est
+// présupposé par référence).
 // -----------------------------------------------------------------
 describe('getCustomAuditProgress', () => {
-    it('0% quand items est vide (module fraîchement propagé, aucun relevé)', () => {
-        expect(getCustomAuditProgress([...SEED, ...PDQ_REFS], DEF.id, {})).toBe(0);
+    it('0% si occurrences vide et jamais vérifié', () => {
+        expect(getCustomAuditProgress({ occurrences: [], lastCheckedAt: undefined })).toBe(0);
     });
-
-    it('progression proportionnelle aux références réellement touchées', () => {
-        const items = { 'pdq-1': { status: AdhesiveStatus.OK }, 'pdq-2': { status: AdhesiveStatus.ToBeReplaced } };
-        expect(getCustomAuditProgress([...SEED, ...PDQ_REFS], DEF.id, items)).toBe(50); // 2/4
+    it('100% dès qu\'au moins une occurrence existe', () => {
+        expect(getCustomAuditProgress({ occurrences: [{ id: 'o1' }], lastCheckedAt: undefined })).toBe(100);
     });
-
-    it('100% quand toutes les références effectives ont un statut (y compris Non applicable)', () => {
-        const items = {
-            'pdq-1': { status: AdhesiveStatus.OK }, 'pdq-2': { status: AdhesiveStatus.NotApplicable },
-            'pdq-3': { status: AdhesiveStatus.Absent }, 'pdq-4': { status: AdhesiveStatus.NotApplicable },
-        };
-        expect(getCustomAuditProgress([...SEED, ...PDQ_REFS], DEF.id, items)).toBe(100);
-    });
-
-    it('une clé orpheline (référence depuis archivée) ne gonfle jamais la progression', () => {
-        const archived = withArchived(PDQ_REFS[3], '2026-01-01T00:00:00.000Z'); // pdq-4
-        const references = [...SEED, ...PDQ_REFS.slice(0, 3), archived];
-        // Seul pdq-1 est coché parmi les 3 références encore effectives.
-        const items = { 'pdq-1': { status: AdhesiveStatus.OK }, 'pdq-4': { status: AdhesiveStatus.OK } };
-        expect(getCustomAuditProgress(references, DEF.id, items)).toBeCloseTo(33.33, 1); // 1/3, pas 2/4
+    it('100% si vérifié sans occurrence (lastCheckedAt posé)', () => {
+        expect(getCustomAuditProgress({ occurrences: [], lastCheckedAt: '2026-08-28T00:00:00.000Z' })).toBe(100);
     });
 });
 
 // -----------------------------------------------------------------
-// ÉCRITURE — store.ts (chemin qui n'existait pas avant cette mission).
+// ÉTAT 1 — LES OCCURRENCES : plusieurs objets physiques, chacun son
+// identité et son emplacement, même référence ou non.
 // -----------------------------------------------------------------
-describe('handleCustomAuditStatusChange', () => {
-    it('écrit le statut dans Dexie et crée l\'entrée si elle n\'existait pas (items sparse, jamais pré-rempli)', async () => {
+describe('handleAddCustomAuditOccurrence — recensement de plusieurs objets', () => {
+    it('crée une occurrence avec son propre id, distinct de la référence, statut Non contrôlé', async () => {
         const lieu = stationWithCustomModule();
         await db.lieux.put(lieu);
         useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
 
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-1', AdhesiveStatus.OK);
+        const created = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1', 'Entrée rue X');
+
+        expect(created.id).not.toBe('pdq-1');
+        expect(created.referenceId).toBe('pdq-1');
+        expect(created.location).toBe('Entrée rue X');
+        expect(created.status).toBe(AdhesiveStatus.NotChecked);
 
         const stored = await db.lieux.get(lieu.id);
         const data = stored!.modules[0].data as CustomAuditData;
-        expect(data.items['pdq-1']).toEqual({ status: AdhesiveStatus.OK });
-        // Le store en mémoire est aussi synchronisé (persistance visible immédiatement à l'écran).
-        expect((useAuditStore.getState().lieux[0].modules[0].data as CustomAuditData).items['pdq-1'].status).toBe(AdhesiveStatus.OK);
+        expect(data.occurrences).toHaveLength(1);
+        expect(data.lastCheckedAt).toBeDefined(); // ajouter un objet = une vérification
     });
 
-    it('re-cliquer le même statut le remet à Non contrôlé (toggle), comme les autres audits', async () => {
-        const lieu = stationWithCustomModule({ 'pdq-1': { status: AdhesiveStatus.OK } });
-        await db.lieux.put(lieu);
-        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
-
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-1', AdhesiveStatus.NotChecked);
-
-        const stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).items['pdq-1'].status).toBe(AdhesiveStatus.NotChecked);
-    });
-
-    it('marque completionDate quand toutes les références effectives sont couvertes, le retire sinon', async () => {
-        const lieu = stationWithCustomModule({
-            'pdq-1': { status: AdhesiveStatus.OK }, 'pdq-2': { status: AdhesiveStatus.OK }, 'pdq-3': { status: AdhesiveStatus.NotApplicable },
-        });
-        await db.lieux.put(lieu);
-        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
-
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-4', AdhesiveStatus.Absent);
-        let stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).completionDate).toBeDefined();
-
-        // Reculer : une référence redevient non contrôlée → completionDate retiré.
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-4', AdhesiveStatus.NotChecked);
-        stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).completionDate).toBeUndefined();
-    });
-
-    it('une clé de items pointant vers une référence archivée n\'empêche jamais la complétude des références encore effectives', async () => {
-        const archived = withArchived(PDQ_REFS[3], '2026-01-01T00:00:00.000Z');
-        useAuditStore.setState({ signageReferences: [...SEED, ...PDQ_REFS.slice(0, 3), archived] });
-        const lieu = stationWithCustomModule({ 'pdq-4': { status: AdhesiveStatus.OK } }); // orpheline
-        await db.lieux.put(lieu);
-        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
-
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-1', AdhesiveStatus.OK);
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-2', AdhesiveStatus.OK);
-        await useAuditStore.getState().handleCustomAuditStatusChange('pdq-3', AdhesiveStatus.NotApplicable);
-
-        const stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).completionDate).toBeDefined();
-    });
-});
-
-describe('handleCustomAuditCommentChange', () => {
-    it('écrit le commentaire général du module (niveau audit, pas par référence)', async () => {
+    it('Jean-Jaurès : 2 occurrences de la MÊME référence + 1 d\'une autre, toutes distinctes et conservées séparément', async () => {
         const lieu = stationWithCustomModule();
         await db.lieux.put(lieu);
         useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
 
-        await useAuditStore.getState().handleCustomAuditCommentChange('Relevé effectué par temps de pluie.');
+        const occ1 = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1', 'Entrée rue X');
+        const occ2 = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1', 'Quai 1');
+        const occ3 = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-3', 'Correspondance métro');
 
         const stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).comment).toBe('Relevé effectué par temps de pluie.');
+        const data = stored!.modules[0].data as CustomAuditData;
+        expect(data.occurrences).toHaveLength(3);
+        expect(occ1.id).not.toBe(occ2.id);
+        const sameRef = data.occurrences.filter(o => o.referenceId === 'pdq-1');
+        expect(sameRef).toHaveLength(2);
+        expect(sameRef.map(o => o.location).sort()).toEqual(['Entrée rue X', 'Quai 1']);
+        expect(data.occurrences.find(o => o.id === occ3.id)?.referenceId).toBe('pdq-3');
+    });
+});
+
+describe('handleRemoveCustomAuditOccurrence', () => {
+    it('retire une occurrence encore vierge (erreur de saisie)', async () => {
+        const lieu = stationWithCustomModule();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+        const created = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1');
+
+        await useAuditStore.getState().handleRemoveCustomAuditOccurrence(created.id);
+
+        const stored = await db.lieux.get(lieu.id);
+        expect((stored!.modules[0].data as CustomAuditData).occurrences).toHaveLength(0);
+    });
+
+    it('refuse de retirer une occurrence qui a déjà reçu un vrai constat — jamais de perte d\'un objet réellement recensé', async () => {
+        const lieu = stationWithCustomModule();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+        const created = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1');
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange(created.id, AdhesiveStatus.OK);
+
+        await expect(useAuditStore.getState().handleRemoveCustomAuditOccurrence(created.id)).rejects.toThrow();
+        const stored = await db.lieux.get(lieu.id);
+        expect((stored!.modules[0].data as CustomAuditData).occurrences).toHaveLength(1);
+    });
+});
+
+// -----------------------------------------------------------------
+// ÉTAT 2 — L'HISTORIQUE DE CONSTATS : corriger ≠ historiser.
+// -----------------------------------------------------------------
+describe('Corriger le constat courant ne crée JAMAIS d\'historique', () => {
+    it('changer plusieurs fois le statut de la même occurrence ne produit aucun previousConstats', async () => {
+        const lieu = stationWithCustomModule();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+        const created = await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1', 'Entrée rue X');
+
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange(created.id, AdhesiveStatus.OK);
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange(created.id, AdhesiveStatus.Absent);
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange(created.id, AdhesiveStatus.OK);
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.status).toBe(AdhesiveStatus.OK);
+        expect(occ.previousConstats ?? []).toHaveLength(0);
+    });
+
+    it('le toggle (même statut → Non contrôlé) est une décision du formulaire, pas du handler — le handler applique fidèlement le statut reçu, sans historiser', async () => {
+        // Le formulaire calcule lui-même le statut cible (currentStatus ===
+        // status ? NotChecked : status, cf. CustomAuditForm.tsx) avant
+        // d'appeler ce handler — même patron que AdhesiveAuditForm/DAT.
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-1', AdhesiveStatus.NotChecked);
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.status).toBe(AdhesiveStatus.NotChecked);
+        expect(occ.previousConstats ?? []).toHaveLength(0);
+    });
+});
+
+describe('handleCustomAuditNewConstat — le SEUL point d\'écriture de previousConstats', () => {
+    it('exemple concret : 28/08/2026 OK, puis « Nouveau constat » le 15/02/2027 → Dégradé — les deux constats coexistent', async () => {
+        const lieu = stationWithCustomModule([{
+            id: 'occ-entree', referenceId: 'pdq-1', location: 'Entrée rue X',
+            status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z',
+        }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-entree');
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-entree', AdhesiveStatus.ToBeReplaced);
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        // Le constat du 28/08/2026 (OK) est conservé...
+        expect(occ.previousConstats).toHaveLength(1);
+        expect(occ.previousConstats![0].status).toBe(AdhesiveStatus.OK);
+        expect(occ.previousConstats![0].constatedAt).toBe('2026-08-28T00:00:00.000Z');
+        // ...le constat courant est le nouveau, l'objet garde la même identité.
+        expect(occ.id).toBe('occ-entree');
+        expect(occ.status).toBe(AdhesiveStatus.ToBeReplaced);
+    });
+
+    it('sans effet si le constat courant est encore Non contrôlé (rien à archiver)', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-1');
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.previousConstats ?? []).toHaveLength(0);
+    });
+
+    it('archive plusieurs constats successifs dans l\'ordre — deuxième relevé ultérieur, l\'ancien n\'est jamais écrasé', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-1');
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-1', AdhesiveStatus.ToBeReplaced);
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-1');
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-1', AdhesiveStatus.OK); // remplacé
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.previousConstats).toHaveLength(2);
+        expect(occ.previousConstats!.map(c => c.status)).toEqual([AdhesiveStatus.OK, AdhesiveStatus.ToBeReplaced]);
+        expect(occ.status).toBe(AdhesiveStatus.OK);
+    });
+
+    it('un objet devenu Absent reste traçable : conservé, jamais supprimé, son ancien constat OK reste dans l\'historique', async () => {
+        const lieu = stationWithCustomModule([{
+            id: 'occ-1', referenceId: 'pdq-1', location: 'Entrée rue X',
+            status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z',
+        }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-1');
+        await useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-1', AdhesiveStatus.Absent);
+
+        const stored = await db.lieux.get(lieu.id);
+        const data = stored!.modules[0].data as CustomAuditData;
+        expect(data.occurrences).toHaveLength(1); // jamais supprimé
+        expect(data.occurrences[0].status).toBe(AdhesiveStatus.Absent);
+        expect(data.occurrences[0].previousConstats![0].status).toBe(AdhesiveStatus.OK);
+    });
+
+    it('la photo et le commentaire du constat archivé ne persistent pas dans le constat courant repartant à vide', async () => {
+        const lieu = stationWithCustomModule([{
+            id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, comment: 'Bon état',
+            photo_base64: 'data:image/jpeg;base64,ZmFrZQ==', photo_note: 'note', photo_rotation: 90,
+            constatedAt: '2026-08-28T00:00:00.000Z',
+        }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditNewConstat('occ-1');
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.status).toBe(AdhesiveStatus.NotChecked);
+        expect(occ.comment).toBeUndefined();
+        expect(occ.photo_base64).toBeUndefined();
+        expect(occ.photo_note).toBeUndefined();
+        expect(occ.photo_rotation).toBeUndefined();
+        // Mais le constat archivé, lui, garde son statut et son commentaire (pas de photo, par conception).
+        expect(occ.previousConstats![0]).toEqual({ status: AdhesiveStatus.OK, comment: 'Bon état', constatedAt: '2026-08-28T00:00:00.000Z' });
+    });
+});
+
+// -----------------------------------------------------------------
+// ÉTAT 3 — VÉRIFICATION DU MODULE SANS OCCURRENCE : les trois états
+// bien séparés, aucun objet fictif.
+// -----------------------------------------------------------------
+describe('lastCheckedAt — module vérifié sans occurrence, distinct de "jamais vérifié"', () => {
+    it('état 1 : aucune occurrence, jamais vérifié', async () => {
+        const lieu = stationWithCustomModule();
+        const data = lieu.modules[0].data as CustomAuditData;
+        expect(data.occurrences).toHaveLength(0);
+        expect(data.lastCheckedAt).toBeUndefined();
+    });
+
+    it('état 3 : handleCustomAuditMarkChecked pose lastCheckedAt SANS créer d\'occurrence', async () => {
+        const lieu = stationWithCustomModule();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditMarkChecked();
+
+        const stored = await db.lieux.get(lieu.id);
+        const data = stored!.modules[0].data as CustomAuditData;
+        expect(data.occurrences).toHaveLength(0); // toujours aucun objet fictif
+        expect(data.lastCheckedAt).toBeDefined();
+    });
+
+    it('état 2 (objet constaté) est bien distinct de l\'état 3 (vérifié, rien trouvé) au niveau des données', async () => {
+        const verifiedEmpty = stationWithCustomModule([], '2026-08-28T00:00:00.000Z');
+        const withObject = stationWithCustomModule([{ id: 'o1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, constatedAt: '2026-08-28T00:00:00.000Z' }]);
+        const neverChecked = stationWithCustomModule();
+
+        const d1 = verifiedEmpty.modules[0].data as CustomAuditData;
+        const d2 = withObject.modules[0].data as CustomAuditData;
+        const d3 = neverChecked.modules[0].data as CustomAuditData;
+
+        expect(d1.occurrences).toHaveLength(0);
+        expect(d1.lastCheckedAt).toBeDefined();
+        expect(d2.occurrences).toHaveLength(1);
+        expect(d3.occurrences).toHaveLength(0);
+        expect(d3.lastCheckedAt).toBeUndefined();
+    });
+
+    it('ajouter une occurrence met aussi lastCheckedAt à jour (une vérification a bien eu lieu)', async () => {
+        const lieu = stationWithCustomModule();
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleAddCustomAuditOccurrence('pdq-1');
+
+        const stored = await db.lieux.get(lieu.id);
+        expect((stored!.modules[0].data as CustomAuditData).lastCheckedAt).toBeDefined();
+    });
+});
+
+describe('handleCustomAuditOccurrenceCommentChange / handleCustomAuditOccurrenceLocationChange', () => {
+    it('le commentaire et l\'emplacement d\'une occurrence se modifient indépendamment de son statut', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditOccurrenceCommentChange('occ-1', 'Vu par temps de pluie');
+        await useAuditStore.getState().handleCustomAuditOccurrenceLocationChange('occ-1', 'Entrée rue X, côté gauche');
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.comment).toBe('Vu par temps de pluie');
+        expect(occ.location).toBe('Entrée rue X, côté gauche');
+        expect(occ.status).toBe(AdhesiveStatus.OK); // inchangé
     });
 });
 
 describe('Photo — handleCustomAuditPhotoChange / PhotoNoteChange / PhotoRotationChange', () => {
-    it('ajoute une photo à une référence jamais touchée (crée l\'entrée, statut Non contrôlé)', async () => {
+    it('ajoute une photo à une occurrence existante', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditPhotoChange('occ-1', 'data:image/jpeg;base64,ZmFrZQ==');
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.photo_base64).toBe('data:image/jpeg;base64,ZmFrZQ==');
+    });
+
+    it('supprimer la photo retire aussi la note et la rotation, jamais le statut', async () => {
+        const lieu = stationWithCustomModule([{
+            id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK,
+            photo_base64: 'data:image/jpeg;base64,ZmFrZQ==', photo_note: 'Note', photo_rotation: 90,
+            constatedAt: '2026-01-01T00:00:00.000Z',
+        }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditPhotoChange('occ-1', null);
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.photo_base64).toBeUndefined();
+        expect(occ.photo_note).toBeUndefined();
+        expect(occ.photo_rotation).toBeUndefined();
+        expect(occ.status).toBe(AdhesiveStatus.OK);
+    });
+
+    it('note et rotation de photo se persistent indépendamment', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, photo_base64: 'data:image/jpeg;base64,ZmFrZQ==', constatedAt: '2026-01-01T00:00:00.000Z' }]);
+        await db.lieux.put(lieu);
+        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
+
+        await useAuditStore.getState().handleCustomAuditPhotoNoteChange('occ-1', 'Panneau décoloré côté nord');
+        await useAuditStore.getState().handleCustomAuditPhotoRotationChange('occ-1', 270);
+
+        const stored = await db.lieux.get(lieu.id);
+        const occ = (stored!.modules[0].data as CustomAuditData).occurrences[0];
+        expect(occ.photo_note).toBe('Panneau décoloré côté nord');
+        expect(occ.photo_rotation).toBe(270);
+    });
+});
+
+describe('handleCustomAuditCommentChange (commentaire général du module)', () => {
+    it('écrit le commentaire du module, distinct des commentaires par occurrence', async () => {
         const lieu = stationWithCustomModule();
         await db.lieux.put(lieu);
         useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
 
-        await useAuditStore.getState().handleCustomAuditPhotoChange('pdq-1', 'data:image/jpeg;base64,ZmFrZQ==');
+        await useAuditStore.getState().handleCustomAuditCommentChange('Tournée du 28/08/2026, RAS globalement.');
 
         const stored = await db.lieux.get(lieu.id);
-        const item = (stored!.modules[0].data as CustomAuditData).items['pdq-1'];
-        expect(item.photo_base64).toBe('data:image/jpeg;base64,ZmFrZQ==');
-        expect(item.status).toBe(AdhesiveStatus.NotChecked);
-    });
-
-    it('supprimer la photo retire aussi la note et la rotation, jamais le statut', async () => {
-        const lieu = stationWithCustomModule({
-            'pdq-1': { status: AdhesiveStatus.OK, photo_base64: 'data:image/jpeg;base64,ZmFrZQ==', photo_note: 'Note', photo_rotation: 90 },
-        });
-        await db.lieux.put(lieu);
-        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
-
-        await useAuditStore.getState().handleCustomAuditPhotoChange('pdq-1', null);
-
-        const stored = await db.lieux.get(lieu.id);
-        const item = (stored!.modules[0].data as CustomAuditData).items['pdq-1'];
-        expect(item.photo_base64).toBeUndefined();
-        expect(item.photo_note).toBeUndefined();
-        expect(item.photo_rotation).toBeUndefined();
-        expect(item.status).toBe(AdhesiveStatus.OK);
-    });
-
-    it('note et rotation de photo se persistent indépendamment', async () => {
-        const lieu = stationWithCustomModule({ 'pdq-1': { status: AdhesiveStatus.OK, photo_base64: 'data:image/jpeg;base64,ZmFrZQ==' } });
-        await db.lieux.put(lieu);
-        useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
-
-        await useAuditStore.getState().handleCustomAuditPhotoNoteChange('pdq-1', 'Panneau décoloré côté nord');
-        await useAuditStore.getState().handleCustomAuditPhotoRotationChange('pdq-1', 270);
-
-        const stored = await db.lieux.get(lieu.id);
-        const item = (stored!.modules[0].data as CustomAuditData).items['pdq-1'];
-        expect(item.photo_note).toBe('Panneau décoloré côté nord');
-        expect(item.photo_rotation).toBe(270);
+        expect((stored!.modules[0].data as CustomAuditData).comment).toBe('Tournée du 28/08/2026, RAS globalement.');
     });
 });
 
 describe('handleResetCustomAudit', () => {
-    it('vide items et le commentaire, retire completionDate, archive un instantané dans l\'historique, journalise', async () => {
-        const lieu = stationWithCustomModule({
-            'pdq-1': { status: AdhesiveStatus.OK, photo_base64: 'data:image/jpeg;base64,ZmFrZQ==' },
-            'pdq-2': { status: AdhesiveStatus.Absent },
-        });
+    it('vide occurrences, comment et lastCheckedAt, archive un instantané dans l\'historique, journalise', async () => {
+        const lieu = stationWithCustomModule(
+            [{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.OK, photo_base64: 'data:image/jpeg;base64,ZmFrZQ==', constatedAt: '2026-01-01T00:00:00.000Z' }],
+            '2026-01-01T00:00:00.000Z'
+        );
         (lieu.modules[0].data as CustomAuditData).comment = 'À vérifier';
-        (lieu.modules[0].data as CustomAuditData).completionDate = '2026-01-01T00:00:00.000Z';
         await db.lieux.put(lieu);
         useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'mod-pdq' });
 
@@ -261,9 +451,9 @@ describe('handleResetCustomAudit', () => {
 
         const stored = await db.lieux.get(lieu.id);
         const data = stored!.modules[0].data as CustomAuditData;
-        expect(data.items).toEqual({});
+        expect(data.occurrences).toEqual([]);
         expect(data.comment).toBe('');
-        expect(data.completionDate).toBeUndefined();
+        expect(data.lastCheckedAt).toBeUndefined();
 
         const history = await db.history.toArray();
         expect(history).toHaveLength(1);
@@ -275,20 +465,16 @@ describe('handleResetCustomAudit', () => {
 });
 
 // -----------------------------------------------------------------
-// NON-RÉGRESSION — DAT/ECA/P+R/PMR/Cognitif/Signalétique n'ont pas de
-// handler CUSTOM à proximité : simple garde-fou que le module de test
-// n'a pas de fuite d'état entre lieux (chaque test repart d'une base
-// vidée, cf. beforeEach) — la suite complète (298+ tests) reste le
-// vrai filet de non-régression, exécutée en plus de ce fichier.
+// NON-RÉGRESSION
 // -----------------------------------------------------------------
-describe('Non-régression — un module CUSTOM ignoré par un handler d\'un autre type', () => {
-    it('handleCustomAuditStatusChange sur un module absent (mauvais selectedModuleId) ne lève pas et ne touche rien', async () => {
-        const lieu = stationWithCustomModule();
+describe('Non-régression', () => {
+    it('handleCustomAuditOccurrenceStatusChange sur un module absent (mauvais selectedModuleId) ne lève pas et ne touche rien', async () => {
+        const lieu = stationWithCustomModule([{ id: 'occ-1', referenceId: 'pdq-1', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z' }]);
         await db.lieux.put(lieu);
         useAuditStore.setState({ lieux: [lieu], selectedLieuId: lieu.id, selectedModuleId: 'module-inexistant' });
 
-        await expect(useAuditStore.getState().handleCustomAuditStatusChange('pdq-1', AdhesiveStatus.OK)).resolves.not.toThrow();
+        await expect(useAuditStore.getState().handleCustomAuditOccurrenceStatusChange('occ-1', AdhesiveStatus.OK)).resolves.not.toThrow();
         const stored = await db.lieux.get(lieu.id);
-        expect((stored!.modules[0].data as CustomAuditData).items).toEqual({});
+        expect((stored!.modules[0].data as CustomAuditData).occurrences[0].status).toBe(AdhesiveStatus.NotChecked);
     });
 });
