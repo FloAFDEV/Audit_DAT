@@ -178,7 +178,13 @@ const App: React.FC = () => {
     return (
         <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
-            <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
+            {/* Le fond transparent est réservé aux toasts custom (ToastManager.tsx,
+                qui dessine déjà son propre fond thémé clair/sombre) — un
+                toast.success()/toast.error() « nu » (utilisé partout ailleurs,
+                ex. Admin) hérite sinon d'un fond transparent + 0 padding et
+                devient illisible dans les deux thèmes (texte flottant sans
+                contraste garanti). Restreint ici au type 'custom' uniquement. */}
+            <Toaster position="top-center" reverseOrder={false} toastOptions={{ custom: { style: { background: 'transparent', boxShadow: 'none', padding: 0 } } }} />
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 flex-grow">
               <ErrorBoundary>
                 <div className="mb-6">

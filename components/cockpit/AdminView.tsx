@@ -117,7 +117,7 @@ const ArchivesPanel: React.FC = () => {
                 onClose={() => setToDelete(null)}
                 onConfirm={handleDeleteForever}
                 title="Supprimer définitivement"
-                message="Cette référence sera supprimée irréversiblement du catalogue. Cette action est impossible pour une référence encore utilisée dans le catalogue historique."
+                message="Cette référence sera supprimée irréversiblement du catalogue. Impossible si elle a déjà été utilisée/auditée sur le terrain — elle doit alors rester archivée pour conserver son historique."
                 isDestructive
             />
         </div>
@@ -324,9 +324,10 @@ const StationArchivesPanel: React.FC = () => {
  *  (SignageReferenceForm + useAdminReferences), simplement filtré. */
 const DefinitionReferencesPanel: React.FC<{ definitionId: string }> = ({ definitionId }) => {
     const allReferences = useAuditStore(s => s.signageReferences);
-    const { create, update, archive, restore } = useAdminReferences();
+    const { create, update, archive, restore, deleteForever } = useAdminReferences();
     const [creating, setCreating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [toDelete, setToDelete] = useState<string | null>(null);
 
     const refs = useMemo(
         () => allReferences.filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === definitionId),
@@ -354,6 +355,20 @@ const DefinitionReferencesPanel: React.FC<{ definitionId: string }> = ({ definit
             setEditingId(null);
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Échec de la modification — réessayez.');
+        }
+    };
+
+    const handleDeleteForever = async () => {
+        if (!toDelete) return;
+        const ref = refs.find(r => r.id === toDelete);
+        if (!ref) { setToDelete(null); return; }
+        try {
+            await deleteForever(ref);
+            toast.success(`Référence « ${ref.name} » supprimée définitivement`);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec de la suppression — réessayez.');
+        } finally {
+            setToDelete(null);
         }
     };
 
@@ -427,13 +442,26 @@ const DefinitionReferencesPanel: React.FC<{ definitionId: string }> = ({ definit
                     {archived.map(ref => (
                         <div key={ref.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
                             <p className="text-sm text-slate-500 truncate">{ref.name}</p>
-                            <button onClick={() => restore(ref)} className="flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline flex-shrink-0">
-                                <ArchiveRestore className="w-3.5 h-3.5" /> Restaurer
-                            </button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => restore(ref)} className="flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline">
+                                    <ArchiveRestore className="w-3.5 h-3.5" /> Restaurer
+                                </button>
+                                <button onClick={() => setToDelete(ref.id)} className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Supprimer définitivement">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
+            <ConfirmationModal
+                isOpen={!!toDelete}
+                onClose={() => setToDelete(null)}
+                onConfirm={handleDeleteForever}
+                title="Supprimer définitivement"
+                message="Cette référence sera supprimée irréversiblement du catalogue. Impossible si elle a déjà été utilisée/auditée sur le terrain — elle doit alors rester archivée pour conserver son historique."
+                isDestructive
+            />
         </div>
     );
 };
