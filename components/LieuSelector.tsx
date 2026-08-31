@@ -124,8 +124,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             if (!key) { toast.error("Aucun backup automatique disponible."); return; }
             const json = localStorage.getItem(key);
             if (!json) { toast.error("Le backup est introuvable ou a été supprimé."); return; }
-            onImportJson(json);
-            setLastBackupDate(localStorage.getItem('tisseo-audit-last-backup-date'));
+            setImportFileContent(json);
         } catch { toast.error("Erreur lors de la restauration du backup."); }
     };
 
@@ -479,7 +478,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 icon={resetModalProps.icon} 
                 isDestructive 
             />
-            <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr de vouloir importer ce fichier ? Toutes les données actuelles seront remplacées par le contenu du fichier." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
+            <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr ? Toutes les données actuelles seront remplacées par les données importées." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
         </div>
     );
 };

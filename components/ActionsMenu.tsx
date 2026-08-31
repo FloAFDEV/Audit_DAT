@@ -171,7 +171,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                 aria-haspopup="true" aria-expanded={isOpen}
             >
                 <DatabaseBackup className="h-5 w-5" />
-                <span className="text-sm font-semibold">Synchroniser</span>
+                <span className="text-sm font-semibold">Sauvegarde</span>
                 <ChevronDown className={`h-5 w-5 transition-transform duration-200 ${isOpen && !isClosing ? 'rotate-180' : ''}`} />
             </button>
             
