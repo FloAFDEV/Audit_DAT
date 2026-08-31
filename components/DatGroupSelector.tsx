@@ -5,6 +5,7 @@ import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft, Layout } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { getDirectionProgress } from '../utils/progressCalculators';
+import { getProgressColor } from '../utils/progressColor';
 import { CategoryIcon } from './CategoryIcon';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { isModuleInAuditScope } from '../utils/moduleScope';
@@ -85,8 +86,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                         <div className="space-y-4">
                             {station.directions.map(direction => {
                                 const progress = getDirectionProgress(direction);
-                                const isInProgress = progress.percentage > 0 && !progress.isComplete;
-                                const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                                const progressBarColor = getProgressColor(progress.percentage);
                                 
                                 return (
                                     <button
@@ -112,7 +112,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                                     </span>
                                                 </div>
                                                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                                    <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
+                                                    <div className="h-2 rounded-full" style={{ width: `${progress.percentage}%`, backgroundColor: progressBarColor }}></div>
                                                 </div>
                                             </div>
                                         )}

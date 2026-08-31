@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges, FormattedCorrespondence } from './Icons';
 import { getModuleProgress } from '../utils/progressCalculators';
+import { getProgressColor } from '../utils/progressColor';
 import { ModuleIcon } from './ModuleIcon';
 import useAuditStore from '../store';
 import { AUDIT_CATEGORIES } from '../data/config';
@@ -100,8 +101,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             <div className="space-y-4">
                 {sortedModules.map((module) => {
                     const { percentage, label, statusText, statusColor, isComplete } = getModuleProgress(module);
-                    const isInProgress = percentage > 0 && !isComplete;
-                    const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                    const progressBarColor = getProgressColor(percentage);
                     
                     const isDisabled = false;
 
@@ -147,7 +147,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                         <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(percentage)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>
+                                        <div className="h-2 rounded-full" style={{ width: `${percentage}%`, backgroundColor: progressBarColor }}></div>
                                     </div>
                                 </div>
                             )}

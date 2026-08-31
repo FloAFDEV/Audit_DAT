@@ -4,6 +4,7 @@ import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
 import { LieuBadges } from './Icons';
 
 import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
+import { getProgressColor } from '../utils/progressColor';
 
 interface EquipmentSelectorProps {
   lieu: Lieu;
@@ -74,8 +75,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                     {zone.equipments.map((equipment) => {
                         const progress = getEquipmentProgress(equipment, signageReferences);
                         const isComplete = progress === 100;
-                        const isInProgress = progress > 0 && !isComplete;
-                        const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                        const progressBarColor = getProgressColor(progress);
                         
                         return (
                             <button
@@ -103,7 +103,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress}%` }}></div>
+                                        <div className="h-2 rounded-full" style={{ width: `${progress}%`, backgroundColor: progressBarColor }}></div>
                                     </div>
                                 </div>
                             </button>

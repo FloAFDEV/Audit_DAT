@@ -6,6 +6,7 @@ import { LieuBadges } from './Icons';
 import { ChevronRight, AlertTriangle } from 'lucide-react';
 import { getLieuProgress } from '../utils/progressCalculators';
 import { getLieuDefectCount } from '../utils/anomalyDetector';
+import { getProgressColor } from '../utils/progressColor';
 import { ProgressBadge } from './ProgressBadge';
 import { cardVariants } from '../hooks/motion/transitions';
 import useAuditStore from '../store';
@@ -39,7 +40,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index);
 
-    const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+    const progressBarColor = getProgressColor(progress);
 
     return (
         <motion.div
@@ -84,7 +85,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     </span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-slate-700">
-                    <div className={`${progressBarColor} h-2.5 rounded-full`} style={{ width: `${progress}%` }}></div>
+                    <div className="h-2.5 rounded-full" style={{ width: `${progress}%`, backgroundColor: progressBarColor }}></div>
                 </div>
             </div>
         </motion.div>
