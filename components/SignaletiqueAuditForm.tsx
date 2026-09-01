@@ -101,6 +101,25 @@ const CATEGORY_ICONS: Record<keyof SignaletiqueData, React.ReactNode> = {
   bandeauStation: <Layers className="w-5 h-5" />
 };
 
+// Même logique que primaryDirKey (ci-dessous) — factorisée pour être appliquée
+// aussi bien à la direction sélectionnée qu'aux 2 extrémités physiques de la
+// station, afin de savoir laquelle des deux correspond au contexte en cours.
+const dirKeyOf = (name: string): 'meett' | 'pdj' => {
+  const n = name.toLowerCase();
+  if (n.includes('meett') || n.includes('aéroport')) return 'meett';
+  return 'pdj';
+};
+
+// Le nom stocké en base (station.directions[i].name) porte le préfixe
+// "Direction " car il sert aussi de libellé au sélecteur de direction
+// (DatGroupSelector). Ici il ne sert plus à choisir une direction — c'est
+// le libellé d'une extrémité physique (totem / bandeau existent aux DEUX
+// bouts de la station, indépendamment de la direction choisie plus haut
+// dans le parcours) — le répéter tel quel donne l'impression erronée de
+// reposer la même question. On retire uniquement ce préfixe à l'affichage,
+// jamais dans les données.
+const stripDirectionPrefix = (name: string) => name.replace(/^Direction\s+/i, '');
+
 const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
 const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
 const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
@@ -127,15 +146,17 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const isTerminus = TERMINUS_STATIONS.includes(station.name);
 
   // Direction sélectionnée via TramDirectionSelector — filtre les catégories tableau.
-  const primaryDirKey = useMemo((): 'meett' | 'pdj' => {
-    const name = direction.name.toLowerCase();
-    if (name.includes('meett') || name.includes('aéroport')) return 'meett';
-    return 'pdj';
-  }, [direction.name]);
+  const primaryDirKey = useMemo((): 'meett' | 'pdj' => dirKeyOf(direction.name), [direction.name]);
 
-  // Labels physiques des extrémités (totem + bandeau)
-  const endpointLabel1 = station.directions[0]?.name ?? 'Extrémité A';
-  const endpointLabel2 = station.directions[1]?.name ?? 'Extrémité B';
+  // Labels physiques des extrémités (totem + bandeau) — préfixe "Direction "
+  // retiré (voir stripDirectionPrefix) : ce sont des lieux, pas un choix.
+  const endpointLabel1 = station.directions[0]?.name ? stripDirectionPrefix(station.directions[0].name) : 'Extrémité A';
+  const endpointLabel2 = station.directions[1]?.name ? stripDirectionPrefix(station.directions[1].name) : 'Extrémité B';
+
+  // Laquelle des 2 extrémités physiques correspond à la direction choisie
+  // dans le parcours — sert à la mettre en avant (ordre + repère visuel)
+  // sans jamais masquer l'autre, qui reste un contrôle à part entière.
+  const endpoint1IsSelected = station.directions[0] ? dirKeyOf(station.directions[0].name) === primaryDirKey : true;
 
   const DIRECTION_LABELS: Record<'meett' | 'pdj', string> = {
     meett: 'MEETT / Aéroport',
@@ -362,7 +383,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     category: 'totem' | 'bandeauStation',
     dirKey: 'direction1' | 'direction2',
     endpointLabel: string,
-    item: any
+    item: any,
+    isSelected: boolean
   ) => {
     if (!item) return null;
 
@@ -381,6 +403,11 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{endpointLabel}</h3>
+              {isSelected && (
+                <span className="px-2 py-0.5 bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 text-[10px] font-bold rounded uppercase tracking-wider">
+                  Direction en cours
+                </span>
+              )}
               {item.dimensions && (
                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
                   {item.dimensions}
@@ -403,6 +430,23 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         {renderPhotoSection(category, dirKey, 0, item)}
       </div>
     );
+  };
+
+  // Rend les 2 extrémités d'une catégorie physique (totem / bandeauStation),
+  // celle correspondant à la direction en cours en premier — le contenu ne
+  // change pas (les 2 restent affichées, référentiel oblige), seul l'ordre
+  // et le repère visuel rendent le contexte déjà choisi explicite.
+  const renderEndpointPair = (category: 'totem' | 'bandeauStation') => {
+    const data = signaletique[category];
+    const item1 = data?.direction1;
+    const item2 = data?.direction2;
+    const first = endpoint1IsSelected
+      ? renderSingleItem(category, 'direction1', endpointLabel1, item1, true)
+      : renderSingleItem(category, 'direction2', endpointLabel2, item2, true);
+    const second = endpoint1IsSelected
+      ? renderSingleItem(category, 'direction2', endpointLabel2, item2, false)
+      : renderSingleItem(category, 'direction1', endpointLabel1, item1, false);
+    return <>{first}{second}</>;
   };
 
   // Render pour biv/planReseau/planQuartier/hap : tableau d'items par direction meett/pdj
@@ -510,11 +554,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       >
         <div className="space-y-6 bg-slate-50 dark:bg-slate-900/30">
 
-          {/* ── TOTEM : les 2 extrémités physiques ── */}
-          {renderCategorySection('totem', <>
-            {renderSingleItem('totem', 'direction1', endpointLabel1, signaletique.totem?.direction1)}
-            {renderSingleItem('totem', 'direction2', endpointLabel2, signaletique.totem?.direction2)}
-          </>)}
+          {/* ── TOTEM : les 2 extrémités physiques (la direction en cours en premier) ── */}
+          {renderCategorySection('totem', renderEndpointPair('totem'))}
 
           {/* ── Direction sélectionnée : BIV, Plan Réseau, Plan Quartier, HAP ── */}
           <div>
@@ -536,11 +577,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             </div>
           </div>
 
-          {/* ── BANDEAU STATION : les 2 extrémités physiques ── */}
-          {renderCategorySection('bandeauStation', <>
-            {renderSingleItem('bandeauStation', 'direction1', endpointLabel1, signaletique.bandeauStation?.direction1)}
-            {renderSingleItem('bandeauStation', 'direction2', endpointLabel2, signaletique.bandeauStation?.direction2)}
-          </>)}
+          {/* ── BANDEAU STATION : les 2 extrémités physiques (la direction en cours en premier) ── */}
+          {renderCategorySection('bandeauStation', renderEndpointPair('bandeauStation'))}
 
         </div>
       </AuditFormLayout>
