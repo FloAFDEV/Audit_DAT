@@ -1,17 +1,25 @@
 // components/cockpit/StationModulesPanel.tsx
 // =================================================================
 // ADMIN — attacher un module à une station, gérer les zones/bornes P+R
-// (Lot 2c), et corriger le périmètre adhesiveIds d'une borne existante
-// (Lot 2d). DAT/ECA gardent leurs mécanismes terrain existants (Ajouter
-// un DAT / Ajouter un ECA, déjà non gated Admin) — ce panneau ne
-// duplique pas ce qui fonctionne déjà, il ne comble que ce qui manquait
-// réellement (attacher un module, CRUD zones/bornes P+R, périmètre
-// adhesiveIds d'une borne).
+// (Lot 2c), corriger le périmètre adhesiveIds d'une borne existante
+// (Lot 2d), et gérer le PARC DE RÉFÉRENCE des DAT/ECA d'une station
+// (Lot 3 — distinct des constats terrain). Un DAT/ECA sans `origin` ou
+// avec origin: 'reference' est un équipement structurel connu de
+// Tisséo, géré ici (créer/modifier/renommer/retirer, persistance Dexie
+// via addDatAdmin/updateDatAdmin/archiveDatAdmin/... — store.ts). Un
+// DAT/ECA avec origin: 'terrain' est un CONSTAT ajouté depuis les
+// écrans terrain existants (Ajouter un DAT / Ajouter un ECA, mécanisme
+// inchangé) — affiché ici en lecture seule, jamais modifiable depuis
+// l'Admin : les deux univers partagent le même tableau de données
+// (aucun objet dupliqué), distingués par ce seul champ.
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, PencilLine, ListFilter, RotateCcw, Link2Off } from 'lucide-react';
+import { Plus, Trash2, PencilLine, ListFilter, RotateCcw, Link2Off, Archive, ArchiveRestore } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType, CustomAuditData } from '../../types';
+import {
+    Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType, CustomAuditData,
+    DAT, ECA, EcaData, EcaEquipmentType, ModeData, Direction,
+} from '../../types';
 import useAuditStore from '../../store';
 import {
     AttachableModuleType, ModuleLine, ATTACHABLE_MODULE_LINES, isModuleTypeAttachable, isCustomAuditAttachable,
@@ -21,6 +29,8 @@ import { getEffectiveEquipmentAdhesives } from '../../utils/effectiveAdhesives';
 import ConfirmationModal from '../ConfirmationModal';
 import { LineIcon } from '../LineIcon';
 import { ModuleIcon } from '../ModuleIcon';
+import { getEcaTypeLabel } from '../EcaUiHelpers';
+import { EDITABLE_ECA_TYPES } from '../EcaEditModal';
 
 const LINE_LABEL: Record<ModuleLine, string> = {
     A: 'Ligne A', B: 'Ligne B', C: 'Ligne C', TRAM: 'Tram', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
@@ -502,6 +512,388 @@ const PrZonesEditor: React.FC<{ lieuId: string; module: AuditModule }> = ({ lieu
     );
 };
 
+/* ---------------- DAT — parc de référence (Lot 3) ---------------- */
+
+/** Une ligne DAT. Un item origin: 'terrain' (constat, ajouté depuis les
+ *  écrans terrain) s'affiche en lecture seule ici — l'Admin ne gère que le
+ *  parc de référence (origin absent ou 'reference'), jamais les constats. */
+const DatRow: React.FC<{ lieuId: string; moduleId: string; directionId: string; dat: DAT }> = ({ lieuId, moduleId, directionId, dat }) => {
+    const updateDatAdmin = useAuditStore(s => s.updateDatAdmin);
+    const archiveDatAdmin = useAuditStore(s => s.archiveDatAdmin);
+    const restoreDatAdmin = useAuditStore(s => s.restoreDatAdmin);
+    const [isRenaming, setIsRenaming] = useState(false);
+    const [name, setName] = useState(dat.name);
+    const [confirmArchive, setConfirmArchive] = useState(false);
+    const isArchived = !!dat.archivedAt;
+    const isReference = dat.origin !== 'terrain';
+
+    const handleRename = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await updateDatAdmin(lieuId, moduleId, directionId, dat.id, { name });
+            setIsRenaming(false);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec du renommage — réessayez.');
+        }
+    };
+
+    const handleArchiveToggle = async () => {
+        try {
+            if (isArchived) {
+                await restoreDatAdmin(lieuId, moduleId, directionId, dat.id);
+                toast.success('DAT restauré au parc de référence');
+            } else {
+                await archiveDatAdmin(lieuId, moduleId, directionId, dat.id);
+                toast.success('DAT retiré du parc de référence');
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec — réessayez.');
+        } finally {
+            setConfirmArchive(false);
+        }
+    };
+
+    if (!isReference) {
+        return (
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+                <span className="text-sm text-slate-700 dark:text-slate-200">{dat.name}</span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex-shrink-0">Constat terrain</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className={`p-2 rounded-lg border ${isArchived ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+                {isRenaming ? (
+                    <form onSubmit={handleRename} className="flex items-center gap-2 flex-1 min-w-[160px]">
+                        <input value={name} onChange={e => setName(e.target.value)} className={`flex-1 ${fieldClass}`} autoFocus />
+                        <button type="submit" className="text-xs font-semibold text-teal-600">OK</button>
+                        <button type="button" onClick={() => { setIsRenaming(false); setName(dat.name); }} className="text-xs text-slate-400">Annuler</button>
+                    </form>
+                ) : (
+                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                        {dat.name} {isArchived && <span className="text-xs font-normal text-slate-400">(archivé)</span>}
+                    </span>
+                )}
+                {!isRenaming && (
+                    <div className="flex items-center gap-1">
+                        {!isArchived && (
+                            <button onClick={() => setIsRenaming(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Renommer le DAT">
+                                <PencilLine className="w-4 h-4" />
+                            </button>
+                        )}
+                        <button
+                            onClick={isArchived ? handleArchiveToggle : () => setConfirmArchive(true)}
+                            className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                            aria-label={isArchived ? 'Restaurer le DAT' : 'Retirer du parc de référence'}
+                        >
+                            {isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                        </button>
+                    </div>
+                )}
+            </div>
+            <ConfirmationModal
+                isOpen={confirmArchive}
+                onClose={() => setConfirmArchive(false)}
+                onConfirm={handleArchiveToggle}
+                title="Retirer du parc de référence"
+                message={`« ${dat.name} » sera retiré du parc de référence. Il disparaît des écrans terrain (sélection, progression, exports) mais reste consultable et restaurable depuis l'Admin.`}
+                isDestructive
+            />
+        </div>
+    );
+};
+
+const AddDatForm: React.FC<{ lieuId: string; moduleId: string; directionId: string }> = ({ lieuId, moduleId, directionId }) => {
+    const addDatAdmin = useAuditStore(s => s.addDatAdmin);
+    const [name, setName] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await addDatAdmin(lieuId, moduleId, directionId, name);
+            setName('');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout du DAT :", error);
+            toast.error("Échec de l'ajout — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline">
+                <Plus className="w-3.5 h-3.5" /> Ajouter un DAT
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom du DAT (ex. DAT 01)" className={fieldClass} autoFocus />
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500">Annuler</button>
+        </form>
+    );
+};
+
+const DatDirectionBlock: React.FC<{ lieuId: string; moduleId: string; direction: Direction }> = ({ lieuId, moduleId, direction }) => {
+    const activeDats = direction.dats.filter(d => !d.archivedAt);
+    const archivedDats = direction.dats.filter(d => d.archivedAt);
+    const [showArchived, setShowArchived] = useState(false);
+
+    return (
+        <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700 space-y-2">
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100">{direction.name}</h4>
+            <div className="space-y-1.5 pl-1">
+                {activeDats.map(dat => (
+                    <DatRow key={dat.id} lieuId={lieuId} moduleId={moduleId} directionId={direction.id} dat={dat} />
+                ))}
+                {activeDats.length === 0 && <p className="text-xs text-slate-400 italic">Aucun DAT dans cette direction.</p>}
+            </div>
+            <AddDatForm lieuId={lieuId} moduleId={moduleId} directionId={direction.id} />
+            {archivedDats.length > 0 && (
+                <div className="pl-1">
+                    <button onClick={() => setShowArchived(v => !v)} className="text-xs font-semibold text-slate-400 hover:underline">
+                        {archivedDats.length} DAT archivé{archivedDats.length > 1 ? 's' : ''} {showArchived ? '▲' : '▼'}
+                    </button>
+                    {showArchived && (
+                        <div className="space-y-1.5 mt-1.5">
+                            {archivedDats.map(dat => (
+                                <DatRow key={dat.id} lieuId={lieuId} moduleId={moduleId} directionId={direction.id} dat={dat} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
+/** Une direction sans aucun DAT (ex. Ligne C : cf. types.ts::DAT — le seed
+ *  historique laisse `directions: []` pour les stations encore isFuture)
+ *  n'a aucun CRUD ailleurs : addDatDirectionAdmin comble ce manque, sans
+ *  dépendre d'un futur ajustement de data/builder.ts. */
+const AddDirectionForm: React.FC<{ lieuId: string; moduleId: string }> = ({ lieuId, moduleId }) => {
+    const addDatDirectionAdmin = useAuditStore(s => s.addDatDirectionAdmin);
+    const [name, setName] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await addDatDirectionAdmin(lieuId, moduleId, name);
+            setName('');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout de la direction :", error);
+            toast.error("Échec de l'ajout — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
+                <Plus className="w-4 h-4" /> Ajouter une direction
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom de la direction (ex. Direction Aéroconstellation)" className={fieldClass} autoFocus />
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500">Annuler</button>
+        </form>
+    );
+};
+
+const DatDirectionsEditor: React.FC<{ lieuId: string; module: AuditModule }> = ({ lieuId, module }) => {
+    const data = module.data as ModeData;
+    const directions = data.stations[0]?.directions ?? [];
+    return (
+        <div className="space-y-2 pl-4 border-l-2 border-teal-100 dark:border-teal-900/40">
+            {directions.map(direction => (
+                <DatDirectionBlock key={direction.id} lieuId={lieuId} moduleId={module.id} direction={direction} />
+            ))}
+            {directions.length === 0 && <p className="text-xs text-slate-400 italic">Aucune direction pour l'instant.</p>}
+            <AddDirectionForm lieuId={lieuId} moduleId={module.id} />
+        </div>
+    );
+};
+
+/* ---------------- ECA — parc de référence (Lot 3) ---------------- */
+
+const EcaRow: React.FC<{ lieuId: string; moduleId: string; eca: ECA }> = ({ lieuId, moduleId, eca }) => {
+    const updateEcaAdmin = useAuditStore(s => s.updateEcaAdmin);
+    const archiveEcaAdmin = useAuditStore(s => s.archiveEcaAdmin);
+    const restoreEcaAdmin = useAuditStore(s => s.restoreEcaAdmin);
+    const [isEditing, setIsEditing] = useState(false);
+    const [name, setName] = useState(eca.name);
+    const [accessPoint, setAccessPoint] = useState(eca.accessPoint);
+    const [type, setType] = useState<EcaEquipmentType>(eca.type);
+    const [number, setNumber] = useState(eca.number);
+    const [confirmArchive, setConfirmArchive] = useState(false);
+    const isArchived = !!eca.archivedAt;
+    const isReference = eca.origin !== 'terrain';
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await updateEcaAdmin(lieuId, moduleId, eca.id, { name, accessPoint, type, number });
+            setIsEditing(false);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec de la modification — réessayez.');
+        }
+    };
+
+    const handleArchiveToggle = async () => {
+        try {
+            if (isArchived) {
+                await restoreEcaAdmin(lieuId, moduleId, eca.id);
+                toast.success('ECA restauré au parc de référence');
+            } else {
+                await archiveEcaAdmin(lieuId, moduleId, eca.id);
+                toast.success('ECA retiré du parc de référence');
+            }
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec — réessayez.');
+        } finally {
+            setConfirmArchive(false);
+        }
+    };
+
+    if (!isReference) {
+        return (
+            <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/30">
+                <span className="text-sm text-slate-700 dark:text-slate-200">{eca.name} <span className="text-xs text-slate-400">({eca.accessPoint})</span></span>
+                <span className="text-xs font-semibold text-amber-700 dark:text-amber-300 flex-shrink-0">Constat terrain</span>
+            </div>
+        );
+    }
+
+    if (isEditing) {
+        return (
+            <form onSubmit={handleSave} className="flex flex-wrap items-end gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+                <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom" className={fieldClass} autoFocus />
+                <input value={accessPoint} onChange={e => setAccessPoint(e.target.value)} placeholder="Point d'accès" className={fieldClass} />
+                <select value={type} onChange={e => setType(e.target.value as EcaEquipmentType)} className={fieldClass}>
+                    {EDITABLE_ECA_TYPES.map(t => <option key={t} value={t}>{getEcaTypeLabel(t)}</option>)}
+                </select>
+                <input type="number" min={1} value={number} onChange={e => setNumber(parseInt(e.target.value, 10) || 1)} className={`${fieldClass} w-20`} />
+                <button type="submit" className="text-xs font-semibold text-teal-600">OK</button>
+                <button type="button" onClick={() => setIsEditing(false)} className="text-xs text-slate-400">Annuler</button>
+            </form>
+        );
+    }
+
+    return (
+        <div className={`flex items-center justify-between gap-2 p-2 rounded-lg border ${isArchived ? 'bg-slate-50 dark:bg-slate-900/40 border-slate-200 dark:border-slate-700 opacity-70' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}>
+            <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
+                    {eca.name} {isArchived && <span className="text-xs font-normal text-slate-400">(archivé)</span>}
+                </p>
+                <p className="text-xs text-slate-400">{eca.accessPoint} · {getEcaTypeLabel(eca.type)} · n°{eca.number}</p>
+            </div>
+            <div className="flex items-center gap-1 flex-shrink-0">
+                {!isArchived && (
+                    <button onClick={() => setIsEditing(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Modifier l'ECA">
+                        <PencilLine className="w-4 h-4" />
+                    </button>
+                )}
+                <button
+                    onClick={isArchived ? handleArchiveToggle : () => setConfirmArchive(true)}
+                    className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                    aria-label={isArchived ? "Restaurer l'ECA" : 'Retirer du parc de référence'}
+                >
+                    {isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
+                </button>
+            </div>
+            <ConfirmationModal
+                isOpen={confirmArchive}
+                onClose={() => setConfirmArchive(false)}
+                onConfirm={handleArchiveToggle}
+                title="Retirer du parc de référence"
+                message={`« ${eca.name} » sera retiré du parc de référence. Il disparaît des écrans terrain (sélection, progression, exports) mais reste consultable et restaurable depuis l'Admin.`}
+                isDestructive
+            />
+        </div>
+    );
+};
+
+const AddEcaForm: React.FC<{ lieuId: string; moduleId: string }> = ({ lieuId, moduleId }) => {
+    const addEcaAdmin = useAuditStore(s => s.addEcaAdmin);
+    const [name, setName] = useState('');
+    const [accessPoint, setAccessPoint] = useState('Accès Principal');
+    const [type, setType] = useState<EcaEquipmentType>(EcaEquipmentType.TripodeEntree);
+    const [number, setNumber] = useState(1);
+    const [isOpen, setIsOpen] = useState(false);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await addEcaAdmin(lieuId, moduleId, { name, accessPoint, type, number });
+            setName('');
+            setIsOpen(false);
+        } catch (error) {
+            console.error("Échec de l'ajout de l'ECA :", error);
+            toast.error("Échec de l'ajout — réessayez.");
+        }
+    };
+
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
+                <Plus className="w-4 h-4" /> Ajouter un ECA
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Nom (ex. Tripode E01)" className={fieldClass} autoFocus />
+            <input value={accessPoint} onChange={e => setAccessPoint(e.target.value)} placeholder="Point d'accès" className={fieldClass} />
+            <select value={type} onChange={e => setType(e.target.value as EcaEquipmentType)} className={fieldClass}>
+                {EDITABLE_ECA_TYPES.map(t => <option key={t} value={t}>{getEcaTypeLabel(t)}</option>)}
+            </select>
+            <input type="number" min={1} value={number} onChange={e => setNumber(parseInt(e.target.value, 10) || 1)} className={`${fieldClass} w-20`} />
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Ajouter</button>
+            <button type="button" onClick={() => setIsOpen(false)} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500">Annuler</button>
+        </form>
+    );
+};
+
+const EcaReferenceEditor: React.FC<{ lieuId: string; module: AuditModule }> = ({ lieuId, module }) => {
+    const data = module.data as EcaData;
+    const active = data.ecas.filter(e => !e.archivedAt);
+    const archived = data.ecas.filter(e => e.archivedAt);
+    const [showArchived, setShowArchived] = useState(false);
+
+    return (
+        <div className="space-y-2 pl-4 border-l-2 border-teal-100 dark:border-teal-900/40">
+            <div className="space-y-1.5">
+                {active.map(eca => <EcaRow key={eca.id} lieuId={lieuId} moduleId={module.id} eca={eca} />)}
+                {active.length === 0 && <p className="text-xs text-slate-400 italic">Aucun ECA.</p>}
+            </div>
+            <AddEcaForm lieuId={lieuId} moduleId={module.id} />
+            {archived.length > 0 && (
+                <div>
+                    <button onClick={() => setShowArchived(v => !v)} className="text-xs font-semibold text-slate-400 hover:underline">
+                        {archived.length} ECA archivé{archived.length > 1 ? 's' : ''} {showArchived ? '▲' : '▼'}
+                    </button>
+                    {showArchived && (
+                        <div className="space-y-1.5 mt-1.5">
+                            {archived.map(eca => <EcaRow key={eca.id} lieuId={lieuId} moduleId={module.id} eca={eca} />)}
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+};
+
 /* ---------------- Conteneur ---------------- */
 
 interface StationModulesPanelProps {
@@ -549,6 +941,8 @@ const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
                             <DetachModuleButton lieuId={lieu.id} module={module} />
                         </div>
                         {module.type === AuditModuleType.PR && <PrZonesEditor lieuId={lieu.id} module={module} />}
+                        {module.type === AuditModuleType.DAT && <DatDirectionsEditor lieuId={lieu.id} module={module} />}
+                        {module.type === AuditModuleType.ECA && <EcaReferenceEditor lieuId={lieu.id} module={module} />}
                         {module.type === AuditModuleType.CUSTOM && (() => {
                             const data = module.data as CustomAuditData;
                             const count = (data.occurrences ?? []).length;
@@ -557,8 +951,9 @@ const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
                                 : data.lastCheckedAt ? 'vérifié, aucun objet trouvé' : 'pas encore vérifié';
                             return <p className="text-xs text-slate-400 italic pl-4">Audit configurable — {label}.</p>;
                         })()}
-                        {module.type !== AuditModuleType.PR && module.type !== AuditModuleType.CUSTOM && (
-                            <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un DAT / un ECA / un point d'accès...).</p>
+                        {module.type !== AuditModuleType.PR && module.type !== AuditModuleType.CUSTOM
+                            && module.type !== AuditModuleType.DAT && module.type !== AuditModuleType.ECA && (
+                            <p className="text-xs text-slate-400 italic pl-4">Gestion via les écrans terrain existants (Ajouter un point d'accès...).</p>
                         )}
                     </div>
                 );

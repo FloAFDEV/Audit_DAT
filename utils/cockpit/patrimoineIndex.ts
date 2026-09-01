@@ -275,7 +275,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     const refs = resolveReferencesForEquipment(references, 'DAT');
                     for (const station of (module.data as ModeData).stations ?? []) {
                         for (const direction of station.directions ?? []) {
-                            for (const dat of direction.dats ?? []) {
+                            for (const dat of (direction.dats ?? []).filter(d => !d.archivedAt)) {
                                 pushImplantations(refs, dat.adhesives ?? {}, {
                                     lieuId: lieu.id, lieuName: lieu.name,
                                     line: module.line || '?',
@@ -306,6 +306,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                 }
                 case AuditModuleType.ECA: {
                     for (const eca of (module.data as EcaData).ecas ?? []) {
+                        if (eca.archivedAt) continue;
                         if (eca.isNotApplicable) continue;
                         const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
                         pushImplantations(refs, eca.adhesives ?? {}, {

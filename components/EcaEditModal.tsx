@@ -13,7 +13,7 @@ interface EcaEditModalProps {
 }
 
 // The simplified, final list of user-selectable ECA types.
-const EDITABLE_ECA_TYPES = [
+export const EDITABLE_ECA_TYPES = [
     EcaEquipmentType.TripodeEntree,
     EcaEquipmentType.TripodeSortie,
     EcaEquipmentType.VantauxEntree,

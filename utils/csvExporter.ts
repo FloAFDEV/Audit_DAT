@@ -461,7 +461,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         const data = module.data as ModeData;
                         for (const station of data.stations) {
                             for (const direction of station.directions) {
-                                for (const dat of direction.dats) {
+                                for (const dat of direction.dats.filter(d => !d.archivedAt)) {
                                     for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
                                         const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
                                         const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
@@ -534,7 +534,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.ECA: {
                         const data = module.data as EcaData;
-                        for (const eca of data.ecas) {
+                        for (const eca of data.ecas.filter(e => !e.archivedAt)) {
                             if (eca.isNotApplicable) {
                                 rows.push({
                                     ...baseRow,

@@ -10,11 +10,13 @@ import {
     createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
     createBlankCustomModule, isModuleBlank, isCustomAuditAttachable,
     createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
+    createDirection, createReferenceDat, withDatRenamed, withDatArchived, withDatRestored,
+    createReferenceEca, withEcaAdminUpdated, withEcaArchived, withEcaRestored,
 } from '../utils/cockpit/moduleAdmin';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import {
     AuditModuleType, EquipmentType, ModeData, EcaData, Pr, Equipment, AdhesiveStatus,
-    PMRFloorAdhesiveData, CognitivePictogramData, CustomAuditData, FloorAdhesiveStatus,
+    PMRFloorAdhesiveData, CognitivePictogramData, CustomAuditData, FloorAdhesiveStatus, EcaEquipmentType,
 } from '../types';
 
 const REFERENCES = buildSignageReferencesSeed();
@@ -144,6 +146,69 @@ describe('withEquipmentScopeOverride — Lot 2d : ne touche JAMAIS equipment.adh
     it('ne mute jamais l\'équipement original', () => {
         withEquipmentScopeOverride(baseEquipment, ['adbe3']);
         expect(baseEquipment.adhesiveIds).toBeUndefined();
+    });
+});
+
+describe('DAT/ECA — parc de référence (Lot 3)', () => {
+    it('createDirection : id technique, démarre sans DAT', () => {
+        const direction = createDirection('Direction Aéroconstellation');
+        expect(direction.name).toBe('Direction Aéroconstellation');
+        expect(direction.dats).toEqual([]);
+        expect(direction.id).toBeTruthy();
+    });
+
+    it('createDirection rejette un nom vide', () => {
+        expect(() => createDirection('  ')).toThrow();
+    });
+
+    it('createReferenceDat : origin "reference", statuts initiaux NotChecked', () => {
+        const dat = createReferenceDat('DAT 01');
+        expect(dat.origin).toBe('reference');
+        expect(dat.archivedAt).toBeUndefined();
+        expect(Object.values(dat.adhesives).every(s => s === AdhesiveStatus.NotChecked)).toBe(true);
+    });
+
+    it('withDatRenamed conserve id/origin, change uniquement le nom', () => {
+        const dat = createReferenceDat('DAT 01');
+        const renamed = withDatRenamed(dat, 'ME01');
+        expect(renamed.id).toBe(dat.id);
+        expect(renamed.origin).toBe('reference');
+        expect(renamed.name).toBe('ME01');
+    });
+
+    it('withDatArchived pose archivedAt sans toucher aux statuts déjà saisis', () => {
+        const dat = { ...createReferenceDat('DAT 01'), adhesives: { ad1: AdhesiveStatus.OK } };
+        const archived = withDatArchived(dat);
+        expect(archived.archivedAt).toBeTruthy();
+        expect(archived.adhesives).toBe(dat.adhesives);
+    });
+
+    it('withDatRestored efface archivedAt', () => {
+        const archived = withDatArchived(createReferenceDat('DAT 01'));
+        const restored = withDatRestored(archived);
+        expect('archivedAt' in restored).toBe(false);
+    });
+
+    it('createReferenceEca : origin "reference", adhésifs dérivés du type', () => {
+        const eca = createReferenceEca({ name: 'Tripode E01', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 1 });
+        expect(eca.origin).toBe('reference');
+        expect(Object.keys(eca.adhesives).length).toBeGreaterThan(0);
+    });
+
+    it('withEcaAdminUpdated : un changement de type réinitialise les adhésifs', () => {
+        const eca = createReferenceEca({ name: 'V1', accessPoint: 'A', type: EcaEquipmentType.TripodeEntree, number: 1 });
+        const withStatus = { ...eca, adhesives: { ...eca.adhesives, [Object.keys(eca.adhesives)[0]]: AdhesiveStatus.OK } };
+        const updated = withEcaAdminUpdated(withStatus, { type: EcaEquipmentType.PMRBras });
+        expect(updated.type).toBe(EcaEquipmentType.PMRBras);
+        expect(Object.values(updated.adhesives).every(s => s === AdhesiveStatus.NotChecked)).toBe(true);
+    });
+
+    it('withEcaArchived / withEcaRestored', () => {
+        const eca = createReferenceEca({ name: 'V1', accessPoint: 'A', type: EcaEquipmentType.TripodeEntree, number: 1 });
+        const archived = withEcaArchived(eca);
+        expect(archived.archivedAt).toBeTruthy();
+        const restored = withEcaRestored(archived);
+        expect('archivedAt' in restored).toBe(false);
     });
 });
 

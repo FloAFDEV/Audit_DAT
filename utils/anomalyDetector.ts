@@ -18,7 +18,7 @@ export const getLieuDefectCount = (lieu: Lieu): number => {
             case AuditModuleType.DAT:
                 (module.data as ModeData).stations?.forEach(s =>
                     s.directions?.forEach(d =>
-                        d.dats?.forEach(dat =>
+                        d.dats?.filter(dat => !dat.archivedAt).forEach(dat =>
                             Object.values(dat.adhesives || {}).forEach(st => { if (isDefect(st)) count++; }))));
                 break;
             case AuditModuleType.PR:
@@ -27,7 +27,7 @@ export const getLieuDefectCount = (lieu: Lieu): number => {
                         Object.values(eq.adhesives || {}).forEach(st => { if (isDefect(st)) count++; })));
                 break;
             case AuditModuleType.ECA:
-                (module.data as EcaData).ecas?.forEach(eca =>
+                (module.data as EcaData).ecas?.filter(eca => !eca.archivedAt).forEach(eca =>
                     Object.values(eca.adhesives || {}).forEach(st => { if (isDefect(st)) count++; }));
                 break;
             case AuditModuleType.PMR_FLOOR_ADHESIVE:

@@ -23,6 +23,8 @@ import {
     createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
     createBlankCustomModule, isModuleBlank, isCustomAuditAttachable,
     createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
+    createDirection, createReferenceDat, withDatRenamed, withDatCommentChanged, withDatArchived, withDatRestored,
+    createReferenceEca, withEcaAdminUpdated, withEcaArchived, withEcaRestored,
 } from './utils/cockpit/moduleAdmin';
 
 // Helper to reset adhesive statuses for a given set of adhesives
@@ -105,6 +107,18 @@ interface AppState {
     renamePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => Promise<void>;
     setPrEquipmentScopeAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => Promise<void>;
     removePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => Promise<void>;
+
+    // Admin — parc de référence DAT/ECA d'une station (distinct des constats
+    // terrain, handleAddDat/handleAddEca ci-dessous, qui restent inchangés).
+    addDatDirectionAdmin: (lieuId: string, moduleId: string, name: string) => Promise<Direction>;
+    addDatAdmin: (lieuId: string, moduleId: string, directionId: string, name: string) => Promise<DAT>;
+    updateDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string, fields: { name?: string; comment?: string }) => Promise<void>;
+    archiveDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string) => Promise<void>;
+    restoreDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string) => Promise<void>;
+    addEcaAdmin: (lieuId: string, moduleId: string, fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>) => Promise<ECA>;
+    updateEcaAdmin: (lieuId: string, moduleId: string, ecaId: string, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>) => Promise<void>;
+    archiveEcaAdmin: (lieuId: string, moduleId: string, ecaId: string) => Promise<void>;
+    restoreEcaAdmin: (lieuId: string, moduleId: string, ecaId: string) => Promise<void>;
 
     // UI Actions
     setTheme: (theme: 'light' | 'dark') => void;
@@ -885,6 +899,163 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
+    // ---------------------------------------------------------------
+    // Admin — parc de référence DAT/ECA d'une station. Distinct des
+    // constats terrain (handleAddDat/handleAddEca plus bas, qui restent
+    // le mécanisme « écart constaté » et posent origin: 'terrain') : ici,
+    // origin: 'reference' — le parc que Tisséo sait implanté. Un retrait
+    // archive (archivedAt) au lieu de supprimer, pour conserver
+    // l'historique de ce qui a existé (cf. types.ts::DAT/ECA).
+    // ---------------------------------------------------------------
+    addDatDirectionAdmin: async (lieuId: string, moduleId: string, name: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const direction = createDirection(name);
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
+            const station = module?.data.stations[0];
+            if (!station) throw new Error('Module DAT introuvable.');
+            station.directions.push(direction);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'direction', entityId: direction.id, entityLabel: direction.name,
+            summary: `Direction ajoutée — ${direction.name}`,
+        });
+        return direction;
+    },
+
+    addDatAdmin: async (lieuId: string, moduleId: string, directionId: string, name: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const dat = createReferenceDat(name);
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
+            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
+            if (!direction) throw new Error('Direction introuvable.');
+            direction.dats.push(dat);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'dat', entityId: dat.id, entityLabel: dat.name,
+            summary: `DAT de référence ajouté — ${dat.name}`,
+            metadata: { origin: 'reference' },
+        });
+        return dat;
+    },
+
+    updateDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string, fields: { name?: string; comment?: string }) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let datName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
+            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
+            const dat = direction?.dats.find(d => d.id === datId);
+            if (!dat) throw new Error('DAT introuvable.');
+            if (fields.name !== undefined) Object.assign(dat, withDatRenamed(dat, fields.name));
+            if (fields.comment !== undefined) Object.assign(dat, withDatCommentChanged(dat, fields.comment));
+            datName = dat.name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_UPDATED', entityType: 'dat', entityId: datId, entityLabel: datName,
+            summary: `DAT de référence modifié — ${datName}`,
+        });
+    },
+
+    archiveDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let datName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
+            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
+            const dat = direction?.dats.find(d => d.id === datId);
+            if (!dat) throw new Error('DAT introuvable.');
+            Object.assign(dat, withDatArchived(dat));
+            datName = dat.name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ARCHIVED', entityType: 'dat', entityId: datId, entityLabel: datName,
+            summary: `DAT retiré du parc de référence — ${datName}`,
+        });
+    },
+
+    restoreDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let datName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
+            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
+            const idx = direction?.dats.findIndex(d => d.id === datId) ?? -1;
+            if (!direction || idx === -1) throw new Error('DAT introuvable.');
+            direction.dats[idx] = withDatRestored(direction.dats[idx]);
+            datName = direction.dats[idx].name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_RESTORED', entityType: 'dat', entityId: datId, entityLabel: datName,
+            summary: `DAT restauré au parc de référence — ${datName}`,
+        });
+    },
+
+    addEcaAdmin: async (lieuId: string, moduleId: string, fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        const eca = createReferenceEca(fields);
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
+            if (!module) throw new Error('Module ECA introuvable.');
+            module.data.ecas.push(eca);
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ADDED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
+            summary: `ECA de référence ajouté — ${eca.name}`,
+            metadata: { origin: 'reference' },
+        });
+        return eca;
+    },
+
+    updateEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let ecaName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
+            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
+            if (!module || idx === -1) throw new Error('ECA introuvable.');
+            module.data.ecas[idx] = withEcaAdminUpdated(module.data.ecas[idx], fields);
+            ecaName = module.data.ecas[idx].name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_UPDATED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
+            summary: `ECA de référence modifié — ${ecaName}`,
+        });
+    },
+
+    archiveEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let ecaName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
+            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
+            if (!module || idx === -1) throw new Error('ECA introuvable.');
+            module.data.ecas[idx] = withEcaArchived(module.data.ecas[idx]);
+            ecaName = module.data.ecas[idx].name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_ARCHIVED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
+            summary: `ECA retiré du parc de référence — ${ecaName}`,
+        });
+    },
+
+    restoreEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
+        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        let ecaName = '';
+        await _updateLieuById(lieuId, (clone) => {
+            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
+            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
+            if (!module || idx === -1) throw new Error('ECA introuvable.');
+            module.data.ecas[idx] = withEcaRestored(module.data.ecas[idx]);
+            ecaName = module.data.ecas[idx].name;
+        });
+        await logEvent({
+            type: 'AUDIT_ITEM_RESTORED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
+            summary: `ECA restauré au parc de référence — ${ecaName}`,
+        });
+    },
+
     logout: () => {
         localStorage.removeItem('tisseo-audit-auth');
         set({
@@ -1088,12 +1259,18 @@ const useAuditStore = create<AppState>((set, get) => {
             const station = module.data.stations.find(s => s.id === selectedStationId);
             const direction = station?.directions.find(d => d.id === selectedDirectionId);
             if (direction) {
-                const newDatNumber = direction.dats.length + 1;
+                // Ne compte que les DAT actifs : un DAT archivé (retiré du parc de
+                // référence, cf. types.ts::DAT.archivedAt) ne doit pas décaler la
+                // numérotation suggérée d'un nouveau DAT terrain.
+                const newDatNumber = direction.dats.filter(d => !d.archivedAt).length + 1;
                 const newDat: DAT = {
                     id: uuidv4(),
                     name: `DAT ${String(newDatNumber).padStart(2, '0')}`,
                     adhesives: createInitialAdhesiveStatus(ADHESIVES),
-                    comment: ''
+                    comment: '',
+                    // Constat terrain (écart par rapport au parc de référence) — par
+                    // opposition à un DAT de référence, ajouté via addDatAdmin.
+                    origin: 'terrain',
                 };
                 direction.dats.push(newDat);
                 createdDat = newDat;
@@ -1105,6 +1282,7 @@ const useAuditStore = create<AppState>((set, get) => {
             await logEvent({
                 type: 'AUDIT_ITEM_ADDED', entityType: 'dat', entityId: dat.id, entityLabel: dat.name,
                 summary: `DAT ajouté — ${dat.name}${lieuName ? ` (${lieuName})` : ''}`,
+                metadata: { origin: 'terrain' },
             });
         }
     },
@@ -1245,6 +1423,9 @@ const useAuditStore = create<AppState>((set, get) => {
                     id: uuidv4(),
                     adhesives: createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type)),
                     comment: '',
+                    // Constat terrain — par opposition à un ECA de référence, ajouté
+                    // via addEcaAdmin.
+                    origin: 'terrain',
                 };
                 module.data.ecas.push(newEca);
                 createdEca = newEca;
@@ -1256,6 +1437,7 @@ const useAuditStore = create<AppState>((set, get) => {
             await logEvent({
                 type: 'AUDIT_ITEM_ADDED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
                 summary: `ECA ajouté — ${eca.name}${lieuName ? ` (${lieuName})` : ''}`,
+                metadata: { origin: 'terrain' },
             });
         }
     },

@@ -78,6 +78,18 @@ export interface DAT {
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
     completionDate?: string;
+    /** Parc de référence / constat terrain — absent = 'reference' (tout le
+     *  parc historique, seedé par data/builder.ts, est réputé connu de
+     *  Tisséo). Seuls les ajouts explicites depuis le terrain reçoivent
+     *  'terrain'. Jamais réévalué automatiquement — une promotion éventuelle
+     *  ('terrain' → 'reference') reste une action explicite. */
+    origin?: 'reference' | 'terrain';
+    /** Retiré du parc de référence — même convention que Lieu/SignageReference/
+     *  AuditDefinition (archivedAt) : jamais une suppression physique pour un
+     *  DAT de référence, afin de conserver l'historique de ce qui a existé.
+     *  Un DAT archivé disparaît des écrans terrain (sélection, stats,
+     *  exports) mais reste consultable/restaurable depuis l'Admin. */
+    archivedAt?: string; // ISO
 }
 
 export interface Direction {
@@ -216,6 +228,10 @@ export interface ECA {
     comment: string;
     isNotApplicable?: boolean;
     completionDate?: string;
+    /** Parc de référence / constat terrain — même convention que DAT.origin. */
+    origin?: 'reference' | 'terrain';
+    /** Retiré du parc de référence — même convention que DAT.archivedAt. */
+    archivedAt?: string; // ISO
 }
 
 export interface EcaData {
@@ -459,7 +475,7 @@ export interface HistoryEntry {
 export type AppEventType =
     | 'RESET_GLOBAL' | 'RESET_CATEGORY' | 'RESET_MODULE_TYPE' | 'RESET_AUDIT'
     | 'IMPORT' | 'EXPORT'
-    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED'
+    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED' | 'AUDIT_ITEM_UPDATED' | 'AUDIT_ITEM_ARCHIVED' | 'AUDIT_ITEM_RESTORED'
     | 'REFERENCE_ARBITRAGE'
     // Lot 2a : CRUD Admin du référentiel signalétique (source unique, R1).
     | 'REFERENCE_CREATED' | 'REFERENCE_UPDATED' | 'REFERENCE_ARCHIVED' | 'REFERENCE_RESTORED' | 'REFERENCE_DELETED'

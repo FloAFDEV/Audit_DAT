@@ -42,7 +42,7 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
         switch (module.type) {
             case AuditModuleType.DAT:
                 const stations = (module.data as ModeData).stations;
-                stations.forEach(s => s.directions.forEach(d => d.dats.forEach(dat => {
+                stations.forEach(s => s.directions.forEach(d => d.dats.filter(dat => !dat.archivedAt).forEach(dat => {
                     Object.values(dat.adhesives).forEach(status => {
                         if (status !== AdhesiveStatus.NotApplicable && status !== AdhesiveStatus.NotChecked) {
                             totalApplicable++;
@@ -70,6 +70,7 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
             case AuditModuleType.ECA:
                 const ecas = (module.data as EcaData).ecas;
                 ecas.forEach(eca => {
+                    if (eca.archivedAt) return; // Retiré du parc de référence
                     if (eca.isNotApplicable) return; // Skip N/A ECAs
                     const defs = getEcaAdhesives(eca.type);
                     defs.forEach(def => {
