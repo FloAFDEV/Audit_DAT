@@ -369,7 +369,7 @@ export const computeAdhesiveInventory = (
                 { id: 'sign-totem',         name: 'Totem',                    dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
                 { id: 'sign-biv',           name: 'BIV (écran dynamique)',     dimensions: 'Variable',        material: 'Écran dynamique' },
                 { id: 'sign-plan-reseau',   name: 'Plan du réseau',            dimensions: '80 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-plan-quartier', name: 'Plan de quartier',          dimensions: '80 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-quartier', name: 'Plan de quartier',          dimensions: '78 x 100 cm',     material: 'Vinyle' },
                 { id: 'sign-hap',           name: 'HAP (fiche horaire)',        dimensions: 'Variable',        material: 'Papier' },
                 { id: 'sign-bandeau',       name: 'Bandeau de station',        dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
             ];

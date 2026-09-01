@@ -265,7 +265,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Équipements",
-    "dimensions": "80 x 100 cm",
+    "dimensions": "78 x 100 cm",
     "id": "sign-plan-quartier",
     "material": "Vinyle",
     "name": "Plan de quartier",
