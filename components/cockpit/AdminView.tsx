@@ -7,35 +7,20 @@
 // plus = une entrée de registre, jamais une restructuration.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { BookPlus, Archive, Building, ArchiveRestore, Trash2, PencilLine, LucideIcon, Search, LayoutList, Sparkles, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookPlus, Archive, Building, ArchiveRestore, Trash2, PencilLine, LucideIcon, Search, LayoutList, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { Lieu, AuditModule, AuditModuleType, AuditDefinition } from '../../types';
+import { Lieu, AuditModule, AuditModuleType, CustomAuditData } from '../../types';
 import { LieuBadges } from '../Icons';
-import { LineIcon } from '../LineIcon';
 import useAuditStore from '../../store';
 import { useAdminReferences } from '../../hooks/useAdminReferences';
-import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
-import { useAdminAuditDefinitions } from '../../hooks/useAdminAuditDefinitions';
 import { referenceToEditableFields } from '../../utils/cockpit/signageReferenceEditor';
-import { computeTargetLieuIds, computeDeployedCount, AuditDefinitionEditableFields } from '../../utils/cockpit/auditDefinitionAdmin';
-import { MODULE_LINES, ModuleLine } from '../../utils/cockpit/moduleAdmin';
-import { CUSTOM_AUDIT_ICON_KEYS, resolveCustomAuditIcon, DEFAULT_CUSTOM_AUDIT_ICON } from '../../data/customAuditIcons';
+import { computeAdhesiveInventory } from '../../hooks/useStats';
+import { CUSTOM_AUDIT_TYPES, CustomAuditTypeDefinition, resolveCustomAuditIcon } from '../../data/customAudits';
 import SignageReferenceForm from './SignageReferenceForm';
 import StationModulesPanel from './StationModulesPanel';
 import AdminGate from './AdminGate';
 import ConfirmationModal from '../ConfirmationModal';
 import { AUDIT_TYPE_LABELS, SUPPORT_LABELS, formatDimensions } from './labels';
-
-const LINE_LABEL: Record<ModuleLine, string> = {
-    A: 'Ligne A', B: 'Ligne B', C: 'Ligne C', TRAM: 'Tram', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
-};
-
-/** Badge de ligne réutilisant EXACTEMENT LineIcon (mêmes couleurs/formes
- *  que partout ailleurs dans l'app) — module synthétique minimal portant
- *  juste la ligne, jamais un second système de badges. */
-const StandaloneLineBadge: React.FC<{ line: string }> = ({ line }) => (
-    <LineIcon module={{ id: '', name: '', type: AuditModuleType.DAT, line: line as any, data: {} as any }} size="sm" />
-);
 
 /* ---------------- Créer une référence ---------------- */
 
@@ -132,7 +117,7 @@ const ArchivesPanel: React.FC = () => {
                 onClose={() => setToDelete(null)}
                 onConfirm={handleDeleteForever}
                 title="Supprimer définitivement"
-                message="Cette référence sera supprimée irréversiblement du catalogue. Cette action est impossible pour une référence encore utilisée dans le catalogue historique."
+                message="Cette référence sera supprimée irréversiblement du catalogue. Impossible si elle a déjà été utilisée/auditée sur le terrain — elle doit alors rester archivée pour conserver son historique."
                 isDestructive
             />
         </div>
@@ -325,135 +310,28 @@ const StationArchivesPanel: React.FC = () => {
     );
 };
 
-/* ---------------- Audits configurables (Partie 2) ---------------- */
+/* ---------------- Audits configurables (registre en dur) ---------------- */
+// Aucune création/modification/suppression d'audit depuis l'UI : le
+// registre (data/customAudits.ts) EST le référentiel des audits — ajouter
+// un audit, c'est ajouter une entrée au fichier. L'Admin ne fait ici que
+// deux choses : montrer l'état de chaque audit (références, stations,
+// occurrences recensées) et donner accès à son référentiel de références
+// (CRUD normal, comme DAT/P+R/ECA). Rattacher un audit à une station se
+// fait depuis la fiche station (StationModulesPanel), pas ici.
 
-/** Sélecteur multi-station compact (exclusions/inclusions) — recherche +
- *  cases à cocher, pas de nouveau composant générique : juste la liste
- *  déjà utilisée partout (useAuditStore lieux), filtrée localement. */
-const StationPicker: React.FC<{ label: string; selectedIds: string[]; onChange: (ids: string[]) => void }> = ({ label, selectedIds, onChange }) => {
-    const lieux = useAuditStore(s => s.lieux);
-    const [open, setOpen] = useState(false);
-    const [query, setQuery] = useState('');
-    const active = useMemo(() => lieux.filter(l => !l.archivedAt), [lieux]);
-    const filtered = useMemo(
-        () => active.filter(l => l.name.toLowerCase().includes(query.trim().toLowerCase())),
-        [active, query]
-    );
-
-    const toggle = (id: string) => onChange(selectedIds.includes(id) ? selectedIds.filter(x => x !== id) : [...selectedIds, id]);
-
-    return (
-        <div>
-            <button type="button" onClick={() => setOpen(v => !v)} className="flex items-center gap-1.5 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1">
-                {label} ({selectedIds.length}) {open ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-            {open && (
-                <div className="border border-slate-200 dark:border-slate-700 rounded-lg p-2 max-h-48 overflow-y-auto space-y-1 bg-white dark:bg-slate-800">
-                    <input
-                        type="text" placeholder="Rechercher une station…" value={query} onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1 px-2 text-xs mb-1"
-                    />
-                    {filtered.map(l => (
-                        <label key={l.id} className="flex items-center gap-2 text-sm px-1 py-0.5 rounded hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer">
-                            <input type="checkbox" checked={selectedIds.includes(l.id)} onChange={() => toggle(l.id)} />
-                            <span className="text-slate-700 dark:text-slate-200">{l.name}</span>
-                        </label>
-                    ))}
-                    {filtered.length === 0 && <p className="text-xs text-slate-400 italic px-1">Aucune station.</p>}
-                </div>
-            )}
-        </div>
-    );
-};
-
-/** Création / modification d'une AuditDefinition — nom, icône (palette
- *  lucide-react existante), lignes ciblées, exclusions, inclusions. Rien
- *  de plus (R : pas de campagne, pas de workflow). */
-const DefinitionForm: React.FC<{
-    initial?: AuditDefinitionEditableFields;
-    onSubmit: (fields: AuditDefinitionEditableFields) => Promise<void>;
-    onCancel: () => void;
-    submitLabel: string;
-}> = ({ initial, onSubmit, onCancel, submitLabel }) => {
-    const [name, setName] = useState(initial?.name ?? '');
-    const [icon, setIcon] = useState(initial?.icon ?? DEFAULT_CUSTOM_AUDIT_ICON);
-    const [targetLines, setTargetLines] = useState<ModuleLine[]>(initial?.targetLines ?? []);
-    const [excludedLieuIds, setExcludedLieuIds] = useState<string[]>(initial?.excludedLieuIds ?? []);
-    const [includedLieuIds, setIncludedLieuIds] = useState<string[]>(initial?.includedLieuIds ?? []);
-    const [error, setError] = useState<string | null>(null);
-
-    const toggleLine = (line: ModuleLine) => setTargetLines(prev => prev.includes(line) ? prev.filter(l => l !== line) : [...prev, line]);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!name.trim()) { setError('Le nom est obligatoire.'); return; }
-        setError(null);
-        try {
-            await onSubmit({ name: name.trim(), icon, targetLines, excludedLieuIds, includedLieuIds });
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Échec — réessayez.');
-        }
-    };
-
-    const inputClass = "block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 px-3 text-sm text-slate-900 dark:text-slate-50";
-    const labelClass = "text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mb-1 block";
-
-    return (
-        <form onSubmit={handleSubmit} className="space-y-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
-            {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-            <div>
-                <label className={labelClass}>Nom *</label>
-                <input type="text" value={name} onChange={e => setName(e.target.value)} className={inputClass} placeholder="Ex. : Plans de quartier" required autoFocus />
-            </div>
-            <div>
-                <label className={labelClass}>Icône</label>
-                <div className="flex flex-wrap gap-2">
-                    {CUSTOM_AUDIT_ICON_KEYS.map(key => {
-                        const Icon = resolveCustomAuditIcon(key);
-                        return (
-                            <button key={key} type="button" onClick={() => setIcon(key)} aria-label={key}
-                                className={`p-2 rounded-lg border transition-colors ${icon === key ? 'bg-teal-600 border-teal-600 text-white' : 'bg-white dark:bg-slate-700 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100'}`}>
-                                <Icon className="w-4 h-4" />
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-            <div>
-                <label className={labelClass}>Lignes ciblées</label>
-                <div className="flex flex-wrap gap-2">
-                    {MODULE_LINES.map(line => (
-                        <button key={line} type="button" onClick={() => toggleLine(line)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${targetLines.includes(line) ? 'bg-teal-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'}`}>
-                            {LINE_LABEL[line]}
-                        </button>
-                    ))}
-                </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <StationPicker label="Stations exclues" selectedIds={excludedLieuIds} onChange={setExcludedLieuIds} />
-                <StationPicker label="Stations ajoutées (hors lignes ciblées)" selectedIds={includedLieuIds} onChange={setIncludedLieuIds} />
-            </div>
-            <div className="flex gap-3 justify-end pt-2">
-                <button type="button" onClick={onCancel} className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700">Annuler</button>
-                <button type="submit" className="px-4 py-2 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">{submitLabel}</button>
-            </div>
-        </form>
-    );
-};
-
-/** Références d'une définition (scope.auditType === 'CUSTOM', même
+/** Références d'un audit (scope.auditType === 'CUSTOM', même
  *  definitionId) — même CRUD que le référentiel historique
  *  (SignageReferenceForm + useAdminReferences), simplement filtré. */
-const DefinitionReferencesPanel: React.FC<{ definition: AuditDefinition }> = ({ definition }) => {
+const DefinitionReferencesPanel: React.FC<{ definitionId: string }> = ({ definitionId }) => {
     const allReferences = useAuditStore(s => s.signageReferences);
-    const { create, update, archive, restore } = useAdminReferences();
+    const { create, update, archive, restore, deleteForever } = useAdminReferences();
     const [creating, setCreating] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [toDelete, setToDelete] = useState<string | null>(null);
 
     const refs = useMemo(
-        () => allReferences.filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === definition.id),
-        [allReferences, definition.id]
+        () => allReferences.filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === definitionId),
+        [allReferences, definitionId]
     );
     const active = refs.filter(r => !r.archivedAt);
     const archived = refs.filter(r => r.archivedAt);
@@ -480,6 +358,20 @@ const DefinitionReferencesPanel: React.FC<{ definition: AuditDefinition }> = ({ 
         }
     };
 
+    const handleDeleteForever = async () => {
+        if (!toDelete) return;
+        const ref = refs.find(r => r.id === toDelete);
+        if (!ref) { setToDelete(null); return; }
+        try {
+            await deleteForever(ref);
+            toast.success(`Référence « ${ref.name} » supprimée définitivement`);
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Échec de la suppression — réessayez.');
+        } finally {
+            setToDelete(null);
+        }
+    };
+
     return (
         <div className="mt-3 pl-3 border-l-2 border-teal-200 dark:border-teal-800 space-y-3">
             <div className="flex items-center justify-between">
@@ -491,222 +383,161 @@ const DefinitionReferencesPanel: React.FC<{ definition: AuditDefinition }> = ({ 
                 )}
             </div>
             {creating && (
-                <SignageReferenceForm mode="create" customDefinitionId={definition.id} onSubmit={handleCreate} onCancel={() => setCreating(false)} submitLabel="Créer la référence" />
+                <SignageReferenceForm mode="create" customDefinitionId={definitionId} onSubmit={handleCreate} onCancel={() => setCreating(false)} submitLabel="Créer la référence" />
             )}
-            <div className="space-y-1.5">
-                {active.map(ref => (
-                    <div key={ref.id}>
-                        <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                            <div className="min-w-0">
-                                <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">{ref.name}</p>
-                                <p className="text-xs text-slate-400">{formatDimensions(ref.dimensions)} · {ref.material || '—'}</p>
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                                <button onClick={() => setEditingId(editingId === ref.id ? null : ref.id)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Modifier">
-                                    <PencilLine className="w-3.5 h-3.5" />
-                                </button>
-                                <button onClick={() => archive(ref)} className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20" aria-label="Archiver">
-                                    <Archive className="w-3.5 h-3.5" />
-                                </button>
-                            </div>
-                        </div>
-                        {editingId === ref.id && (
-                            <div className="mt-2">
-                                <SignageReferenceForm
-                                    mode="edit" customDefinitionId={definition.id}
-                                    initialFields={referenceToEditableFields(ref)}
-                                    onSubmit={fields => handleUpdate(ref.id, fields)}
-                                    onCancel={() => setEditingId(null)}
-                                    submitLabel="Enregistrer"
-                                />
-                            </div>
-                        )}
-                    </div>
-                ))}
-                {active.length === 0 && !creating && <p className="text-xs text-slate-400 italic">Aucune référence pour l'instant.</p>}
-            </div>
+            {active.length > 0 && (
+                <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-slate-50 dark:bg-slate-900/40 text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                                <th className="text-left px-3 py-2">Référence</th>
+                                <th className="text-left px-3 py-2">Format</th>
+                                <th className="text-left px-3 py-2">Support</th>
+                                <th className="text-left px-3 py-2">Où / comment</th>
+                                <th className="px-3 py-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {active.map(ref => (
+                                <React.Fragment key={ref.id}>
+                                    <tr className="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                        <td className="px-3 py-2 font-medium text-slate-800 dark:text-slate-100">{ref.name}</td>
+                                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{formatDimensions(ref.dimensions) || '—'}</td>
+                                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400">{SUPPORT_LABELS[ref.support]}</td>
+                                        <td className="px-3 py-2 text-slate-500 dark:text-slate-400 truncate max-w-[16rem]">{ref.placement.installationGuidance || ref.placement.zone || '—'}</td>
+                                        <td className="px-3 py-2">
+                                            <div className="flex items-center gap-1 justify-end">
+                                                <button onClick={() => setEditingId(editingId === ref.id ? null : ref.id)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Modifier">
+                                                    <PencilLine className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button onClick={() => archive(ref)} className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20" aria-label="Archiver">
+                                                    <Archive className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {editingId === ref.id && (
+                                        <tr className="bg-white dark:bg-slate-800">
+                                            <td colSpan={5} className="px-3 pb-3">
+                                                <SignageReferenceForm
+                                                    mode="edit" customDefinitionId={definitionId}
+                                                    initialFields={referenceToEditableFields(ref)}
+                                                    onSubmit={fields => handleUpdate(ref.id, fields)}
+                                                    onCancel={() => setEditingId(null)}
+                                                    submitLabel="Enregistrer"
+                                                />
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            )}
+            {active.length === 0 && !creating && <p className="text-xs text-slate-400 italic">Aucune référence pour l'instant.</p>}
             {archived.length > 0 && (
                 <div className="space-y-1.5">
                     <p className="text-xs font-semibold uppercase text-slate-400">Archivées ({archived.length})</p>
                     {archived.map(ref => (
                         <div key={ref.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
                             <p className="text-sm text-slate-500 truncate">{ref.name}</p>
-                            <button onClick={() => restore(ref)} className="flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline flex-shrink-0">
-                                <ArchiveRestore className="w-3.5 h-3.5" /> Restaurer
-                            </button>
+                            <div className="flex items-center gap-1 flex-shrink-0">
+                                <button onClick={() => restore(ref)} className="flex items-center gap-1 text-xs font-semibold text-teal-700 dark:text-teal-300 hover:underline">
+                                    <ArchiveRestore className="w-3.5 h-3.5" /> Restaurer
+                                </button>
+                                <button onClick={() => setToDelete(ref.id)} className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Supprimer définitivement">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
                     ))}
                 </div>
             )}
-        </div>
-    );
-};
-
-const DefinitionCard: React.FC<{ definition: AuditDefinition }> = ({ definition }) => {
-    const lieux = useAuditStore(s => s.lieux);
-    const applyToNetwork = useAuditStore(s => s.applyAuditDefinitionToNetwork);
-    const { update, archive, restore, deleteForever } = useAdminAuditDefinitions();
-    const [editing, setEditing] = useState(false);
-    const [showRefs, setShowRefs] = useState(false);
-    const [toDelete, setToDelete] = useState(false);
-    const [applying, setApplying] = useState(false);
-
-    const targetCount = useMemo(() => computeTargetLieuIds(definition, lieux).length, [definition, lieux]);
-    const deployedCount = useMemo(() => computeDeployedCount(definition, lieux), [definition, lieux]);
-    const Icon = resolveCustomAuditIcon(definition.icon);
-    const isArchived = !!definition.archivedAt;
-
-    const handleUpdate = async (fields: AuditDefinitionEditableFields) => {
-        await update(definition, fields);
-        toast.success(`« ${fields.name} » modifié`);
-        setEditing(false);
-    };
-
-    const handleArchiveToggle = async () => {
-        try {
-            if (isArchived) { await restore(definition); toast.success(`« ${definition.name} » restauré`); }
-            else { await archive(definition); toast.success(`« ${definition.name} » archivé`); }
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Échec — réessayez.');
-        }
-    };
-
-    const handleDeleteForever = async () => {
-        try {
-            await deleteForever(definition);
-            toast.success(`« ${definition.name} » supprimé définitivement`);
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Échec de la suppression — réessayez.');
-        } finally {
-            setToDelete(false);
-        }
-    };
-
-    const handleApply = async () => {
-        setApplying(true);
-        try {
-            const { created, unresolved } = await applyToNetwork(definition);
-            if (created === 0 && unresolved === 0) toast.success('Déjà à jour — aucune station manquante.');
-            else toast.success(`${created} module(s) créé(s)${unresolved > 0 ? ` — ${unresolved} station(s) ignorée(s)` : ''}`);
-        } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Échec de l'application au réseau — réessayez.");
-        } finally {
-            setApplying(false);
-        }
-    };
-
-    if (editing) {
-        return (
-            <DefinitionForm
-                initial={{ name: definition.name, icon: definition.icon, targetLines: definition.targetLines, excludedLieuIds: definition.excludedLieuIds, includedLieuIds: definition.includedLieuIds }}
-                onSubmit={handleUpdate}
-                onCancel={() => setEditing(false)}
-                submitLabel="Enregistrer"
-            />
-        );
-    }
-
-    return (
-        <div className={`p-3 rounded-lg bg-white dark:bg-slate-800 border ${isArchived ? 'border-slate-200 dark:border-slate-700 opacity-70' : 'border-slate-200 dark:border-slate-700'}`}>
-            <div className="flex items-start justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3 min-w-0">
-                    <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex-shrink-0">
-                        <Icon className="w-5 h-5 text-teal-700 dark:text-teal-300" />
-                    </div>
-                    <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">
-                            {definition.name} {isArchived && <span className="text-xs font-normal text-slate-400">(archivé)</span>}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
-                            {definition.targetLines.map(line => <StandaloneLineBadge key={line} line={line} />)}
-                            {definition.targetLines.length === 0 && <span className="text-xs text-slate-400 italic">Aucune ligne ciblée</span>}
-                        </div>
-                        <p className="text-xs text-slate-400 mt-1">
-                            {targetCount} station{targetCount !== 1 ? 's' : ''} ciblée{targetCount !== 1 ? 's' : ''} · {deployedCount} module{deployedCount !== 1 ? 's' : ''} déployé{deployedCount !== 1 ? 's' : ''}
-                            {definition.excludedLieuIds.length > 0 && ` · ${definition.excludedLieuIds.length} exclue(s)`}
-                            {definition.includedLieuIds.length > 0 && ` · ${definition.includedLieuIds.length} ajoutée(s)`}
-                        </p>
-                    </div>
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap">
-                    {!isArchived && (
-                        <button onClick={handleApply} disabled={applying} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50">
-                            <Share2 className="w-4 h-4" /> Appliquer au réseau
-                        </button>
-                    )}
-                    <button onClick={() => setShowRefs(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200">
-                        <LayoutList className="w-4 h-4" /> Références
-                    </button>
-                    <button onClick={() => setEditing(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Modifier">
-                        <PencilLine className="w-4 h-4" />
-                    </button>
-                    <button onClick={handleArchiveToggle} className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20" aria-label={isArchived ? 'Restaurer' : 'Archiver'}>
-                        {isArchived ? <ArchiveRestore className="w-4 h-4" /> : <Archive className="w-4 h-4" />}
-                    </button>
-                    {isArchived && (
-                        <button onClick={() => setToDelete(true)} className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20" aria-label="Supprimer définitivement">
-                            <Trash2 className="w-4 h-4" />
-                        </button>
-                    )}
-                </div>
-            </div>
-            {showRefs && <DefinitionReferencesPanel definition={definition} />}
             <ConfirmationModal
-                isOpen={toDelete}
-                onClose={() => setToDelete(false)}
+                isOpen={!!toDelete}
+                onClose={() => setToDelete(null)}
                 onConfirm={handleDeleteForever}
                 title="Supprimer définitivement"
-                message={`« ${definition.name} » sera supprimé irréversiblement. Impossible si une station porte encore un module de cet audit.`}
+                message="Cette référence sera supprimée irréversiblement du catalogue. Impossible si elle a déjà été utilisée/auditée sur le terrain — elle doit alors rester archivée pour conserver son historique."
                 isDestructive
             />
         </div>
     );
 };
 
-const CustomAuditsPanel: React.FC = () => {
-    const { definitions, reload } = useAuditDefinitions();
-    const { create } = useAdminAuditDefinitions();
-    const [creating, setCreating] = useState(false);
+/** Une carte par audit du registre en dur — nom → résumé → occurrences
+ *  recensées → action principale (Référentiel). Aucune action secondaire :
+ *  il n'y a rien à modifier/archiver/supprimer sur un audit défini dans
+ *  le code. */
+const CustomAuditCard: React.FC<{ audit: CustomAuditTypeDefinition }> = ({ audit }) => {
+    const lieux = useAuditStore(s => s.lieux);
+    const signageReferences = useAuditStore(s => s.signageReferences);
+    const [showRefs, setShowRefs] = useState(false);
 
-    const active = useMemo(() => definitions.filter(d => !d.archivedAt), [definitions]);
-    const archived = useMemo(() => definitions.filter(d => d.archivedAt), [definitions]);
+    const Icon = resolveCustomAuditIcon(audit.icon);
 
-    const handleCreate = async (fields: AuditDefinitionEditableFields) => {
-        await create(fields);
-        toast.success(`« ${fields.name} » créé`);
-        setCreating(false);
-        reload();
-    };
+    const myRefIds = useMemo(
+        () => new Set(signageReferences.filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === audit.id && !r.archivedAt).map(r => r.id)),
+        [signageReferences, audit.id]
+    );
+    const refCount = myRefIds.size;
+
+    const stationCount = useMemo(() => {
+        let count = 0;
+        for (const lieu of lieux) {
+            if (lieu.modules.some(m => m.type === AuditModuleType.CUSTOM && (m.data as CustomAuditData).definitionId === audit.id)) count++;
+        }
+        return count;
+    }, [lieux, audit.id]);
+
+    // Même compteur que l'Inventaire Détaillé (computeAdhesiveInventory) —
+    // quantité RECENSÉE (occurrences hors Non applicable), jamais une
+    // notion de « posé » : réutilisé, pas réinventé. La fonction renvoie
+    // les lignes de TOUT le réseau (DAT/P+R/ECA compris) — on ne garde
+    // que celles dont l'id correspond à une référence de CET audit.
+    const totalOccurrences = useMemo(
+        () => computeAdhesiveInventory(lieux, signageReferences)
+            .filter(row => myRefIds.has(row.id))
+            .reduce((sum, row) => sum + row.quantity, 0),
+        [lieux, signageReferences, myRefIds]
+    );
 
     return (
-        <div className="space-y-4">
-            {!creating ? (
-                <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">
-                    <Sparkles className="w-4 h-4" /> Créer un audit configurable
-                </button>
-            ) : (
-                <DefinitionForm onSubmit={handleCreate} onCancel={() => setCreating(false)} submitLabel="Créer" />
-            )}
-
-            <div className="space-y-2">
-                {active.map(def => <DefinitionCard key={def.id} definition={def} />)}
-                {active.length === 0 && !creating && (
-                    <div className="text-center py-12 text-slate-500 dark:text-slate-400">
-                        <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Aucun audit configurable pour l'instant.</p>
-                    </div>
-                )}
-            </div>
-
-            {archived.length > 0 && (
-                <div className="space-y-2 pt-2">
-                    <p className="text-xs font-semibold uppercase text-slate-400">Archivés ({archived.length})</p>
-                    {archived.map(def => <DefinitionCard key={def.id} definition={def} />)}
+        <div className="p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-teal-50 dark:bg-teal-900/30 flex-shrink-0">
+                    <Icon className="w-5 h-5 text-teal-700 dark:text-teal-300" />
                 </div>
-            )}
+                <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{audit.name}</p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                        {refCount} référence{refCount !== 1 ? 's' : ''} · {stationCount} station{stationCount !== 1 ? 's' : ''}
+                    </p>
+                </div>
+                <button onClick={() => setShowRefs(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 flex-shrink-0">
+                    <LayoutList className="w-4 h-4" /> Référentiel
+                </button>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">
+                {totalOccurrences} <span className="text-sm font-normal text-slate-400">occurrence{totalOccurrences !== 1 ? 's' : ''} recensée{totalOccurrences !== 1 ? 's' : ''}</span>
+            </p>
+            {showRefs && <DefinitionReferencesPanel definitionId={audit.id} />}
         </div>
     );
 };
+
+const CustomAuditsPanel: React.FC = () => (
+    <div className="space-y-2">
+        {CUSTOM_AUDIT_TYPES.map(audit => <CustomAuditCard key={audit.id} audit={audit} />)}
+        {CUSTOM_AUDIT_TYPES.length === 0 && (
+            <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>Aucun audit configurable défini dans le code (data/customAudits.ts).</p>
+            </div>
+        )}
+    </div>
+);
 
 /* ---------------- Conteneur ---------------- */
 

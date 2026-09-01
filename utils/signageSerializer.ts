@@ -19,7 +19,7 @@
 //     signageAssets (base64). → restauration complète des deux tables.
 // =================================================================
 
-import { Lieu, SignageReference, SignageAsset, AuditDefinition } from '../types';
+import { Lieu, SignageReference, SignageAsset } from '../types';
 import { db } from '../db';
 
 // -----------------------------------------------------------------
@@ -60,10 +60,6 @@ export interface FullExportPayload {
     data: Lieu[];
     signageReferences: SignageReference[];
     signageAssets: SerializedSignageAsset[];
-    /** Partie 2 : définitions d'audits configurables. Même philosophie que
-     *  signageReferences — présente dans tout export produit par cette
-     *  version de l'app, même si vide ([]). */
-    customAuditDefinitions: AuditDefinition[];
 }
 
 /** Résultat du parsing d'un import, quel que soit son format d'origine. */
@@ -72,10 +68,6 @@ export interface ParsedImportPayload {
     /** undefined = format ancien → ne pas toucher aux tables du référentiel. */
     signageReferences?: SignageReference[];
     signageAssets?: SignageAsset[];
-    /** undefined = absente du fichier (ancien export, ou export d'avant la
-     *  Partie 2) → la table locale auditDefinitions n'est jamais touchée,
-     *  exactement la même règle que signageReferences ci-dessus. */
-    customAuditDefinitions?: AuditDefinition[];
 }
 
 // -----------------------------------------------------------------
@@ -123,29 +115,15 @@ const validateSerializedAssets = (data: any): data is SerializedSignageAsset[] =
     );
 };
 
-export const validateAuditDefinitions = (data: any): data is AuditDefinition[] => {
-    if (!Array.isArray(data)) return false;
-    return data.every(def =>
-        def && typeof def === 'object' &&
-        typeof def.id === 'string' && def.id.length > 0 &&
-        typeof def.name === 'string' &&
-        typeof def.icon === 'string' &&
-        Array.isArray(def.targetLines) &&
-        Array.isArray(def.excludedLieuIds) &&
-        Array.isArray(def.includedLieuIds)
-    );
-};
-
 // -----------------------------------------------------------------
 // Construction du payload d'export complet (lit toutes les tables)
 // -----------------------------------------------------------------
 
 export const buildFullExportPayload = async (): Promise<FullExportPayload> => {
-    const [lieux, references, assets, definitions] = await Promise.all([
+    const [lieux, references, assets] = await Promise.all([
         db.lieux.toArray(),
         db.signageReferences.toArray(),
         db.signageAssets.toArray(),
-        db.auditDefinitions.toArray(),
     ]);
 
     const serializedAssets: SerializedSignageAsset[] = await Promise.all(
@@ -161,7 +139,6 @@ export const buildFullExportPayload = async (): Promise<FullExportPayload> => {
         data: lieux,
         signageReferences: references,
         signageAssets: serializedAssets,
-        customAuditDefinitions: definitions,
     };
 };
 
@@ -207,19 +184,7 @@ export const parseImportPayload = (jsonString: string): ParsedImportPayload => {
         }));
     }
 
-    // customAuditDefinitions : absente (ancien export, ou export d'avant la
-    // Partie 2) → la table locale n'est jamais touchée (même règle que
-    // signageReferences/signageAssets ci-dessus, aucune restauration
-    // partielle silencieuse si présente mais invalide).
-    let customAuditDefinitions: AuditDefinition[] | undefined;
-    if (raw.customAuditDefinitions !== undefined) {
-        if (!validateAuditDefinitions(raw.customAuditDefinitions)) {
-            throw new Error('Définitions d\'audits configurables invalides dans le fichier.');
-        }
-        customAuditDefinitions = raw.customAuditDefinitions;
-    }
-
-    return { lieux, signageReferences: raw.signageReferences, signageAssets, customAuditDefinitions };
+    return { lieux, signageReferences: raw.signageReferences, signageAssets };
 };
 
 /**
@@ -229,7 +194,7 @@ export const parseImportPayload = (jsonString: string): ParsedImportPayload => {
  *   dans le payload (format v2) — un vieux backup n'y touche jamais.
  */
 export const applyImportPayload = async (payload: ParsedImportPayload): Promise<void> => {
-    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets, db.auditDefinitions], async () => {
+    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets], async () => {
         await db.lieux.clear();
         await db.lieux.bulkPut(payload.lieux);
 
@@ -240,13 +205,6 @@ export const applyImportPayload = async (payload: ParsedImportPayload): Promise<
             await db.signageAssets.clear();
             if (payload.signageAssets && payload.signageAssets.length > 0) {
                 await db.signageAssets.bulkPut(payload.signageAssets);
-            }
-        }
-
-        if (payload.customAuditDefinitions !== undefined) {
-            await db.auditDefinitions.clear();
-            if (payload.customAuditDefinitions.length > 0) {
-                await db.auditDefinitions.bulkPut(payload.customAuditDefinitions);
             }
         }
     });

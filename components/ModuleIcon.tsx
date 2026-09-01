@@ -1,13 +1,13 @@
 import React from 'react';
 import { AuditModuleType } from '../types';
 import { Euro, Car, Fence, Footprints, ScanEye, Layout } from 'lucide-react';
-import { resolveCustomAuditIcon } from '../data/customAuditIcons';
+import { resolveCustomAuditIcon } from '../data/customAudits';
 
 interface ModuleIconProps {
   type: AuditModuleType;
   className?: string;
-  /** Partie 2 : clé d'icône de l'AuditDefinition (module.type === CUSTOM
-   *  uniquement) — même palette que data/customAuditIcons.ts, jamais un
+  /** Clé d'icône de l'audit configurable (module.type === CUSTOM
+   *  uniquement) — même registre que data/customAudits.ts, jamais un
    *  second système graphique. Ignoré pour tout autre type. */
   customAuditIconKey?: string;
 }

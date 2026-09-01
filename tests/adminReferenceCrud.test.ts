@@ -24,7 +24,7 @@ beforeEach(async () => {
     await db.signageReferences.clear();
     await db.signageAssets.clear();
     await db.events.clear();
-    useAuditStore.setState({ signageReferences: [], isAdminUnlocked: false });
+    useAuditStore.setState({ signageReferences: [], lieux: [], isAdminUnlocked: false });
 });
 
 describe('Garde-fou isAdminUnlocked', () => {
@@ -98,11 +98,37 @@ describe('archiveReference / restoreReference', () => {
 });
 
 describe('deleteReferenceForever — garde-fous', () => {
-    it('refuse de supprimer une référence encore active (jamais archivée)', async () => {
+    it('autorise la suppression d\'une référence jamais utilisée/auditée, même non archivée', async () => {
         useAuditStore.setState({ isAdminUnlocked: true });
         const created = await createReference(baseFields);
 
-        await expect(deleteReferenceForever(created)).rejects.toThrow(/archivée/);
+        await expect(deleteReferenceForever(created)).resolves.toBeUndefined();
+        expect(await db.signageReferences.get(created.id)).toBeUndefined();
+    });
+
+    it('refuse de supprimer une référence déjà utilisée/auditée sur le terrain, même archivée (l\'archivage ne suffit pas)', async () => {
+        useAuditStore.setState({ isAdminUnlocked: true });
+        const created = await createReference(baseFields);
+        const archived = await archiveReference(created);
+        const lieuWithUsage = {
+            id: 'lieu-1', name: 'Station Test',
+            modules: [{
+                id: 'mod-1', type: 'DAT', name: 'DAT', line: 'A',
+                data: {
+                    id: 'mode-1', name: 'Station Test', type: 'METRO', line: 'A',
+                    stations: [{
+                        id: 'station-1', name: 'Station Test',
+                        directions: [{
+                            id: 'dir-1', name: 'Accès',
+                            dats: [{ id: 'dat-1', name: 'DAT', adhesives: { [created.id]: 'OK' }, comment: '' }],
+                        }],
+                    }],
+                },
+            }],
+        } as any;
+        useAuditStore.setState({ lieux: [lieuWithUsage] });
+
+        await expect(deleteReferenceForever(archived)).rejects.toThrow(/utilisée|auditée/);
         expect(await db.signageReferences.get(created.id)).toBeTruthy();
     });
 

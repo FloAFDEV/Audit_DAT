@@ -8,7 +8,7 @@
 // réellement (attacher un module, CRUD zones/bornes P+R, périmètre
 // adhesiveIds d'une borne).
 // =================================================================
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, PencilLine, ListFilter, RotateCcw, Link2Off } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Lieu, AuditModule, AuditModuleType, Pr, PrZone, Equipment, EquipmentType, CustomAuditData } from '../../types';
@@ -16,7 +16,7 @@ import useAuditStore from '../../store';
 import {
     AttachableModuleType, ModuleLine, ATTACHABLE_MODULE_LINES, isModuleTypeAttachable, isCustomAuditAttachable,
 } from '../../utils/cockpit/moduleAdmin';
-import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
+import { CUSTOM_AUDIT_TYPES, getCustomAuditType } from '../../data/customAudits';
 import { getEffectiveEquipmentAdhesives } from '../../utils/effectiveAdhesives';
 import ConfirmationModal from '../ConfirmationModal';
 import { LineIcon } from '../LineIcon';
@@ -60,7 +60,6 @@ const ALL_ATTACHABLE_TYPES: AttachableModuleType[] = ['DAT', 'ECA', 'PR', 'PMR_F
 
 const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const attachModuleAdmin = useAuditStore(s => s.attachModuleAdmin);
-    const { definitions } = useAuditDefinitions();
 
     // Filtrage réel (données de la station), pas une liste figée dans l'UI :
     // un type unique déjà présent sur cette station n'est plus proposé.
@@ -68,12 +67,12 @@ const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
         () => ALL_ATTACHABLE_TYPES.filter(t => isModuleTypeAttachable(lieu.modules, ATTACHABLE_TYPE_TO_AUDIT_TYPE[t])),
         [lieu.modules]
     );
-    // Audits configurables (Partie 2) : une définition active pas encore
-    // présente sur CETTE station — jamais un module déjà présent proposé
-    // à nouveau (même règle que pour DAT/Signalétique...).
+    // Audits configurables (registre en dur, data/customAudits.ts) : un
+    // audit pas encore présent sur CETTE station — jamais un module déjà
+    // présent proposé à nouveau (même règle que pour DAT/Signalétique...).
     const availableDefinitions = useMemo(
-        () => definitions.filter(d => !d.archivedAt && isCustomAuditAttachable(lieu.modules, d.id)),
-        [definitions, lieu.modules]
+        () => CUSTOM_AUDIT_TYPES.filter(d => isCustomAuditAttachable(lieu.modules, d.id)),
+        [lieu.modules]
     );
     const allTypes = useMemo(
         () => (availableDefinitions.length > 0 ? [...availableTypes, 'CUSTOM' as AttachableModuleType] : availableTypes),
@@ -87,20 +86,6 @@ const AddModuleForm: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const [definitionId, setDefinitionId] = useState(availableDefinitions[0]?.id ?? '');
     const [isOpen, setIsOpen] = useState(false);
     const needsLine = lineOptions.length > 0;
-
-    // Les définitions se chargent de façon asynchrone (useAuditDefinitions,
-    // lecture Dexie) : à l'ouverture du formulaire, la liste peut encore
-    // être vide au premier rendu. Sans cette synchronisation, definitionId
-    // resterait figé à '' même une fois les définitions chargées — le
-    // <select> afficherait visuellement la première option (comportement
-    // par défaut du navigateur pour une value non trouvée) sans que l'état
-    // réel corresponde, et la soumission refuserait à tort « Choisissez un
-    // audit configurable. ».
-    useEffect(() => {
-        if (!availableDefinitions.some(d => d.id === definitionId)) {
-            setDefinitionId(availableDefinitions[0]?.id ?? '');
-        }
-    }, [availableDefinitions, definitionId]);
 
     const handleTypeChange = (t: AttachableModuleType) => {
         setModuleType(t);
@@ -529,14 +514,12 @@ const DetachModuleButton: React.FC<{ lieuId: string; module: AuditModule }> = ({
 };
 
 const StationModulesPanel: React.FC<StationModulesPanelProps> = ({ lieu }) => {
-    const { definitions } = useAuditDefinitions();
-
     return (
         <div className="space-y-3 mt-3 p-3 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
             {lieu.modules.length === 0 && <p className="text-sm text-slate-400 italic">Aucun module — ajoutez-en un pour commencer.</p>}
             {lieu.modules.map(module => {
                 const customIconKey = module.type === AuditModuleType.CUSTOM
-                    ? definitions.find(d => d.id === (module.data as CustomAuditData).definitionId)?.icon
+                    ? getCustomAuditType((module.data as CustomAuditData).definitionId)?.icon
                     : undefined;
                 return (
                     <div key={module.id} className="space-y-1">

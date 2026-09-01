@@ -18,26 +18,19 @@ import {
     base64ToBlob,
     validateSignageReferences,
     validateLieuxData,
-    validateAuditDefinitions,
 } from '../utils/signageSerializer';
-import { SignageReference, AuditDefinition } from '../types';
+import { SignageReference } from '../types';
 
 /** Remet la base dans l'état "seed frais" avant chaque test. */
 const resetDb = async () => {
-    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets, db.auditDefinitions], async () => {
+    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets], async () => {
         await db.lieux.clear();
         await db.signageReferences.clear();
         await db.signageAssets.clear();
-        await db.auditDefinitions.clear();
         await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
         // Un lieu minimal pour vérifier que le flux lieux reste intact.
         await db.lieux.bulkPut([{ id: 'lieu-test', name: 'Lieu Test', modules: [] }]);
     });
-};
-
-const SAMPLE_DEFINITION: AuditDefinition = {
-    id: 'def-pdq', name: 'Plans de quartier', icon: 'MapPin',
-    targetLines: ['A'], excludedLieuIds: ['lieu-x'], includedLieuIds: ['lieu-y'],
 };
 
 /**
@@ -244,56 +237,6 @@ describe("Compatibilité anciens exports (format v1) — protection du travail a
     it('un fichier illisible est rejeté avec le message historique', () => {
         expect(() => parseImportPayload('pas du json')).toThrow('Format de fichier invalide.');
         expect(() => parseImportPayload('{"data": 42}')).toThrow('Données invalides.');
-    });
-});
-
-describe('Partie 2 — audits configurables (customAuditDefinitions)', () => {
-    it('validateAuditDefinitions valide la forme minimale et rejette une entrée incomplète', () => {
-        expect(validateAuditDefinitions([SAMPLE_DEFINITION])).toBe(true);
-        expect(validateAuditDefinitions([{ id: 'x', name: 'X' }])).toBe(false); // icon/targetLines/... manquants
-        expect(validateAuditDefinitions('pas un tableau')).toBe(false);
-    });
-
-    it('un export inclut toujours customAuditDefinitions (même vide)', async () => {
-        const payload = await buildFullExportPayload();
-        expect(payload.customAuditDefinitions).toEqual([]);
-    });
-
-    it('exporte puis restaure une définition intégralement (ciblage/exclusions/inclusions/icône)', async () => {
-        await db.auditDefinitions.add(SAMPLE_DEFINITION);
-        const backup = JSON.stringify(await buildFullExportPayload());
-
-        await db.auditDefinitions.clear();
-        await applyImportPayload(parseImportPayload(backup));
-
-        const restored = await db.auditDefinitions.get('def-pdq');
-        expect(restored).toEqual(SAMPLE_DEFINITION);
-    });
-
-    it('un import v1 (ancien format) ne touche JAMAIS auditDefinitions', async () => {
-        await db.auditDefinitions.add(SAMPLE_DEFINITION);
-        const oldFormat = JSON.stringify({ exportDate: '2026-01-01', data: [] });
-
-        await applyImportPayload(parseImportPayload(oldFormat));
-
-        expect(await db.auditDefinitions.get('def-pdq')).toEqual(SAMPLE_DEFINITION);
-    });
-
-    it('un import v2 SANS la clé customAuditDefinitions (export d\'avant la Partie 2) laisse la table locale intacte', async () => {
-        await db.auditDefinitions.add(SAMPLE_DEFINITION);
-        const payload: any = await buildFullExportPayload();
-        delete payload.customAuditDefinitions; // simule un export produit avant cette fonctionnalité
-
-        await applyImportPayload(parseImportPayload(JSON.stringify(payload)));
-
-        expect(await db.auditDefinitions.get('def-pdq')).toEqual(SAMPLE_DEFINITION);
-    });
-
-    it('refuse tout l\'import si customAuditDefinitions est présent mais invalide (pas de restauration partielle)', async () => {
-        const payload: any = await buildFullExportPayload();
-        payload.customAuditDefinitions = [{ id: '', broken: true }];
-        expect(() => parseImportPayload(JSON.stringify(payload)))
-            .toThrow('Définitions d\'audits configurables invalides dans le fichier.');
     });
 });
 

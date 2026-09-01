@@ -26,6 +26,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import {
     SignageReference, SignageReferenceVersion, SignageScope, SignageSupport, SignageDimensions, SignagePlacement,
+    Lieu, AuditModuleType, ModeData, Pr, EcaData, CustomAuditData,
 } from '../../types';
 
 export const MAX_PREVIOUS_VERSIONS = 2;
@@ -159,4 +160,50 @@ export const withArchived = (reference: SignageReference, now: string = new Date
 export const withRestored = (reference: SignageReference): SignageReference => {
     const { archivedAt, ...rest } = reference;
     return rest;
+};
+
+/**
+ * Vrai si cette référence porte un constat RÉEL (jamais une valeur par
+ * défaut) quelque part sur le réseau — DAT/ECA/P+R (clé explicite dans une
+ * map .adhesives) ou CUSTOM (une occurrence dont referenceId correspond).
+ *
+ * Volontairement DISTINCT de buildPatrimoineIndex (utils/cockpit/
+ * patrimoineIndex.ts) : ce dernier ne résout que les références encore
+ * ACTIVES (resolveReferencesForEquipment exclut l'archivée) — une
+ * référence archivée y ressort donc toujours à 0 implantation, même si un
+ * statut réel a été saisi avant son archivage. Ce contrôle-ci lit
+ * directement les clés des maps .adhesives / occurrences, sans filtrer
+ * par archivage : c'est justement le cas qu'il doit protéger contre une
+ * suppression définitive (R : suppression uniquement si jamais
+ * utilisée/auditée, peu importe l'état archivé ou non).
+ */
+export const isReferenceEverUsed = (referenceId: string, lieux: Lieu[]): boolean => {
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            switch (module.type) {
+                case AuditModuleType.DAT:
+                    for (const station of (module.data as ModeData).stations ?? [])
+                        for (const direction of station.directions ?? [])
+                            for (const dat of direction.dats ?? [])
+                                if (referenceId in (dat.adhesives ?? {})) return true;
+                    break;
+                case AuditModuleType.PR:
+                    for (const zone of (module.data as Pr).zones ?? [])
+                        for (const equip of zone.equipments ?? [])
+                            if (referenceId in (equip.adhesives ?? {})) return true;
+                    break;
+                case AuditModuleType.ECA:
+                    for (const eca of (module.data as EcaData).ecas ?? [])
+                        if (referenceId in (eca.adhesives ?? {})) return true;
+                    break;
+                case AuditModuleType.CUSTOM:
+                    for (const occ of (module.data as CustomAuditData).occurrences ?? [])
+                        if (occ.referenceId === referenceId) return true;
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+    return false;
 };

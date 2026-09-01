@@ -21,21 +21,20 @@ import useAuditStore from '../store';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { withArchived } from '../utils/cockpit/signageReferenceEditor';
 import { getEffectiveCustomReferences, getCustomAuditProgress } from '../utils/effectiveAdhesives';
-import { AuditDefinition, AuditModuleType, AdhesiveStatus, CustomAuditData, CustomAuditOccurrence, Lieu, SignageReference } from '../types';
+import { CUSTOM_AUDIT_TYPES } from '../data/customAudits';
+import { AuditModuleType, AdhesiveStatus, CustomAuditData, CustomAuditOccurrence, Lieu, SignageReference } from '../types';
 
 const SEED = buildSignageReferencesSeed();
 
-const DEF: AuditDefinition = {
-    id: 'def-pdq', name: 'Plans de quartier', icon: 'MapPin',
-    targetLines: ['A'], excludedLieuIds: [], includedLieuIds: [],
-};
+// Audit du registre en dur (data/customAudits.ts) utilisé pour ce cas de test.
+const PDQ_ID = CUSTOM_AUDIT_TYPES.find(a => a.name === 'Plans de quartier')!.id;
 
 // Ids prévisibles (pdq-1..4), même patron que
 // tests/nomenclatureCharacterization.test.ts — pas createSignageReference
 // (id toujours uuidv4(), non adressable par un id lisible dans un test).
 const ref = (id: string, over: Partial<SignageReference> = {}): SignageReference => ({
     id, name: `Plan de quartier ${id}`,
-    auditType: 'CUSTOM', scope: { auditType: 'CUSTOM', definitionId: DEF.id },
+    auditType: 'CUSTOM', scope: { auditType: 'CUSTOM', definitionId: PDQ_ID },
     version: 1, support: 'adhesif', material: 'Adhésif',
     dimensions: { width: 80, height: 100, unit: 'cm' },
     placement: { zone: 'Abords station' },
@@ -48,19 +47,17 @@ const stationWithCustomModule = (occurrences: CustomAuditOccurrence[] = [], last
     id: 'lieu-pdq', name: 'Station Test',
     modules: [{
         id: 'mod-pdq', type: AuditModuleType.CUSTOM, name: 'Plans de quartier', line: 'A',
-        data: { id: 'c-pdq', definitionId: DEF.id, stationName: 'Station Test', stationCode: '', occurrences, lastCheckedAt, comment: '' } as CustomAuditData,
+        data: { id: 'c-pdq', definitionId: PDQ_ID, stationName: 'Station Test', stationCode: '', occurrences, lastCheckedAt, comment: '' } as CustomAuditData,
     }],
 });
 
 beforeEach(async () => {
-    await db.transaction('rw', [db.lieux, db.signageReferences, db.auditDefinitions, db.history, db.events], async () => {
+    await db.transaction('rw', [db.lieux, db.signageReferences, db.history, db.events], async () => {
         await db.lieux.clear();
         await db.signageReferences.clear();
-        await db.auditDefinitions.clear();
         await db.history.clear();
         await db.events.clear();
         await db.signageReferences.bulkAdd([...SEED, ...PDQ_REFS]);
-        await db.auditDefinitions.add(DEF);
     });
     useAuditStore.setState({ lieux: [], signageReferences: [...SEED, ...PDQ_REFS] });
 });
@@ -70,14 +67,14 @@ beforeEach(async () => {
 // -----------------------------------------------------------------
 describe('getEffectiveCustomReferences — ce que le formulaire terrain propose au recensement', () => {
     it('retourne les 4 références actives de la définition, dans le référentiel réel', () => {
-        const effective = getEffectiveCustomReferences([...SEED, ...PDQ_REFS], DEF.id);
+        const effective = getEffectiveCustomReferences([...SEED, ...PDQ_REFS], PDQ_ID);
         expect(effective.map(r => r.id).sort()).toEqual(['pdq-1', 'pdq-2', 'pdq-3', 'pdq-4']);
     });
 
     it('exclut une référence archivée : elle ne doit plus être proposée pour un nouvel objet', () => {
         const archived = withArchived(PDQ_REFS[0], '2026-01-01T00:00:00.000Z');
         const references = [...SEED, archived, ...PDQ_REFS.slice(1)];
-        const effective = getEffectiveCustomReferences(references, DEF.id);
+        const effective = getEffectiveCustomReferences(references, PDQ_ID);
         expect(effective.map(r => r.id)).not.toContain('pdq-1');
         expect(effective).toHaveLength(3);
     });
@@ -85,7 +82,7 @@ describe('getEffectiveCustomReferences — ce que le formulaire terrain propose 
     it('une nouvelle référence ajoutée à la définition apparaît immédiatement, sans recréer l\'audit', () => {
         const nouvelleRef = ref('pdq-5');
         const references = [...SEED, ...PDQ_REFS, nouvelleRef];
-        const effective = getEffectiveCustomReferences(references, DEF.id);
+        const effective = getEffectiveCustomReferences(references, PDQ_ID);
         expect(effective.map(r => r.id)).toContain('pdq-5');
         expect(effective).toHaveLength(5);
     });

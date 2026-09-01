@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Archive, History, Trash2, ScrollText, RotateCcw, Upload, Download,
     PlusCircle, MinusCircle, Scale, Database, AlertTriangle, LucideIcon,
-    FilePlus2, FilePenLine, ArchiveRestore, Building2, PencilLine, Share2,
+    FilePlus2, FilePenLine, ArchiveRestore, Building2, PencilLine,
 } from 'lucide-react';
 import { Lieu, AuditModule, HistoryEntry, MaintenanceItem, AppEvent, AppEventType } from '../../types';
 import { db } from '../../db';
@@ -164,7 +164,6 @@ const EVENT_TYPE_GROUPS: { key: string; label: string; types: AppEventType[] }[]
     { key: 'AUDIT', label: "Éléments d'audit", types: ['AUDIT_ITEM_ADDED', 'AUDIT_ITEM_REMOVED'] },
     { key: 'REF', label: 'Référentiel', types: ['REFERENCE_ARBITRAGE', 'REFERENCE_CREATED', 'REFERENCE_UPDATED', 'REFERENCE_ARCHIVED', 'REFERENCE_RESTORED', 'REFERENCE_DELETED'] },
     { key: 'STATION', label: 'Stations', types: ['STATION_CREATED', 'STATION_RENAMED', 'STATION_ARCHIVED', 'STATION_RESTORED', 'STATION_DELETED'] },
-    { key: 'CUSTOM_AUDIT', label: 'Audits configurables', types: ['AUDIT_DEFINITION_CREATED', 'AUDIT_DEFINITION_UPDATED', 'AUDIT_DEFINITION_ARCHIVED', 'AUDIT_DEFINITION_RESTORED', 'AUDIT_DEFINITION_DELETED', 'AUDIT_DEFINITION_APPLIED'] },
     { key: 'SYSTEM', label: 'Système', types: ['DATA_MIGRATION', 'PERSISTENCE_ERROR'] },
 ];
 
@@ -175,8 +174,6 @@ const EVENT_ICON: Record<AppEventType, LucideIcon> = {
     REFERENCE_ARBITRAGE: Scale,
     REFERENCE_CREATED: FilePlus2, REFERENCE_UPDATED: FilePenLine, REFERENCE_ARCHIVED: Archive, REFERENCE_RESTORED: ArchiveRestore, REFERENCE_DELETED: Trash2,
     STATION_CREATED: Building2, STATION_RENAMED: PencilLine, STATION_ARCHIVED: Archive, STATION_RESTORED: ArchiveRestore, STATION_DELETED: Trash2,
-    AUDIT_DEFINITION_CREATED: FilePlus2, AUDIT_DEFINITION_UPDATED: FilePenLine, AUDIT_DEFINITION_ARCHIVED: Archive,
-    AUDIT_DEFINITION_RESTORED: ArchiveRestore, AUDIT_DEFINITION_DELETED: Trash2, AUDIT_DEFINITION_APPLIED: Share2,
     DATA_MIGRATION: Database,
     PERSISTENCE_ERROR: AlertTriangle,
 };

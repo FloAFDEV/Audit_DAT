@@ -10,7 +10,7 @@
 // =================================================================
 import React, { useState } from 'react';
 import {
-    ArrowLeft, Ruler, MapPin, FileText, Link2, History, Flag, Radar, Camera, ShieldCheck, PencilLine, Archive, ArchiveRestore, Lock,
+    ArrowLeft, Ruler, MapPin, Link2, History, Flag, Radar, Camera, ShieldCheck, PencilLine, Archive, ArchiveRestore, Lock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { SignageReference } from '../../types';
@@ -374,30 +374,6 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         Description historique : {reference.legacyDescription}
                     </p>
                 )}
-            </SheetSection>
-
-            {/* Documents externes */}
-            <SheetSection title="Documents externes" icon={<FileText className="w-4 h-4" />}>
-                {(reference.externalDocuments?.length ?? 0) === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucune référence documentaire connue.</p>
-                ) : (
-                    <ul className="space-y-3">
-                        {reference.externalDocuments!.map((doc, i) => (
-                            <li key={i} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Pill tone="teal">{doc.provider}</Pill>
-                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100 font-mono">{doc.fileReference}</span>
-                                    {doc.docVersion && <span className="text-xs text-slate-500 dark:text-slate-400">({doc.docVersion})</span>}
-                                    {doc.forVersion !== undefined && <span className="text-xs text-slate-400">→ v{doc.forVersion}</span>}
-                                </div>
-                                {doc.note && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{doc.note}</p>}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-                    Les fichiers de production restent gérés hors application (références documentaires uniquement).
-                </p>
             </SheetSection>
 
             {/* Médias terrain — emplacement prévu, édition à venir */}

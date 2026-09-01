@@ -1,7 +1,7 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry, SignageReference, SignageAsset, AppEvent, AuditDefinition } from './types';
+import { Lieu, HistoryEntry, SignageReference, SignageAsset, AppEvent } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
 
 export type AuditDb = Dexie & {
@@ -10,7 +10,6 @@ export type AuditDb = Dexie & {
     signageReferences: EntityTable<SignageReference, 'id'>;
     signageAssets: EntityTable<SignageAsset, 'id'>;
     events: EntityTable<AppEvent, 'id'>;
-    auditDefinitions: EntityTable<AuditDefinition, 'id'>;
 };
 
 /**
@@ -312,23 +311,6 @@ export const createAuditDb = (name: string): AuditDb => {
     signageReferences: 'id, auditType',
     signageAssets: 'id, referenceId',
     events: '++id, date, type, entityType',
-});
-
-// V14: création de la table des audits configurables (Partie 2).
-//   - auditDefinitions : la petite définition (nom, icône, ciblage réseau)
-//     d'un audit administrable (ex. Plans de quartier). Vide au seed —
-//     aucun audit configurable n'existe tant que l'admin n'en crée pas.
-//     Ses références (signageReferences, scope.auditType === 'CUSTOM') et
-//     ses modules (Lieu.modules[], type CUSTOM) vivent dans les tables
-//     déjà existantes — cette table ne stocke QUE le projet d'audit.
-//   ⚠ Table neuve uniquement : aucune modification des tables existantes.
-    instance.version(14).stores({
-    lieux: 'id, name',
-    history: '++id, date, type, categoryKey',
-    signageReferences: 'id, auditType',
-    signageAssets: 'id, referenceId',
-    events: '++id, date, type, entityType',
-    auditDefinitions: 'id',
 });
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :

@@ -17,6 +17,7 @@ import { logEvent } from '../utils/eventLog';
 import { isLegacyCatalogId } from '../utils/effectiveAdhesives';
 import {
     SignageReferenceEditableFields, createSignageReference, applyReferenceEdit, withArchived, withRestored,
+    isReferenceEverUsed,
 } from '../utils/cockpit/signageReferenceEditor';
 
 const assertUnlocked = () => {
@@ -91,19 +92,23 @@ export const restoreReference = async (reference: SignageReference): Promise<Sig
 };
 
 /**
- * Suppression définitive — garde-fous : la référence doit déjà être
- * archivée (jamais de suppression directe d'une référence active), et ne
- * doit pas faire partie du catalogue historique (isLegacyCatalogId) —
- * sinon resolve() planterait pour tout DAT/ECA/équipement qui la
- * référence encore dans ses données d'audit existantes.
+ * Suppression définitive — garde-fous : la référence ne doit pas faire
+ * partie du catalogue historique (isLegacyCatalogId — sinon resolve()
+ * planterait pour tout DAT/ECA/équipement qui la référence encore dans
+ * ses données d'audit existantes), et ne doit avoir JAMAIS été
+ * utilisée/auditée sur le terrain (isReferenceEverUsed — pas une règle
+ * basée sur archivedAt : une référence jamais utilisée doit rester
+ * supprimable même non archivée, et une référence déjà utilisée/auditée
+ * doit rester protégée même archivée, pour conserver l'historique réel
+ * du patrimoine).
  */
 export const deleteReferenceForever = async (reference: SignageReference): Promise<void> => {
     assertUnlocked();
-    if (!reference.archivedAt) {
-        throw new Error('Seule une référence archivée peut être supprimée définitivement.');
-    }
     if (isLegacyCatalogId(reference.id)) {
         throw new Error('Cette référence fait partie du catalogue historique et ne peut pas être supprimée définitivement.');
+    }
+    if (isReferenceEverUsed(reference.id, useAuditStore.getState().lieux)) {
+        throw new Error('Cette référence a déjà été utilisée/auditée sur le terrain : elle doit rester archivée pour conserver son historique, pas supprimée.');
     }
     const assets = await db.signageAssets.where('referenceId').equals(reference.id).toArray();
     await db.signageAssets.bulkDelete(assets.map(a => a.id));
