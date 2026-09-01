@@ -124,6 +124,12 @@ const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
 const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
 const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 
+// Le Plan de Quartier mesure réellement 83 x 100 cm (valeur conservée telle
+// quelle dans le référentiel et les exports — item.dimensions n'est jamais
+// modifié). Sur le terrain, l'équipe parle par convention de « 80 » — cet
+// écart d'affichage est local au relevé d'audit uniquement.
+const PLAN_QUARTIER_DISPLAY_DIMENSIONS = '80 x 100 cm';
+
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   module,
   station,
@@ -464,15 +470,19 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     let options = [okOption, absentOption, toReplaceOption];
     if (category === 'biv') options = [okOption, degradedOption, hsOption];
 
+    // Affichage du relevé uniquement — item.dimensions (référentiel/export)
+    // n'est jamais modifié, voir PLAN_QUARTIER_DISPLAY_DIMENSIONS.
+    const displayedDimensions = category === 'planQuartier' ? PLAN_QUARTIER_DISPLAY_DIMENSIONS : item.dimensions;
+
     return (
       <div key={`${category}-${dir}-${index}`} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-700 last:border-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{itemName}</h3>
-              {item.dimensions && (
+              {displayedDimensions && (
                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
-                  {item.dimensions}
+                  {displayedDimensions}
                 </span>
               )}
             </div>
