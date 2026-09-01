@@ -125,7 +125,7 @@ export interface PlanReseauStatus extends EquipmentStatus {
 }
 
 export interface PlanQuartierStatus extends EquipmentStatus {
-    dimensions?: string; // "80 x 100 cm"
+    dimensions?: string; // "78 x 100 cm"
     bannerDirection: EquipmentStatusType | 'NotChecked';
     hap: EquipmentStatusType | 'NotChecked';
 }
