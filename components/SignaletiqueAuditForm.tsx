@@ -154,7 +154,20 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const isTerminus = TERMINUS_STATIONS.includes(station.name);
 
   // Direction sélectionnée via TramDirectionSelector — filtre les catégories tableau.
+  // primaryDirKey reste un simple SLOT DE STOCKAGE interne (biv/planReseau/
+  // planQuartier/hap sont indexés meett/pdj dans SignaletiqueData, types.ts,
+  // structure inchangée) — jamais un libellé. Ne pas utiliser 'meett'/'pdj'
+  // pour l'affichage : le nom réel de la direction (directionLabel,
+  // ci-dessous) sert cet usage, quelle que soit la ligne (Tram ou Aéroport
+  // Express — les deux utilisent ce même formulaire, cf. data/builder.ts).
   const primaryDirKey = useMemo((): 'meett' | 'pdj' => dirKeyOf(direction.name), [direction.name]);
+
+  // Libellé affiché de la direction en cours — toujours le nom réel fourni
+  // par les données de la station (jamais un fallback fixe type « Palais de
+  // Justice ») : correct aussi bien pour le Tram (MEETT / Aéroport, Palais
+  // de Justice) que pour l'Aéroport Express (ex. Blagnac, Aéroport Toulouse
+  // Blagnac), dont les noms de direction n'ont rien à voir avec ceux du Tram.
+  const directionLabel = stripDirectionPrefix(direction.name);
 
   // Labels physiques des extrémités (totem + bandeau) — préfixe "Direction "
   // retiré (voir stripDirectionPrefix) : ce sont des lieux, pas un choix.
@@ -171,11 +184,6 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const endpoint1IsSelected = station.directions[0] ? dirKeyOf(station.directions[0].name) === primaryDirKey : true;
   const selectedDirKey: 'direction1' | 'direction2' = endpoint1IsSelected ? 'direction1' : 'direction2';
   const selectedEndpointLabel = endpoint1IsSelected ? endpointLabel1 : endpointLabel2;
-
-  const DIRECTION_LABELS: Record<'meett' | 'pdj', string> = {
-    meett: 'MEETT / Aéroport',
-    pdj: 'Palais de Justice',
-  };
 
   const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
 
@@ -549,7 +557,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         title="Équipements Station"
         subtitle={
           <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">{DIRECTION_LABELS[primaryDirKey]}</span>
+            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">{directionLabel}</span>
           </p>
         }
         progress={progress}
@@ -569,7 +577,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           <div>
             <div className="px-4 pt-2 pb-2 flex items-center gap-2">
               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${dirBadgeClass}`}>
-                Direction {DIRECTION_LABELS[primaryDirKey]}
+                Direction {directionLabel}
               </span>
             </div>
             <div className="space-y-6">
