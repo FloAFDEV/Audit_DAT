@@ -143,7 +143,7 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
         id: station.id!, name: station.name!,
         // AEROPORT stations are isFuture:true but still need auditable directions (planning phase).
         directions: (station.isFuture && line !== 'AEROPORT') ? [] : createDatDirectionsAndDatsForStation(station, line),
-        signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!) : undefined
+        signaletique: line === 'TRAM' && !station.isFuture ? getInitialSignaletiqueData(station.name!, 'TRAM') : undefined
     };
 
     const modeData: ModeData = {
@@ -178,7 +178,7 @@ const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AER
         ...station,
         id: station.id!, name: station.name!,
         directions,
-        signaletique: getInitialSignaletiqueData(station.name!)
+        signaletique: getInitialSignaletiqueData(station.name!, line)
     };
 
     const modeData: ModeData = {
