@@ -43,7 +43,7 @@ const createInitialPlanQuartierStatus = (count: number): PlanQuartierStatus[] =>
     return Array.from({ length: count }, () => ({
         status: 'NotChecked' as const,
         comment: '',
-        dimensions: '78 x 100 cm',
+        dimensions: '83 x 100 cm',
         bannerDirection: 'NotChecked' as const,
         hap: 'NotChecked' as const
     }));
