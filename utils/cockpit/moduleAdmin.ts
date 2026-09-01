@@ -217,9 +217,10 @@ export const createBlankCognitivePictogramModule = (stationName: string, line: M
 
 /** Signalétique (« Équipements Station ») — même forme que
  *  createSignaletiqueModule (data/builder.ts), avec des directions vides
- *  (pas de DAT ici) : getInitialSignaletiqueData est déjà générique (ne
- *  dépend que du nom de station), directement réutilisable pour une
- *  station Admin arbitraire. Restreint à TRAM/AEROPORT (cf.
+ *  (pas de DAT ici) : getInitialSignaletiqueData est directement
+ *  réutilisable pour une station Admin arbitraire, à condition de lui
+ *  passer la bonne ligne (la cote du Plan de Quartier diffère entre
+ *  TRAM et AEROPORT). Restreint à TRAM/AEROPORT (cf.
  *  ATTACHABLE_MODULE_LINES) — même périmètre que le générateur, jamais
  *  étendu au Métro par ce lot. */
 export const createBlankSignaletiqueModule = (stationName: string, line: 'TRAM' | 'AEROPORT'): AuditModule => {
@@ -234,7 +235,7 @@ export const createBlankSignaletiqueModule = (stationName: string, line: 'TRAM' 
             id: stationId,
             name: stationName,
             directions: [{ id: uuidv4(), name: 'Accès', dats: [] }],
-            signaletique: getInitialSignaletiqueData(stationName),
+            signaletique: getInitialSignaletiqueData(stationName, line),
         }],
     };
     return {
@@ -320,8 +321,10 @@ export const isModuleBlank = (module: AuditModule): boolean => {
             if (!station.signaletique) return true;
             // Comparaison structurelle contre l'état de création — aucun id
             // dans SignaletiqueData, une comparaison JSON suffit et reste
-            // déterministe (getInitialSignaletiqueData ne dépend que du nom).
-            return JSON.stringify(station.signaletique) === JSON.stringify(getInitialSignaletiqueData(station.name));
+            // déterministe (getInitialSignaletiqueData ne dépend que du nom
+            // et de la ligne — la cote du Plan de Quartier diffère selon
+            // TRAM/AEROPORT, cf. signaletique_config.ts).
+            return JSON.stringify(station.signaletique) === JSON.stringify(getInitialSignaletiqueData(station.name, module.line as 'TRAM' | 'AEROPORT'));
         }
         case AuditModuleType.CUSTOM: {
             const data = module.data as CustomAuditData;

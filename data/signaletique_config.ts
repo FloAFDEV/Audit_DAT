@@ -39,11 +39,18 @@ const createInitialPlanReseauStatus = (count: number): PlanReseauStatus[] => {
     }));
 };
 
-const createInitialPlanQuartierStatus = (count: number): PlanQuartierStatus[] => {
+// Cote réelle du Plan de Quartier — distincte selon la ligne : 83 x 100 cm
+// sur le réseau Tram, 78 x 100 cm ailleurs (LAE/Aéroport Express). Valeur
+// utilisée telle quelle dans le référentiel et les exports (bon de
+// commande) — l'affichage du relevé d'audit l'arrondit à « 80 » par
+// convention terrain (voir PLAN_QUARTIER_DISPLAY_DIMENSIONS,
+// SignaletiqueAuditForm.tsx), sans jamais toucher à cette valeur.
+const createInitialPlanQuartierStatus = (count: number, line: 'TRAM' | 'AEROPORT'): PlanQuartierStatus[] => {
+    const dimensions = line === 'TRAM' ? '83 x 100 cm' : '78 x 100 cm';
     return Array.from({ length: count }, () => ({
         status: 'NotChecked' as const,
         comment: '',
-        dimensions: '83 x 100 cm',
+        dimensions,
         bannerDirection: 'NotChecked' as const,
         hap: 'NotChecked' as const
     }));
@@ -65,7 +72,7 @@ const HAP_COUNTS: Record<string, { meett: number; pdj: number }> = {
     // 'Arènes': { meett: 1, pdj: 1 },
 };
 
-export const getInitialSignaletiqueData = (stationName: string): SignaletiqueData => {
+export const getInitialSignaletiqueData = (stationName: string, line: 'TRAM' | 'AEROPORT'): SignaletiqueData => {
     // Default counts
     let bivMeett = 1;
     let bivPdj = 1;
@@ -97,8 +104,8 @@ export const getInitialSignaletiqueData = (stationName: string): SignaletiqueDat
             pdj: createInitialPlanReseauStatus(planReseauPdj)
         },
         planQuartier: {
-            meett: createInitialPlanQuartierStatus(planQuartierMeett),
-            pdj: createInitialPlanQuartierStatus(planQuartierPdj)
+            meett: createInitialPlanQuartierStatus(planQuartierMeett, line),
+            pdj: createInitialPlanQuartierStatus(planQuartierPdj, line)
         },
         hap: {
             meett: createInitialHapStatus(hapCountsMeett),

@@ -470,10 +470,10 @@ const useAuditStore = create<AppState>((set, get) => {
 
                 // DATA MIGRATION: Ensure TRAM stations have signaletique data initialized (incl. hap field)
 
-                const migrateStation = (station: any) => {
+                const migrateStation = (station: any, line: 'TRAM' | 'AEROPORT') => {
                     if (station.isFuture) return;
                     if (!station.signaletique) {
-                        station.signaletique = getInitialSignaletiqueData(station.name || '');
+                        station.signaletique = getInitialSignaletiqueData(station.name || '', line);
                         dataChanged = true;
                         return;
                     }
@@ -481,7 +481,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
                     // Ensure hap exists
                     if (!sig.hap) {
-                        sig.hap = getInitialSignaletiqueData(station.name || '').hap;
+                        sig.hap = getInitialSignaletiqueData(station.name || '', line).hap;
                         dataChanged = true;
                     }
 
@@ -495,7 +495,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
                     // Initialize bandeauStation if missing
                     if (!sig.bandeauStation) {
-                        sig.bandeauStation = getInitialSignaletiqueData(station.name || '').bandeauStation;
+                        sig.bandeauStation = getInitialSignaletiqueData(station.name || '', line).bandeauStation;
                         dataChanged = true;
                     }
 
@@ -529,7 +529,8 @@ const useAuditStore = create<AppState>((set, get) => {
                         const isTramDat = module.type === AuditModuleType.DAT && module.line === 'TRAM';
                         const isSignaletique = module.type === AuditModuleType.SIGNALETIQUE;
                         if (isTramDat || isSignaletique) {
-                            (module.data as ModeData).stations.forEach(migrateStation);
+                            const line = module.line as 'TRAM' | 'AEROPORT';
+                            (module.data as ModeData).stations.forEach(station => migrateStation(station, line));
                         }
                     });
                 });

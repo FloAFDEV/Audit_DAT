@@ -124,10 +124,12 @@ const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
 const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
 const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 
-// Le Plan de Quartier mesure réellement 83 x 100 cm (valeur conservée telle
-// quelle dans le référentiel et les exports — item.dimensions n'est jamais
-// modifié). Sur le terrain, l'équipe parle par convention de « 80 » — cet
-// écart d'affichage est local au relevé d'audit uniquement.
+// Le Plan de Quartier mesure réellement 83 x 100 cm sur le réseau Tram et
+// 78 x 100 cm sur l'Aéroport Express (valeur conservée telle quelle dans le
+// référentiel et les exports/bon de commande — item.dimensions n'est jamais
+// modifié, voir data/signaletique_config.ts). Sur le terrain, l'équipe
+// parle par convention de « 80 » quelle que soit la ligne — cet écart
+// d'affichage est local au relevé d'audit uniquement.
 const PLAN_QUARTIER_DISPLAY_DIMENSIONS = '80 x 100 cm';
 
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({

@@ -365,13 +365,17 @@ export const computeAdhesiveInventory = (
 
         const signConfig = auditModules.find(c => c.type === AuditModuleType.SIGNALETIQUE);
         if (signConfig) {
+            // Plan de quartier : cote réelle distincte selon la ligne (83cm Tram,
+            // 78cm Aéroport Express) — deux lignes de nomenclature séparées pour
+            // rester exactes sur l'export/bon de commande (cf. signaletique_config.ts).
             const signItems = [
-                { id: 'sign-totem',         name: 'Totem',                    dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
-                { id: 'sign-biv',           name: 'BIV (écran dynamique)',     dimensions: 'Variable',        material: 'Écran dynamique' },
-                { id: 'sign-plan-reseau',   name: 'Plan du réseau',            dimensions: '80 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-plan-quartier', name: 'Plan de quartier',          dimensions: '83 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-hap',           name: 'HAP (fiche horaire)',        dimensions: 'Variable',        material: 'Papier' },
-                { id: 'sign-bandeau',       name: 'Bandeau de station',        dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
+                { id: 'sign-totem',                 name: 'Totem',                              dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
+                { id: 'sign-biv',                   name: 'BIV (écran dynamique)',               dimensions: 'Variable',        material: 'Écran dynamique' },
+                { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: '80 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-quartier-tram',     name: 'Plan de quartier (Tram)',             dimensions: '83 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: '78 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-hap',                   name: 'HAP (fiche horaire)',                 dimensions: 'Variable',        material: 'Papier' },
+                { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
             ];
             signItems.forEach(item => {
                 if (!inventoryMap.has(item.id)) {
@@ -453,13 +457,14 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.SIGNALETIQUE) {
+                    const planQuartierId = module.line === 'AEROPORT' ? 'sign-plan-quartier-aeroport' : 'sign-plan-quartier-tram';
                     for (const station of (module.data as ModeData).stations) {
                         const sig = station.signaletique;
                         if (!sig) continue;
                         addQty('sign-totem', 2); // direction1 + direction2
                         addQty('sign-biv', (sig.biv?.meett?.length || 0) + (sig.biv?.pdj?.length || 0));
                         addQty('sign-plan-reseau', (sig.planReseau?.meett?.length || 0) + (sig.planReseau?.pdj?.length || 0));
-                        addQty('sign-plan-quartier', (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
+                        addQty(planQuartierId, (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
                         addQty('sign-hap', (sig.hap?.meett?.length || 0) + (sig.hap?.pdj?.length || 0));
                         addQty('sign-bandeau', 2); // direction1 + direction2
                     }
