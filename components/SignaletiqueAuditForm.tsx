@@ -160,9 +160,15 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const endpointLabel2 = station.directions[1]?.name ? stripDirectionPrefix(station.directions[1].name) : 'Extrémité B';
 
   // Laquelle des 2 extrémités physiques correspond à la direction choisie
-  // dans le parcours — sert à la mettre en avant (ordre + repère visuel)
-  // sans jamais masquer l'autre, qui reste un contrôle à part entière.
+  // dans le parcours — Totem et Bandeau Station sont bien définis par
+  // extrémité dans le référentiel (direction1/direction2 tous deux
+  // obligatoires, types.ts), mais le questionnaire n'affiche que celle
+  // du contexte en cours, exactement comme BIV/Plan Réseau/Plan Quartier/
+  // HAP : l'autre extrémité reste dans les données, elle sera qualifiée
+  // en visitant l'autre direction, jamais montrée ni perdue ici.
   const endpoint1IsSelected = station.directions[0] ? dirKeyOf(station.directions[0].name) === primaryDirKey : true;
+  const selectedDirKey: 'direction1' | 'direction2' = endpoint1IsSelected ? 'direction1' : 'direction2';
+  const selectedEndpointLabel = endpoint1IsSelected ? endpointLabel1 : endpointLabel2;
 
   const DIRECTION_LABELS: Record<'meett' | 'pdj', string> = {
     meett: 'MEETT / Aéroport',
@@ -171,34 +177,36 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
   const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
 
-  // Progress : totem + bandeauStation (les 2 extrémités), autres catégories = direction sélectionnée seulement.
+  // Progress : toutes les catégories comptent uniquement ce qui est affiché
+  // pour la direction sélectionnée (cohérent avec le filtrage d'affichage —
+  // l'autre extrémité de totem/bandeauStation compte lorsqu'on visite
+  // l'autre direction, pas ici).
   const progress = useMemo(() => {
     if (!signaletique) return 0;
     let total = 0;
     let checked = 0;
 
-    // totem — 1 champ status par extrémité
+    const dirKey: 'direction1' | 'direction2' =
+      station.directions[0] && dirKeyOf(station.directions[0].name) === primaryDirKey ? 'direction1' : 'direction2';
+
+    // totem — 1 champ status pour l'extrémité de la direction sélectionnée
     if (signaletique.totem) {
-      (['direction1', 'direction2'] as const).forEach(dir => {
-        const item = signaletique.totem[dir];
-        if (item) {
-          total++;
-          if (item.status !== 'NotChecked') checked++;
-        }
-      });
+      const item = signaletique.totem[dirKey];
+      if (item) {
+        total++;
+        if (item.status !== 'NotChecked') checked++;
+      }
     }
 
-    // bandeauStation — status + directionContent + stationNameContent par extrémité
+    // bandeauStation — status + directionContent + stationNameContent pour l'extrémité sélectionnée
     if (signaletique.bandeauStation) {
-      (['direction1', 'direction2'] as const).forEach(dir => {
-        const item = signaletique.bandeauStation[dir];
-        if (item) {
-          total += 3;
-          if (item.status !== 'NotChecked') checked++;
-          if (item.directionContent !== 'NotChecked') checked++;
-          if (item.stationNameContent !== 'NotChecked') checked++;
-        }
-      });
+      const item = signaletique.bandeauStation[dirKey];
+      if (item) {
+        total += 3;
+        if (item.status !== 'NotChecked') checked++;
+        if (item.directionContent !== 'NotChecked') checked++;
+        if (item.stationNameContent !== 'NotChecked') checked++;
+      }
     }
 
     // biv, planReseau, planQuartier, hap — direction sélectionnée uniquement
@@ -226,7 +234,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     }
 
     return total === 0 ? 100 : (checked / total) * 100;
-  }, [signaletique, station.name, primaryDirKey]);
+  }, [signaletique, station, primaryDirKey]);
 
   const handlePhotoUploadClick = (category: keyof SignaletiqueData, dir: SignDir, index: number) => {
     currentUploadRef.current = { category, direction: dir, index };
@@ -389,8 +397,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     category: 'totem' | 'bandeauStation',
     dirKey: 'direction1' | 'direction2',
     endpointLabel: string,
-    item: any,
-    isSelected: boolean
+    item: any
   ) => {
     if (!item) return null;
 
@@ -409,11 +416,6 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{endpointLabel}</h3>
-              {isSelected && (
-                <span className="px-2 py-0.5 bg-teal-100 dark:bg-teal-900/40 text-teal-800 dark:text-teal-300 text-[10px] font-bold rounded uppercase tracking-wider">
-                  Direction en cours
-                </span>
-              )}
               {item.dimensions && (
                 <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
                   {item.dimensions}
@@ -438,21 +440,15 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     );
   };
 
-  // Rend les 2 extrémités d'une catégorie physique (totem / bandeauStation),
-  // celle correspondant à la direction en cours en premier — le contenu ne
-  // change pas (les 2 restent affichées, référentiel oblige), seul l'ordre
-  // et le repère visuel rendent le contexte déjà choisi explicite.
-  const renderEndpointPair = (category: 'totem' | 'bandeauStation') => {
-    const data = signaletique[category];
-    const item1 = data?.direction1;
-    const item2 = data?.direction2;
-    const first = endpoint1IsSelected
-      ? renderSingleItem(category, 'direction1', endpointLabel1, item1, true)
-      : renderSingleItem(category, 'direction2', endpointLabel2, item2, true);
-    const second = endpoint1IsSelected
-      ? renderSingleItem(category, 'direction2', endpointLabel2, item2, false)
-      : renderSingleItem(category, 'direction1', endpointLabel1, item1, false);
-    return <>{first}{second}</>;
+  // Totem / Bandeau Station sont définis par extrémité dans le référentiel
+  // (direction1 ET direction2, tous deux obligatoires — types.ts), mais
+  // seule l'extrémité de la direction actuellement sélectionnée est
+  // affichée ici, exactement comme BIV/Plan Réseau/Plan Quartier/HAP.
+  // L'autre extrémité n'est pas supprimée : elle reste dans les données et
+  // sera qualifiée en visitant l'autre direction.
+  const renderSelectedEndpoint = (category: 'totem' | 'bandeauStation') => {
+    const item = signaletique[category]?.[selectedDirKey];
+    return renderSingleItem(category, selectedDirKey, selectedEndpointLabel, item);
   };
 
   // Render pour biv/planReseau/planQuartier/hap : tableau d'items par direction meett/pdj
@@ -564,8 +560,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       >
         <div className="space-y-6 bg-slate-50 dark:bg-slate-900/30">
 
-          {/* ── TOTEM : les 2 extrémités physiques (la direction en cours en premier) ── */}
-          {renderCategorySection('totem', renderEndpointPair('totem'))}
+          {/* ── TOTEM : extrémité de la direction sélectionnée uniquement ── */}
+          {renderCategorySection('totem', renderSelectedEndpoint('totem'))}
 
           {/* ── Direction sélectionnée : BIV, Plan Réseau, Plan Quartier, HAP ── */}
           <div>
@@ -587,8 +583,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             </div>
           </div>
 
-          {/* ── BANDEAU STATION : les 2 extrémités physiques (la direction en cours en premier) ── */}
-          {renderCategorySection('bandeauStation', renderEndpointPair('bandeauStation'))}
+          {/* ── BANDEAU STATION : extrémité de la direction sélectionnée uniquement ── */}
+          {renderCategorySection('bandeauStation', renderSelectedEndpoint('bandeauStation'))}
 
         </div>
       </AuditFormLayout>
