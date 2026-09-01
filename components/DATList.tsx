@@ -45,6 +45,10 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
     const [editingName, setEditingName] = useState('');
     const [datToDelete, setDatToDelete] = useState<DAT | null>(null);
 
+    // Un DAT retiré du parc de référence (archivedAt) disparaît des écrans
+    // terrain — il reste consultable/restaurable depuis l'Admin uniquement.
+    const activeDats = (direction?.dats ?? []).filter(d => !d.archivedAt);
+
     const handleEditClick = (e: React.MouseEvent, dat: DAT) => {
         e.stopPropagation();
         setEditingDatId(dat.id);
@@ -56,7 +60,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
     };
 
     const handleSaveName = (datId: string) => {
-        if (editingName.trim() && editingName.trim() !== direction.dats.find(d => d.id === datId)?.name) {
+        if (editingName.trim() && editingName.trim() !== activeDats.find(d => d.id === datId)?.name) {
             onUpdateDatName(datId, editingName.trim());
         }
         setEditingDatId(null);
@@ -114,7 +118,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </button>
         </div>
         
-        {(!direction || !direction.dats || direction.dats.length === 0) ? (
+        {activeDats.length === 0 ? (
             <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                 <Ticket className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
                 <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun DAT</h3>
@@ -132,7 +136,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </div>
         ) : (
              <div className="space-y-4">
-                {direction.dats.map((dat) => {
+                {activeDats.map((dat) => {
                     const progress = getDatProgress(dat);
                     return (
                         <div key={dat.id} onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full cursor-pointer group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600">

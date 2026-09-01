@@ -69,8 +69,8 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
 
                 switch (module.type) {
                     case AuditModuleType.DAT:
-                        const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) => 
-                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
+                        const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) =>
+                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.filter(dat => !dat.archivedAt).length || 0), 0) || 0), 0) || 0;
                         datCount += datsInModule;
                         if (module.line === 'A') datCountA += datsInModule;
                         else if (module.line === 'B') datCountB += datsInModule;
@@ -89,7 +89,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
                         }
                         break;
                     case AuditModuleType.ECA:
-                        const ecas = (module.data as EcaData).ecas || [];
+                        const ecas = ((module.data as EcaData).ecas || []).filter(e => !e.archivedAt);
                         ecaCount += ecas.length;
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
@@ -178,7 +178,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
             for (const module of lieu.modules) {
                 if (module.type === AuditModuleType.ECA && isModuleInAuditScope(module)) {
                     const data = module.data as EcaData;
-                    const ecas = data.ecas || [];
+                    const ecas = (data.ecas || []).filter(e => !e.archivedAt);
 
                     const lineKey = module.line === 'A' ? 'A'
                         : module.line === 'B' ? 'B'
@@ -395,7 +395,7 @@ export const computeAdhesiveInventory = (
 
                 if (module.type === AuditModuleType.DAT && referencesReady) {
                     const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>
-                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
+                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.filter(dat => !dat.archivedAt).length || 0), 0) || 0), 0) || 0;
                     getEffectiveAdhesives(references).forEach(ad => addQty(ad.id, datsCount));
                 }
 
@@ -408,7 +408,7 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.ECA && referencesReady) {
-                    for (const eca of ((module.data as EcaData).ecas || [])) {
+                    for (const eca of ((module.data as EcaData).ecas || []).filter(e => !e.archivedAt)) {
                         getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
                     }
                 }

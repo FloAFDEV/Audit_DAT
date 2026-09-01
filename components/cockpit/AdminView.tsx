@@ -682,7 +682,7 @@ const CustomAuditsPanel: React.FC = () => {
         <div className="space-y-4">
             {!creating ? (
                 <button onClick={() => setCreating(true)} className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">
-                    <Sparkles className="w-4 h-4" /> Créer un audit configurable
+                    <Sparkles className="w-4 h-4" /> Créer un audit
                 </button>
             ) : (
                 <DefinitionForm onSubmit={handleCreate} onCancel={() => setCreating(false)} submitLabel="Créer" />
@@ -693,7 +693,7 @@ const CustomAuditsPanel: React.FC = () => {
                 {active.length === 0 && !creating && (
                     <div className="text-center py-12 text-slate-500 dark:text-slate-400">
                         <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>Aucun audit configurable pour l'instant.</p>
+                        <p>Aucun audit créé pour l'instant.</p>
                     </div>
                 )}
             </div>
@@ -714,7 +714,7 @@ type AdminTabKey = 'create' | 'archives' | 'stations' | 'stationArchives' | 'cus
 
 const ADMIN_TABS: { key: AdminTabKey; label: string; Icon: LucideIcon }[] = [
     { key: 'stations', label: 'Stations', Icon: Building },
-    { key: 'customAudits', label: 'Audits configurables', Icon: Sparkles },
+    { key: 'customAudits', label: 'Créer un audit', Icon: Sparkles },
     { key: 'create', label: 'Créer une référence', Icon: BookPlus },
     { key: 'archives', label: 'Références archivées', Icon: Archive },
     { key: 'stationArchives', label: 'Stations archivées', Icon: Archive },

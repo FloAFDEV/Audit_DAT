@@ -28,11 +28,13 @@ import { v4 as uuidv4 } from 'uuid';
 import {
     AuditModule, AuditModuleType, TransportMode, MetroLine, ModeData, Pr, PrZone, Equipment,
     EcaData, EquipmentType, SignageReference, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus,
-    CognitivePictogramData, CustomAuditData,
+    CognitivePictogramData, CustomAuditData, Direction, DAT, ECA,
 } from '../../types';
 import { getEffectiveEquipmentAdhesives } from '../effectiveAdhesives';
 import { createInitialAdhesiveStatus } from '../../data/builder';
 import { getInitialSignaletiqueData } from '../../data/signaletique_config';
+import { ADHESIVES, getEcaAdhesives } from '../../data/adhesives';
+import { canEcaBeNotApplicable } from '../../data/eca_data';
 
 export type ModuleLine = MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT';
 export type AttachableModuleType = 'DAT' | 'ECA' | 'PR' | 'PMR_FLOOR_ADHESIVE' | 'COGNITIVE_PICTOGRAMS' | 'SIGNALETIQUE' | 'CUSTOM';
@@ -337,6 +339,99 @@ export const isModuleBlank = (module: AuditModule): boolean => {
         default:
             return false;
     }
+};
+
+// -----------------------------------------------------------------
+// DAT/ECA — parc de référence (Admin) — même patron que le CRUD P+R
+// ci-dessous : fonctions pures, aucune touche Dexie. Les mécanismes
+// terrain existants (handleAddDat/handleAddEca, store.ts) restent
+// inchangés et gèrent toujours les constats (origin: 'terrain') ; ce
+// bloc comble ce qui manquait : créer/modifier/archiver un DAT/ECA de
+// RÉFÉRENCE (origin: 'reference') depuis l'Admin, avec la même
+// persistance (db.lieux) que le reste de la station.
+// -----------------------------------------------------------------
+
+/** Une direction sans aucun DAT (ex. Ligne C, encore isFuture au sens du
+ *  seed initial — cf. data/builder.ts) : aucun CRUD de direction n'existe
+ *  ailleurs dans l'app (même constat que pour le DAT lui-même avant ce
+ *  lot). Créer une direction ici permet à l'Admin de démarrer un parc de
+ *  référence sur une station qui n'en a encore aucune, sans dépendre
+ *  d'un futur ajustement du générateur historique. */
+export const createDirection = (name: string): Direction => {
+    assertNonEmpty(name, 'Le nom de la direction');
+    return { id: uuidv4(), name: name.trim(), dats: [] };
+};
+
+/** DAT de référence — origin: 'reference' explicite (par opposition au
+ *  DAT terrain créé par handleAddDat, qui reçoit 'terrain'). Mêmes
+ *  statuts initiaux (NotChecked) que le mécanisme terrain : un DAT de
+ *  référence fraîchement créé reste à auditer, comme n'importe quel DAT. */
+export const createReferenceDat = (name: string): DAT => {
+    assertNonEmpty(name, 'Le nom du DAT');
+    return {
+        id: uuidv4(),
+        name: name.trim(),
+        adhesives: createInitialAdhesiveStatus(ADHESIVES),
+        comment: '',
+        origin: 'reference',
+    };
+};
+
+export const withDatRenamed = (dat: DAT, newName: string): DAT => {
+    assertNonEmpty(newName, 'Le nom du DAT');
+    return { ...dat, name: newName.trim() };
+};
+
+export const withDatCommentChanged = (dat: DAT, comment: string): DAT => ({ ...dat, comment });
+
+/** Retrait du parc de référence — jamais une suppression physique (cf.
+ *  DAT.archivedAt) : les statuts déjà saisis restent intacts, prêts à
+ *  réapparaître si le DAT est restauré. */
+export const withDatArchived = (dat: DAT): DAT => ({ ...dat, archivedAt: new Date().toISOString() });
+
+export const withDatRestored = (dat: DAT): DAT => {
+    const { archivedAt: _drop, ...rest } = dat;
+    return rest;
+};
+
+/** ECA de référence — mêmes règles de construction que handleAddEca
+ *  (store.ts) : adhésifs initiaux dérivés du type d'équipement. Seule
+ *  différence : origin: 'reference' au lieu de 'terrain'. */
+export const createReferenceEca = (
+    fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>
+): ECA => {
+    assertNonEmpty(fields.name, "Le nom de l'ECA");
+    return {
+        ...fields,
+        id: uuidv4(),
+        adhesives: createInitialAdhesiveStatus(getEcaAdhesives(fields.type)),
+        comment: '',
+        origin: 'reference',
+    };
+};
+
+/** Modification d'un ECA de référence — même règles que handleUpdateEca
+ *  (store.ts) : un changement de type réinitialise les adhésifs (ils ne
+ *  correspondent plus au nouveau type) et efface la date de réalisation ;
+ *  isNotApplicable n'est conservé que si le type le permet encore. */
+export const withEcaAdminUpdated = (
+    eca: ECA, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>
+): ECA => {
+    const updated: ECA = { ...eca, ...fields };
+    if (fields.type && fields.type !== eca.type) {
+        updated.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(fields.type));
+        delete updated.completionDate;
+    }
+    if (!canEcaBeNotApplicable(updated.type)) delete updated.isNotApplicable;
+    if (updated.isNotApplicable) updated.completionDate = new Date().toISOString();
+    return updated;
+};
+
+export const withEcaArchived = (eca: ECA): ECA => ({ ...eca, archivedAt: new Date().toISOString() });
+
+export const withEcaRestored = (eca: ECA): ECA => {
+    const { archivedAt: _drop, ...rest } = eca;
+    return rest;
 };
 
 // -----------------------------------------------------------------

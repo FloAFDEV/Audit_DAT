@@ -36,7 +36,7 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
 
             switch (module.type) {
                 case AuditModuleType.DAT:
-                    ((module.data as ModeData).stations || []).forEach(s => (s.directions || []).forEach(d => (d.dats || []).forEach(dat => {
+                    ((module.data as ModeData).stations || []).forEach(s => (s.directions || []).forEach(d => (d.dats || []).filter(dat => !dat.archivedAt).forEach(dat => {
                         Object.entries(dat.adhesives || {}).forEach(([adhesiveId, status]) => {
                             const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
                             if (!adhesive) return;
@@ -77,7 +77,7 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     }));
                     break;
                 case AuditModuleType.ECA:
-                    ((module.data as EcaData).ecas || []).forEach(eca => {
+                    ((module.data as EcaData).ecas || []).filter(eca => !eca.archivedAt).forEach(eca => {
                         const allEcaAdhesives = getEcaAdhesives(eca.type);
                         Object.entries(eca.adhesives || {}).forEach(([adhesiveId, status]) => {
                             const adhesive = allEcaAdhesives.find(a => a.id === adhesiveId);
