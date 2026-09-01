@@ -102,8 +102,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
         {prData.zones.map(zone => {
           const progress = getPrZoneProgress(zone);
           const isComplete = progress === 100;
-          const isInProgress = progress > 0 && !isComplete;
-          const progressBarColor = isInProgress ? 'bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+          const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
 
           return (
             <button

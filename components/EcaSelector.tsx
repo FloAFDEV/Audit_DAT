@@ -132,13 +132,8 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                     {sortedEcas.map((eca) => {
                         const progress = getEcaProgress(eca);
                         const isNotApplicable = eca.isNotApplicable;
-                        const isInProgress = progress.percentage > 0 && !progress.isComplete;
-                        
-                        const progressBarColor = isNotApplicable
-                            ? 'bg-slate-400 dark:bg-slate-600'
-                            : isInProgress
-                                ? 'bg-amber-500 dark:bg-amber-500'
-                                : 'bg-teal-500 dark:bg-teal-600';
+
+                        const progressBarColor = isNotApplicable ? 'bg-slate-400 dark:bg-slate-600' : 'bg-teal-500 dark:bg-teal-600';
                         
                         const statusLabelColor = isNotApplicable
                             ? 'text-slate-500 dark:text-slate-400'

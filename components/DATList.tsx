@@ -33,14 +33,12 @@ const getStatusLabelColor = (status: ProgressStatus) => {
 const getProgressBarColor = (status: ProgressStatus) => {
     switch (status) {
         case ProgressStatus.InProgress:
-            return 'bg-amber-500 dark:bg-amber-500';
         case ProgressStatus.Completed:
             return 'bg-teal-500 dark:bg-teal-600';
         default:
             return 'bg-gray-400 dark:bg-slate-500';
     }
 };
-
 
 const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectDat, onAddDat, onRemoveDat, onUpdateDatName, onBack }) => {
     const [editingDatId, setEditingDatId] = useState<string | null>(null);

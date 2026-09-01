@@ -100,8 +100,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             <div className="space-y-4">
                 {sortedModules.map((module) => {
                     const { percentage, label, statusText, statusColor, isComplete } = getModuleProgress(module);
-                    const isInProgress = percentage > 0 && !isComplete;
-                    const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                    const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
                     
                     const isDisabled = false;
 

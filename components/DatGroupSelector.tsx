@@ -85,8 +85,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                         <div className="space-y-4">
                             {station.directions.map(direction => {
                                 const progress = getDirectionProgress(direction);
-                                const isInProgress = progress.percentage > 0 && !progress.isComplete;
-                                const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+                                const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
                                 
                                 return (
                                     <button

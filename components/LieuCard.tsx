@@ -39,7 +39,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
         .filter((code): code is string => !!code)
         .filter((value, index, self) => self.indexOf(value) === index);
 
-    const progressBarColor = isInProgress ? 'bg-amber-500 dark:bg-amber-500' : 'bg-teal-500 dark:bg-teal-600';
+    const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
 
     return (
         <motion.div
