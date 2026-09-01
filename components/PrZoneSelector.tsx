@@ -2,7 +2,6 @@ import React from 'react';
 import { AuditModule, Pr, PrZone, Lieu } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, Building, Navigation2, Users } from 'lucide-react';
 import { getPrZoneProgress } from '../utils/progressCalculators';
-import { getProgressColor } from '../utils/progressColor';
 import { LieuBadges } from './Icons';
 
 interface PrZoneSelectorProps {
@@ -103,7 +102,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
         {prData.zones.map(zone => {
           const progress = getPrZoneProgress(zone);
           const isComplete = progress === 100;
-          const progressBarColor = getProgressColor(progress);
+          const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
 
           return (
             <button
@@ -133,8 +132,8 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
                 </div>
                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                   <div
-                    className="h-2 rounded-full"
-                    style={{ width: `${progress}%`, backgroundColor: progressBarColor }}
+                    className={`${progressBarColor} h-2 rounded-full`}
+                    style={{ width: `${progress}%` }}
                   ></div>
                 </div>
               </div>

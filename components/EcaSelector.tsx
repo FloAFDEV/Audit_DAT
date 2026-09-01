@@ -7,7 +7,6 @@ import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
-import { getProgressColor } from '../utils/progressColor';
 import { formatEcaTypeForDisplay } from './EcaUiHelpers';
 
 interface EcaSelectorProps {
@@ -134,8 +133,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                         const progress = getEcaProgress(eca);
                         const isNotApplicable = eca.isNotApplicable;
 
-                        const progressBarClass = isNotApplicable ? 'bg-slate-400 dark:bg-slate-600' : '';
-                        const progressBarColor = isNotApplicable ? undefined : getProgressColor(progress.percentage);
+                        const progressBarColor = isNotApplicable ? 'bg-slate-400 dark:bg-slate-600' : 'bg-teal-500 dark:bg-teal-600';
                         
                         const statusLabelColor = isNotApplicable
                             ? 'text-slate-500 dark:text-slate-400'
@@ -198,7 +196,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                     </div>
                                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                                        <div className={`${progressBarClass} h-2 rounded-full`} style={{ width: `${progress.percentage}%`, backgroundColor: progressBarColor }}></div>
+                                        <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>
                             </button>

@@ -6,7 +6,6 @@ import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
 import { ModuleIcon } from './ModuleIcon';
 import VoiceInput from './VoiceInput';
-import { getProgressColor } from '../utils/progressColor';
 
 interface AuditFormLayoutProps {
     module: AuditModule;
@@ -43,7 +42,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
 }) => {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-    const progressBarColor = getProgressColor(progress);
+    const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
 
     return (
         <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden">
@@ -84,7 +83,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
-                        <div className="h-2 rounded-full transition-all duration-75" style={{ width: `${progress}%`, backgroundColor: progressBarColor }}></div>
+                        <div className={`${progressBarColor} h-2 rounded-full transition-all duration-75`} style={{ width: `${progress}%` }}></div>
                     </div>
                 </div>
             </div>
