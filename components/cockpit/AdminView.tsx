@@ -7,12 +7,14 @@
 // plus = une entrée de registre, jamais une restructuration.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { BookPlus, Archive, Building, ArchiveRestore, Trash2, PencilLine, LucideIcon, Search, LayoutList, Sparkles, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookPlus, Archive, Building, ArchiveRestore, Trash2, PencilLine, LucideIcon, Search, LayoutList, Sparkles, Share2, ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Lieu, AuditModule, AuditModuleType, AuditDefinition } from '../../types';
 import { LieuBadges } from '../Icons';
 import { LineIcon } from '../LineIcon';
 import useAuditStore from '../../store';
+import { AUDIT_CATEGORIES } from '../../data/config';
+import { getLieuxForCategory } from '../../data/builder';
 import { useAdminReferences } from '../../hooks/useAdminReferences';
 import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
 import { useAdminAuditDefinitions } from '../../hooks/useAdminAuditDefinitions';
@@ -201,15 +203,13 @@ const StationRow: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     );
 };
 
-const StationsPanel: React.FC = () => {
-    const lieux = useAuditStore(s => s.lieux);
+/** Formulaire de création, replié par défaut derrière un CTA compact
+ *  (même patron que AddZoneForm/AddDatForm) — évite qu'un champ de saisie
+ *  toujours visible ressemble à un second champ de recherche. */
+const NewStationForm: React.FC = () => {
     const createStationAdmin = useAuditStore(s => s.createStationAdmin);
-    const [query, setQuery] = useState('');
+    const [isOpen, setIsOpen] = useState(false);
     const [newName, setNewName] = useState('');
-    const active = useMemo(
-        () => lieux.filter(l => !l.archivedAt && l.name.toLowerCase().includes(query.trim().toLowerCase())),
-        [lieux, query]
-    );
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -217,37 +217,94 @@ const StationsPanel: React.FC = () => {
             await createStationAdmin(newName);
             toast.success(`Station « ${newName} » créée`);
             setNewName('');
+            setIsOpen(false);
         } catch (error) {
             console.error('Échec de la création de la station :', error);
             toast.error('Échec de la création — réessayez.');
         }
     };
 
+    if (!isOpen) {
+        return (
+            <button onClick={() => setIsOpen(true)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300">
+                <Plus className="w-4 h-4" /> Nouvelle station
+            </button>
+        );
+    }
+
+    return (
+        <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
+            <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nom de la station" className="flex-1 min-w-[200px] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-2 text-sm" autoFocus />
+            <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Créer</button>
+            <button type="button" onClick={() => { setIsOpen(false); setNewName(''); }} className="px-3 py-1.5 rounded-lg text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700">Annuler</button>
+        </form>
+    );
+};
+
+const StationsPanel: React.FC = () => {
+    const lieux = useAuditStore(s => s.lieux);
+    const [query, setQuery] = useState('');
+    const active = useMemo(
+        () => lieux.filter(l => !l.archivedAt && l.name.toLowerCase().includes(query.trim().toLowerCase())),
+        [lieux, query]
+    );
+
+    // Regroupement par ligne — même catégorisation que le reste de l'app
+    // (AUDIT_CATEGORIES + getLieuxForCategory, cf. useLieuList/LieuBadges) :
+    // jamais une seconde logique de tri spécifique à l'Admin. Une station
+    // desservant plusieurs lignes (pôle d'échange) apparaît dans chaque
+    // groupe correspondant, exactement comme dans les onglets terrain.
+    const groups = useMemo(() => {
+        const seen = new Set<string>();
+        const byCategory = AUDIT_CATEGORIES.map(category => {
+            const lieuxInCategory = getLieuxForCategory(active, category.key)
+                .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+            lieuxInCategory.forEach(l => seen.add(l.id));
+            return { category, lieux: lieuxInCategory };
+        }).filter(g => g.lieux.length > 0);
+
+        const uncategorized = active
+            .filter(l => !seen.has(l.id))
+            .sort((a, b) => a.name.localeCompare(b.name, 'fr', { sensitivity: 'base' }));
+
+        return { byCategory, uncategorized };
+    }, [active]);
+
     return (
         <div className="space-y-4">
-            <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-2 p-3 rounded-lg bg-slate-50 dark:bg-slate-900/40 border border-slate-200 dark:border-slate-700">
-                <div className="flex-1 min-w-[200px]">
-                    <label className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 block mb-1">Nouvelle station</label>
-                    <input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Nom de la station" className="block w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-2 text-sm" />
-                </div>
-                <button type="submit" className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700">Créer</button>
-            </form>
-
             <div className="relative">
-                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
+                    <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                 </div>
                 <input
                     type="text"
                     placeholder="Rechercher une station…"
                     value={query}
                     onChange={e => setQuery(e.target.value)}
-                    className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-sm"
+                    className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base"
+                    autoComplete="off"
                 />
             </div>
 
-            <div className="space-y-2">
-                {active.map(lieu => <StationRow key={lieu.id} lieu={lieu} />)}
+            <NewStationForm />
+
+            <div className="space-y-5">
+                {groups.byCategory.map(({ category, lieux }) => (
+                    <div key={category.key}>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">{category.label}</h3>
+                        <div className="space-y-2">
+                            {lieux.map(lieu => <StationRow key={lieu.id} lieu={lieu} />)}
+                        </div>
+                    </div>
+                ))}
+                {groups.uncategorized.length > 0 && (
+                    <div>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Autres</h3>
+                        <div className="space-y-2">
+                            {groups.uncategorized.map(lieu => <StationRow key={lieu.id} lieu={lieu} />)}
+                        </div>
+                    </div>
+                )}
                 {active.length === 0 && <p className="text-sm text-slate-400 italic text-center py-6">Aucune station ne correspond.</p>}
             </div>
         </div>
