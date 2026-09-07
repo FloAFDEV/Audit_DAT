@@ -1,12 +1,17 @@
 
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
 import { getDatProgress, ProgressStatus } from '../utils/progressCalculators';
 import { DatIcon } from './DatIcon';
+import useAuditStore from '../store';
+
+/** Durée d'affichage de la surbrillance de retour — discrète, alignée sur les
+ *  transitions déjà utilisées sur ces cartes (`transition-all duration-75`). */
+const RETURN_HIGHLIGHT_MS = 2000;
 
 interface DATListProps {
   module: AuditModule;
@@ -44,10 +49,39 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
     const [editingDatId, setEditingDatId] = useState<string | null>(null);
     const [editingName, setEditingName] = useState('');
     const [datToDelete, setDatToDelete] = useState<DAT | null>(null);
+    const [returnHighlightId, setReturnHighlightId] = useState<string | null>(null);
 
     // Un DAT retiré du parc de référence (archivedAt) disparaît des écrans
     // terrain — il reste consultable/restaurable depuis l'Admin uniquement.
     const activeDats = (direction?.dats ?? []).filter(d => !d.archivedAt);
+
+    // Repositionnement au retour d'un audit (store.ts::selectDat) — cette
+    // liste est entièrement remontée à chaque retour (App.tsx clé son arbre
+    // sur selectedDatId), donc lastCompletedDatId ne peut refléter qu'un
+    // retour qui vient tout juste de se produire. Capturé UNE FOIS dans une
+    // ref (lecture pure, jamais de mutation ici) : l'identité de la cible ne
+    // doit pas dépendre du store, qui sera vidé par l'effet ci-dessous — en
+    // React StrictMode (dev), cet effet est rejoué une seconde fois juste
+    // après le montage (monte → nettoie → remonte), et une deuxième lecture
+    // du store y trouverait déjà `null` si la cible n'était pas mise de côté
+    // ici (constaté en direct : le minuteur du premier passage était annulé
+    // par ce rejeu, sans qu'aucun second minuteur ne soit reprogrammé).
+    const pendingHighlightId = useRef(useAuditStore.getState().lastCompletedDatId).current;
+
+    useEffect(() => {
+        // Toujours effacé, qu'on retrouve l'élément ou non — idempotent (sans
+        // effet la deuxième fois en StrictMode) : jamais de référence
+        // obsolète qui traînerait pour un futur montage sans rapport.
+        useAuditStore.getState().clearLastCompletedDat();
+        if (!pendingHighlightId) return;
+        const el = document.getElementById(`dat-card-${pendingHighlightId}`);
+        // DAT supprimé/archivé entre-temps : rien à faire, aucune erreur.
+        if (!el) return;
+        el.scrollIntoView({ block: 'center' });
+        setReturnHighlightId(pendingHighlightId);
+        const timer = setTimeout(() => setReturnHighlightId(null), RETURN_HIGHLIGHT_MS);
+        return () => clearTimeout(timer);
+    }, [pendingHighlightId]);
 
     const handleEditClick = (e: React.MouseEvent, dat: DAT) => {
         e.stopPropagation();
@@ -138,8 +172,18 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
              <div className="space-y-4">
                 {activeDats.map((dat) => {
                     const progress = getDatProgress(dat);
+                    const isReturnHighlighted = dat.id === returnHighlightId;
                     return (
-                        <div key={dat.id} onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)} className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full cursor-pointer group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600">
+                        <div
+                            key={dat.id}
+                            id={`dat-card-${dat.id}`}
+                            onClick={() => editingDatId !== dat.id && onSelectDat(dat.id)}
+                            className={`p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full cursor-pointer group ${
+                                isReturnHighlighted
+                                    ? 'bg-teal-50 dark:bg-teal-900/20 ring-2 ring-teal-500 dark:ring-teal-400'
+                                    : 'bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600'
+                            }`}
+                        >
                             <div className="flex items-center justify-between">
                                 <div className="flex flex-1 min-w-0 items-center gap-4">
                                     <DatIcon dat={dat} size="lg" />

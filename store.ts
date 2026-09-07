@@ -73,6 +73,14 @@ interface AppState {
     selectedPrZoneId: string | null;
     selectedEquipmentId: string | null;
     selectedEcaId: string | null;
+    /** DAT/ECA qu'on vient de quitter (retour depuis le formulaire d'audit),
+     *  pour que DATList/EcaSelector puissent s'y repositionner (scroll +
+     *  surbrillance) au remontage. Mémoire de session pure : jamais écrite
+     *  dans localStorage (absente de NAV_KEYS/navigationPersistence.ts),
+     *  consommée et effacée par la liste dès qu'elle l'a utilisée — jamais
+     *  une préférence utilisateur durable. */
+    lastCompletedDatId: string | null;
+    lastCompletedEcaId: string | null;
     isSignaletiqueActive: boolean;
 
     // Actions
@@ -136,6 +144,9 @@ interface AppState {
     selectStation: (stationId: string | null) => void;
     selectDirection: (directionId: string | null) => void;
     selectDat: (datId: string | null) => void;
+    /** Consomme lastCompletedDatId (DATList l'appelle après avoir tenté le
+     *  scroll/la surbrillance, qu'elle ait trouvé l'élément ou non). */
+    clearLastCompletedDat: () => void;
     handleDatStatusChange: (adhesiveId: string, status: AdhesiveStatus) => Promise<void>;
     handleDatCommentChange: (comment: string) => Promise<void>;
     handleResetDat: () => Promise<void>;
@@ -152,6 +163,9 @@ interface AppState {
     
     // ECA Flow Actions
     selectEca: (ecaId: string | null) => void;
+    /** Consomme lastCompletedEcaId (EcaSelector l'appelle après avoir tenté
+     *  le scroll/la surbrillance, qu'elle ait trouvé l'élément ou non). */
+    clearLastCompletedEca: () => void;
     handleEcaAdhesiveStatusChange: (adhesiveId: string, status: AdhesiveStatus) => Promise<void>;
     handleEcaAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetEcaAdhesive: () => Promise<void>;
@@ -398,6 +412,8 @@ const useAuditStore = create<AppState>((set, get) => {
     selectedPrZoneId: null,
     selectedEquipmentId: null,
     selectedEcaId: null,
+    lastCompletedDatId: null,
+    lastCompletedEcaId: null,
     isSignaletiqueActive: false,
 
     // =================================================================
@@ -1175,10 +1191,24 @@ const useAuditStore = create<AppState>((set, get) => {
     
     selectDirection: (directionId) => set({ selectedDirectionId: directionId, selectedDatId: null, isSignaletiqueActive: false }),
     setIsSignaletiqueActive: (isActive) => set({ isSignaletiqueActive: isActive }),
-    selectDat: (datId) => set({ selectedDatId: datId }),
+    // Retour depuis le formulaire d'audit (datId passe à null) : mémorise le
+    // DAT qu'on vient de quitter pour que DATList puisse s'y repositionner à
+    // son prochain montage. N'importe quel autre appel (sélection d'un DAT,
+    // resets globaux qui mettent selectedDatId à null ailleurs dans ce
+    // fichier) ne passe pas par cette action et ne déclenche donc rien ici.
+    selectDat: (datId) => set(state => ({
+        selectedDatId: datId,
+        lastCompletedDatId: (datId === null && state.selectedDatId) ? state.selectedDatId : state.lastCompletedDatId,
+    })),
+    clearLastCompletedDat: () => set({ lastCompletedDatId: null }),
     selectPrZone: (zoneId) => set({ selectedPrZoneId: zoneId, selectedEquipmentId: null }),
     selectEquipment: (equipmentId) => set({ selectedEquipmentId: equipmentId }),
-    selectEca: (ecaId) => set({ selectedEcaId: ecaId }),
+    // Même principe que selectDat ci-dessus, pour l'ECA qu'on vient de quitter.
+    selectEca: (ecaId) => set(state => ({
+        selectedEcaId: ecaId,
+        lastCompletedEcaId: (ecaId === null && state.selectedEcaId) ? state.selectedEcaId : state.lastCompletedEcaId,
+    })),
+    clearLastCompletedEca: () => set({ lastCompletedEcaId: null }),
 
     navigate: (level) => {
         switch (level) {
@@ -1409,7 +1439,11 @@ const useAuditStore = create<AppState>((set, get) => {
                 else delete eca.completionDate;
             }
         });
-        if (isNA) set({ selectedEcaId: null });
+        // Passe par l'action selectEca (pas un set direct) : un ECA confirmé
+        // « Non applicable » retourne directement à la liste sans passer par
+        // le formulaire d'audit — il doit bénéficier du même repositionnement
+        // que n'importe quel autre retour.
+        if (isNA) get().selectEca(null);
     },
     
     handleAddEca: async (ecaData) => {

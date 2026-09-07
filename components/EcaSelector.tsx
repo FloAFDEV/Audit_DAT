@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { AuditModule, EcaData, ECA, EcaEquipmentType } from '../types';
 import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle, Fence } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
@@ -8,6 +8,11 @@ import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
 import { formatEcaTypeForDisplay } from './EcaUiHelpers';
+import useAuditStore from '../store';
+
+/** Durée d'affichage de la surbrillance de retour — même valeur que DATList,
+ *  discrète et alignée sur les transitions déjà présentes sur ces cartes. */
+const RETURN_HIGHLIGHT_MS = 2000;
 
 interface EcaSelectorProps {
   module: AuditModule;
@@ -43,6 +48,31 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [ecaToEdit, setEcaToEdit] = useState<ECA | null>(null);
     const [ecaToDelete, setEcaToDelete] = useState<ECA | null>(null);
+    const [returnHighlightId, setReturnHighlightId] = useState<string | null>(null);
+
+    // Repositionnement au retour d'un audit (store.ts::selectEca), même
+    // principe que DATList : écran entièrement remonté à chaque retour
+    // (formulaire d'audit ou écran de décision N/A). Capturé UNE FOIS dans
+    // une ref (lecture pure) : l'identité de la cible ne doit pas dépendre du
+    // store, que l'effet ci-dessous va vider — en React StrictMode (dev), cet
+    // effet est rejoué une seconde fois juste après le montage, et une
+    // deuxième lecture du store y trouverait déjà `null` si la cible
+    // n'était pas mise de côté ici.
+    const pendingHighlightId = useRef(useAuditStore.getState().lastCompletedEcaId).current;
+
+    useEffect(() => {
+        // Toujours effacé, qu'on retrouve l'élément ou non — idempotent :
+        // jamais de référence obsolète pour un futur montage sans rapport.
+        useAuditStore.getState().clearLastCompletedEca();
+        if (!pendingHighlightId) return;
+        const el = document.getElementById(`eca-card-${pendingHighlightId}`);
+        // ECA supprimé/archivé entre-temps : rien à faire, aucune erreur.
+        if (!el) return;
+        el.scrollIntoView({ block: 'center' });
+        setReturnHighlightId(pendingHighlightId);
+        const timer = setTimeout(() => setReturnHighlightId(null), RETURN_HIGHLIGHT_MS);
+        return () => clearTimeout(timer);
+    }, [pendingHighlightId]);
 
     const handleOpenAddModal = () => {
         setEcaToEdit(null);
@@ -144,16 +174,22 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                 : 'text-gray-500 dark:text-slate-400';
 
                         const isPmr = isPmrEcaType(eca.type);
+                        const isReturnHighlighted = eca.id === returnHighlightId;
 
                         return (
                             <button
                                 key={eca.id}
+                                id={`eca-card-${eca.id}`}
                                 onClick={isNotApplicable ? undefined : () => onSelectEca(eca.id)}
                                 // We don't use the `disabled` attribute directly to allow child buttons to be interactive.
                                 // Instead, we manage the visual state and click behavior manually.
-                                className={`bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 ${
-                                    isNotApplicable 
-                                    ? 'opacity-70 cursor-default' 
+                                className={`p-4 rounded-xl shadow-lg transition-all duration-75 w-full text-left group ${
+                                    isReturnHighlighted
+                                        ? 'bg-teal-50 dark:bg-teal-900/20 ring-2 ring-teal-500 dark:ring-teal-400'
+                                        : 'bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700/50'
+                                } ${
+                                    isNotApplicable
+                                    ? 'opacity-70 cursor-default'
                                     : 'hover:shadow-xl dark:hover:ring-slate-600'
                                 }`}
                             >
