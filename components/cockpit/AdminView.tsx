@@ -146,9 +146,15 @@ const ArchivesPanel: React.FC = () => {
 const StationRow: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
     const renameStationAdmin = useAuditStore(s => s.renameStationAdmin);
     const archiveStationAdmin = useAuditStore(s => s.archiveStationAdmin);
+    // Zustand (pas useState) : changer d'onglet Admin ou de section du cockpit
+    // démonte StationsPanel/StationRow (rendu par condition, cf. StatsPage et
+    // AdminView) — un état local perdrait le repérage. Plusieurs stations
+    // peuvent être dépliées à la fois ; mémoire de session pure, jamais une
+    // préférence permanente (voir adminExpandedStationIds dans store.ts).
+    const showModules = useAuditStore(s => s.adminExpandedStationIds.includes(lieu.id));
+    const toggleAdminExpandedStation = useAuditStore(s => s.toggleAdminExpandedStation);
     const [isRenaming, setIsRenaming] = useState(false);
     const [name, setName] = useState(lieu.name);
-    const [showModules, setShowModules] = useState(false);
 
     const handleRename = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -187,7 +193,7 @@ const StationRow: React.FC<{ lieu: Lieu }> = ({ lieu }) => {
                     </div>
                 )}
                 <div className="flex items-center gap-1.5 flex-shrink-0">
-                    <button onClick={() => setShowModules(v => !v)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200">
+                    <button onClick={() => toggleAdminExpandedStation(lieu.id)} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200">
                         <LayoutList className="w-4 h-4" /> Modules
                     </button>
                     <button onClick={() => setIsRenaming(true)} className="p-1.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700" aria-label="Renommer la station">

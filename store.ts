@@ -82,6 +82,18 @@ interface AppState {
     lastCompletedDatId: string | null;
     lastCompletedEcaId: string | null;
     isSignaletiqueActive: boolean;
+    /** Recherche du tableau de bord (LieuSelector) — la liste entière est
+     *  démontée/remontée en quittant puis en revenant d'un lieu (App.tsx clé
+     *  son arbre sur selectedLieuId), donc un simple useState local y serait
+     *  perdu. Mémoire de session pure, jamais écrite dans localStorage. */
+    dashboardSearchQuery: string;
+    /** Stations dont le panneau Modules est déplié dans Admin > Stations.
+     *  Même raison qu'au-dessus : changer d'onglet cockpit/Admin démonte les
+     *  panneaux (StatsPage/AdminView rendent leurs sections par condition),
+     *  ce qu'un useState local dans StationRow ne peut pas traverser.
+     *  Plusieurs stations peuvent être ouvertes en même temps ; mémoire de
+     *  session pure, jamais une préférence permanente. */
+    adminExpandedStationIds: string[];
 
     // Actions
     init: () => Promise<void>;
@@ -136,6 +148,8 @@ interface AppState {
     // Navigation Actions
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
     setActiveAuditFilters: (filters: AuditModuleType[]) => void;
+    setDashboardSearchQuery: (query: string) => void;
+    toggleAdminExpandedStation: (lieuId: string) => void;
     selectLieu: (lieuId: string | null) => void;
     selectModule: (moduleId: string | null) => void;
     navigate: (level: 'home' | 'lieu' | 'module' | 'station' | 'direction') => void;
@@ -415,6 +429,8 @@ const useAuditStore = create<AppState>((set, get) => {
     lastCompletedDatId: null,
     lastCompletedEcaId: null,
     isSignaletiqueActive: false,
+    dashboardSearchQuery: '',
+    adminExpandedStationIds: [],
 
     // =================================================================
     // Initialization & Auth
@@ -1088,9 +1104,11 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedEquipmentId: null,
             selectedEcaId: null,
             isStatsViewActive: false,
+            dashboardSearchQuery: '',
+            adminExpandedStationIds: [],
         });
     },
-    
+
     setTheme: (theme) => {
         applyTheme(theme);
         set({ theme });
@@ -1113,6 +1131,14 @@ const useAuditStore = create<AppState>((set, get) => {
         set({ activeFilter: filter, activeAuditFilters: [] });
     },
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
+
+    setDashboardSearchQuery: (query) => set({ dashboardSearchQuery: query }),
+
+    toggleAdminExpandedStation: (lieuId) => set(state => ({
+        adminExpandedStationIds: state.adminExpandedStationIds.includes(lieuId)
+            ? state.adminExpandedStationIds.filter(id => id !== lieuId)
+            : [...state.adminExpandedStationIds, lieuId],
+    })),
 
     selectLieu: (lieuId) => {
         if (lieuId) {
