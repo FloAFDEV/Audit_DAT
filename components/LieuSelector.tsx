@@ -78,7 +78,12 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const { activeAuditFilters, setIsStatsViewActive, auditModeActive, setAuditModeActive } = useAuditStore();
     const gridRef = useRef<HTMLDivElement>(null);
     const activeBadgeRef = useBadgePulse(activeFilter);
-    const [searchQuery, setSearchQuery] = useState('');
+    // Zustand (pas useState) : ce composant est entièrement démonté/remonté en
+    // quittant puis en revenant d'un lieu (App.tsx clé son arbre sur
+    // selectedLieuId, cf. DATList/EcaSelector pour le même mécanisme côté
+    // DAT/ECA). Mémoire de session pure — jamais écrite dans localStorage.
+    const searchQuery = useAuditStore(s => s.dashboardSearchQuery);
+    const setSearchQuery = useAuditStore(s => s.setDashboardSearchQuery);
     const [isOrderReversed, setIsOrderReversed] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
     const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -177,7 +182,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     // L'approche "dim les voisins" nuisait à la lisibilité (blur + opacité sur état normal).
 
     const handleSelectLieuFromDropdown = (lieu: Lieu) => {
-        setSearchQuery('');
+        // La recherche n'est plus effacée ici : elle doit être restaurée telle
+        // quelle au retour (mémorisée dans le store, cf. dashboardSearchQuery) —
+        // seul un effacement volontaire par l'utilisateur doit la vider.
         setIsDropdownOpen(false);
         onSelectLieu(lieu.id);
     };

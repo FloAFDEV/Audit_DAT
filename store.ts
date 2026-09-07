@@ -82,6 +82,11 @@ interface AppState {
     lastCompletedDatId: string | null;
     lastCompletedEcaId: string | null;
     isSignaletiqueActive: boolean;
+    /** Recherche du tableau de bord (LieuSelector) — la liste entière est
+     *  démontée/remontée en quittant puis en revenant d'un lieu (App.tsx clé
+     *  son arbre sur selectedLieuId), donc un simple useState local y serait
+     *  perdu. Mémoire de session pure, jamais écrite dans localStorage. */
+    dashboardSearchQuery: string;
 
     // Actions
     init: () => Promise<void>;
@@ -136,6 +141,7 @@ interface AppState {
     // Navigation Actions
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
     setActiveAuditFilters: (filters: AuditModuleType[]) => void;
+    setDashboardSearchQuery: (query: string) => void;
     selectLieu: (lieuId: string | null) => void;
     selectModule: (moduleId: string | null) => void;
     navigate: (level: 'home' | 'lieu' | 'module' | 'station' | 'direction') => void;
@@ -415,6 +421,7 @@ const useAuditStore = create<AppState>((set, get) => {
     lastCompletedDatId: null,
     lastCompletedEcaId: null,
     isSignaletiqueActive: false,
+    dashboardSearchQuery: '',
 
     // =================================================================
     // Initialization & Auth
@@ -1088,9 +1095,10 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedEquipmentId: null,
             selectedEcaId: null,
             isStatsViewActive: false,
+            dashboardSearchQuery: '',
         });
     },
-    
+
     setTheme: (theme) => {
         applyTheme(theme);
         set({ theme });
@@ -1113,6 +1121,8 @@ const useAuditStore = create<AppState>((set, get) => {
         set({ activeFilter: filter, activeAuditFilters: [] });
     },
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
+
+    setDashboardSearchQuery: (query) => set({ dashboardSearchQuery: query }),
 
     selectLieu: (lieuId) => {
         if (lieuId) {
