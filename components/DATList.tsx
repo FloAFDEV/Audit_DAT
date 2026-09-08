@@ -119,7 +119,20 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
 
   return (
     <div>
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        {/* Sticky mobile uniquement : Retour + repère station/direction
+         *  restent visibles pendant le défilement d'une longue liste de DAT
+         *  (même besoin que le header d'audit déjà traité) — pas d'état
+         *  compact séparé, ce header est déjà court (pas de barre de
+         *  progression ni d'action de reset ici). Doit être un enfant DIRECT
+         *  de la racine du composant (pas imbriqué sous un petit conteneur
+         *  d'en-tête) : le rectangle de collage d'un `sticky` est borné par
+         *  son parent immédiat — imbriqué plus profond, il décroche dès que
+         *  ce petit parent est entièrement défilé (constaté en direct sur
+         *  Jean-Jaurès : 27 ECA, le header quittait le haut de l'écran après
+         *  quelques centaines de pixels au lieu de rester collé). "Ajouter
+         *  un DAT" reste hors de la zone sticky sur mobile : pas
+         *  indispensable en continu, on évite d'alourdir la barre. */}
+        <div className="sticky top-0 z-10 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sm:static sm:py-0 sm:bg-transparent sm:border-0 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-start gap-4">
                 <button
                     onClick={onBack}
@@ -145,12 +158,22 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </div>
             <button
                 onClick={onAddDat}
-                className="inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-500"
+                className="hidden sm:inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-500"
             >
                 <PlusCircle className="h-5 w-5" />
                 Ajouter un DAT
             </button>
         </div>
+        {/* Doublon mobile du bouton ci-dessus, hors zone sticky (garde la
+         *  barre compacte) — masqué à partir de sm: où le bouton du header
+         *  suffit. */}
+        <button
+            onClick={onAddDat}
+            className="sm:hidden w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-500 mt-3 mb-6"
+        >
+            <PlusCircle className="h-5 w-5" />
+            Ajouter un DAT
+        </button>
         
         {activeDats.length === 0 ? (
             <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
