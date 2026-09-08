@@ -237,22 +237,30 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const laeConfig = categoryMap['LAE'];
 
     // Lecture synthétique ECA (vue mono-station) : partition des 8 types
-    // techniques en 3 catégories métier lisibles au premier coup d'œil.
-    // Partition stricte (pas de recomptage) — Entrée + Sortie + PMR +
-    // Réversible = total ECA, toujours : chaque type technique n'alimente
-    // qu'une seule case.
+    // techniques en catégories métier lisibles au premier coup d'œil, sans
+    // tournure « Dont » qui masquerait la nature exacte de l'équipement.
+    // Partition stricte (pas de recomptage) — Entrée + Sortie + PMR à bras +
+    // PMR à vantaux + PMR à vantaux réversible + Réversible = total ECA,
+    // toujours : chaque type technique n'alimente qu'une seule case.
     //   - Entrée = Tripode d'entrée + Vantaux d'entrée
     //   - Sortie = Tripode de sortie + Vantaux de sortie
-    //   - PMR    = les 3 variantes PMR (déjà agrégées par isPmrEcaType,
-    //     cf. globalCounts.ecaPmrCount) — un PMR à vantaux n'est jamais
-    //     recompté dans Entrée/Sortie, y compris sa variante réversible.
-    //   - Réversible = Vantaux réversible (non-PMR) — seul type ne
-    //     rentrant ni dans Entrée ni dans Sortie ni dans PMR ; case
-    //     masquée quand nulle (absente de la plupart des stations).
+    //   - PMR à bras / PMR à vantaux / PMR à vantaux réversible : les 3
+    //     variantes PMR affichées séparément (jamais recomptées dans
+    //     Entrée/Sortie) — un agrégat "Dont PMR" resterait dispo via
+    //     globalCounts.ecaPmrCount si besoin ailleurs, mais n'est plus
+    //     affiché ici.
+    //   - Réversible = Vantaux réversible non-PMR — seul type ne rentrant
+    //     dans aucune des cases précédentes.
+    // Chaque case n'est affichée que si elle est non nulle (comme le
+    // tableau réseau existant, ECA_TYPE_ROWS) : la lecture reste courte sur
+    // la grande majorité des stations, qui n'ont pas toutes les variantes.
     const ecaEntreeCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeEntree] ?? 0)
         + (ecaBreakdown.byType[EcaEquipmentType.VantauxEntree] ?? 0);
     const ecaSortieCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeSortie] ?? 0)
         + (ecaBreakdown.byType[EcaEquipmentType.VantauxSortie] ?? 0);
+    const ecaPmrBrasCount = ecaBreakdown.byType[EcaEquipmentType.PMRBras] ?? 0;
+    const ecaPmrVantauxCount = ecaBreakdown.byType[EcaEquipmentType.PMRVantaux] ?? 0;
+    const ecaPmrVantauxReversibleCount = ecaBreakdown.byType[EcaEquipmentType.PMRVantauxReversible] ?? 0;
     const ecaReversibleCount = ecaBreakdown.byType[EcaEquipmentType.VantauxReversible] ?? 0;
 
     return (
@@ -504,9 +512,17 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     <div className="space-y-1 mt-2">
                         <StatRow label="Entrée" value={ecaEntreeCount} isSubItem />
                         <StatRow label="Sortie" value={ecaSortieCount} isSubItem />
-                        <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
+                        {ecaPmrBrasCount > 0 && (
+                            <StatRow label="PMR à bras" value={ecaPmrBrasCount} isSubItem />
+                        )}
+                        {ecaPmrVantauxCount > 0 && (
+                            <StatRow label="PMR à vantaux" value={ecaPmrVantauxCount} isSubItem />
+                        )}
+                        {ecaPmrVantauxReversibleCount > 0 && (
+                            <StatRow label="PMR à vantaux réversible" value={ecaPmrVantauxReversibleCount} isSubItem />
+                        )}
                         {ecaReversibleCount > 0 && (
-                            <StatRow label="Dont réversible" value={ecaReversibleCount} isSubItem />
+                            <StatRow label="Vantaux réversible" value={ecaReversibleCount} isSubItem />
                         )}
                     </div>
                     </>
