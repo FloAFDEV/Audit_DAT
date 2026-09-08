@@ -236,6 +236,25 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const lineCConfig = categoryMap['METRO_C'];
     const laeConfig = categoryMap['LAE'];
 
+    // Lecture synthétique ECA (vue mono-station) : partition des 8 types
+    // techniques en 3 catégories métier lisibles au premier coup d'œil.
+    // Partition stricte (pas de recomptage) — Entrée + Sortie + PMR +
+    // Réversible = total ECA, toujours : chaque type technique n'alimente
+    // qu'une seule case.
+    //   - Entrée = Tripode d'entrée + Vantaux d'entrée
+    //   - Sortie = Tripode de sortie + Vantaux de sortie
+    //   - PMR    = les 3 variantes PMR (déjà agrégées par isPmrEcaType,
+    //     cf. globalCounts.ecaPmrCount) — un PMR à vantaux n'est jamais
+    //     recompté dans Entrée/Sortie, y compris sa variante réversible.
+    //   - Réversible = Vantaux réversible (non-PMR) — seul type ne
+    //     rentrant ni dans Entrée ni dans Sortie ni dans PMR ; case
+    //     masquée quand nulle (absente de la plupart des stations).
+    const ecaEntreeCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeEntree] ?? 0)
+        + (ecaBreakdown.byType[EcaEquipmentType.VantauxEntree] ?? 0);
+    const ecaSortieCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeSortie] ?? 0)
+        + (ecaBreakdown.byType[EcaEquipmentType.VantauxSortie] ?? 0);
+    const ecaReversibleCount = ecaBreakdown.byType[EcaEquipmentType.VantauxReversible] ?? 0;
+
     return (
         <>
             {/* --- BARRE DE FILTRE PAR LIEU --- */}
@@ -483,7 +502,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
                     </div>
                     <div className="space-y-1 mt-2">
+                        <StatRow label="Entrée" value={ecaEntreeCount} isSubItem />
+                        <StatRow label="Sortie" value={ecaSortieCount} isSubItem />
                         <StatRow label="Dont PMR" value={globalCounts.ecaPmrCount} isSubItem />
+                        {ecaReversibleCount > 0 && (
+                            <StatRow label="Dont réversible" value={ecaReversibleCount} isSubItem />
+                        )}
                     </div>
                     </>
                 ) : (
