@@ -121,7 +121,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                     style={{ gridTemplateRows: isCompact ? '1fr' : '0fr' }}
                 >
                     <div className="min-h-0 overflow-hidden">
-                        <div className="flex items-center gap-2 px-3 py-2">
+                        <div className="flex items-start gap-2 px-3 py-2">
                             <button
                                 onClick={onBack}
                                 className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
@@ -129,19 +129,28 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                             >
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            {customIcon ?? <ModuleIcon type={module.type} className="w-5 h-5 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
-                            {/* Même titre/sous-titre que la variante complète, fusionnés
-                             *  sur une ligne et tronqués — aucune donnée nouvelle, aucune
-                             *  modification des formulaires : {subtitle} est toujours le
-                             *  <p> fourni par chacun des 7 formulaires, simplement rendu
-                             *  inline ([&>p]:inline) pour participer à la même ligne
-                             *  tronquée que le titre. */}
-                            <div className="flex-1 min-w-0 truncate text-sm text-slate-700 dark:text-slate-300 [&>p]:inline [&>p]:m-0 [&>p]:text-inherit [&>p]:text-sm">
-                                <span className="font-medium text-slate-900 dark:text-slate-100">{title}</span>
-                                <span className="text-slate-400 dark:text-slate-500 mx-1.5">&bull;</span>
+                            {customIcon ?? <ModuleIcon type={module.type} className="w-5 h-5 mt-1.5 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
+                            {/* Uniquement le sous-titre ici (pas le titre) : sur les 7
+                             *  formulaires, le titre en compact ("Audit pour DAT 03",
+                             *  "ECA (Valideurs)"...) fait doublon avec l'icône/badge déjà
+                             *  affiché juste à gauche (ex. DatIcon montre déjà "03"), alors
+                             *  que le sous-titre porte l'info qui distingue vraiment deux
+                             *  équipements (station, direction/accès, équipement précis) —
+                             *  notamment la Direction d'un DAT Tram (ex. MEETT vs Palais de
+                             *  Justice, deux jeux d'équipements bien distincts, contre
+                             *  "Salle des billets" en général unique en Métro).
+                             *  line-clamp-2 (pas troncature une ligne) : même après avoir
+                             *  retiré le titre, station + direction combinées dépassent
+                             *  souvent une ligne à 375px (constaté en direct sur le Tram,
+                             *  "Palais de Justice" + "MEETT / Aéroport" coupait quand même
+                             *  la direction) — autoriser 2 lignes garde toute l'info dans
+                             *  l'immense majorité des cas, sans revenir à un header aussi
+                             *  haut que la variante complète. {subtitle} reste le <p> fourni
+                             *  par chacun des 7 formulaires, non modifié. */}
+                            <div className="flex-1 min-w-0 text-sm text-slate-700 dark:text-slate-300 [&>p]:m-0 [&>p]:text-inherit [&>p]:text-sm [&>p]:font-medium [&>p]:line-clamp-2">
                                 {subtitle}
                             </div>
-                            <span className="flex-shrink-0 text-xs font-normal text-slate-500 dark:text-slate-400">{Math.round(progress)}%</span>
+                            <span className="flex-shrink-0 mt-1 text-xs font-normal text-slate-500 dark:text-slate-400">{Math.round(progress)}%</span>
                             <button
                                 onClick={() => setShowResetConfirm(true)}
                                 className="flex-shrink-0 p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
