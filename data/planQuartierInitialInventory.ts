@@ -19,15 +19,22 @@ import { AdhesiveStatus } from '../types';
 export interface PlanQuartierInitialEntry {
     /** Doit correspondre exactement à Station.name (data/stationRegistry.ts). */
     stationName: string;
-    line: 'A' | 'B' | 'C' | 'TRAM' | 'TELEO';
+    line: 'A' | 'B' | 'C' | 'TRAM' | 'TELEO' | 'AEROPORT';
     modelId: string;
     quantity: number;
     comment?: string;
+    location?: string;
     measuredDimensions?: { width: number; height: number; unit: 'cm' | 'mm' };
 }
 
 export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // --- Plans de quartier plastifiés ---
+    // NB : le 78x120 sur caisse automatique de P+R (Arènes, Argoulets,
+    // Balma-Gramont, Basso Cambo, Borderouge, Ramonville, Oncopole) est
+    // DÉJÀ tracé par l'audit P+R existant (référence adca12/adca13 sur
+    // l'équipement CA, data/adhesives.ts::PR_ADHESIVES_CA) — jamais
+    // redondé ici. Oncopole n'a donc PAS d'entrée 78x120 ci-dessous :
+    // ses 2 exemplaires (CA01/CA02) sont déjà comptés côté P+R.
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, comment: 'Réf. terrain : 2026b' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
@@ -48,7 +55,6 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
     { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
-    { stationName: 'Oncopole-Lise Enjalbert', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
 
     // --- Adhésifs PDQ ---
     {
@@ -64,6 +70,22 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 3 },
+
+    // --- PDQ 78x120 en agence commerciale (1 par agence) ---
+    // En agence, le support (plastifié ou adhésif) dépend de la commande
+    // passée pour cette agence — les deux existent, mais l'adhésif est le
+    // plus fréquent. Faute de confirmation terrain agence par agence, ces
+    // 5 exemplaires sont seedés sur le modèle adhésif (le plus probable),
+    // à corriger vers pdq-78x120 (plastifié) si le contrôle terrain montre
+    // le contraire pour l'une d'elles.
+    // Aéroport Toulouse Blagnac : la station LAE n'est pas encore en
+    // service (train à venir), mais l'agence commerciale, elle, est
+    // toujours ouverte au public et équipée d'un plan de quartier 78x120.
+    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
+    { stationName: 'Arènes', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
+    { stationName: 'Basso Cambo', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
+    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
+    { stationName: 'Aéroport Toulouse Blagnac', line: 'AEROPORT', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
 ];
 
 /** DEFAULT_STATUS : les exemplaires seedés depuis cet inventaire initial

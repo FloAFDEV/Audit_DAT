@@ -30,16 +30,18 @@ describe('data/builder.ts — createPlanQuartierModule', () => {
         expect(pdqModules.map(m => m.line).sort()).toEqual(['A', 'B']);
     });
 
-    it("ne crée jamais de module PLAN_QUARTIER sur la ligne 'PR' (hors périmètre — seuls A/B/C/TRAM/TELEO en ont)", async () => {
+    it("ne crée jamais de module PLAN_QUARTIER sur la ligne 'PR' (hors périmètre — seuls A/B/C/TRAM/TELEO/AEROPORT en ont)", async () => {
         // Un lieu P+R peut partager le même Lieu qu'une station de métro/tram/téléo
         // (ex: Basso Cambo, Arènes) et donc légitimement porter un module
         // PLAN_QUARTIER — au même titre qu'il porte déjà DAT/ECA dans ce cas.
         // L'invariant réel n'est pas "jamais co-localisé avec un P+R", mais
-        // "jamais généré directement pour la ligne P+R elle-même".
+        // "jamais généré directement pour la ligne P+R elle-même". AEROPORT
+        // (antenne LAE) en a aussi : son agence commerciale (Aéroport
+        // Toulouse Blagnac) reste ouverte malgré le train pas encore en service.
         const lieux = await generateInitialLieuxDataAsync();
         const pdqModules = lieux.flatMap(l => l.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER));
         expect(pdqModules.length).toBeGreaterThan(0);
-        expect(pdqModules.every(m => ['A', 'B', 'C', 'TRAM', 'TELEO'].includes(m.line as string))).toBe(true);
+        expect(pdqModules.every(m => ['A', 'B', 'C', 'TRAM', 'TELEO', 'AEROPORT'].includes(m.line as string))).toBe(true);
     });
 });
 
@@ -56,9 +58,10 @@ describe('data/signage_seed.ts — catalogue Plans de quartier', () => {
         const model78x120 = pdq.find(r => r.id === 'pdq-78x120')!;
         expect(model78x120.dimensions).toEqual({ width: 78, height: 120, unit: 'cm' });
 
-        // Adhésif PDQ : aucune dimension inventée.
+        // Adhésif PDQ : même format que le 78x120 (avec header/footer),
+        // support adhésif au lieu de plastifié — confirmé, jamais 78x100.
         const adhesif = pdq.find(r => r.id === 'pdq-adhesif')!;
-        expect(adhesif.dimensions).toBeUndefined();
+        expect(adhesif.dimensions).toEqual({ width: 78, height: 120, unit: 'cm' });
         expect(adhesif.support).toBe('adhesif');
 
         // PEM 3D : 120x80, Dibond exclusivement.

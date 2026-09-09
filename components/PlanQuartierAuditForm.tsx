@@ -76,7 +76,13 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
     [data.occurrences]
   );
 
-  const progress = data.occurrences.length > 0 || !!data.lastCheckedAt ? 100 : 0;
+  // Ratio sur les exemplaires réellement contrôlés — un exemplaire connu dès
+  // le premier recensement (statut Non contrôlé) ne compte pas comme audité
+  // tant que son état réel n'a pas été renseigné sur le terrain.
+  const relevantOccurrences = data.occurrences.filter(o => o.status !== AdhesiveStatus.NotApplicable);
+  const progress = relevantOccurrences.length > 0
+    ? (relevantOccurrences.filter(o => o.status !== AdhesiveStatus.NotChecked).length / relevantOccurrences.length) * 100
+    : (data.lastCheckedAt ? 100 : 0);
 
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
   const [draftLocations, setDraftLocations] = useState<Record<string, string>>({});
