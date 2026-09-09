@@ -164,6 +164,136 @@ describe('Migration V12 → V13 (introduction du journal d\'événements, Lot 3)
     });
 });
 
+describe('Migration V14 → V15 (qualification statique de 8 références + adbs3)', () => {
+    it('patche les références déjà présentes SANS écraser un champ modifié localement, ajoute adbs3, et reste idempotente', async () => {
+        const name = uniqueDbName();
+
+        // 1) Base au schéma V14 (avant la qualification), avec un référentiel
+        //    dans son état PRÉ-qualification (tel qu'un appareil déjà en
+        //    usage l'aurait persisté) : ad12 mal orienté, adca12 en 'autre'
+        //    + needsReview, eca-r-1 encore actif, pas de adbs3. `material`
+        //    sur adca12 simule une modification locale antérieure (Admin,
+        //    aujourd'hui retiré) qui ne doit jamais être écrasée.
+        const v14 = new Dexie(name);
+        v14.version(14).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            signageAssets: 'id, referenceId',
+            events: '++id, date, type, entityType',
+            auditDefinitions: 'id',
+        });
+        await v14.open();
+        await v14.table('signageReferences').bulkAdd([
+            {
+                id: 'ad12', name: 'Repère 12', auditType: 'DAT', scope: { auditType: 'DAT' }, version: 1,
+                support: 'adhesif', dimensions: { width: 3.7, height: 5.4, unit: 'cm' },
+                placement: {}, legacyDescription: 'Dimensions: 3,7x5,4cm | Localisation: ...',
+            },
+            {
+                id: 'adca12', name: 'Plan de quartier', auditType: 'PR', scope: { auditType: 'PR' }, version: 1,
+                support: 'autre', material: 'Modification locale antérieure', needsReview: true,
+                placement: {}, legacyDescription: 'Fiche plan de quartier au format 78x120cm',
+            },
+            {
+                id: 'eca-r-1', name: 'Repère R1', auditType: 'ECA', scope: { auditType: 'ECA' }, version: 1,
+                support: 'autre', needsReview: true,
+                placement: {}, legacyDescription: 'Flèche verte / Croix rouge lumineuse | ...',
+            },
+            {
+                id: 'adbe3', name: 'Repère 3 - Tarifs + coordonnées', auditType: 'PR', scope: { auditType: 'PR', equipmentTypes: ['BE'] }, version: 1,
+                support: 'adhesif', sameAs: ['adca9'], needsReview: true,
+                placement: {}, legacyDescription: 'Adhésif « Tarifs + coordonnées Parc Relais » ...',
+            },
+            {
+                id: 'ad1', name: 'Repère 1', auditType: 'DAT', scope: { auditType: 'DAT' }, version: 1,
+                support: 'adhesif', placement: {}, legacyDescription: 'Dimensions: 95x5,8cm | ...',
+                needsReview: true,
+            },
+            // Référence HORS PÉRIMÈTRE de la qualification — doit rester
+            // bit-à-bit intacte (aucun id de ARBITRAGE_DECISIONS ne la vise).
+            {
+                id: 'ad2', name: 'Repère 2', auditType: 'DAT', scope: { auditType: 'DAT' }, version: 1,
+                support: 'adhesif', placement: {}, legacyDescription: 'Dimensions: 2,5x2,5cm | ...',
+            },
+        ]);
+        v14.close();
+
+        // 2) Réouverture avec le schéma courant (V15 inclus).
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const table = upgraded.table('signageReferences');
+
+        const ad12 = await table.get('ad12');
+        expect(ad12.dimensions).toEqual({ width: 5.4, height: 3.7, unit: 'cm' });
+        expect(ad12.arbitrage.status).toBe('keep');
+        expect(ad12.needsReview).toBeUndefined();
+
+        const adca12 = await table.get('adca12');
+        expect(adca12.support).toBe('adhesif');
+        expect(adca12.material).toBe('Modification locale antérieure'); // jamais écrasé
+        expect(adca12.needsReview).toBeUndefined();
+
+        const ecaR1 = await table.get('eca-r-1');
+        expect(ecaR1.isDisabled).toBe(true);
+        expect(ecaR1.arbitrage.status).toBe('remove');
+
+        const adbe3 = await table.get('adbe3');
+        expect(adbe3.sameAs).toEqual(expect.arrayContaining(['adca9', 'adbs3']));
+
+        const adbs3 = await table.get('adbs3');
+        expect(adbs3).toBeDefined();
+        expect(adbs3.scope).toEqual({ auditType: 'PR', equipmentTypes: ['BS'] });
+
+        // ad1 EST qualifiée (décision 'keep', divergence BPU non significative).
+        const ad1 = await table.get('ad1');
+        expect(ad1.needsReview).toBeUndefined();
+        expect(ad1.arbitrage.status).toBe('keep');
+
+        // ad2 est HORS périmètre de la qualification : strictement intacte.
+        const ad2 = await table.get('ad2');
+        expect(ad2).toEqual({
+            id: 'ad2', name: 'Repère 2', auditType: 'DAT', scope: { auditType: 'DAT' }, version: 1,
+            support: 'adhesif', placement: {}, legacyDescription: 'Dimensions: 2,5x2,5cm | ...',
+        });
+
+        expect(await table.count()).toBe(7); // 6 seedées + adbs3
+
+        upgraded.close();
+
+        // 3) Réouverture — idempotence : ni duplication de adbs3, ni re-patch destructeur.
+        const reopened = createAuditDb(name);
+        await reopened.open();
+        expect(await reopened.table('signageReferences').count()).toBe(7);
+        const adca12Again = await reopened.table('signageReferences').get('adca12');
+        expect(adca12Again.material).toBe('Modification locale antérieure');
+        reopened.close();
+
+        await Dexie.delete(name);
+    });
+
+    it("n'ajoute jamais adbs3 sur un référentiel vide (table jamais seedée)", async () => {
+        const name = uniqueDbName();
+        const v14 = new Dexie(name);
+        v14.version(14).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            signageAssets: 'id, referenceId',
+            events: '++id, date, type, entityType',
+            auditDefinitions: 'id',
+        });
+        await v14.open();
+        v14.close();
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect(await upgraded.table('signageReferences').count()).toBe(0);
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+});
+
 describe('Robustesse — transaction de migration atomique (garantie native IndexedDB)', () => {
     it('une exception dans une fonction .upgrade() abandonne toute la transaction (aucune écriture partielle)', async () => {
         const name = uniqueDbName();

@@ -17,7 +17,11 @@ export const ADHESIVES: Adhesive[] = [
   { id: 'ad9', name: 'Repère 9 - « Numéro » du DAT', description: 'Localisation: Dans l’angle gauche de la partie grise au dessus du bandeau « Achat + rechargement » (Voir focus page 8).', referentiel: '' },
   { id: 'ad10', name: 'Repère 10 - Adhésif « Validation avec carte bancaire » + QR_Code', description: 'Dimensions: 24x52cm | Localisation: A droite et au dessus de l’appel d’urgence (focus en page 9).', referentiel: '' },
   { id: 'ad11', name: 'Repère 11 - Adhésif « Appel d’urgence. Tous abus sera puni »', description: 'Dimensions: 214x306mm | Localisation: A droite, entoure le bouton d’appel d’urgence (focus en page 9).', referentiel: '' },
-  { id: 'ad12', name: 'Repère 12 - Adhésif « Appel d’urgence + braille»', description: 'Dimensions: 3,7x5,4cm | Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).', referentiel: '' }
+  // Dimensions corrigées (largeur x hauteur) : le catalogue historique avait
+  // interverti les deux valeurs par rapport au BPU PICTO ligne 51 — qualifié,
+  // cf. ARBITRAGE_DECISIONS dans data/signage_seed.ts. Adhésif non produit en
+  // interne mais bien référencé.
+  { id: 'ad12', name: 'Repère 12 - Adhésif « Appel d’urgence + braille»', description: 'Dimensions: 5,4x3,7cm | Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).', referentiel: '' }
 ];
 
 // =================================================================
@@ -31,6 +35,11 @@ export const PR_ADHESIVES_BE: PrAdhesive[] = [
     { id: 'adbe10', name: 'Repère 10 - Information latérale', description: 'Adhésif « Sticker-borne-P+R-entree-A3_ » // 32,8x45,1cm', location: 'Sur le latéral de la borne en entrée de P+R orienté vers l’usager', referentiel: '//serveur/docs/PNR/BE/ref-adbe10.pdf' }
 ];
 export const PR_ADHESIVES_BS: PrAdhesive[] = [
+    // Même visuel que adbe3 (posé sur les deux types de bornes, cf. sa propre
+    // description) — qualifié, cf. ARBITRAGE_DECISIONS dans signage_seed.ts.
+    // Id distinct par convention (même principe que adbe2/adbs2), lié via
+    // sameAs.
+    { id: 'adbs3', name: 'Repère 3 - Tarifs + coordonnées', description: 'Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée ET sortie // 34x8cm', location: 'Sur la casquette supérieure de la borne', referentiel: '//serveur/docs/PNR/BS/ref-adbs3.pdf' },
     { id: 'adbs2', name: 'Repère 2 - Information Ticket', description: 'Adhésif « P+r-rustine-ticket-P+r_2025-02-12 » // 9x5cm', location: 'Au dessus du distributeur de ticket parking, centré sur celui-ci', referentiel: '//serveur/docs/PNR/BS/ref-adbs2.pdf' },
     { id: 'adbs4', name: 'Repère 4 - "cible" Information sortie', description: 'Adhésif « P+r-rustine-sortie-cible_2025-02-05 » // 11x12,5cm', location: 'A gauche de l’écran principal, sur la partie haute de la borne (uniquement sur sortie)', referentiel: '//serveur/docs/PNR/BS/ref-adbs4.pdf' },
     { id: 'adbs5', name: 'Repère 5 - Adhésif borne sortie "Bulle"', description: 'Adhésif borne sortie "Bulle" uniquement sur borne sortie // 99x115mm', location: 'A gauche de la borne, entre l’écran principal et le distributeur de ticket parking', referentiel: '//serveur/docs/PNR/BS/ref-adbs5.pdf' },
@@ -91,7 +100,11 @@ const ECA_ADHESIVES_SORTIE: Adhesive[] = [
 
 const ECA_ADHESIVES_REVERSIBLE: Adhesive[] = [
     ...ECA_ADHESIVES_ENTREE,
-    { id: 'eca-r-1', name: 'Repère R1 - Signalisation dynamique', description: 'Flèche verte / Croix rouge lumineuse | Sur les deux faces du vantail', referentiel: 'REF-ECA-REVERSIBLE-01' },
+    // Affichage digital intégré au caisson de l'ECA à la conception — non
+    // auditable, non modifiable sur le terrain. Retiré du référentiel actif
+    // (désactivé, jamais supprimé, R1) — qualifié, cf. ARBITRAGE_DECISIONS
+    // dans signage_seed.ts.
+    { id: 'eca-r-1', name: 'Repère R1 - Signalisation dynamique', description: 'Flèche verte / Croix rouge lumineuse | Sur les deux faces du vantail', referentiel: 'REF-ECA-REVERSIBLE-01', isDisabled: true },
 ];
 
 const ECA_ADHESIVES_PMR_PICTOGRAMS: Adhesive[] = [

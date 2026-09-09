@@ -40,6 +40,15 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
+    "dimensions": "34x8cm",
+    "id": "adbs3",
+    "material": "Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée ET sortie",
+    "name": "Tarifs + coordonnées",
+    "quantity": 34,
+    "repere": "3",
+  },
+  {
+    "auditType": "Bornes P+R",
     "dimensions": "11x12,5cm",
     "id": "adbs4",
     "material": "Adhésif « P+r-rustine-sortie-cible_2025-02-05 »",
@@ -229,7 +238,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 3,7x5,4cm",
+    "dimensions": "Dimensions: 5,4x3,7cm",
     "id": "ad12",
     "material": "Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).",
     "name": "Adhésif « Appel d’urgence + braille»",
