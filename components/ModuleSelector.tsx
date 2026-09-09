@@ -109,7 +109,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                             key={module.id}
                             onClick={() => onSelectModule(module.id)}
                             disabled={isDisabled}
-                            className="module-card bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm transition-shadow duration-200 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed dark:ring-1 dark:ring-slate-700/50"
+                            className="module-card bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm transition-shadow duration-200 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed dark:ring-1 dark:ring-slate-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">

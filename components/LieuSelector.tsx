@@ -16,7 +16,6 @@ import { AuditFilterSelector } from './AuditFilterSelector';
 import useAuditStore from '../store';
 import { LieuCard } from './LieuCard';
 import { useLieuList } from '../hooks/useLieuList';
-import { useRecentLieux } from '../hooks/useRecentLieux';
 import { ProgressBadge } from './ProgressBadge';
 import { LieuBadges } from './Icons';
 import { ModuleIcon } from './ModuleIcon';
@@ -34,7 +33,7 @@ const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu,
 
     return (
         <li
-            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
+            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700"
             onClick={onClick}
         >
             <div className="flex items-center gap-x-3">
@@ -168,8 +167,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         lieux, searchQuery, activeFilter, isOrderReversed, activeAuditFilters
     });
 
-    const recentLieux = useRecentLieux(lieux, activeFilter, activeAuditFilters);
-
     // Signature qui change dès qu'un filtre/tri modifie la composition de la grille.
     const gridSignature = useMemo(
         () => `${activeFilter}|${[...activeAuditFilters].sort().join(',')}|${isOrderReversed}|${(orderedLieuxForDisplay || []).map(l => l.id).join(',')}`,
@@ -234,7 +231,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900';
         if (activeFilter === catKey) return `${baseClasses} font-medium`;
         return `${baseClasses} border-transparent text-slate-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)] font-normal`;
     };
@@ -335,7 +332,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
                  <div className="sm:hidden">
                     <div className="relative" ref={mobileMenuRef}>
-                        <button type="button" className="relative w-full cursor-default rounded-md bg-white dark:bg-slate-800 py-2 pl-3 pr-10 text-left text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 sm:text-sm sm:leading-6" onClick={() => setIsMobileMenuOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={isMobileMenuOpen}>
+                        <button type="button" className="relative w-full cursor-default rounded-md bg-white dark:bg-slate-800 py-2 pl-3 pr-10 text-left text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 sm:text-sm sm:leading-6" onClick={() => setIsMobileMenuOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={isMobileMenuOpen}>
                              <span className="flex items-center justify-between w-full">
                                 <span className="flex items-center">
                                     <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" asDiv />
@@ -348,7 +345,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
 
                         {isMobileMenuOpen && (
                             <ul className="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg ring-1 ring-black dark:ring-slate-600 ring-opacity-5 focus:outline-none sm:text-sm">
-                                <li className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange('ALL'); setIsMobileMenuOpen(false); }}>
+                                <li className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange('ALL'); setIsMobileMenuOpen(false); }}>
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center">
                                             <CategoryIcon size="sm" asDiv />
@@ -356,10 +353,10 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                         </div>
                                         <ProgressBadge progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)} isActive={activeFilter === 'ALL'} />
                                     </div>
-                                    {activeFilter === 'ALL' && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
+                                    {activeFilter === 'ALL' && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-600 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
                                 </li>
                                 {AUDIT_CATEGORIES.map(cat => (
-                                    <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-indigo-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
+                                    <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
                                         <div className="flex items-center justify-between w-full">
                                             <div className="flex items-center">
                                                 <CategoryIcon categoryConfig={cat} size="sm" asDiv />
@@ -367,7 +364,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                             </div>
                                             <ProgressBadge progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)} isActive={activeFilter === cat.key} />
                                         </div>
-                                        {activeFilter === cat.key && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600 dark:text-indigo-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
+                                        {activeFilter === cat.key && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-600 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
                                     </li>
                                 ))}
                             </ul>
@@ -385,7 +382,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                     </div>
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-base" autoComplete="off" />
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base" autoComplete="off" />
                     {isDropdownOpen && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
                             {(!searchResults?.inCategory || searchResults.inCategory.length === 0) && (!searchResults?.others || searchResults.others.length === 0) && searchQuery.trim() && (
@@ -410,7 +407,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     {showInverter && (
                         <button 
                             onClick={toggleOrderReversed} 
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-normal text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900" 
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-normal text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900" 
                             title="Inverser l'ordre des stations"
                         >
                             <ArrowUpDown className="h-5 w-5" />
@@ -440,20 +437,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     </div>
                 </div>
             </div>
-
-            {recentLieux.length > 0 && !searchQuery && (
-                <div className="mb-8">
-                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
-                        Reprendre
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {recentLieux.map((lieu) => (
-                            <LieuCard key={lieu.id} lieu={lieu} onSelect={() => onSelectLieu(lieu.id)} activeFilter={activeFilter} />
-                        ))}
-                    </div>
-                    <div className="mt-6 border-t border-slate-200 dark:border-slate-700" />
-                </div>
-            )}
 
             {(!orderedLieuxForDisplay || orderedLieuxForDisplay.length === 0) ? (
                  <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">

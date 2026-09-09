@@ -147,13 +147,13 @@
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.08),
       0 12px 24px -4px rgba(0, 0, 0, 0.12),
-      0 0 0 1.5px rgba(99, 102, 241, 0.18);
+      0 0 0 1.5px rgba(20, 184, 166, 0.18);
   }
   .dark .lieu-card:hover {
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.3),
       0 12px 24px -4px rgba(0, 0, 0, 0.4),
-      0 0 0 1.5px rgba(129, 140, 248, 0.25);
+      0 0 0 1.5px rgba(45, 212, 191, 0.22);
   }
   .lieu-card:hover .lieu-card-chevron { color: rgb(30 41 59); }
   .dark .lieu-card:hover .lieu-card-chevron { color: rgb(226 232 240); }
@@ -163,13 +163,13 @@
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.08),
       0 12px 24px -4px rgba(0, 0, 0, 0.12),
-      0 0 0 1.5px rgba(99, 102, 241, 0.18);
+      0 0 0 1.5px rgba(20, 184, 166, 0.18);
   }
   .dark .module-card:hover {
     box-shadow:
       0 4px 6px -1px rgba(0, 0, 0, 0.3),
       0 12px 24px -4px rgba(0, 0, 0, 0.4),
-      0 0 0 1.5px rgba(129, 140, 248, 0.25);
+      0 0 0 1.5px rgba(45, 212, 191, 0.22);
   }
   .module-card:hover .module-card-chevron { color: rgb(30 41 59); }
   .dark .module-card:hover .module-card-chevron { color: rgb(226 232 240); }

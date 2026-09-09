@@ -63,7 +63,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
                     </p>
                     <button
                         onClick={this.handleReturnHome}
-                        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+                        className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
                     >
                         <Home className="h-4 w-4" aria-hidden="true" />
                         Retour à l'accueil

@@ -27,7 +27,7 @@ export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title,
     </button>
     <div className="flex items-center gap-3">
         <Logo className="w-8 h-8 sm:w-10 sm:h-10 text-teal-600 dark:text-teal-400" />
-        <h1 className="text-3xl md:text-4xl font-extrabold leading-tight text-gray-900 dark:text-slate-100">{title}</h1>
+        <h1 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{title}</h1>
     </div>
   </div>
 );
@@ -154,6 +154,25 @@ export interface AnomalySummaryCardProps {
 
 export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, title, count, subCounts, detailLabel, detailDisabled, onDetail }) => {
     const hasAnomalies = count > 0;
+
+    // À zéro, la confirmation « rien à signaler » reste affichée mais sans
+    // l'empreinte visuelle d'une carte à traiter (grande icône, chiffre en
+    // text-3xl, bouton) : un simple indicateur compact, même esprit que les
+    // lignes masquées à zéro ailleurs dans l'app (StatRow sub-items,
+    // ECA_TYPE_ROWS). Le détail n'a de toute façon rien à montrer à 0.
+    if (!hasAnomalies) {
+        return (
+            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 flex items-center gap-2 min-w-0">
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500">
+                    {icon}
+                </div>
+                <span className="text-sm text-slate-500 dark:text-slate-400 truncate">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300">{title}</span> · 0 anomalie
+                </span>
+            </div>
+        );
+    }
+
     return (
         <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
             <div className="flex items-start justify-between gap-2">

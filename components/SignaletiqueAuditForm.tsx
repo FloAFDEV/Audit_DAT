@@ -261,7 +261,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       showPromiseToast(
         promise,
         {
-          icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>,
+          icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>,
           title: "Traitement de l'image...",
           message: "Compression en cours.",
         },
@@ -349,7 +349,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           onClick={() => handlePhotoUploadClick(category, dir, index)}
           className={`flex items-center justify-center p-2 rounded-lg transition-all duration-75 active:scale-95 ${
             item.photo_base64
-              ? 'bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-400 dark:ring-indigo-800'
+              ? 'bg-teal-50 text-teal-600 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:ring-teal-800'
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
           }`}
           title={item.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
@@ -373,7 +373,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             value={item.comment || ''}
             onChange={(e) => onCommentChange(category, dir, index, e.target.value)}
             placeholder="Observation..."
-            className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-indigo-500 outline-none text-gray-700 dark:text-slate-300 transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 outline-none text-gray-700 dark:text-slate-300 transition-all"
           />
         </div>
       </div>
@@ -525,7 +525,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
       <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-xl">
             {CATEGORY_ICONS[category]}
           </div>
           <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>

@@ -77,9 +77,9 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
           </button>
           <button
             onClick={onAudit}
-            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 shadow-lg ring-1 ring-inset ring-gray-200 dark:ring-slate-600 hover:ring-indigo-500 dark:hover:ring-indigo-400 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 transform hover:scale-105"
+            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 shadow-lg ring-1 ring-inset ring-gray-200 dark:ring-slate-600 hover:ring-teal-500 dark:hover:ring-teal-400 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 transform hover:scale-105"
           >
-            <Edit3 className="w-10 h-10 mb-3 text-indigo-500 dark:text-indigo-400" />
+            <Edit3 className="w-10 h-10 mb-3 text-teal-500 dark:text-teal-400" />
             <span className="text-lg font-semibold">Auditer les adhésifs</span>
             <span className="text-sm text-gray-500 dark:text-slate-400 mt-1">Procéder à l'audit.</span>
           </button>

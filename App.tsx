@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState, Suspense } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { LogOut } from 'lucide-react';
 import { pageVariants } from './hooks/motion/transitions';
 import useAuditStore from './store';
 import Login from './components/Login';
@@ -16,7 +17,7 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 // A simple loading spinner component
 const Loader: React.FC = () => (
   <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900" role="status" aria-live="polite">
-    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-indigo-500" aria-label="Chargement en cours..."></div>
+    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500" aria-label="Chargement en cours..."></div>
   </div>
 );
 
@@ -30,7 +31,7 @@ const InitErrorScreen: React.FC<{ message: string }> = ({ message }) => (
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{message}</p>
       <button
         onClick={() => window.location.reload()}
-        className="inline-flex items-center gap-2 rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+        className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
       >
         Réessayer
       </button>
@@ -267,14 +268,14 @@ const App: React.FC = () => {
           AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
           <a
             href="mailto:florent.perez@tisseo.fr"
-            className="text-indigo-500 hover:underline font-normal"
+            className="text-teal-500 hover:underline font-normal"
           >
             Contact
           </a>{" "}
           | 72 76 |{" "}
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="text-indigo-500 hover:underline font-normal uppercase tracking-wider"
+            className="text-teal-500 hover:underline font-normal uppercase tracking-wider"
           >
             À propos
           </button>
@@ -285,8 +286,15 @@ const App: React.FC = () => {
                 isOpen={isLogoutModalOpen}
                 onClose={() => setIsLogoutModalOpen(false)}
                 onConfirm={handleLogoutConfirm}
-                title="Confirmation de déconnexion"
-                message="Êtes-vous sûr de vouloir vous déconnecter ? Vous serez redirigé vers l'écran de connexion."
+                title="Déconnexion"
+                message="Voulez-vous vraiment vous déconnecter ?"
+                mainIcon={
+                    <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/30 sm:mx-0 sm:h-10 sm:w-10">
+                        <LogOut className="h-5 w-5 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+                    </div>
+                }
+                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 sm:ml-3 sm:w-auto"
+                confirmLabel="Se déconnecter"
             />
             {modalState.reminderOptions && modalState.pendingExport && (
                  <ReminderModal

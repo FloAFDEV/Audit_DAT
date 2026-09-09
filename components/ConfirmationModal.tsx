@@ -12,18 +12,22 @@ interface ConfirmationModalProps {
   mainIcon?: React.ReactNode;
   confirmButtonClass?: string;
   isDestructive?: boolean;
+  confirmLabel?: string;
+  cancelLabel?: string;
 }
 
-const ConfirmationModal: React.FC<ConfirmationModalProps> = ({ 
-    isOpen, 
-    onClose, 
-    onConfirm, 
-    title, 
-    message, 
-    icon, 
-    mainIcon, 
-    confirmButtonClass, 
-    isDestructive 
+const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
+    isOpen,
+    onClose,
+    onConfirm,
+    title,
+    message,
+    icon,
+    mainIcon,
+    confirmButtonClass,
+    isDestructive,
+    confirmLabel = "Confirmer",
+    cancelLabel = "Annuler",
 }) => {
     const [confirmationCode, setConfirmationCode] = useState('');
     const [userInput, setUserInput] = useState('');
@@ -175,7 +179,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                 value={userInput}
                                 onChange={(e) => setUserInput(e.target.value.trim())}
                                 onKeyDown={handleKeyDown}
-                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-indigo-600 dark:focus:ring-indigo-500 leading-6"
+                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 leading-6"
                                 placeholder="****"
                                 maxLength={4}
                                 autoComplete="off"
@@ -194,14 +198,14 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 disabled={!isConfirmationMatch}
                 className={confirmButtonClass || "inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"}
             >
-                Confirmer
+                {confirmLabel}
             </button>
             <button
                 type="button"
                 onClick={onClose}
                 className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
             >
-                Annuler
+                {cancelLabel}
             </button>
             </div>
         </div>
