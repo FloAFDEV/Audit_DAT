@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference,
+    SignageReference, PlanQuartierData, AdhesiveStatus,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
@@ -300,6 +300,9 @@ export const computeAdhesiveInventory = (
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
         if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
 
+        const pdqConfig = auditModules.find(c=>c.type === AuditModuleType.PLAN_QUARTIER);
+        if (pdqConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'PDQ'), pdqConfig.shortLabel, false);
+
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
         if (pmrModule) {
             const allPmrMaterials = getAllPmrMaterials();
@@ -381,6 +384,19 @@ export const computeAdhesiveInventory = (
                 if (module.type === AuditModuleType.ECA && referencesReady) {
                     for (const eca of (module.data as EcaData).ecas || []) {
                         getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
+                    }
+                }
+
+                if (module.type === AuditModuleType.PLAN_QUARTIER && referencesReady) {
+                    // Quantité = nombre d'exemplaires réellement recensés (pas un
+                    // slot structurel comme DAT/PR/ECA) — seules les occurrences
+                    // CATALOGUÉES comptent ici ; les découvertes non cataloguées
+                    // (adHocLabel) n'ont pas de ligne de nomenclature tant qu'elles
+                    // ne sont pas intégrées au référentiel (cf. types.ts).
+                    for (const occ of (module.data as PlanQuartierData).occurrences ?? []) {
+                        if (!occ.modelId) continue;
+                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
+                        addQty(occ.modelId, 1);
                     }
                 }
 

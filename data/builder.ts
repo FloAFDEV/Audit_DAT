@@ -1,7 +1,7 @@
 
 import {
     Lieu, AuditModule, ModeData, AuditModuleType, TransportMode, MetroLine, Station, Direction, DAT, AdhesiveStatus, Pr,
-    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone
+    Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone, PlanQuartierData
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from './adhesives';
@@ -329,6 +329,28 @@ const createCognitivePictogramModule = (station: Partial<Station>, line: MetroLi
     };
 };
 
+/** Module Plans de quartier — vierge (occurrences: []) au seed, comme DAT :
+ *  le nombre d'exemplaires par station n'est pas connu à l'avance, c'est
+ *  le recensement terrain qui le construit (cf. types.ts en-tête). */
+const createPlanQuartierModule = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'TELEO'): AuditModule => {
+    const data: PlanQuartierData = {
+        id: `pdq-data-${station.id}`,
+        stationName: station.name!,
+        stationCode: station.code ?? '',
+        occurrences: [],
+        comment: '',
+    };
+
+    return {
+        id: `module-pdq-${station.id}`,
+        type: AuditModuleType.PLAN_QUARTIER,
+        name: 'Plans de quartier',
+        data,
+        isFuture: !!station.isFuture,
+        line,
+    };
+};
+
 export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
     return new Promise(resolve => {
         const modules: AuditModule[] = [
@@ -342,6 +364,14 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             ...AEROPORT_EXPRESS_STATIONS.filter(s => s.id !== 'sta-hub-bla').map(s => createSignaletiqueModule(s, 'AEROPORT')),
             ...TELEO_STATIONS.map(s => createDatModule(s, TransportMode.TELEO, 'TELEO')),
             ...PR_DATA.map(p => createPrModule(p)),
+
+            // Plans de quartier (+ PEM 3D) : métro A/B/C, Tram T1, Téléo —
+            // jamais P+R/Aéroport (périmètre non demandé pour l'instant).
+            ...LINE_A_STATIONS.map(s => createPlanQuartierModule(s, 'A')),
+            ...LINE_B_STATIONS.map(s => createPlanQuartierModule(s, 'B')),
+            ...LINE_C_STATIONS.map(s => createPlanQuartierModule(s, 'C')),
+            ...TRAM_STATIONS.map(s => createPlanQuartierModule(s, 'TRAM')),
+            ...TELEO_STATIONS.map(s => createPlanQuartierModule(s, 'TELEO')),
             
             // Generic ECA modules, excluding Jean Jaurès Ligne A ('JJA') et Ligne B ('JJB')
             ...LINE_A_STATIONS.filter(s => s.code !== 'JJA').map(s => createEcaModule(
@@ -425,6 +455,11 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
                 const stationName = (module.data as CognitivePictogramData).stationName;
                 const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS].find(s => s.name === stationName);
+                return station?.lieuName || stationName;
+            }
+            if (module.type === AuditModuleType.PLAN_QUARTIER) {
+                const stationName = (module.data as PlanQuartierData).stationName;
+                const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS, ...LINE_C_STATIONS, ...TRAM_STATIONS, ...TELEO_STATIONS].find(s => s.name === stationName);
                 return station?.lieuName || stationName;
             }
             return module.name;

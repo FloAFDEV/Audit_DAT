@@ -37,7 +37,7 @@ interface ReferencesListProps {
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, onOpen }) => {
-    const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA'>('ALL');
+    const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
     const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
     const [onlyReview, setOnlyReview] = useState(false);
     const [query, setQuery] = useState('');
@@ -77,7 +77,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                     />
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
-                    {(['ALL', 'DAT', 'PR', 'ECA'] as const).map(f => (
+                    {(['ALL', 'DAT', 'PR', 'ECA', 'PDQ'] as const).map(f => (
                         <button
                             key={f}
                             onClick={() => setFamily(f)}

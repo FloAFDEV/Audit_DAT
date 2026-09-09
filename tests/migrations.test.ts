@@ -257,14 +257,14 @@ describe('Migration V14 → V15 (qualification statique de 8 références + adbs
             support: 'adhesif', placement: {}, legacyDescription: 'Dimensions: 2,5x2,5cm | ...',
         });
 
-        expect(await table.count()).toBe(7); // 6 seedées + adbs3
+        expect(await table.count()).toBe(11); // 6 seedées + adbs3 (V15) + 4 modèles Plans de quartier (V17)
 
         upgraded.close();
 
         // 3) Réouverture — idempotence : ni duplication de adbs3, ni re-patch destructeur.
         const reopened = createAuditDb(name);
         await reopened.open();
-        expect(await reopened.table('signageReferences').count()).toBe(7);
+        expect(await reopened.table('signageReferences').count()).toBe(11);
         const adca12Again = await reopened.table('signageReferences').get('adca12');
         expect(adca12Again.material).toBe('Modification locale antérieure');
         reopened.close();
@@ -328,7 +328,7 @@ describe('Migration V15 → V16 (retrait Admin — suppression auditDefinitions/
         expect(upgraded.tables.map(t => t.name)).not.toContain('signageAssets');
         // Le reste des tables et leur contenu restent strictement intacts.
         expect(await upgraded.table('lieux').count()).toBe(1);
-        expect(await upgraded.table('signageReferences').count()).toBe(39);
+        expect(await upgraded.table('signageReferences').count()).toBe(43);
         upgraded.close();
 
         await Dexie.delete(name);

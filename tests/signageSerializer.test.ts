@@ -67,9 +67,9 @@ const enrichAd3 = async (): Promise<SignageReference> => {
 beforeEach(resetDb);
 
 describe('Seed et validation', () => {
-    it('le seed fournit 39 références valides', async () => {
+    it('le seed fournit 43 références valides', async () => {
         const refs = await db.signageReferences.toArray();
-        expect(refs).toHaveLength(39);
+        expect(refs).toHaveLength(43);
         expect(validateSignageReferences(refs)).toBe(true);
     });
 
@@ -125,7 +125,7 @@ describe('Export complet (format v2)', () => {
         const payload = await buildFullExportPayload();
 
         expect(payload.formatVersion).toBe(2);
-        expect(payload.signageReferences).toHaveLength(39);
+        expect(payload.signageReferences).toHaveLength(43);
         const exported = payload.signageReferences.find(r => r.id === 'ad3')!;
         // Conservation exhaustive des champs sensibles du contrat.
         expect(exported.externalDocuments).toEqual(enriched.externalDocuments);
@@ -157,7 +157,7 @@ describe('Import / restauration (format v2)', () => {
 
         const restored = (await db.signageReferences.get('ad3'))!;
         expect(restored).toEqual(enriched); // conservation champ à champ
-        expect(await db.signageReferences.count()).toBe(39);
+        expect(await db.signageReferences.count()).toBe(43);
     });
 
     it('refuse un fichier v2 dont le référentiel est corrompu (pas de restauration partielle)', async () => {
@@ -182,7 +182,7 @@ describe("Compatibilité anciens exports (format v1) — protection du référen
         expect((await db.lieux.toArray()).map(l => l.id)).toEqual(['lieu-importe']);
         // ...mais le référentiel local est strictement intact.
         expect(await db.signageReferences.get('ad3')).toEqual(enriched);
-        expect(await db.signageReferences.count()).toBe(39);
+        expect(await db.signageReferences.count()).toBe(43);
     });
 
     it('un import v1 en tableau brut (Lieu[]) est accepté et préserve aussi le référentiel', async () => {

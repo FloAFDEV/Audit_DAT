@@ -1,6 +1,6 @@
 // utils/progressCalculators.ts
 
-import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone } from '../types';
+import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone, PlanQuartierData } from '../types';
 import { getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 
@@ -280,6 +280,17 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
                     }
                 }
             }
+            break;
+        }
+        case AuditModuleType.PLAN_QUARTIER: {
+            // Pas de nombre d'emplacements présupposé (cf. types.ts) : binaire,
+            // comme les anciens audits configurables — 100% si la station a été
+            // vérifiée (au moins un exemplaire recensé, ou « aucun élément
+            // trouvé » explicite), 0% sinon.
+            const data = module.data as PlanQuartierData;
+            hasAuditableContent = true;
+            totalApplicableItems = 1;
+            totalCheckedItems = (data.occurrences.length > 0 || !!data.lastCheckedAt) ? 1 : 0;
             break;
         }
     }

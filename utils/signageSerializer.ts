@@ -52,7 +52,7 @@ export const validateLieuxData = (data: any): data is Lieu[] => {
     );
 };
 
-const AUDIT_TYPES = ['DAT', 'PR', 'ECA'];
+const AUDIT_TYPES = ['DAT', 'PR', 'ECA', 'PDQ'];
 
 export const validateSignageReferences = (data: any): data is SignageReference[] => {
     if (!Array.isArray(data)) return false;

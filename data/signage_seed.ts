@@ -173,6 +173,59 @@ const buildReference = (ad: Adhesive, scope: SignageScope, legacyDescription: st
     };
 };
 
+// -----------------------------------------------------------------
+// Plans de quartier (+ PEM 3D) — référentiel figé, 4 modèles connus.
+// -----------------------------------------------------------------
+// Dimensions confirmées : 78cm, JAMAIS 80cm (corrigé du texte historique
+// qui utilisait par erreur 80x..). Le 78x100 (sans header/footer) n'existe
+// JAMAIS en version adhésive — seul le 78x120 (avec header/footer) le peut,
+// mais sa dimension adhésive précise n'est pas encore confirmée : on ne
+// l'invente pas (dimensions laissées vides sur pdq-adhesif). PEM 3D :
+// 120x80cm, support Dibond exclusivement — aucune variante adhésive
+// présentée dans l'app tant qu'elle n'est pas une réalité observée.
+const PLAN_QUARTIER_REFERENCES_DATE = '2026-09-09T00:00:00.000Z';
+
+const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
+    {
+        id: 'pdq-78x100',
+        name: 'Plan de quartier 78×100 (sans header ni footer)',
+        auditType: 'PDQ', scope: { auditType: 'PDQ' },
+        version: 1, support: 'plastifie',
+        dimensions: { width: 78, height: 100, unit: 'cm' },
+        placement: {},
+        legacyDescription: '78 x 100 cm | Métro A/B/C, Tram T1, Téléo — sans header ni footer. Jamais en version adhésive.',
+    },
+    {
+        id: 'pdq-78x120',
+        name: 'Plan de quartier 78×120 (avec header et footer)',
+        auditType: 'PDQ', scope: { auditType: 'PDQ' },
+        version: 1, support: 'plastifie',
+        dimensions: { width: 78, height: 120, unit: 'cm' },
+        placement: {},
+        legacyDescription: '78 x 120 cm | Métro A/B/C, Tram T1, Téléo — avec header et footer.',
+    },
+    {
+        id: 'pdq-adhesif',
+        name: 'Plan de quartier (adhésif)',
+        auditType: 'PDQ', scope: { auditType: 'PDQ' },
+        version: 1, support: 'adhesif',
+        // Dimension non confirmée — jamais inventée. Seule certitude connue :
+        // ce n'est jamais le format 78x100 (sans header/footer).
+        placement: {},
+        legacyDescription: "Version adhésive d'un Plan de quartier — jamais au format 78×100. Dimension précise non encore confirmée.",
+    },
+    {
+        id: 'pem3d-120x80',
+        name: 'PEM 3D 120×80',
+        auditType: 'PDQ', scope: { auditType: 'PDQ' },
+        version: 1, support: 'dibond',
+        dimensions: { width: 120, height: 80, unit: 'cm' },
+        placement: {},
+        legacyDescription: '120 x 80 cm | Pôles d\'échange multimodaux — support Dibond exclusivement.',
+        arbitrage: { status: 'keep', reason: 'Modèle unique confirmé : 120×80cm, Dibond.', createdAt: PLAN_QUARTIER_REFERENCES_DATE },
+    },
+];
+
 /**
  * Construit les enregistrements du référentiel (39 depuis la qualification V15) depuis le catalogue
  * historique. Les scopes P+R et ECA sont DÉRIVÉS de l'appartenance réelle
@@ -220,6 +273,8 @@ export const buildSignageReferencesSeed = (): SignageReference[] => {
             : { auditType: 'ECA', equipmentTypes: types };
         seed.push(buildReference(ad, scope, ad.description));
     }
+
+    seed.push(...buildPlanQuartierReferencesSeed());
 
     return seed;
 };

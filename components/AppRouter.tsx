@@ -17,6 +17,7 @@ const EcaAdhesiveAuditForm = lazy(() => import('./EcaAdhesiveAuditForm'));
 const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision'));
 const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
 const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
+const PlanQuartierAuditForm = lazy(() => import('./PlanQuartierAuditForm'));
 const StatsPage = lazy(() => import('./StatsPage'));
 
 
@@ -74,6 +75,17 @@ interface AppRouterProps {
     handlePmrFloorAdhesivePhotoNoteChange: any;
     handlePmrFloorAdhesivePhotoRotationChange: any;
     handleResetPmrFloorAdhesiveRequest: any;
+
+    handleAddPlanQuartierOccurrence: any;
+    handleRemovePlanQuartierOccurrence: any;
+    handlePlanQuartierOccurrenceStatusChange: any;
+    handlePlanQuartierOccurrenceCommentChange: any;
+    handlePlanQuartierOccurrenceLocationChange: any;
+    handlePlanQuartierMeasuredDimensionsChange: any;
+    handlePlanQuartierNewConstat: any;
+    handlePlanQuartierMarkChecked: any;
+    handlePlanQuartierCommentChange: any;
+    handleResetPlanQuartierRequest: any;
 
     handleCognitivePictogramStatusChange: any;
     handleCognitivePictogramCommentChange: any;
@@ -210,6 +222,25 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onAddAccessPoint={handlers.handleAddCognitivePictogramAccessPoint}
             onRemoveAccessPoint={handlers.handleRemoveCognitivePictogramAccessPoint}
             onUpdateAccessPointName={handlers.handleUpdateCognitivePictogramAccessPointName}
+            onBack={() => handlers.selectModule(null)}
+        />
+    }
+
+    // Plans de quartier (+ PEM 3D) Form
+    if (selectedModule?.type === AuditModuleType.PLAN_QUARTIER) {
+        return <PlanQuartierAuditForm
+            module={selectedModule}
+            signageReferences={signageReferences}
+            onAddOccurrence={handlers.handleAddPlanQuartierOccurrence}
+            onRemoveOccurrence={handlers.handleRemovePlanQuartierOccurrence}
+            onStatusChange={handlers.handlePlanQuartierOccurrenceStatusChange}
+            onOccurrenceCommentChange={handlers.handlePlanQuartierOccurrenceCommentChange}
+            onLocationChange={handlers.handlePlanQuartierOccurrenceLocationChange}
+            onMeasuredDimensionsChange={handlers.handlePlanQuartierMeasuredDimensionsChange}
+            onNewConstat={handlers.handlePlanQuartierNewConstat}
+            onMarkChecked={handlers.handlePlanQuartierMarkChecked}
+            onCommentChange={handlers.handlePlanQuartierCommentChange}
+            onReset={handlers.handleResetPlanQuartierRequest}
             onBack={() => handlers.selectModule(null)}
         />
     }
