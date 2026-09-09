@@ -163,6 +163,24 @@ export interface ImplantationRef {
     status: AdhesiveStatus;
 }
 
+/**
+ * Détail des exemplaires d'une référence sur UN lieu, regroupés par
+ * emplacement physique — le niveau qui rend la fiche exploitable pour
+ * préparer une pose : « ligne → emplacement → numéros d'équipement ».
+ * Un groupe = une (ligne, emplacement) réellement présente ; un emplacement
+ * sans exemplaire n'existe pas, il n'est donc jamais affiché à zéro.
+ */
+export interface ImplantationGroup {
+    /** Ligne de transport (A/B/C/TRAM/TELEO/AEROPORT) ou 'P+R'. */
+    line: string;
+    /** Direction DAT, point d'accès ECA, zone P+R — tel que saisi au référentiel. */
+    context: string;
+    /** Numéros des équipements concernés : « DAT 01 », « Liaison A→B - Valideur 13 »... */
+    equipmentLabels: string[];
+    installed: number;
+    defects: number;
+}
+
 /** Réponse à « où cette référence est-elle utilisée ? ». */
 export interface ReferenceUsage {
     referenceId: string;
@@ -176,7 +194,7 @@ export interface ReferenceUsage {
     lieuCount: number;
     lines: string[];
     equipmentTypes: string[];
-    byLieu: { lieuId: string; lieuName: string; installed: number; defects: number }[];
+    byLieu: { lieuId: string; lieuName: string; installed: number; defects: number; groups: ImplantationGroup[] }[];
     /** Répartition par ligne — « combien sur la ligne B ? » sans re-parcourir l'arbre. */
     byLine: { line: string; installed: number; defects: number }[];
 }
@@ -363,7 +381,14 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
 
     // --- Agrégation : une seule passe sur les implantations ---
     const byReference = new Map<string, ReferenceUsage>();
-    const byRefLieu = new Map<string, Map<string, { lieuId: string; lieuName: string; installed: number; defects: number }>>();
+    // Accumulateur par lieu : les groupes restent en Map le temps de la passe
+    // (clé ligne+emplacement), puis sont matérialisés en tableau — même passe
+    // unique, aucun second parcours de l'arbre (règle 1).
+    type LieuAcc = {
+        lieuId: string; lieuName: string; installed: number; defects: number;
+        groups: Map<string, ImplantationGroup>;
+    };
+    const byRefLieu = new Map<string, Map<string, LieuAcc>>();
     const byRefLine = new Map<string, Map<string, { line: string; installed: number; defects: number }>>();
     const bySupport = new Map<SignageSupport, GroupStatusCounts>();
     const byLine = new Map<string, GroupStatusCounts>();
@@ -413,11 +438,24 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
         const lieuMap = byRefLieu.get(imp.referenceId)!;
         let lieuEntry = lieuMap.get(imp.lieuId);
         if (!lieuEntry) {
-            lieuEntry = { lieuId: imp.lieuId, lieuName: imp.lieuName, installed: 0, defects: 0 };
+            lieuEntry = { lieuId: imp.lieuId, lieuName: imp.lieuName, installed: 0, defects: 0, groups: new Map() };
             lieuMap.set(imp.lieuId, lieuEntry);
         }
         lieuEntry.installed++;
         if (isDefect(imp.status)) lieuEntry.defects++;
+
+        // Groupement par emplacement réel. L'ordre d'insertion suit le parcours
+        // de l'arbre (module → station → direction/accès → équipement), donc
+        // l'ordre physique du terrain : on ne le retrie pas.
+        const groupKey = `${imp.line} ${imp.context}`;
+        let group = lieuEntry.groups.get(groupKey);
+        if (!group) {
+            group = { line: imp.line, context: imp.context, equipmentLabels: [], installed: 0, defects: 0 };
+            lieuEntry.groups.set(groupKey, group);
+        }
+        group.equipmentLabels.push(imp.equipmentLabel);
+        group.installed++;
+        if (isDefect(imp.status)) group.defects++;
 
         const lineMap = byRefLine.get(imp.referenceId)!;
         let lineEntry = lineMap.get(imp.line);
@@ -439,6 +477,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
     byReference.forEach((usage, refId) => {
         usage.defectCount = usage.absentCount + usage.toReplaceCount;
         usage.byLieu = Array.from(byRefLieu.get(refId)!.values())
+            .map(({ groups, ...lieu }) => ({ ...lieu, groups: Array.from(groups.values()) }))
             .sort((a, b) => b.defects - a.defects || b.installed - a.installed);
         usage.lieuCount = usage.byLieu.length;
         usage.byLine = Array.from(byRefLine.get(refId)!.values())

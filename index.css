@@ -131,13 +131,6 @@
   50%      { opacity: 1; }
 }
 
-/* Mode audit : emphase CSS des anomalies (anneau rouge sur les erreurs).
-   Seules les erreurs ressortent — on neutralise l'accent warning. */
-.audit-mode .status-error {
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.55), 0 8px 24px -6px rgba(239, 68, 68, 0.45);
-}
-.audit-mode .status-warning::before { animation: none; opacity: 0.3; }
-
 /* Hover desktop uniquement (@media hover:hover = vrais pointeurs, pas le touch).
    Les états :hover CSS "collent" sur iOS/Android après un tap — on les isole ici
    pour ne jamais déclencher ces effets sur écran tactile. */

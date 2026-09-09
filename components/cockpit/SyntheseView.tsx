@@ -189,7 +189,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // Use filtered lieux for stats calculation
     const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references, auditDefinitions);
-    const needsReviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
     // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
@@ -443,13 +442,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
                 ) : (
                     <>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 sm:gap-3">
-                            <IndicatorTile value={activeReferencesCount} label="Références actives" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires suivis" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.okCount} label="Conformes" tone="teal" />
-                            <IndicatorTile value={patrimoineIndex.totals.defectCount} label="Anomalies" tone="red" onClick={() => nav.navigate({ section: 'audit' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.uncheckedCount} label="Non contrôlés" tone="amber" />
-                            <IndicatorTile value={needsReviewCount} label="À qualifier" tone="amber" onClick={() => nav.navigate({ section: 'referentiel', subSection: 'qualification' })} />
+                        {/* Deux nombres, pas six : le référentiel est acté dans
+                            le moteur et distribué avec l'application — Synthèse
+                            en donne le volume, pas l'état d'avancement d'un
+                            contrôle (qui vit dans Analyse des anomalies). */}
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
+                            <IndicatorTile value={activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
                         </div>
                         <div className="flex flex-wrap gap-3 pt-1">
                             <button
@@ -463,12 +462,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                 className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
                             >
                                 Voir les anomalies →
-                            </button>
-                            <button
-                                onClick={() => nav.navigate({ section: 'referentiel', subSection: 'qualification' })}
-                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
-                            >
-                                Qualifier le référentiel ({needsReviewCount}) →
                             </button>
                         </div>
                     </>

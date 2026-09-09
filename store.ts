@@ -59,8 +59,6 @@ interface AppState {
     // UI State
     theme: 'light' | 'dark';
     isStatsViewActive: boolean;
-    // Mode audit : met en surbrillance les lieux comportant des anomalies (à remplacer / absent).
-    auditModeActive: boolean;
 
     // Navigation
     activeFilter: AuditCategory | 'ALL';
@@ -143,7 +141,6 @@ interface AppState {
     // UI Actions
     setTheme: (theme: 'light' | 'dark') => void;
     setIsStatsViewActive: (isActive: boolean) => void;
-    setAuditModeActive: (isActive: boolean) => void;
 
     // Navigation Actions
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
@@ -408,7 +405,6 @@ const useAuditStore = create<AppState>((set, get) => {
     initError: null,
     theme: 'light',
     isStatsViewActive: false,
-    auditModeActive: false,
     activeFilter: (() => {
         try {
             const saved = localStorage.getItem('tisseo-audit-active-filter') as AuditCategory | 'ALL' | null;
@@ -1124,8 +1120,6 @@ const useAuditStore = create<AppState>((set, get) => {
         selectedEquipmentId: null,
         selectedEcaId: null,
     }),
-    setAuditModeActive: (isActive) => set({ auditModeActive: isActive }),
-
     setActiveFilter: (filter) => {
         try { localStorage.setItem('tisseo-audit-active-filter', filter); } catch { /* ignore */ }
         set({ activeFilter: filter, activeAuditFilters: [] });
