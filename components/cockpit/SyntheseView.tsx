@@ -263,6 +263,84 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const ecaPmrVantauxReversibleCount = ecaBreakdown.byType[EcaEquipmentType.PMRVantauxReversible] ?? 0;
     const ecaReversibleCount = ecaBreakdown.byType[EcaEquipmentType.VantauxReversible] ?? 0;
 
+    // DAT par direction (vue mono-station uniquement) : répartition déjà
+    // saisie dans le référentiel (Direction.name + dats.length), jamais
+    // calculée ni stockée ailleurs — même filtre !dat.archivedAt que
+    // globalCounts.datCount (useStats), juste regroupé par direction au
+    // lieu d'être sommé à plat. N'affiche rien si une seule direction
+    // (le détail serait redondant avec le total juste au-dessus).
+    const datByDirection = useMemo(() => {
+        if (!selectedLieuId || !selectedLieuObject) return [];
+        const counts = new Map<string, number>();
+        for (const module of selectedLieuObject.modules) {
+            if (module.type !== AuditModuleType.DAT) continue;
+            for (const station of (module.data as ModeData).stations ?? []) {
+                for (const direction of station.directions ?? []) {
+                    const activeDats = (direction.dats ?? []).filter(dat => !dat.archivedAt).length;
+                    counts.set(direction.name, (counts.get(direction.name) ?? 0) + activeDats);
+                }
+            }
+        }
+        return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
+    }, [selectedLieuId, selectedLieuObject]);
+
+    // Bloc « État des anomalies » extrait en variable pour être positionné
+    // différemment selon la vue (cf. rendu ci-dessous), sans dupliquer son
+    // JSX : vue réseau inchangée (en tête), vue mono-station après les
+    // informations concrètes de la station (Référentiel + Aperçu).
+    const anomaliesSection = (
+        <section>
+            <SectionTitle>État des anomalies</SectionTitle>
+            {/* Une colonne par référentiel : la grille suit le nombre réel
+                de référentiels (4), sinon la dernière carte reste orpheline
+                sur une seconde rangée aux deux tiers vide. items-start évite
+                que les cartes compactes (0 anomalie) soient étirées à la
+                hauteur d'une carte voisine en anomalie. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                <AnomalySummaryCard
+                    icon={<BookOpenCheck className="w-4 h-4" />}
+                    title="Signalétique IV"
+                    count={patrimoineIndex.totals.defectCount}
+                    subCounts={[
+                        { label: 'absents', value: patrimoineIndex.totals.absentCount, tone: 'red' },
+                        { label: 'à remplacer', value: patrimoineIndex.totals.toReplaceCount, tone: 'amber' },
+                    ]}
+                    detailLabel="Voir le détail"
+                    onDetail={() => nav.navigate({ section: 'audit' })}
+                />
+                <AnomalySummaryCard
+                    icon={<Footprints className="w-4 h-4" />}
+                    title="PMR sol"
+                    count={pmrSolDefectItems.length}
+                    detailLabel="Voir le détail"
+                    detailDisabled={pmrSolDefectItems.length === 0}
+                    onDetail={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
+                />
+                <AnomalySummaryCard
+                    icon={<ScanEye className="w-4 h-4" />}
+                    title="Pictogrammes cognitifs"
+                    count={pictogrammesDefectItems.length}
+                    detailLabel="Voir le détail"
+                    detailDisabled={pictogrammesDefectItems.length === 0}
+                    onDetail={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
+                />
+                <AnomalySummaryCard
+                    icon={<Layout className="w-4 h-4" />}
+                    title="Anomalies Équipements Station"
+                    count={signaletiqueStationIndex.totals.defectCount}
+                    subCounts={[
+                        { label: 'absents', value: signaletiqueStationIndex.totals.absentCount, tone: 'red' },
+                        { label: 'à remplacer', value: signaletiqueStationIndex.totals.toReplaceCount, tone: 'amber' },
+                        { label: 'HS', value: signaletiqueStationIndex.totals.hsCount, tone: 'red' },
+                    ]}
+                    detailLabel="Voir le détail"
+                    detailDisabled={signaletiqueStationDefectItems.length === 0}
+                    onDetail={() => setModalContent({ title: 'Anomalies Équipements Station', items: signaletiqueStationDefectItems })}
+                />
+            </div>
+        </section>
+    );
+
     return (
         <>
             {/* --- BARRE DE FILTRE PAR LIEU --- */}
@@ -323,7 +401,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             filterOptions.map((lieu) => (
                                 <li
                                     key={lieu.id}
-                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-indigo-50 dark:hover:bg-slate-700"
+                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700"
                                     onClick={() => {
                                         setSelectedLieuId(lieu.id);
                                         setFilterQuery('');
@@ -346,55 +424,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 carte restitue un compte déjà produit ailleurs, elle ne
                 recalcule rien. Signalétique IV oriente vers Analyse des
                 anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
-                cognitifs ouvrent la liste existante faute de section dédiée. */}
-            <section>
-                <SectionTitle>État des anomalies</SectionTitle>
-                {/* Une colonne par référentiel : la grille suit le nombre réel
-                    de référentiels (4), sinon la dernière carte reste orpheline
-                    sur une seconde rangée aux deux tiers vide. */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <AnomalySummaryCard
-                        icon={<BookOpenCheck className="w-4 h-4" />}
-                        title="Signalétique IV"
-                        count={patrimoineIndex.totals.defectCount}
-                        subCounts={[
-                            { label: 'absents', value: patrimoineIndex.totals.absentCount, tone: 'red' },
-                            { label: 'à remplacer', value: patrimoineIndex.totals.toReplaceCount, tone: 'amber' },
-                        ]}
-                        detailLabel="Voir le détail"
-                        onDetail={() => nav.navigate({ section: 'audit' })}
-                    />
-                    <AnomalySummaryCard
-                        icon={<Footprints className="w-4 h-4" />}
-                        title="PMR sol"
-                        count={pmrSolDefectItems.length}
-                        detailLabel="Voir le détail"
-                        detailDisabled={pmrSolDefectItems.length === 0}
-                        onDetail={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
-                    />
-                    <AnomalySummaryCard
-                        icon={<ScanEye className="w-4 h-4" />}
-                        title="Pictogrammes cognitifs"
-                        count={pictogrammesDefectItems.length}
-                        detailLabel="Voir le détail"
-                        detailDisabled={pictogrammesDefectItems.length === 0}
-                        onDetail={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
-                    />
-                    <AnomalySummaryCard
-                        icon={<Layout className="w-4 h-4" />}
-                        title="Anomalies Équipements Station"
-                        count={signaletiqueStationIndex.totals.defectCount}
-                        subCounts={[
-                            { label: 'absents', value: signaletiqueStationIndex.totals.absentCount, tone: 'red' },
-                            { label: 'à remplacer', value: signaletiqueStationIndex.totals.toReplaceCount, tone: 'amber' },
-                            { label: 'HS', value: signaletiqueStationIndex.totals.hsCount, tone: 'red' },
-                        ]}
-                        detailLabel="Voir le détail"
-                        detailDisabled={signaletiqueStationDefectItems.length === 0}
-                        onDetail={() => setModalContent({ title: 'Anomalies Équipements Station', items: signaletiqueStationDefectItems })}
-                    />
-                </div>
-            </section>
+                cognitifs ouvrent la liste existante faute de section dédiée.
+                Vue réseau : reste en tête (comportement inchangé). Vue
+                mono-station : décalée après Référentiel + Aperçu (cf. plus
+                bas) pour que la station recherchée montre d'abord son propre
+                contenu avant son état d'anomalies. */}
+            {!selectedLieuId && anomaliesSection}
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
@@ -462,7 +497,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     <div>
                     <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
                     <div className="space-y-1 mt-2">
-                        {selectedLieuId ? null : (
+                        {selectedLieuId ? (
+                            datByDirection.length > 1 && datByDirection.map(({ name, count }) => (
+                                <StatRow key={name} label={name} value={count} isSubItem />
+                            ))
+                        ) : (
                             <>
                             <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
                             <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
@@ -620,6 +659,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </div>
                 </div>
             </StatCard>
+
+            {/* Vue mono-station : l'état des anomalies arrive ici, après le
+                contenu concret de la station (Référentiel + Aperçu),
+                cf. commentaire sur anomaliesSection plus haut. */}
+            {selectedLieuId && anomaliesSection}
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
             <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />}>
