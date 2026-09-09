@@ -27,6 +27,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AuditDefinition, AuditModuleType, Lieu } from '../../types';
 import { ModuleLine } from './moduleAdmin';
+import { assertNonEmpty } from './adminGuards';
 
 export interface AuditDefinitionEditableFields {
     name: string;
@@ -37,8 +38,8 @@ export interface AuditDefinitionEditableFields {
 }
 
 const assertValidFields = (fields: AuditDefinitionEditableFields) => {
-    if (!fields.name.trim()) throw new Error("Le nom de l'audit configurable est obligatoire.");
-    if (!fields.icon.trim()) throw new Error("Une icône est obligatoire.");
+    assertNonEmpty(fields.name, "Le nom de l'audit configurable");
+    assertNonEmpty(fields.icon, "Une icône");
 };
 
 /** Nouvelle définition — id purement technique (uuid), jamais saisi (R1). */

@@ -21,12 +21,9 @@ import {
     AuditDefinitionEditableFields, createAuditDefinition, applyDefinitionEdit,
     withDefinitionArchived, withDefinitionRestored,
 } from '../utils/cockpit/auditDefinitionAdmin';
+import { assertAdminUnlocked } from '../utils/cockpit/adminGuards';
 
-const assertUnlocked = () => {
-    if (!useAuditStore.getState().isAdminUnlocked) {
-        throw new Error('Action Admin refusée : accès non déverrouillé.');
-    }
-};
+const assertUnlocked = () => assertAdminUnlocked(useAuditStore.getState().isAdminUnlocked);
 
 export const createDefinition = async (fields: AuditDefinitionEditableFields): Promise<AuditDefinition> => {
     assertUnlocked();

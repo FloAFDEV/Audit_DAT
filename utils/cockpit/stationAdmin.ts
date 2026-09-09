@@ -27,21 +27,18 @@
 // =================================================================
 import { v4 as uuidv4 } from 'uuid';
 import { Lieu } from '../../types';
-
-const assertValidName = (name: string) => {
-    if (!name.trim()) throw new Error('Le nom de la station est obligatoire.');
-};
+import { assertNonEmpty } from './adminGuards';
 
 /** Nouvelle station — id purement technique, jamais saisi (R1). */
 export const createStation = (name: string): Lieu => {
-    assertValidName(name);
+    assertNonEmpty(name, 'Le nom de la station');
     return { id: uuidv4(), name: name.trim(), modules: [] };
 };
 
 /** Renomme une station — id et modules strictement inchangés : une
  *  station qui change de nom reste la même station. */
 export const withStationRenamed = (lieu: Lieu, newName: string): Lieu => {
-    assertValidName(newName);
+    assertNonEmpty(newName, 'Le nom de la station');
     return { ...lieu, name: newName.trim() };
 };
 
