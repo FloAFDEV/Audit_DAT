@@ -32,7 +32,7 @@ import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } fr
 
 interface ReferencesListProps {
     references: SignageReference[];
-    usageOf: (id: string) => { installedCount: number; defectCount: number; lieuCount: number; lines: string[] } | undefined;
+    usageOf: (id: string) => { installedCount: number; lieuCount: number; lines: string[] } | undefined;
     onOpen: (id: string) => void;
 }
 
@@ -123,7 +123,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Posés</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden sm:table-cell">Défauts</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Docs</th>
@@ -152,11 +151,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
                                     <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-400 font-normal">—</span>}</td>
-                                    <td className="p-3 text-center hidden sm:table-cell">
-                                        {usage && usage.defectCount > 0
-                                            ? <span className="font-bold text-red-600 dark:text-red-400">{usage.defectCount}</span>
-                                            : <span className="text-slate-400">—</span>}
-                                    </td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-500 dark:text-slate-400 hidden lg:table-cell">
@@ -167,7 +161,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                         })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={9} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                                <td colSpan={8} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                                     Aucune référence ne correspond aux filtres.
                                 </td>
                             </tr>
@@ -384,7 +378,6 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     index={index}
                     onBack={() => setOpenReferenceId(null)}
                     onOpenReference={setOpenReferenceId}
-                    onReload={reload}
                 />
             );
         }
