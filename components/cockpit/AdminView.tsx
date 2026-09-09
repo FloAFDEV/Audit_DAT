@@ -39,36 +39,6 @@ const StandaloneLineBadge: React.FC<{ line: string }> = ({ line }) => (
     <LineIcon module={{ id: '', name: '', type: AuditModuleType.DAT, line: line as any, data: {} as any }} size="sm" />
 );
 
-/* ---------------- Créer une référence ---------------- */
-
-const CreatePanel: React.FC = () => {
-    const { create } = useAdminReferences();
-    const [key, setKey] = useState(0); // force un formulaire vierge après création
-
-    const handleSubmit = async (fields: Parameters<typeof create>[0]) => {
-        try {
-            await create(fields);
-            toast.success(`Référence « ${fields.name} » créée`);
-            setKey(k => k + 1);
-        } catch (error) {
-            console.error('Échec de la création de la référence :', error);
-            toast.error('Échec de la création — réessayez.');
-        }
-    };
-
-    return (
-        <div className="max-w-2xl">
-            <SignageReferenceForm
-                key={key}
-                mode="create"
-                onSubmit={handleSubmit}
-                onCancel={() => setKey(k => k + 1)}
-                submitLabel="Créer la référence"
-            />
-        </div>
-    );
-};
-
 /* ---------------- Archives des références ---------------- */
 
 const ArchivesPanel: React.FC = () => {
@@ -773,12 +743,11 @@ const CustomAuditsPanel: React.FC = () => {
 
 /* ---------------- Conteneur ---------------- */
 
-type AdminTabKey = 'create' | 'archives' | 'stations' | 'stationArchives' | 'customAudits';
+type AdminTabKey = 'archives' | 'stations' | 'stationArchives' | 'customAudits';
 
 const ADMIN_TABS: { key: AdminTabKey; label: string; Icon: LucideIcon }[] = [
     { key: 'stations', label: 'Stations', Icon: Building },
     { key: 'customAudits', label: 'Créer un audit', Icon: Sparkles },
-    { key: 'create', label: 'Créer une référence', Icon: BookPlus },
     { key: 'archives', label: 'Références archivées', Icon: Archive },
     { key: 'stationArchives', label: 'Stations archivées', Icon: Archive },
 ];
@@ -812,7 +781,6 @@ const AdminView: React.FC = () => {
 
             {tab === 'stations' && <StationsPanel />}
             {tab === 'customAudits' && <CustomAuditsPanel />}
-            {tab === 'create' && <CreatePanel />}
             {tab === 'archives' && <ArchivesPanel />}
             {tab === 'stationArchives' && <StationArchivesPanel />}
         </div>

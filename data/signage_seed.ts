@@ -6,9 +6,13 @@
 // enregistrements SignageReference pour le premier peuplement de la
 // table Dexie `signageReferences` (migration v12).
 //
-// Rôle strictement limité à l'initialisation (R3) : après migration,
-// signageReferences est la source de vérité et les corrections métier
-// se font dans l'application — jamais ici.
+// Rôle : le référentiel DAT/PR/ECA est une donnée STATIQUE distribuée avec
+// le build (aucune administration locale). Toute correction métier se fait
+// ICI, dans le code source, puis se distribue via une nouvelle version de
+// l'application — jamais depuis l'app elle-même. Une correction qui doit
+// aussi atteindre les appareils déjà provisionnés passe par une migration
+// Dexie dédiée (db.ts), qui patche les enregistrements déjà persistés sans
+// jamais toucher aux données d'audit.
 //
 // Principes appliqués :
 //  - ids historiques conservés à l'identique (R1) ;
@@ -16,13 +20,14 @@
 //    getEcaAdhesives / ADHESIVES) — aucune règle d'implantation recopiée à
 //    la main, donc aucune dérive possible avec le comportement existant ;
 //  - texte d'origine intégral conservé dans legacyDescription ;
-//  - file needsReview initialisée avec les éléments validés (divergences
-//    BPU PICTO + qualifications en attente) ;
+//  - qualification du catalogue tranchée UNE FOIS dans le code
+//    (ARBITRAGE_DECISIONS ci-dessous), jamais laissée en attente d'une
+//    décision interactive locale ;
 //  - aucun champ fabrication, prix ou donnée BPU structurante.
 // =================================================================
 
 import {
-    Adhesive, EquipmentType, EcaEquipmentType,
+    Adhesive, EquipmentType, EcaEquipmentType, ArbitrageStatus,
     SignageReference, SignageScope, SignageDimensions, SignageSupport, ExternalDocumentRef,
 } from '../types';
 import { ADHESIVES, getPrAdhesives, getEcaAdhesives } from './adhesives';
@@ -50,32 +55,66 @@ const SUPPORT_OVERRIDES: Record<string, SignageSupport> = {
     'ad8': 'adhesif',
     // Pose sur vitrage (définition retenue de la vitrophanie).
     'eca-3': 'vitrophanie',
-    // Support physique réel mais non encore catégorisé → règle stricte
-    // « autre » ⇒ needsReview jusqu'à qualification en administration.
-    'adca12': 'autre',
-    'adca13': 'autre',
-    // Signalisation lumineuse — appartenance au référentiel à qualifier.
+    // Affichage digital intégré au caisson à la conception — ni adhésif, ni
+    // aucun autre support physique posable ; classement 'autre' maintenu
+    // bien que la référence soit désactivée (cf. ARBITRAGE_DECISIONS).
     'eca-r-1': 'autre',
 };
 
-// File needsReview validée : divergences BPU PICTO + qualifications en attente.
-const NEEDS_REVIEW = new Set<string>([
-    'ad1',      // catalogue 95x5,8 cm / BPU PICTO L41 : 96,2x6,7 cm
-    'ad5',      // catalogue 12,2x10 cm / BPU PICTO L44 : 12,4x10 cm
-    'ad12',     // orientation : catalogue 3,7x5,4 cm / BPU PICTO L51 : 5,4x3,7 cm
-    'adbe3',    // scope ambigu (description « entrée ET sortie ») + BPU L66 divergent
-    'adca12',   // support 'autre' à qualifier
-    'adca13',   // support 'autre' à qualifier
-    'eca-r-1',  // signalisation lumineuse : appartenance au référentiel à trancher
-    'eca-11',   // étiquette identifiant : dimensions et nature à préciser
-]);
+// Date de la décision de qualification ci-dessous — fixe (pas new Date()) :
+// la donnée doit être identique sur tous les appareils, indépendamment du
+// moment où le build tourne localement.
+const SEED_QUALIFICATION_DATE = '2026-09-09T00:00:00.000Z';
+
+// Qualification du catalogue — décisions tranchées une fois pour toutes
+// (jamais laissées à une administration locale, cf. en-tête de fichier).
+// Chaque entrée remplace l'ancien needsReview interactif par une décision
+// explicite, versionnée avec le code.
+const ARBITRAGE_DECISIONS: Record<string, { status: ArbitrageStatus; reason: string }> = {
+    'ad1': {
+        status: 'keep',
+        reason: "Divergence BPU PICTO L41 (96,2x6,7 cm) jugée non significative — dimension catalogue 95x5,8 cm retenue.",
+    },
+    'ad5': {
+        status: 'keep',
+        reason: "Divergence BPU PICTO L44 (12,4x10 cm) jugée non significative — dimension catalogue 12,2x10 cm retenue.",
+    },
+    'ad12': {
+        status: 'keep',
+        reason: "Le catalogue avait interverti largeur et hauteur — dimension corrigée à 5,4x3,7 cm (largeur x hauteur), conforme au BPU PICTO L51. Adhésif non produit en interne mais bien référencé.",
+    },
+    'adbe3': {
+        status: 'keep',
+        reason: "Confirmé : posé sur la casquette supérieure des bornes d'entrée ET de sortie, 34x8 cm. L'entrée BPU L66 « Borne P+r - Tarifs » 10x15 cm est obsolète. Scope étendu à Bornes Sortie via la référence adbs3 (même visuel).",
+    },
+    'adca12': {
+        status: 'keep',
+        reason: "Support confirmé : adhésif simple, format 78x120 cm, posé sur la vitre latérale extérieure des caisses automatiques.",
+    },
+    'adca13': {
+        status: 'keep',
+        reason: "Verso de adca12 (dos gris), même format 78x120 cm, adhésif simple.",
+    },
+    'eca-r-1': {
+        status: 'remove',
+        reason: "Affichage digital intégré au caisson de l'ECA à la conception — non auditable, non modifiable sur le terrain. Retiré du référentiel actif (désactivé, jamais supprimé, R1).",
+    },
+    'eca-11': {
+        status: 'keep',
+        reason: "Étiquette de numéro de valideur, produite en interne, posée sur le corps de l'ECA — équivalent de l'item 9 des DAT. La numérotation suit l'identifiant du valideur (ex. valideur 4 → chiffre 4).",
+    },
+};
 
 // Équivalences métier (comptage commun dans l'inventaire — jamais de fusion, R1).
 const SAME_AS: Record<string, string[]> = {
     'adbe2': ['adbs2'], // même artwork « P+r-rustine-ticket-P+r_2025-02-12 »
     'adbs2': ['adbe2'],
-    'adbe3': ['adca9'], // même visuel « Tarifs + coordonnées Parc Relais » 34x8
-    'adca9': ['adbe3'],
+    // Même visuel « Tarifs + coordonnées Parc Relais » 34x8, posé sur les
+    // bornes d'entrée, de sortie et les caisses automatiques (qualifié,
+    // cf. ARBITRAGE_DECISIONS['adbe3']).
+    'adbe3': ['adca9', 'adbs3'],
+    'adbs3': ['adbe3', 'adca9'],
+    'adca9': ['adbe3', 'adbs3'],
 };
 
 // Associations physiques posées ensemble (recto/verso). Symétrie maintenue ici
@@ -127,13 +166,15 @@ const buildReference = (ad: Adhesive, scope: SignageScope, legacyDescription: st
         ...(SAME_AS[ad.id] ? { sameAs: SAME_AS[ad.id] } : {}),
         ...(PAIRED_WITH[ad.id] ? { pairedWith: PAIRED_WITH[ad.id] } : {}),
         ...(ad.isDisabled ? { isDisabled: true } : {}),
-        ...(NEEDS_REVIEW.has(ad.id) ? { needsReview: true } : {}),
+        ...(ARBITRAGE_DECISIONS[ad.id]
+            ? { arbitrage: { ...ARBITRAGE_DECISIONS[ad.id], createdAt: SEED_QUALIFICATION_DATE } }
+            : {}),
         legacyDescription,
     };
 };
 
 /**
- * Construit les 38 enregistrements du référentiel depuis le catalogue
+ * Construit les enregistrements du référentiel (39 depuis la qualification V15) depuis le catalogue
  * historique. Les scopes P+R et ECA sont DÉRIVÉS de l'appartenance réelle
  * aux listes actuelles (aucune recopie manuelle des règles d'implantation).
  */

@@ -282,7 +282,7 @@ export const createAuditDb = (name: string): AuditDb => {
 //   - signageReferences : catalogue métier destiné à devenir administrable.
 //     Index : id (clé primaire, ids historiques ad1/adbe1/eca-11... conservés)
 //     et auditType (dénormalisé depuis scope.auditType — règle R11).
-//     Seed initial depuis data/adhesives.ts (38 références) : après cette
+//     Seed initial depuis data/adhesives.ts (38 références à l'origine, 39 depuis la qualification V15 — adbs3) : après cette
 //     migration, la table est la source de vérité métier (règle R3) ; les
 //     constantes historiques restent utilisées par les lecteurs existants
 //     jusqu'à leur bascule progressive (strangler pattern).
@@ -329,6 +329,61 @@ export const createAuditDb = (name: string): AuditDb => {
     signageAssets: 'id, referenceId',
     events: '++id, date, type, entityType',
     auditDefinitions: 'id',
+});
+
+// V15: qualification statique de 8 références DAT/PR/ECA (décisions
+// tranchées dans le code, cf. ARBITRAGE_DECISIONS dans data/signage_seed.ts)
+// + ajout de adbs3 (même visuel « Tarifs + coordonnées » que adbe3, posé
+// aussi sur les bornes de sortie, pas seulement en entrée).
+//   ⚠ Aucun re-seed global : seules CES références précises (par id) sont
+//   patchées via un merge superficiel, jamais un remplacement complet — un
+//   éventuel changement déjà fait localement sur un autre champ de ces
+//   mêmes références (support/dimensions non concernés ici) est préservé.
+//   Une base neuve (populate) reçoit déjà la version à jour via
+//   buildSignageReferencesSeed() : cette migration ne concerne que les
+//   appareils déjà provisionnés en V12+.
+    instance.version(15).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    signageAssets: 'id, referenceId',
+    events: '++id, date, type, entityType',
+    auditDefinitions: 'id',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    const freshById = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+
+    // Références déjà présentes : merge ciblé des seuls champs qualifiés
+    // (support, dimensions, legacyDescription, sameAs, isDisabled,
+    // arbitrage), needsReview retiré — jamais un remplacement de l'objet.
+    const patchedIds = ['ad1', 'ad5', 'ad12', 'adbe3', 'adca9', 'adca12', 'adca13', 'eca-r-1', 'eca-11'];
+    for (const id of patchedIds) {
+        const existing = await table.get(id);
+        const fresh = freshById.get(id);
+        if (!existing || !fresh) continue;
+        const { needsReview, ...rest } = existing;
+        await table.put({
+            ...rest,
+            support: fresh.support,
+            dimensions: fresh.dimensions,
+            legacyDescription: fresh.legacyDescription,
+            ...(fresh.sameAs ? { sameAs: fresh.sameAs } : {}),
+            ...(fresh.isDisabled ? { isDisabled: true } : {}),
+            ...(fresh.arbitrage ? { arbitrage: fresh.arbitrage } : {}),
+        });
+    }
+
+    // adbs3 est une référence réellement nouvelle — ajoutée seulement si
+    // absente (idempotence : une réouverture ne doit jamais dupliquer) ET
+    // seulement si la table est un référentiel déjà peuplé (adbe3 déjà
+    // présent) — jamais sur une table vide, qui n'a jamais reçu le seed et
+    // n'a donc rien à corriger ici (le seed initial s'en charge via
+    // populate).
+    const adbs3Existing = await table.get('adbs3');
+    if (!adbs3Existing && await table.get('adbe3')) {
+        const adbs3 = freshById.get('adbs3');
+        if (adbs3) await table.add(adbs3);
+    }
 });
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :

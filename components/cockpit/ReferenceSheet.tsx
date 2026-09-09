@@ -4,23 +4,33 @@
 // Contrat de plateforme, règle 2 : c'est LA fiche unique, ouverte depuis
 // n'importe quelle section du cockpit.
 // Conçue comme une COMPOSITION de sections autonomes : ajouter demain
-// « Photos », « Campagnes », « Stocks »... = ajouter un composant de
-// section ici, sans toucher aux autres. Lecture seule à ce stade
-// (l'édition arrive avec l'administration).
+// une nouvelle capacité = ajouter un composant de section ici, sans
+// toucher aux autres.
+// Lecture seule : le référentiel (DAT/PR/ECA) est une donnée statique
+// distribuée avec le build — sa correction se fait dans le code source,
+// jamais depuis l'application (aucune administration locale).
 // =================================================================
 import React, { useState } from 'react';
-import {
-    ArrowLeft, Ruler, Link2, Flag, Radar, Camera, ShieldCheck, PencilLine, Archive, ArchiveRestore, Lock, ChevronRight, ChevronDown,
-} from 'lucide-react';
-import toast from 'react-hot-toast';
+import { ArrowLeft, Ruler, Link2, Flag, Radar, ChevronRight, ChevronDown } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
-import useAuditStore from '../../store';
-import { useAdminReferences } from '../../hooks/useAdminReferences';
-import { referenceToEditableFields } from '../../utils/cockpit/signageReferenceEditor';
-import { ADMIN_CODE } from './AdminGate';
-import SignageReferenceForm from './SignageReferenceForm';
+import { AUDIT_CATEGORIES } from '../../data/config';
+import { CategoryIcon } from '../CategoryIcon';
 import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+
+/** Ligne de transport → config visuelle (mêmes couleurs que partout
+ *  ailleurs dans l'app, cf. AUDIT_CATEGORIES). 'P+R' n'a pas de config
+ *  de ligne (ce n'est pas une ligne) : CategoryIcon affiche alors le
+ *  badge générique "Tout le réseau" — jamais utilisé ici pour du P+R
+ *  puisqu'on retombe sur le label texte dans ce cas (cf. LineBadge). */
+const LINE_CATEGORY_KEY: Record<string, string> = {
+    A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE',
+};
+const LineBadge: React.FC<{ line: string }> = ({ line }) => {
+    if (line === 'P+R') return <span className="text-xs font-bold text-slate-600 dark:text-slate-300">P+R</span>;
+    const config = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line]);
+    return config ? <CategoryIcon categoryConfig={config} size="sm" /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
+};
 
 /* ---------- briques locales de la fiche ---------- */
 
@@ -108,7 +118,12 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {usage.byLine.map(l => (
                                         <tr key={l.line} className="bg-white dark:bg-slate-900">
-                                            <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.line === 'P+R' ? 'P+R' : `Ligne ${l.line}`}</td>
+                                            <td className="p-2.5">
+                                                <span className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
+                                                    <LineBadge line={l.line} />
+                                                    {l.line === 'P+R' ? null : `Ligne ${l.line}`}
+                                                </span>
+                                            </td>
                                             <td className="p-2.5 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.installed}</td>
                                         </tr>
                                     ))}
@@ -157,8 +172,9 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                                                                 {l.groups.map((g, i) => (
                                                                     <li key={`${g.line}-${g.context}-${i}`}>
                                                                         <div className="flex items-baseline justify-between gap-3">
-                                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                                                                                {g.line === 'P+R' ? 'P+R' : `Ligne ${g.line}`}
+                                                                            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                                                                <LineBadge line={g.line} />
+                                                                                {g.line === 'P+R' ? null : `Ligne ${g.line}`}
                                                                                 {g.context && <span className="font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400"> · {g.context}</span>}
                                                                             </span>
                                                                             <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{g.installed}</span>
@@ -185,161 +201,15 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
     );
 };
 
-/* ---------- section Admin (Lot 2a) : édition / archivage / restauration ---------- */
-
-/** Accès discret depuis la fiche elle-même quand l'Admin est verrouillé —
- *  avant ce correctif, la section Administration disparaissait purement
- *  et simplement (return null), sans aucun moyen de savoir depuis la
- *  fiche que déverrouiller l'Admin est possible. Volontairement minimal :
- *  un simple lien, pas un panneau (AdminGate reste le point d'entrée
- *  complet, utilisé par ailleurs dans l'onglet Admin du cockpit). Une
- *  fois déverrouillé, isAdminUnlocked est un état de STORE (pas local à
- *  ce composant) : la fiche affiche immédiatement Modifier/Archiver,
- *  sans navigation ni rechargement, et reste active pour le reste de la
- *  session — exactement comme un déverrouillage depuis l'onglet Admin. */
-const InlineAdminUnlock: React.FC = () => {
-    const unlockAdmin = useAuditStore(s => s.unlockAdmin);
-    const [isOpen, setIsOpen] = useState(false);
-    const [code, setCode] = useState('');
-    const [error, setError] = useState('');
-
-    if (!isOpen) {
-        return (
-            <button
-                onClick={() => setIsOpen(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
-            >
-                <Lock className="w-3.5 h-3.5" /> Déverrouiller l'Admin
-            </button>
-        );
-    }
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (code === ADMIN_CODE) {
-            unlockAdmin();
-        } else {
-            setError('Code incorrect.');
-            setCode('');
-        }
-    };
-
-    return (
-        <form onSubmit={handleSubmit} className="flex items-center gap-2">
-            <input
-                type="password"
-                inputMode="numeric"
-                maxLength={4}
-                aria-label="Code Admin à 4 chiffres"
-                value={code}
-                onChange={e => setCode(e.target.value)}
-                autoFocus
-                className="w-20 text-center tracking-[0.4em] rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1 px-2 text-sm text-slate-900 dark:text-slate-50 focus:ring-2 focus:ring-inset focus:ring-teal-600"
-                placeholder="••••"
-            />
-            <button type="submit" className="text-xs font-semibold text-teal-600 dark:text-teal-400">Déverrouiller</button>
-            <button type="button" onClick={() => { setIsOpen(false); setError(''); setCode(''); }} className="text-xs text-slate-400">Annuler</button>
-            {error && <span className="text-xs text-red-600 dark:text-red-400">{error}</span>}
-        </form>
-    );
-};
-
-const AdminSection: React.FC<{ reference: SignageReference; onReload: () => void }> = ({ reference, onReload }) => {
-    const isAdminUnlocked = useAuditStore(s => s.isAdminUnlocked);
-    const { update, archive, restore } = useAdminReferences();
-    const [isEditing, setIsEditing] = useState(false);
-
-    if (!isAdminUnlocked) {
-        return (
-            <SheetSection title="Administration" icon={<ShieldCheck className="w-4 h-4" />}>
-                <InlineAdminUnlock />
-            </SheetSection>
-        );
-    }
-
-    const handleSubmit = async (fields: Parameters<typeof update>[1], changeReason?: string) => {
-        try {
-            await update(reference, fields, changeReason);
-            toast.success(`Référence « ${fields.name} » modifiée`);
-            setIsEditing(false);
-            onReload();
-        } catch (error) {
-            console.error('Échec de la modification de la référence :', error);
-            toast.error("Échec de la modification — réessayez.");
-        }
-    };
-
-    const handleArchive = async () => {
-        try {
-            await archive(reference);
-            toast.success(`Référence « ${reference.name} » archivée`);
-            onReload();
-        } catch (error) {
-            console.error("Échec de l'archivage de la référence :", error);
-            toast.error("Échec de l'archivage — réessayez.");
-        }
-    };
-
-    const handleRestore = async () => {
-        try {
-            await restore(reference);
-            toast.success(`Référence « ${reference.name} » restaurée`);
-            onReload();
-        } catch (error) {
-            console.error('Échec de la restauration de la référence :', error);
-            toast.error('Échec de la restauration — réessayez.');
-        }
-    };
-
-    return (
-        <SheetSection title="Administration" icon={<ShieldCheck className="w-4 h-4" />}>
-            {isEditing ? (
-                <SignageReferenceForm
-                    mode="edit"
-                    initialFields={referenceToEditableFields(reference)}
-                    onSubmit={handleSubmit}
-                    onCancel={() => setIsEditing(false)}
-                    submitLabel="Enregistrer les modifications"
-                />
-            ) : (
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => setIsEditing(true)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600"
-                    >
-                        <PencilLine className="w-4 h-4" /> Modifier
-                    </button>
-                    {reference.archivedAt ? (
-                        <button
-                            onClick={handleRestore}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-teal-50 text-teal-700 hover:bg-teal-100 dark:bg-teal-900/30 dark:text-teal-300"
-                        >
-                            <ArchiveRestore className="w-4 h-4" /> Restaurer
-                        </button>
-                    ) : (
-                        <button
-                            onClick={handleArchive}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300"
-                        >
-                            <Archive className="w-4 h-4" /> Archiver
-                        </button>
-                    )}
-                </div>
-            )}
-        </SheetSection>
-    );
-};
-
 interface ReferenceSheetProps {
     reference: SignageReference;
     references: SignageReference[]; // pour résoudre sameAs / pairedWith
     index: PatrimoineIndex;
     onBack: () => void;
     onOpenReference: (referenceId: string) => void;
-    onReload: () => void;
 }
 
-const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference, onReload }) => {
+const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference }) => {
     const refName = (id: string) => references.find(r => r.id === id)?.name ?? id;
     const linked = (id: string) => (
         <button
@@ -375,8 +245,6 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 </div>
             </div>
 
-            <AdminSection reference={reference} onReload={onReload} />
-
             {/* Identité & caractéristiques */}
             <SheetSection title="Caractéristiques" icon={<Ruler className="w-4 h-4" />}>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -389,13 +257,6 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
 
             {/* Implantations (moteur d'index) */}
             <UsageSection reference={reference} index={index} />
-
-            {/* Rendu terrain — emplacement prévu, édition à venir */}
-            <SheetSection title="Rendu terrain" icon={<Camera className="w-4 h-4" />}>
-                <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                    Aucune photo — le rendu réel de ce visuel une fois posé sera ajoutable dans une prochaine étape.
-                </p>
-            </SheetSection>
 
             {/* Relations */}
             {(reference.sameAs?.length || reference.pairedWith) && (

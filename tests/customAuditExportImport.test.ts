@@ -219,8 +219,8 @@ describe('Export/import bout-en-bout — audits configurables (Partie 2)', () =>
         const restoredExcluded = await db.lieux.get('lieu-excluded');
         expect(restoredExcluded!.modules.every(m => m.type !== AuditModuleType.CUSTOM)).toBe(true);
 
-        // --- Non-régression : le référentiel historique (38 refs) est intact ---
-        expect(await db.signageReferences.count()).toBe(40); // 38 historiques + 2 CUSTOM
+        // --- Non-régression : le référentiel historique (39 refs) est intact ---
+        expect(await db.signageReferences.count()).toBe(41); // 39 historiques + 2 CUSTOM
     });
 
     it('un import v1 (ancien format, sans customAuditDefinitions) laisse la table auditDefinitions locale strictement intacte', async () => {

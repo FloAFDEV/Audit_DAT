@@ -238,7 +238,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
  * Contenu (dimensions/matière) : pour une référence qui porte encore son
  * texte historique (legacyDescription), on réutilise EXACTEMENT l'ancien
  * découpage (« | » pour DAT, « // » pour P+R/ECA) — comportement identique
- * aux 38 références historiques, garanti par le test de caractérisation.
+ * aux 39 références historiques, garanti par le test de caractérisation.
  * Une référence Admin sans texte historique (nouvelle création) utilise
  * directement ses champs structurés (dimensions/material) — c'est la
  * seule situation nouvelle, qui n'existait simplement pas avant.
