@@ -16,7 +16,7 @@ import { createContext, useContext } from 'react';
 // flux opérationnel : c'est un sous-onglet de Référentiel, réservé aux
 // questions de qualité de donnée (le référentiel est-il correct ?),
 // jamais aux constats terrain.
-export type CockpitSectionKey = 'synthese' | 'referentiel' | 'audit' | 'historique' | 'admin';
+export type CockpitSectionKey = 'synthese' | 'referentiel' | 'audit' | 'historique';
 
 export interface CockpitNavigation {
     /** Change de section ; `subSection` cible un onglet interne à la

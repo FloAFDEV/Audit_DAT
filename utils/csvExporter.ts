@@ -50,10 +50,10 @@ const downloadFile = (content: string, fileName: string, mimeType: string) => {
 // =================================================================
 
 /**
- * Export JSON complet (format v2) : lieux + signageReferences + signageAssets.
- * Lit directement les tables Dexie — le référentiel administré est TOUJOURS
- * inclus dans la sauvegarde (aucune perte possible des corrections métier).
- * Reste compatible en restauration avec les anciens fichiers (format v1).
+ * Export JSON complet (format v2) : lieux + signageReferences.
+ * Lit directement les tables Dexie — le référentiel est TOUJOURS inclus
+ * dans la sauvegarde. Reste compatible en restauration avec les anciens
+ * fichiers (format v1).
  */
 export const exportLieuxToJson = async (): Promise<{ success: boolean }> => {
     try {
@@ -461,7 +461,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         const data = module.data as ModeData;
                         for (const station of data.stations) {
                             for (const direction of station.directions) {
-                                for (const dat of direction.dats.filter(d => !d.archivedAt)) {
+                                for (const dat of direction.dats) {
                                     for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
                                         const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
                                         const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
@@ -534,7 +534,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                     }
                     case AuditModuleType.ECA: {
                         const data = module.data as EcaData;
-                        for (const eca of data.ecas.filter(e => !e.archivedAt)) {
+                        for (const eca of data.ecas) {
                             if (eca.isNotApplicable) {
                                 rows.push({
                                     ...baseRow,

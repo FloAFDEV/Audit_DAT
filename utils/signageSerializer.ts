@@ -2,56 +2,22 @@
 // =================================================================
 // SÉRIALISATION EXPORT/IMPORT/BACKUP DU RÉFÉRENTIEL SIGNALÉTIQUE
 // -----------------------------------------------------------------
-// Objectif (commit 2) : rendre signageReferences fiable AVANT d'autoriser
-// son édition humaine. Ce module centralise :
+// Ce module centralise :
 //   - la construction du payload d'export complet (lieux + référentiel) ;
 //   - le parsing/validation d'un import (ancien ou nouveau format) ;
-//   - l'application d'un import en base ;
-//   - la conversion Blob ↔ base64 des assets (base64 UNIQUEMENT dans le
-//     fichier d'export — le stockage IndexedDB reste en Blob, règle R5/R6).
+//   - l'application d'un import en base.
 //
 // Compatibilité des formats :
 //   - Ancien export (v1) : { exportDate, data: Lieu[] } ou Lieu[] brut.
-//     → l'import ne touche JAMAIS signageReferences/signageAssets :
-//       le référentiel administré survit à la restauration d'un vieux
-//       backup d'audits (aucune régénération, aucun écrasement).
-//   - Nouveau format (v2) : ajoute formatVersion, signageReferences,
-//     signageAssets (base64). → restauration complète des deux tables.
+//     → l'import ne touche JAMAIS signageReferences : le référentiel local
+//       survit à la restauration d'un vieux backup d'audits (aucune
+//       régénération, aucun écrasement).
+//   - Nouveau format (v2) : ajoute formatVersion, signageReferences.
+//     → restauration complète de cette table.
 // =================================================================
 
-import { Lieu, SignageReference, SignageAsset, AuditDefinition } from '../types';
+import { Lieu, SignageReference } from '../types';
 import { db } from '../db';
-
-// -----------------------------------------------------------------
-// Blob ↔ base64 (compatible navigateur ET Node/tests : pas de FileReader)
-// -----------------------------------------------------------------
-
-export const blobToBase64 = async (blob: Blob): Promise<string> => {
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    // Conversion par blocs pour éviter la limite d'arguments de String.fromCharCode.
-    const CHUNK = 0x8000;
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
-    }
-    return btoa(binary);
-};
-
-export const base64ToBlob = (base64: string, mimeType: string): Blob => {
-    const binary = atob(base64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return new Blob([bytes], { type: mimeType });
-};
-
-// -----------------------------------------------------------------
-// Formats de payload
-// -----------------------------------------------------------------
-
-/** Asset sérialisé pour le fichier d'export (le champ blob devient base64). */
-export interface SerializedSignageAsset extends Omit<SignageAsset, 'blob'> {
-    blobBase64: string;
-}
 
 export interface FullExportPayload {
     exportDate: string;
@@ -59,23 +25,13 @@ export interface FullExportPayload {
     /** Clé 'data' conservée à l'identique du format v1 (compat restauration). */
     data: Lieu[];
     signageReferences: SignageReference[];
-    signageAssets: SerializedSignageAsset[];
-    /** Partie 2 : définitions d'audits configurables. Même philosophie que
-     *  signageReferences — présente dans tout export produit par cette
-     *  version de l'app, même si vide ([]). */
-    customAuditDefinitions: AuditDefinition[];
 }
 
 /** Résultat du parsing d'un import, quel que soit son format d'origine. */
 export interface ParsedImportPayload {
     lieux: Lieu[];
-    /** undefined = format ancien → ne pas toucher aux tables du référentiel. */
+    /** undefined = format ancien → ne pas toucher à la table du référentiel. */
     signageReferences?: SignageReference[];
-    signageAssets?: SignageAsset[];
-    /** undefined = absente du fichier (ancien export, ou export d'avant la
-     *  Partie 2) → la table locale auditDefinitions n'est jamais touchée,
-     *  exactement la même règle que signageReferences ci-dessus. */
-    customAuditDefinitions?: AuditDefinition[];
 }
 
 // -----------------------------------------------------------------
@@ -96,7 +52,7 @@ export const validateLieuxData = (data: any): data is Lieu[] => {
     );
 };
 
-const AUDIT_TYPES = ['DAT', 'PR', 'ECA', 'CUSTOM'];
+const AUDIT_TYPES = ['DAT', 'PR', 'ECA'];
 
 export const validateSignageReferences = (data: any): data is SignageReference[] => {
     if (!Array.isArray(data)) return false;
@@ -112,56 +68,21 @@ export const validateSignageReferences = (data: any): data is SignageReference[]
     );
 };
 
-const validateSerializedAssets = (data: any): data is SerializedSignageAsset[] => {
-    if (!Array.isArray(data)) return false;
-    return data.every(a =>
-        a && typeof a === 'object' &&
-        typeof a.id === 'string' &&
-        typeof a.referenceId === 'string' &&
-        typeof a.blobBase64 === 'string' &&
-        typeof a.mimeType === 'string'
-    );
-};
-
-export const validateAuditDefinitions = (data: any): data is AuditDefinition[] => {
-    if (!Array.isArray(data)) return false;
-    return data.every(def =>
-        def && typeof def === 'object' &&
-        typeof def.id === 'string' && def.id.length > 0 &&
-        typeof def.name === 'string' &&
-        typeof def.icon === 'string' &&
-        Array.isArray(def.targetLines) &&
-        Array.isArray(def.excludedLieuIds) &&
-        Array.isArray(def.includedLieuIds)
-    );
-};
-
 // -----------------------------------------------------------------
 // Construction du payload d'export complet (lit toutes les tables)
 // -----------------------------------------------------------------
 
 export const buildFullExportPayload = async (): Promise<FullExportPayload> => {
-    const [lieux, references, assets, definitions] = await Promise.all([
+    const [lieux, references] = await Promise.all([
         db.lieux.toArray(),
         db.signageReferences.toArray(),
-        db.signageAssets.toArray(),
-        db.auditDefinitions.toArray(),
     ]);
-
-    const serializedAssets: SerializedSignageAsset[] = await Promise.all(
-        assets.map(async ({ blob, ...rest }) => ({
-            ...rest,
-            blobBase64: await blobToBase64(blob),
-        }))
-    );
 
     return {
         exportDate: new Date().toISOString(),
         formatVersion: 2,
         data: lieux,
         signageReferences: references,
-        signageAssets: serializedAssets,
-        customAuditDefinitions: definitions,
     };
 };
 
@@ -196,58 +117,23 @@ export const parseImportPayload = (jsonString: string): ParsedImportPayload => {
         throw new Error('Référentiel signalétique invalide dans le fichier.');
     }
 
-    let signageAssets: SignageAsset[] | undefined;
-    if (raw.signageAssets !== undefined) {
-        if (!validateSerializedAssets(raw.signageAssets)) {
-            throw new Error('Assets du référentiel invalides dans le fichier.');
-        }
-        signageAssets = (raw.signageAssets as SerializedSignageAsset[]).map(({ blobBase64, ...rest }) => ({
-            ...rest,
-            blob: base64ToBlob(blobBase64, rest.mimeType),
-        }));
-    }
-
-    // customAuditDefinitions : absente (ancien export, ou export d'avant la
-    // Partie 2) → la table locale n'est jamais touchée (même règle que
-    // signageReferences/signageAssets ci-dessus, aucune restauration
-    // partielle silencieuse si présente mais invalide).
-    let customAuditDefinitions: AuditDefinition[] | undefined;
-    if (raw.customAuditDefinitions !== undefined) {
-        if (!validateAuditDefinitions(raw.customAuditDefinitions)) {
-            throw new Error('Définitions d\'audits configurables invalides dans le fichier.');
-        }
-        customAuditDefinitions = raw.customAuditDefinitions;
-    }
-
-    return { lieux, signageReferences: raw.signageReferences, signageAssets, customAuditDefinitions };
+    return { lieux, signageReferences: raw.signageReferences };
 };
 
 /**
  * Applique un import parsé en base, dans une transaction unique.
  * - lieux : toujours remplacés (comportement historique inchangé) ;
- * - signageReferences/signageAssets : remplacés UNIQUEMENT si présents
- *   dans le payload (format v2) — un vieux backup n'y touche jamais.
+ * - signageReferences : remplacé UNIQUEMENT si présent dans le payload
+ *   (format v2) — un vieux backup n'y touche jamais.
  */
 export const applyImportPayload = async (payload: ParsedImportPayload): Promise<void> => {
-    await db.transaction('rw', [db.lieux, db.signageReferences, db.signageAssets, db.auditDefinitions], async () => {
+    await db.transaction('rw', [db.lieux, db.signageReferences], async () => {
         await db.lieux.clear();
         await db.lieux.bulkPut(payload.lieux);
 
         if (payload.signageReferences !== undefined) {
             await db.signageReferences.clear();
             await db.signageReferences.bulkPut(payload.signageReferences);
-
-            await db.signageAssets.clear();
-            if (payload.signageAssets && payload.signageAssets.length > 0) {
-                await db.signageAssets.bulkPut(payload.signageAssets);
-            }
-        }
-
-        if (payload.customAuditDefinitions !== undefined) {
-            await db.auditDefinitions.clear();
-            if (payload.customAuditDefinitions.length > 0) {
-                await db.auditDefinitions.bulkPut(payload.customAuditDefinitions);
-            }
         }
     });
 };

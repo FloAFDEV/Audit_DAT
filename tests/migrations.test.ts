@@ -294,6 +294,47 @@ describe('Migration V14 → V15 (qualification statique de 8 références + adbs
     });
 });
 
+describe('Migration V15 → V16 (retrait Admin — suppression auditDefinitions/signageAssets)', () => {
+    it('supprime réellement les deux tables côté IndexedDB, sans toucher lieux/history/events/signageReferences', async () => {
+        const name = uniqueDbName();
+
+        // 1) Base au schéma V15 (avant le retrait de l'Admin), avec du
+        //    contenu réel dans les deux tables qui vont disparaître — la
+        //    preuve qu'un appareil ayant réellement utilisé l'Admin ne
+        //    garde pas de table orpheline après la migration.
+        const v15 = new Dexie(name);
+        v15.version(15).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            signageAssets: 'id, referenceId',
+            events: '++id, date, type, entityType',
+            auditDefinitions: 'id',
+        });
+        await v15.open();
+        await v15.table('lieux').bulkPut([{ id: 'lieu-1', name: 'Lieu 1', modules: [] }]);
+        await v15.table('signageReferences').bulkAdd(buildSignageReferencesSeed());
+        await v15.table('auditDefinitions').add({ id: 'def-1', name: 'Ancien audit', icon: 'MapPin', targetLines: [], excludedLieuIds: [], includedLieuIds: [] });
+        await v15.table('signageAssets').add({ id: 'asset-1', referenceId: 'ad1', kind: 'poseExample', blob: new Blob(['x']), mimeType: 'image/png', addedAt: '2026-01-01T00:00:00.000Z' });
+        expect(await v15.table('auditDefinitions').count()).toBe(1);
+        expect(await v15.table('signageAssets').count()).toBe(1);
+        v15.close();
+
+        // 2) Réouverture avec le schéma courant (V16 inclus).
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+
+        expect(upgraded.tables.map(t => t.name)).not.toContain('auditDefinitions');
+        expect(upgraded.tables.map(t => t.name)).not.toContain('signageAssets');
+        // Le reste des tables et leur contenu restent strictement intacts.
+        expect(await upgraded.table('lieux').count()).toBe(1);
+        expect(await upgraded.table('signageReferences').count()).toBe(39);
+        upgraded.close();
+
+        await Dexie.delete(name);
+    });
+});
+
 describe('Robustesse — transaction de migration atomique (garantie native IndexedDB)', () => {
     it('une exception dans une fonction .upgrade() abandonne toute la transaction (aucune écriture partielle)', async () => {
         const name = uniqueDbName();

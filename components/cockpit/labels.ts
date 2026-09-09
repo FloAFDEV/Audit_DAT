@@ -10,14 +10,10 @@ export const SUPPORT_LABELS: Record<SignageSupport, string> = {
     autre: 'Autre',
 };
 
-export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA' | 'CUSTOM', string> = {
+export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA', string> = {
     DAT: 'DAT',
     PR: 'P+R',
     ECA: 'ECA',
-    // Étiquette générique de secours — les audits configurables affichent
-    // en pratique le nom de leur AuditDefinition, pas cette valeur fixe
-    // (une seule chaîne ne peut pas nommer plusieurs définitions distinctes).
-    CUSTOM: 'Audit configurable',
 };
 
 export const ARBITRAGE_LABELS: Record<ArbitrageStatus, string> = {
@@ -43,7 +39,6 @@ export const formatDimensions = (d?: SignageDimensions): string => {
 
 /** Décrit le scope d'implantation en clair pour la fiche et les listes. */
 export const formatScope = (scope: SignageScope): string => {
-    if (scope.auditType === 'CUSTOM') return 'Audit configurable';
     if (scope.auditType === 'DAT') return 'Tous les DAT';
     const family = AUDIT_TYPE_LABELS[scope.auditType];
     if (!scope.equipmentTypes || scope.equipmentTypes.length === 0) {

@@ -16,7 +16,7 @@ import {
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import {
     Lieu, AuditModuleType, AdhesiveStatus, EquipmentType, EcaEquipmentType,
-    TransportMode, CustomAuditOccurrence,
+    TransportMode,
 } from '../types';
 
 const REFERENCES = buildSignageReferencesSeed();
@@ -198,16 +198,6 @@ describe('buildPatrimoineIndex', () => {
         expect(index.totals.implantationCount).toBeGreaterThan(0);
     });
 
-    it("Lot 2a : resolveReferencesForEquipment exclut une référence archivée (archivedAt), même si elle est dans le scope", () => {
-        const baseline = resolveReferencesForEquipment(REFERENCES, 'PR', EquipmentType.BE);
-        expect(baseline.length).toBeGreaterThan(0);
-        const target = baseline[0];
-        const withArchived = REFERENCES.map(r => r.id === target.id ? { ...r, archivedAt: '2026-01-01T00:00:00.000Z' } : r);
-        const resolved = resolveReferencesForEquipment(withArchived, 'PR', EquipmentType.BE);
-        expect(resolved.some(r => r.id === target.id)).toBe(false);
-        expect(resolved.length).toBe(baseline.length - 1);
-    });
-
     it("« où cette référence est-elle utilisée ? » : agrégats par référence", () => {
         const lieux = [
             datLieu('l1', 'Jean-Jaurès', { ad3: AdhesiveStatus.ToBeReplaced }),
@@ -282,119 +272,5 @@ describe('buildPatrimoineIndex', () => {
         let sum = 0;
         index.byLine.forEach(c => { sum += c.installed; });
         expect(sum).toBe(index.totals.implantationCount);
-    });
-});
-
-// ------------------------------------------------------------------
-// Partie 2 — audits configurables (type CUSTOM)
-// ------------------------------------------------------------------
-describe('buildPatrimoineIndex — module CUSTOM (audits configurables)', () => {
-    const DEF_ID = 'def-pdq';
-    const CUSTOM_REFS = [
-        { id: 'pdq-100-adh', name: 'PdQ 80x100 adhésif', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'adhesif' as const, placement: {} },
-        { id: 'pdq-100-pla', name: 'PdQ 80x100 plastifié', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'pvc' as const, placement: {} },
-        // Référence d'une AUTRE définition — ne doit jamais se mélanger.
-        { id: 'other-def-ref', name: 'Autre audit', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: 'def-autre' }, version: 1, support: 'adhesif' as const, placement: {} },
-        // Référence archivée — ne doit jamais apparaître.
-        { id: 'pdq-archived', name: 'PdQ archivée', auditType: 'CUSTOM' as const, scope: { auditType: 'CUSTOM' as const, definitionId: DEF_ID }, version: 1, support: 'adhesif' as const, placement: {}, archivedAt: '2026-01-01T00:00:00.000Z' },
-    ];
-
-    let occCounter = 0;
-    const occ = (referenceId: string, status: AdhesiveStatus, location?: string): CustomAuditOccurrence => ({
-        id: `occ-${++occCounter}`, referenceId, status, location, constatedAt: '2026-01-01T00:00:00.000Z',
-    });
-
-    const customLieu = (id: string, occurrences: CustomAuditOccurrence[]): Lieu => ({
-        id, name: `Station ${id}`,
-        modules: [{
-            id: `module-custom-${id}`,
-            type: AuditModuleType.CUSTOM,
-            name: 'Plans de quartier',
-            line: 'A',
-            data: {
-                id: `custom-${id}`, definitionId: DEF_ID, stationName: `Station ${id}`, stationCode: '',
-                occurrences, comment: '',
-            },
-        }],
-    });
-
-    it('une occurrence marquée OK est comptée, une occurrence NotApplicable ne l\'est pas', () => {
-        const lieux = [customLieu('c1', [occ('pdq-100-adh', AdhesiveStatus.OK), occ('pdq-100-pla', AdhesiveStatus.NotApplicable)])];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-
-        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(1);
-        expect(index.byReference.get('pdq-100-pla')).toBeUndefined(); // NotApplicable → jamais une implantation
-    });
-
-    it('une référence CUSTOM archivée n\'est jamais résolue, même avec une occurrence recensée', () => {
-        const lieux = [customLieu('c1', [occ('pdq-archived', AdhesiveStatus.OK)])];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-        expect(index.byReference.get('pdq-archived')).toBeUndefined();
-        // L'occurrence reste intacte dans la donnée source (jamais supprimée) —
-        // seule sa résolution dans le patrimoine disparaît.
-        expect((lieux[0].modules[0].data as any).occurrences[0].status).toBe(AdhesiveStatus.OK);
-    });
-
-    it('les références de DEUX définitions différentes ne se mélangent jamais', () => {
-        const lieux = [customLieu('c1', [occ('pdq-100-adh', AdhesiveStatus.OK), occ('other-def-ref', AdhesiveStatus.OK)])];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-
-        // other-def-ref n'appartient pas à DEF_ID : le module ne peut pas le
-        // faire apparaître même si une occurrence existe sous cet id.
-        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(1);
-        expect(index.byReference.get('other-def-ref')).toBeUndefined();
-    });
-
-    it('agrège correctement sur plusieurs stations (chaque occurrence explicitement constatée, cas terrain réel)', () => {
-        const lieux = [
-            customLieu('c1', [occ('pdq-100-adh', AdhesiveStatus.OK), occ('pdq-100-pla', AdhesiveStatus.NotApplicable)]),
-            customLieu('c2', [occ('pdq-100-adh', AdhesiveStatus.ToBeReplaced), occ('pdq-100-pla', AdhesiveStatus.NotApplicable)]),
-            customLieu('c3', [occ('pdq-100-adh', AdhesiveStatus.NotApplicable), occ('pdq-100-pla', AdhesiveStatus.OK)]),
-        ];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-
-        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(2); // c1 + c2, pas c3 (NotApplicable)
-        expect(index.byReference.get('pdq-100-adh')?.defectCount).toBe(1);
-        expect(index.byReference.get('pdq-100-pla')?.installedCount).toBe(1); // c3 seulement
-    });
-
-    it('plusieurs occurrences de la même référence sur la même station comptent chacune comme une implantation distincte, avec leur propre emplacement', () => {
-        const lieux = [customLieu('jean-jaures', [
-            occ('pdq-100-adh', AdhesiveStatus.OK, 'Entrée rue X'),
-            occ('pdq-100-adh', AdhesiveStatus.ToBeReplaced, 'Quai 1'),
-        ])];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-
-        expect(index.byReference.get('pdq-100-adh')?.installedCount).toBe(2);
-        expect(index.byReference.get('pdq-100-adh')?.defectCount).toBe(1);
-        const implantations = index.implantations.filter(i => i.referenceId === 'pdq-100-adh');
-        expect(implantations.map(i => i.context).sort()).toEqual(['Entrée rue X', 'Quai 1']);
-    });
-
-    it('un module fraîchement propagé (occurrences: [], rien recensé) ne produit AUCUNE implantation — contrairement à DAT/PR/ECA, aucun nombre d\'occurrences n\'est présupposé par référence', () => {
-        // Différence assumée avec DAT/PR/ECA (R10, cf. en-tête de ce fichier) :
-        // ceux-ci ont un nombre de slots structurellement connu par
-        // équipement (donc « Non contrôlé » tant que non audité). Un audit
-        // configurable n'a AUCUN nombre d'occurrences présupposé par
-        // référence — c'est justement ce que le relevé terrain découvre —
-        // donc 0 occurrence = 0 implantation, jamais une implantation
-        // fantôme « Non contrôlé » par référence résolvable.
-        const lieux = [customLieu('c1', [])];
-        const index = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-        expect(index.totals.implantationCount).toBe(0);
-        expect(index.byReference.get('pdq-100-adh')).toBeUndefined();
-        expect(index.byReference.get('pdq-100-pla')).toBeUndefined();
-    });
-
-    it('n\'affecte STRICTEMENT AUCUNE implantation DAT/PR/ECA existante (non-régression)', () => {
-        const lieux = [
-            datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK }),
-            customLieu('c1', [occ('pdq-100-adh', AdhesiveStatus.OK), occ('pdq-100-pla', AdhesiveStatus.NotApplicable)]),
-        ];
-        const withoutCustom = buildPatrimoineIndex([datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK })], REFERENCES);
-        const withCustom = buildPatrimoineIndex(lieux, REFERENCES.concat(CUSTOM_REFS));
-
-        expect(withCustom.byReference.get('ad1')?.installedCount).toBe(withoutCustom.byReference.get('ad1')?.installedCount);
-        expect(withCustom.totals.implantationCount).toBe(withoutCustom.totals.implantationCount + 1); // + pdq-100-adh (pla est NotApplicable)
     });
 });

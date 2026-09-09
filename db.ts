@@ -1,16 +1,14 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry, SignageReference, SignageAsset, AppEvent, AuditDefinition } from './types';
+import { Lieu, HistoryEntry, SignageReference, AppEvent } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
 
 export type AuditDb = Dexie & {
     lieux: EntityTable<Lieu, 'id'>;
     history: EntityTable<HistoryEntry, 'id'>;
     signageReferences: EntityTable<SignageReference, 'id'>;
-    signageAssets: EntityTable<SignageAsset, 'id'>;
     events: EntityTable<AppEvent, 'id'>;
-    auditDefinitions: EntityTable<AuditDefinition, 'id'>;
 };
 
 /**
@@ -384,6 +382,23 @@ export const createAuditDb = (name: string): AuditDb => {
         const adbs3 = freshById.get('adbs3');
         if (adbs3) await table.add(adbs3);
     }
+});
+
+// V16: retrait de la couche Admin — suppression de auditDefinitions (Partie 2,
+// audits configurables, retirés avec l'Admin) et de signageAssets (n'existait
+// que pour l'éditeur Admin du référentiel ; orpheline depuis son retrait —
+// plus aucun lecteur ni écrivain dans l'application). `null` supprime
+// réellement la table côté IndexedDB pour les appareils déjà provisionnés,
+// plutôt que de la laisser orpheline.
+//   ⚠ Aucune donnée d'audit (lieux/history/events/signageReferences) n'est
+//   touchée — ces deux tables ne stockaient jamais de constat terrain.
+    instance.version(16).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    signageAssets: null,
+    events: '++id, date, type, entityType',
+    auditDefinitions: null,
 });
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
