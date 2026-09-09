@@ -1,6 +1,5 @@
 
-import React, { useState, useEffect } from "react";
-import { motion, useMotionValue, useTransform } from "motion/react";
+import React, { useState } from "react";
 import { Logo } from "./Logo";
 
 interface LoginProps {
@@ -24,96 +23,21 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     }
   };
 
-  // 💡 Gestion du halo dynamique
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-  const translateX = useTransform(mouseX, [0, window.innerWidth], [-30, 30]);
-  const translateY = useTransform(mouseY, [0, window.innerHeight], [-30, 30]);
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      mouseX.set(e.clientX);
-      mouseY.set(e.clientY);
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, [mouseX, mouseY]);
-
-  // 🎨 Fond quadrillé + halo teal
-  const backgroundStyle: React.CSSProperties = {
-    backgroundColor: "#0f172a",
-    backgroundImage: `
-      linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px)
-    `,
-    backgroundSize: "40px 40px",
-  };
-
   return (
-    <div
-      className="relative flex flex-col min-h-screen overflow-hidden transition-colors"
-      style={backgroundStyle}
-    >
-      {/* 💫 Halo dynamique */}
-      <motion.div
-        className="absolute w-[700px] h-[700px] rounded-full pointer-events-none"
-        style={{
-          x: translateX,
-          y: translateY,
-          background:
-            "radial-gradient(circle at center, rgba(20,184,166,0.25), transparent 70%)",
-          filter: "blur(120px)",
-          zIndex: 0,
-        }}
-      />
-
-      {/* 🔦 Rayon lumineux “scanner” */}
-      <motion.div
-        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-        style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(20,184,166,0.15), transparent)",
-          zIndex: 0,
-        }}
-        animate={{ backgroundPositionX: ["0%", "100%"] }}
-        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-      />
-
-      {/* 🌌 Halo fixe teal pour profondeur */}
-      <motion.div
-        className="absolute w-[900px] h-[900px] rounded-full bottom-[-250px] left-[-250px] pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle at center, rgba(13,148,136,0.25), transparent 70%)",
-          filter: "blur(180px)",
-          zIndex: 0,
-        }}
-        animate={{
-          scale: [1, 1.05, 0.95, 1],
-          opacity: [0.8, 1, 0.9, 0.8],
-        }}
-        transition={{ duration: 35, repeat: Infinity, ease: "easeInOut" }}
-      />
-
-      {/* 💻 Contenu principal */}
-      <main className="relative flex-grow flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 z-10">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 1.2 }}
-          className="w-full max-w-md p-8 space-y-8 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md border border-slate-300 dark:border-slate-700 rounded-xl shadow-[0_0_40px_rgba(20,184,166,0.25)]"
-        >
+    <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-900">
+      <main className="flex-grow flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm p-8 space-y-8">
           <div className="text-center">
-            <div className="mx-auto flex justify-center drop-shadow-[0_0_10px_rgba(20,184,166,0.5)]">
-                <Logo className="h-16 w-16 text-teal-600 dark:text-teal-400" />
+            <div className="mx-auto flex justify-center">
+              <Logo className="h-12 w-12" />
             </div>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-100">
+            <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
               AuditRef
-            </h2>
-            <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">Portail d'Audit Tisséo</p>
+            </h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Portail d'Audit Tisséo</p>
           </div>
 
-          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="password" className="sr-only">
                 Mot de passe
@@ -125,35 +49,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="relative block w-full appearance-none rounded-md bg-white/80 dark:bg-slate-800/60 px-3 py-2 text-gray-900 dark:text-slate-100 placeholder-gray-500 dark:placeholder-slate-400 ring-1 ring-inset ring-gray-400 dark:ring-slate-600 focus:ring-2 focus:ring-teal-600 dark:focus:ring-teal-400 sm:text-sm backdrop-blur-sm transition"
+                className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-teal-600 transition-colors"
                 placeholder="Mot de passe"
               />
             </div>
 
             {error && (
-              <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-4">
-                <p className="text-sm font-medium text-red-800 dark:text-red-300">
-                  {error}
-                </p>
-              </div>
+              <p className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
+                {error}
+              </p>
             )}
 
             <button
               type="submit"
-              className="group relative flex w-full justify-center rounded-md border border-transparent bg-teal-600 py-2 px-4 text-sm font-medium text-white hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 dark:focus:ring-offset-slate-950 transition"
+              className="w-full rounded-lg bg-teal-600 hover:bg-teal-700 py-2.5 text-sm font-semibold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2 dark:focus:ring-offset-slate-800"
             >
               Se connecter
             </button>
           </form>
-        </motion.div>
+        </div>
       </main>
 
-      <footer className="relative z-10 text-center py-6 text-gray-500 dark:text-slate-400 text-xs">
+      <footer className="text-center py-6 text-slate-500 dark:text-slate-400 text-[10px] font-light tracking-wider uppercase">
         <p>
-          AuditRef © 2025 - Tous droits réservés |{" "}
+          AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
           <a
             href="mailto:florent.perez@tisseo.fr?subject=Contact%20depuis%20AuditRef"
-            className="text-teal-600 dark:text-teal-400 hover:underline"
+            className="text-teal-600 dark:text-teal-400 hover:underline font-normal normal-case"
           >
             Contact
           </a>{" "}

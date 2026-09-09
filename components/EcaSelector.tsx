@@ -230,7 +230,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">
                                         <button 
                                             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(eca); }}
-                                            className="p-2 rounded-full hover:bg-indigo-100 text-indigo-600 transition-colors dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+                                            className="p-2 rounded-full hover:bg-teal-100 text-teal-600 transition-colors dark:text-teal-400 dark:hover:bg-teal-900/20"
                                             aria-label={`Modifier ${eca.name}`}
                                         >
                                             <Edit className="w-5 h-5" />

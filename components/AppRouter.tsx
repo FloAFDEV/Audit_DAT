@@ -376,7 +376,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             return (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
                     <p className="text-red-500 mb-4 font-medium">Erreur : Données de station manquantes pour ce module.</p>
-                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Retour</button>
+                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">Retour</button>
                 </div>
             );
         }
@@ -404,7 +404,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
             <p className="text-red-500 mb-4 font-medium">Cet élément n'est pas reconnu par l'application.</p>
-            <button onClick={() => handlers.selectLieu(null)} className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">Retour à l'accueil</button>
+            <button onClick={() => handlers.selectLieu(null)} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">Retour à l'accueil</button>
         </div>
     );
 };

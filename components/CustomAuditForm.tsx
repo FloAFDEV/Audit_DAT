@@ -145,7 +145,7 @@ const CustomAuditForm: React.FC<CustomAuditFormProps> = (props) => {
       });
       showPromiseToast(
         promise,
-        { icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-indigo-500"></div>, title: "Traitement de l'image...", message: "Compression en cours." },
+        { icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>, title: "Traitement de l'image...", message: "Compression en cours." },
         { icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-white" /></div>, title: "Photo ajoutée", message: "L'image a été enregistrée avec succès." },
         { icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>, title: "Erreur", message: "Impossible de traiter l'image." }
       );
@@ -229,8 +229,8 @@ const CustomAuditForm: React.FC<CustomAuditFormProps> = (props) => {
               onClick={() => handlePhotoUploadClick(occ.id)}
               className={`flex items-center justify-center text-sm font-medium transition-all duration-75 active:scale-95 ${
                 occ.photo_base64
-                  ? 'p-2 rounded-full bg-white text-indigo-700 ring-1 ring-inset ring-indigo-500 hover:bg-indigo-50 dark:bg-slate-700/50 dark:text-indigo-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                  : 'px-3 py-1.5 rounded-md bg-indigo-600 text-white shadow-sm hover:bg-indigo-500 whitespace-nowrap'
+                  ? 'p-2 rounded-full bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                  : 'px-3 py-1.5 rounded-md bg-teal-600 text-white shadow-sm hover:bg-teal-500 whitespace-nowrap'
               }`}
               title={occ.photo_base64 ? 'Remplacer la photo' : 'Ajouter une photo'}
             >

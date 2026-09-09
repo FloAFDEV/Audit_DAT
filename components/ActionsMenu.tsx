@@ -167,7 +167,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
         <div className="relative" ref={menuRef}>
             <button
                 onClick={toggleMenu}
-                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 ring-1 ring-inset ring-indigo-600 dark:ring-indigo-400 hover:bg-indigo-600 hover:text-white dark:hover:bg-indigo-500 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900 transition-colors"
+                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-teal-600 dark:text-teal-400 ring-1 ring-inset ring-teal-600 dark:ring-teal-400 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900 transition-colors"
                 aria-haspopup="true" aria-expanded={isOpen}
             >
                 <DatabaseBackup className="h-5 w-5" />
@@ -184,7 +184,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
-                            <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Sauvegarde & Restauration</p></div>
+                            <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Sauvegarde & Restauration</p></div>
                             <button onClick={() => { onExportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Download className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Sauvegarder les données (.json)</span>
                             </button>
@@ -200,10 +200,10 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                         </p>
                                     </div>
                                     <button onClick={() => { onDownloadLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                        <Download className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /><span>Télécharger le backup auto (.json)</span>
+                                        <Download className="w-4 h-4 text-teal-500 dark:text-teal-400" /><span>Télécharger le backup auto (.json)</span>
                                     </button>
                                     <button onClick={() => { onRestoreFromLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                        <Upload className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /><span>Restaurer depuis le backup auto</span>
+                                        <Upload className="w-4 h-4 text-teal-500 dark:text-teal-400" /><span>Restaurer depuis le backup auto</span>
                                     </button>
                                 </>
                             )}

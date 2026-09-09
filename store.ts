@@ -1141,10 +1141,6 @@ const useAuditStore = create<AppState>((set, get) => {
     })),
 
     selectLieu: (lieuId) => {
-        if (lieuId) {
-            // Enregistre la visite pour la section "Reprendre" (import dynamique pour éviter la circularité)
-            import('./hooks/useRecentLieux').then(({ trackRecentLieu }) => trackRecentLieu(lieuId));
-        }
         set({
             isStatsViewActive: false,
             isSignaletiqueActive: false,

@@ -53,7 +53,7 @@ const TramDirectionSelector: React.FC<TramDirectionSelectorProps> = ({ lieu, onS
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-xl">
                                     <ArrowRightLeft className="w-6 h-6" />
                                 </div>
                                 <div>
