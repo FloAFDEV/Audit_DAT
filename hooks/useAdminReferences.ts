@@ -18,12 +18,9 @@ import { isLegacyCatalogId } from '../utils/effectiveAdhesives';
 import {
     SignageReferenceEditableFields, createSignageReference, applyReferenceEdit, withArchived, withRestored,
 } from '../utils/cockpit/signageReferenceEditor';
+import { assertAdminUnlocked } from '../utils/cockpit/adminGuards';
 
-const assertUnlocked = () => {
-    if (!useAuditStore.getState().isAdminUnlocked) {
-        throw new Error('Action Admin refusée : accès non déverrouillé.');
-    }
-};
+const assertUnlocked = () => assertAdminUnlocked(useAuditStore.getState().isAdminUnlocked);
 
 const upsertInStore = (reference: SignageReference) => {
     useAuditStore.setState(state => ({

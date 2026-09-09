@@ -35,6 +35,7 @@ import { createInitialAdhesiveStatus } from '../../data/builder';
 import { getInitialSignaletiqueData } from '../../data/signaletique_config';
 import { ADHESIVES, getEcaAdhesives } from '../../data/adhesives';
 import { canEcaBeNotApplicable } from '../../data/eca_data';
+import { assertNonEmpty } from './adminGuards';
 
 export type ModuleLine = MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT';
 export type AttachableModuleType = 'DAT' | 'ECA' | 'PR' | 'PMR_FLOOR_ADHESIVE' | 'COGNITIVE_PICTOGRAMS' | 'SIGNALETIQUE' | 'CUSTOM';
@@ -91,10 +92,6 @@ const lineToTransportMode = (line: ModuleLine): TransportMode => {
     if (line === 'TRAM' || line === 'AEROPORT') return TransportMode.TRAM;
     if (line === 'TELEO') return TransportMode.TELEO;
     return TransportMode.METRO;
-};
-
-const assertNonEmpty = (value: string, label: string) => {
-    if (!value.trim()) throw new Error(`${label} est obligatoire.`);
 };
 
 /** DAT — une station et une direction par défaut ("Accès"), sans DAT :

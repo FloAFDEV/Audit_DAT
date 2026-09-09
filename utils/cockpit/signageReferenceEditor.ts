@@ -27,6 +27,7 @@ import { v4 as uuidv4 } from 'uuid';
 import {
     SignageReference, SignageReferenceVersion, SignageScope, SignageSupport, SignageDimensions, SignagePlacement,
 } from '../../types';
+import { assertNonEmpty } from './adminGuards';
 
 export const MAX_PREVIOUS_VERSIONS = 2;
 
@@ -42,7 +43,7 @@ export interface SignageReferenceEditableFields {
 }
 
 const assertValidFields = (fields: SignageReferenceEditableFields) => {
-    if (!fields.name.trim()) throw new Error('Le nom de la référence est obligatoire.');
+    assertNonEmpty(fields.name, 'Le nom de la référence');
 };
 
 /** Nouvelle référence — id purement technique (uuid), jamais saisi (R1). */

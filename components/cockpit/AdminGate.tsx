@@ -11,7 +11,7 @@ import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import useAuditStore from '../../store';
 
-export const ADMIN_CODE = '3194';
+const ADMIN_CODE = '3194';
 
 const AdminGate: React.FC = () => {
     const unlockAdmin = useAuditStore(s => s.unlockAdmin);

@@ -26,6 +26,7 @@ import {
     createDirection, createReferenceDat, withDatRenamed, withDatCommentChanged, withDatArchived, withDatRestored,
     createReferenceEca, withEcaAdminUpdated, withEcaArchived, withEcaRestored,
 } from './utils/cockpit/moduleAdmin';
+import { assertAdminUnlocked } from './utils/cockpit/adminGuards';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -240,15 +241,33 @@ export const DATA_VERSION = 'v13.2';
 
 const useAuditStore = create<AppState>((set, get) => {
     /**
-     * A generic function to update a nested property within the state.
-     * @param updateFn A function that receives a cloned Lieu and should return the modified object.
+     * Écrit une modification sur UNE station : clone, applique updateFn,
+     * persiste en base puis synchronise le store — dans ce seul geste, pour
+     * que Dexie et Zustand ne divergent jamais. Deux façons de désigner la
+     * station, avec un comportement d'absence volontairement différent :
+     *  - `mode: 'selected'` (terrain) : si aucune station n'est sélectionnée,
+     *    ou si elle est introuvable, ne fait RIEN (silencieux) — état
+     *    courant normal du terrain avant sélection, jamais une erreur.
+     *  - `mode: 'byId'` (Admin, Lot 2b/2c) : la station DOIT exister (id
+     *    choisi explicitement dans un panneau d'administration) — une
+     *    absence lève une erreur explicite plutôt que d'échouer en silence.
      */
-    const _updateLieu = async (updateFn: (lieu: Lieu) => void) => {
+    const _updateLieuById = async (
+        target: { mode: 'selected' } | { mode: 'byId'; id: string },
+        updateFn: (lieu: Lieu) => void,
+    ): Promise<Lieu | undefined> => {
         const { selectedLieuId, lieux } = get();
-        if (!selectedLieuId) return;
+        const id = target.mode === 'selected' ? selectedLieuId : target.id;
+        if (!id) {
+            if (target.mode === 'byId') throw new Error('Station introuvable : identifiant manquant.');
+            return undefined;
+        }
 
-        const lieuToUpdate = lieux.find(l => l.id === selectedLieuId);
-        if (!lieuToUpdate) return;
+        const lieuToUpdate = lieux.find(l => l.id === id);
+        if (!lieuToUpdate) {
+            if (target.mode === 'byId') throw new Error(`Station introuvable : ${id}`);
+            return undefined;
+        }
 
         // Deep clone to avoid direct state mutation
         const clonedLieu = JSON.parse(JSON.stringify(lieuToUpdate));
@@ -270,48 +289,17 @@ const useAuditStore = create<AppState>((set, get) => {
             // doit jamais faire échouer CE bloc catch lui-même si l'écriture du
             // journal échoue à son tour (logEvent avale déjà ses propres erreurs).
             await logEvent({
-                type: 'PERSISTENCE_ERROR', entityType: 'lieu', entityId: selectedLieuId, entityLabel: lieuToUpdate.name,
+                type: 'PERSISTENCE_ERROR', entityType: 'lieu', entityId: id, entityLabel: lieuToUpdate.name,
                 summary: `Échec d'enregistrement — ${lieuToUpdate.name}`,
                 metadata: { message: error instanceof Error ? error.message : String(error) },
             });
             // On relance l'erreur (en plus du toast déjà affiché ci-dessus) :
             // plusieurs appelants (les resets DAT/ECA/P+R/Signalétique/Pictos,
             // via createResetHandler → showPromiseToast) attendent cette promesse
-            // pour savoir si l'opération a réussi. Sans ce throw, _updateLieu
-            // avalait l'échec et resolve() silencieusement — showPromiseToast
-            // affichait alors un second toast « Réinitialisation terminée »,
-            // contradictoire avec l'échec réel qui venait d'être signalé.
-            throw error;
-        }
-
-        const updatedLieux = lieux.map(l => l.id === selectedLieuId ? clonedLieu : l);
-        set({ lieux: updatedLieux });
-    };
-
-    /**
-     * Même patron que _updateLieu, mais pour une station arbitraire (pas
-     * nécessairement get().selectedLieuId) — utilisé par les actions Admin
-     * du Lot 2b, qui opèrent sur une station choisie dans un panneau
-     * d'administration, jamais forcément la station « ouverte » côté terrain.
-     */
-    const _updateLieuById = async (id: string, updateFn: (lieu: Lieu) => void): Promise<Lieu> => {
-        const { lieux } = get();
-        const lieuToUpdate = lieux.find(l => l.id === id);
-        if (!lieuToUpdate) throw new Error(`Station introuvable : ${id}`);
-
-        const clonedLieu = JSON.parse(JSON.stringify(lieuToUpdate));
-        updateFn(clonedLieu);
-
-        try {
-            await db.lieux.put(clonedLieu);
-        } catch (error) {
-            console.error("Échec de l'enregistrement en base :", error);
-            toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible. Votre dernière modification n'a pas été sauvegardée, réessayez.", { duration: 8000 });
-            await logEvent({
-                type: 'PERSISTENCE_ERROR', entityType: 'lieu', entityId: id, entityLabel: lieuToUpdate.name,
-                summary: `Échec d'enregistrement — ${lieuToUpdate.name}`,
-                metadata: { message: error instanceof Error ? error.message : String(error) },
-            });
+            // pour savoir si l'opération a réussi. Sans ce throw, l'échec serait
+            // avalé et resolve() silencieusement — showPromiseToast afficherait
+            // alors un second toast « Réinitialisation terminée », contradictoire
+            // avec l'échec réel qui venait d'être signalé.
             throw error;
         }
 
@@ -319,6 +307,9 @@ const useAuditStore = create<AppState>((set, get) => {
         set({ lieux: updatedLieux });
         return clonedLieu;
     };
+
+    /** Terrain : opère toujours sur la station actuellement sélectionnée. */
+    const _updateLieu = (updateFn: (lieu: Lieu) => void) => _updateLieuById({ mode: 'selected' }, updateFn);
 
 
     const applyTheme = (theme: 'light' | 'dark') => {
@@ -639,7 +630,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // données d'audit déjà saisies strictement inchangés.
     // =================================================================
     createStationAdmin: async (name: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const created = createStation(name);
         try {
             await db.lieux.put(created);
@@ -657,9 +648,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     renameStationAdmin: async (id: string, newName: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const previousName = get().lieux.find(l => l.id === id)?.name;
-        const updated = await _updateLieuById(id, (clone) => {
+        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
             clone.name = withStationRenamed(clone, newName).name;
         });
         await logEvent({
@@ -670,8 +661,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     archiveStationAdmin: async (id: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        const updated = await _updateLieuById(id, (clone) => {
+        assertAdminUnlocked(get().isAdminUnlocked);
+        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
             clone.archivedAt = withStationArchived(clone).archivedAt;
         });
         await logEvent({
@@ -681,8 +672,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     restoreStationAdmin: async (id: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        const updated = await _updateLieuById(id, (clone) => {
+        assertAdminUnlocked(get().isAdminUnlocked);
+        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
             delete clone.archivedAt;
         });
         await logEvent({
@@ -692,7 +683,7 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     deleteStationForever: async (id: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const current = get().lieux.find(l => l.id === id);
         if (!current) throw new Error(`Station introuvable : ${id}`);
         if (!current.archivedAt) throw new Error('Seule une station archivée peut être supprimée définitivement.');
@@ -718,7 +709,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // types d'événements — même nature d'opération, entityType distingue.
     // =================================================================
     attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const lieu = get().lieux.find(l => l.id === lieuId);
         if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
 
@@ -749,7 +740,7 @@ const useAuditStore = create<AppState>((set, get) => {
             created = createBlankPrModule(lieu.name);
         }
 
-        await _updateLieuById(lieuId, (clone) => { clone.modules.push(created); });
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => { clone.modules.push(created); });
         await logEvent({
             type: 'AUDIT_ITEM_ADDED', entityType: 'module', entityId: created.id, entityLabel: created.name,
             summary: `Module ${moduleType} ajouté — ${lieu.name}`,
@@ -764,7 +755,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // avant tout à annuler une propagation « Appliquer au réseau » mal
     // ciblée avant que le terrain n'ait commencé l'audit.
     detachModuleAdmin: async (lieuId: string, moduleId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const lieu = get().lieux.find(l => l.id === lieuId);
         if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
         const module = lieu.modules.find(m => m.id === moduleId);
@@ -773,7 +764,7 @@ const useAuditStore = create<AppState>((set, get) => {
             throw new Error(`Impossible de détacher « ${module.name} » : ce module contient déjà des données d'audit (statut, commentaire ou photo).`);
         }
 
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             clone.modules = clone.modules.filter(m => m.id !== moduleId);
         });
         await logEvent({
@@ -788,7 +779,7 @@ const useAuditStore = create<AppState>((set, get) => {
     // n'en supprime jamais. Un SEUL événement consolidé par exécution (pas un
     // par station) pour ne pas noyer le journal à l'échelle du réseau.
     applyAuditDefinitionToNetwork: async (definition: AuditDefinition) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         if (definition.archivedAt) throw new Error(`« ${definition.name} » est archivé : impossible de l'appliquer au réseau.`);
 
         const missingIds = computeMissingLieuIds(definition, get().lieux);
@@ -823,9 +814,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     createPrZoneAdmin: async (lieuId: string, moduleId: string, zoneName: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const zone = createPrZone(zoneName);
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             if (!module) throw new Error('Module P+R introuvable.');
             module.data.zones.push(zone);
@@ -838,8 +829,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     renamePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string, newName: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        await _updateLieuById(lieuId, (clone) => {
+        assertAdminUnlocked(get().isAdminUnlocked);
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             const zone = module?.data.zones.find(z => z.id === zoneId);
             if (!zone) throw new Error('Zone P+R introuvable.');
@@ -848,9 +839,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     removePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let zoneName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             if (!module) throw new Error('Module P+R introuvable.');
             const zone = module.data.zones.find(z => z.id === zoneId);
@@ -865,9 +856,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     createPrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, name: string, type: EquipmentType) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const equipment = createPrEquipment(name, type, get().signageReferences);
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             const zone = module?.data.zones.find(z => z.id === zoneId);
             if (!zone) throw new Error('Zone P+R introuvable.');
@@ -881,8 +872,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     renamePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        await _updateLieuById(lieuId, (clone) => {
+        assertAdminUnlocked(get().isAdminUnlocked);
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             const zone = module?.data.zones.find(z => z.id === zoneId);
             const equipment = zone?.equipments.find(e => e.id === equipmentId);
@@ -897,8 +888,8 @@ const useAuditStore = create<AppState>((set, get) => {
     // champ adhesiveIds, en le supprimant si adhesiveIds est vide/undefined
     // (retour au périmètre standard du type de borne).
     setPrEquipmentScopeAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
-        await _updateLieuById(lieuId, (clone) => {
+        assertAdminUnlocked(get().isAdminUnlocked);
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             const zone = module?.data.zones.find(z => z.id === zoneId);
             const equipment = zone?.equipments.find(e => e.id === equipmentId);
@@ -910,9 +901,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     removePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let equipmentName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
             const zone = module?.data.zones.find(z => z.id === zoneId);
             if (!zone) throw new Error('Zone P+R introuvable.');
@@ -936,9 +927,9 @@ const useAuditStore = create<AppState>((set, get) => {
     // l'historique de ce qui a existé (cf. types.ts::DAT/ECA).
     // ---------------------------------------------------------------
     addDatDirectionAdmin: async (lieuId: string, moduleId: string, name: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const direction = createDirection(name);
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
             const station = module?.data.stations[0];
             if (!station) throw new Error('Module DAT introuvable.');
@@ -952,9 +943,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     addDatAdmin: async (lieuId: string, moduleId: string, directionId: string, name: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const dat = createReferenceDat(name);
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
             const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
             if (!direction) throw new Error('Direction introuvable.');
@@ -969,9 +960,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     updateDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string, fields: { name?: string; comment?: string }) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let datName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
             const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
             const dat = direction?.dats.find(d => d.id === datId);
@@ -987,9 +978,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     archiveDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let datName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
             const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
             const dat = direction?.dats.find(d => d.id === datId);
@@ -1004,9 +995,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     restoreDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let datName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
             const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
             const idx = direction?.dats.findIndex(d => d.id === datId) ?? -1;
@@ -1021,9 +1012,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     addEcaAdmin: async (lieuId: string, moduleId: string, fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         const eca = createReferenceEca(fields);
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
             if (!module) throw new Error('Module ECA introuvable.');
             module.data.ecas.push(eca);
@@ -1037,9 +1028,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     updateEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let ecaName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
             const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
             if (!module || idx === -1) throw new Error('ECA introuvable.');
@@ -1053,9 +1044,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     archiveEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let ecaName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
             const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
             if (!module || idx === -1) throw new Error('ECA introuvable.');
@@ -1069,9 +1060,9 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     restoreEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
-        if (!get().isAdminUnlocked) throw new Error('Action Admin refusée : accès non déverrouillé.');
+        assertAdminUnlocked(get().isAdminUnlocked);
         let ecaName = '';
-        await _updateLieuById(lieuId, (clone) => {
+        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
             const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
             const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
             if (!module || idx === -1) throw new Error('ECA introuvable.');
