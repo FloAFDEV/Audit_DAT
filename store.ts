@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, AuditDefinition, CustomAuditData, CustomAuditOccurrence, CustomAuditConstat
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
@@ -16,17 +16,6 @@ import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
-import { createStation, withStationRenamed, withStationArchived, withStationRestored } from './utils/cockpit/stationAdmin';
-import { computeMissingLieuIds, computeDeployedCount } from './utils/cockpit/auditDefinitionAdmin';
-import {
-    AttachableModuleType, ModuleLine, createBlankDatModule, createBlankEcaModule, createBlankPrModule,
-    createBlankPmrFloorModule, createBlankCognitivePictogramModule, createBlankSignaletiqueModule,
-    createBlankCustomModule, isModuleBlank, isCustomAuditAttachable,
-    createPrZone, withZoneRenamed, createPrEquipment, withEquipmentRenamed, withEquipmentScopeOverride,
-    createDirection, createReferenceDat, withDatRenamed, withDatCommentChanged, withDatArchived, withDatRestored,
-    createReferenceEca, withEcaAdminUpdated, withEcaArchived, withEcaRestored,
-} from './utils/cockpit/moduleAdmin';
-import { assertAdminUnlocked } from './utils/cockpit/adminGuards';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -37,17 +26,12 @@ interface AppState {
     // Data
     lieux: Lieu[];
     /** Référentiel signalétique (Dexie, table signageReferences) — chargé une
-     *  fois à init() et tenu à jour par les actions Admin (Lot 2a). Source
-     *  effective consommée par les formulaires terrain (utils/effectiveAdhesives.ts),
-     *  qui préserve l'ordre et l'appartenance historiques tout en résolvant le
-     *  contenu depuis cette liste (R1 : aucune régression sur les ids existants). */
+     *  fois à init(), source distribuée par le code/build (data/signage_seed.ts).
+     *  Source effective consommée par les formulaires terrain
+     *  (utils/effectiveAdhesives.ts), qui préserve l'ordre et l'appartenance
+     *  historiques tout en résolvant le contenu depuis cette liste (R1 :
+     *  aucune régression sur les ids existants). */
     signageReferences: SignageReference[];
-    /** Zone Admin du cockpit (Lot 2a) déverrouillée pour la session en
-     *  cours — volontairement NON persistée (contrairement à
-     *  isAuthenticated) : se réinitialise à chaque rechargement complet,
-     *  couche de protection supplémentaire contre une exposition
-     *  accidentelle, en plus du code à 4 chiffres. */
-    isAdminUnlocked: boolean;
     isLoading: boolean;
     isAuthenticated: boolean;
     /** Message affichable si init() a échoué à charger les données — sans lui,
@@ -86,58 +70,11 @@ interface AppState {
      *  son arbre sur selectedLieuId), donc un simple useState local y serait
      *  perdu. Mémoire de session pure, jamais écrite dans localStorage. */
     dashboardSearchQuery: string;
-    /** Stations dont le panneau Modules est déplié dans Admin > Stations.
-     *  Même raison qu'au-dessus : changer d'onglet cockpit/Admin démonte les
-     *  panneaux (StatsPage/AdminView rendent leurs sections par condition),
-     *  ce qu'un useState local dans StationRow ne peut pas traverser.
-     *  Plusieurs stations peuvent être ouvertes en même temps ; mémoire de
-     *  session pure, jamais une préférence permanente. */
-    adminExpandedStationIds: string[];
 
     // Actions
     init: () => Promise<void>;
     login: () => void;
     logout: () => void;
-    unlockAdmin: () => void;
-    lockAdmin: () => void;
-
-    // Admin — stations (Lot 2b)
-    createStationAdmin: (name: string) => Promise<Lieu>;
-    renameStationAdmin: (id: string, newName: string) => Promise<Lieu>;
-    archiveStationAdmin: (id: string) => Promise<void>;
-    restoreStationAdmin: (id: string) => Promise<void>;
-    deleteStationForever: (id: string) => Promise<void>;
-
-    // Admin — attacher un module à une station, gérer zones/bornes P+R (Lot 2c)
-    // customAudit : requis uniquement pour moduleType === 'CUSTOM' (Partie 2).
-    attachModuleAdmin: (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => Promise<AuditModule>;
-    // Détachement générique (Partie 2) — refuse si le module n'est pas
-    // strictement vide (cf. isModuleBlank) : jamais de suppression de
-    // données d'audit, jamais de nouveau système d'archivage de module.
-    detachModuleAdmin: (lieuId: string, moduleId: string) => Promise<void>;
-    // « Appliquer au réseau » (Partie 2) — matérialise les modules
-    // manquants pour une définition, idempotent (cf. computeMissingLieuIds).
-    // N'écrase et ne supprime jamais un module existant.
-    applyAuditDefinitionToNetwork: (definition: AuditDefinition) => Promise<{ created: number; unresolved: number }>;
-    createPrZoneAdmin: (lieuId: string, moduleId: string, zoneName: string) => Promise<PrZone>;
-    renamePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string, newName: string) => Promise<void>;
-    removePrZoneAdmin: (lieuId: string, moduleId: string, zoneId: string) => Promise<void>;
-    createPrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, name: string, type: EquipmentType) => Promise<Equipment>;
-    renamePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => Promise<void>;
-    setPrEquipmentScopeAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => Promise<void>;
-    removePrEquipmentAdmin: (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => Promise<void>;
-
-    // Admin — parc de référence DAT/ECA d'une station (distinct des constats
-    // terrain, handleAddDat/handleAddEca ci-dessous, qui restent inchangés).
-    addDatDirectionAdmin: (lieuId: string, moduleId: string, name: string) => Promise<Direction>;
-    addDatAdmin: (lieuId: string, moduleId: string, directionId: string, name: string) => Promise<DAT>;
-    updateDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string, fields: { name?: string; comment?: string }) => Promise<void>;
-    archiveDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string) => Promise<void>;
-    restoreDatAdmin: (lieuId: string, moduleId: string, directionId: string, datId: string) => Promise<void>;
-    addEcaAdmin: (lieuId: string, moduleId: string, fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>) => Promise<ECA>;
-    updateEcaAdmin: (lieuId: string, moduleId: string, ecaId: string, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>) => Promise<void>;
-    archiveEcaAdmin: (lieuId: string, moduleId: string, ecaId: string) => Promise<void>;
-    restoreEcaAdmin: (lieuId: string, moduleId: string, ecaId: string) => Promise<void>;
 
     // UI Actions
     setTheme: (theme: 'light' | 'dark') => void;
@@ -147,7 +84,6 @@ interface AppState {
     setActiveFilter: (filter: AuditCategory | 'ALL') => void;
     setActiveAuditFilters: (filters: AuditModuleType[]) => void;
     setDashboardSearchQuery: (query: string) => void;
-    toggleAdminExpandedStation: (lieuId: string) => void;
     selectLieu: (lieuId: string | null) => void;
     selectModule: (moduleId: string | null) => void;
     navigate: (level: 'home' | 'lieu' | 'module' | 'station' | 'direction') => void;
@@ -194,20 +130,6 @@ interface AppState {
     handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
     handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
 
-    // Custom Audit Actions (Partie 2 — recensement patrimonial dans le temps)
-    handleAddCustomAuditOccurrence: (referenceId: string, location?: string) => Promise<CustomAuditOccurrence>;
-    handleRemoveCustomAuditOccurrence: (occurrenceId: string) => Promise<void>;
-    handleCustomAuditOccurrenceStatusChange: (occurrenceId: string, status: AdhesiveStatus) => Promise<void>;
-    handleCustomAuditOccurrenceCommentChange: (occurrenceId: string, comment: string) => Promise<void>;
-    handleCustomAuditOccurrenceLocationChange: (occurrenceId: string, location: string) => Promise<void>;
-    handleCustomAuditNewConstat: (occurrenceId: string) => Promise<void>;
-    handleCustomAuditPhotoChange: (occurrenceId: string, photo_base64: string | null) => Promise<void>;
-    handleCustomAuditPhotoNoteChange: (occurrenceId: string, note: string) => Promise<void>;
-    handleCustomAuditPhotoRotationChange: (occurrenceId: string, rotation: number) => Promise<void>;
-    handleCustomAuditMarkChecked: () => Promise<void>;
-    handleCustomAuditCommentChange: (comment: string) => Promise<void>;
-    handleResetCustomAudit: () => Promise<void>;
-
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
     handleCognitivePictogramCommentChange: (comment: string) => Promise<void>;
@@ -248,9 +170,8 @@ const useAuditStore = create<AppState>((set, get) => {
      *  - `mode: 'selected'` (terrain) : si aucune station n'est sélectionnée,
      *    ou si elle est introuvable, ne fait RIEN (silencieux) — état
      *    courant normal du terrain avant sélection, jamais une erreur.
-     *  - `mode: 'byId'` (Admin, Lot 2b/2c) : la station DOIT exister (id
-     *    choisi explicitement dans un panneau d'administration) — une
-     *    absence lève une erreur explicite plutôt que d'échouer en silence.
+     *  - `mode: 'byId'` : la station DOIT exister (id choisi explicitement) —
+     *    une absence lève une erreur explicite plutôt que d'échouer en silence.
      */
     const _updateLieuById = async (
         target: { mode: 'selected' } | { mode: 'byId'; id: string },
@@ -339,18 +260,18 @@ const useAuditStore = create<AppState>((set, get) => {
     /**
      * Sauvegarde automatique de toutes les données dans localStorage avant
      * toute opération destructive (reset / hard-reset).
-     * Inclut le référentiel signalétique (signageReferences + signageAssets) :
-     * les corrections métier administrées ne doivent JAMAIS être perdues
-     * silencieusement — notamment lors d'un hard-reset (db.delete()) qui,
-     * sans ce backup, re-seederait le référentiel depuis les constantes.
+     * Inclut le référentiel signalétique (signageReferences) : les données
+     * ne doivent JAMAIS être perdues silencieusement — notamment lors d'un
+     * hard-reset (db.delete()) qui, sans ce backup, re-seederait le
+     * référentiel depuis les constantes.
      * Si localStorage est plein, déclenche un téléchargement automatique du fichier JSON.
      * @returns la clé localStorage utilisée pour le backup, ou '' si download forcé.
      */
     const _backupBeforeReset = async (scope: string): Promise<string> => {
         const fullPayload = await buildFullExportPayload();
         const now = fullPayload.exportDate;
-        // Format identique à l'export JSON v2 (clé 'data' + signageReferences +
-        // signageAssets) pour permettre la restauration complète via
+        // Format identique à l'export JSON v2 (clé 'data' + signageReferences)
+        // pour permettre la restauration complète via
         // "Restaurer une sauvegarde (.json)".
         const backup = { ...fullPayload, scope };
         const json = JSON.stringify(backup);
@@ -390,7 +311,6 @@ const useAuditStore = create<AppState>((set, get) => {
     // =================================================================
     lieux: [],
     signageReferences: [],
-    isAdminUnlocked: false,
     isLoading: true,
     isAuthenticated: false,
     initError: null,
@@ -417,7 +337,6 @@ const useAuditStore = create<AppState>((set, get) => {
     lastCompletedEcaId: null,
     isSignaletiqueActive: false,
     dashboardSearchQuery: '',
-    adminExpandedStationIds: [],
 
     // =================================================================
     // Initialization & Auth
@@ -583,9 +502,8 @@ const useAuditStore = create<AppState>((set, get) => {
                 set({ lieux: initialData });
             }
 
-            // Référentiel signalétique (Lot 1) : chargé une fois ici, tenu à jour
-            // ensuite en mémoire par les actions Admin (Lot 2a) — jamais rechargé
-            // par polling. C'est la même table que useSignageReferences (Cockpit),
+            // Référentiel signalétique : chargé une fois ici, jamais rechargé par
+            // polling. C'est la même table que useSignageReferences (Cockpit),
             // simplement aussi exposée aux formulaires terrain via le store.
             const references = await db.signageReferences.toArray();
             set({ signageReferences: references });
@@ -615,471 +533,10 @@ const useAuditStore = create<AppState>((set, get) => {
         set({ isAuthenticated: true });
     },
 
-    unlockAdmin: () => set({ isAdminUnlocked: true }),
-    lockAdmin: () => set({ isAdminUnlocked: false }),
-
-    // =================================================================
-    // Admin — stations (Lot 2b)
-    // -----------------------------------------------------------------
-    // Même patron que les actions Admin du référentiel (hooks/useAdminReferences.ts) :
-    // écrit Dexie PUIS synchronise `lieux` en mémoire dans le même geste
-    // (via _updateLieuById / set direct), pour une propagation immédiate
-    // et cohérente dans toute l'application (terrain ET cockpit lisent
-    // tous deux get().lieux). AUCUNE CASCADE : archiver/restaurer une
-    // station ne touche jamais son tableau `modules` — équipements et
-    // données d'audit déjà saisies strictement inchangés.
-    // =================================================================
-    createStationAdmin: async (name: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const created = createStation(name);
-        try {
-            await db.lieux.put(created);
-        } catch (error) {
-            console.error("Échec de l'enregistrement en base :", error);
-            toast.error("Échec de l'enregistrement — vérifiez l'espace de stockage disponible.", { duration: 8000 });
-            throw error;
-        }
-        set({ lieux: [...get().lieux, created] });
-        await logEvent({
-            type: 'STATION_CREATED', entityType: 'lieu', entityId: created.id, entityLabel: created.name,
-            summary: `Station « ${created.name} » créée`,
-        });
-        return created;
-    },
-
-    renameStationAdmin: async (id: string, newName: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const previousName = get().lieux.find(l => l.id === id)?.name;
-        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
-            clone.name = withStationRenamed(clone, newName).name;
-        });
-        await logEvent({
-            type: 'STATION_RENAMED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
-            summary: `Station renommée — ${previousName ?? id} → ${updated.name}`,
-        });
-        return updated;
-    },
-
-    archiveStationAdmin: async (id: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
-            clone.archivedAt = withStationArchived(clone).archivedAt;
-        });
-        await logEvent({
-            type: 'STATION_ARCHIVED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
-            summary: `Station « ${updated.name} » archivée`,
-        });
-    },
-
-    restoreStationAdmin: async (id: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const updated = await _updateLieuById({ mode: 'byId', id }, (clone) => {
-            delete clone.archivedAt;
-        });
-        await logEvent({
-            type: 'STATION_RESTORED', entityType: 'lieu', entityId: id, entityLabel: updated.name,
-            summary: `Station « ${updated.name} » restaurée`,
-        });
-    },
-
-    deleteStationForever: async (id: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const current = get().lieux.find(l => l.id === id);
-        if (!current) throw new Error(`Station introuvable : ${id}`);
-        if (!current.archivedAt) throw new Error('Seule une station archivée peut être supprimée définitivement.');
-        await db.lieux.delete(id);
-        set({ lieux: get().lieux.filter(l => l.id !== id) });
-        await logEvent({
-            type: 'STATION_DELETED', entityType: 'lieu', entityId: id, entityLabel: current.name,
-            summary: `Station « ${current.name} » supprimée définitivement`,
-        });
-    },
-
-    // =================================================================
-    // Admin — attacher un module, gérer zones/bornes P+R (Lot 2c)
-    // -----------------------------------------------------------------
-    // Comble le manque identifié : une station créée en Admin (Lot 2b)
-    // démarrait sans aucun moyen d'y attacher un module ; les zones et
-    // bornes P+R (BE/BS/CA) n'avaient, elles, AUCUN CRUD nulle part dans
-    // l'application (contrairement aux DAT/ECA, gérables côté terrain).
-    // Même patron que les actions ci-dessus : écrit Dexie PUIS synchronise
-    // `lieux` dans le même geste (_updateLieuById / set direct), gated
-    // isAdminUnlocked. Réutilise AUDIT_ITEM_ADDED/AUDIT_ITEM_REMOVED (déjà
-    // utilisés par handleAddDat/handleRemoveDat) plutôt que de nouveaux
-    // types d'événements — même nature d'opération, entityType distingue.
-    // =================================================================
-    attachModuleAdmin: async (lieuId: string, moduleType: AttachableModuleType, line?: ModuleLine, accessPointLabel?: string, customAudit?: { definitionId: string; definitionName: string }) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const lieu = get().lieux.find(l => l.id === lieuId);
-        if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
-
-        let created: AuditModule;
-        if (moduleType === 'DAT') {
-            if (!line) throw new Error('Une ligne est requise pour un module DAT.');
-            created = createBlankDatModule(lieu.name, line);
-        } else if (moduleType === 'ECA') {
-            if (!line) throw new Error('Une ligne est requise pour un module ECA.');
-            created = createBlankEcaModule(lieu.name, line, accessPointLabel);
-        } else if (moduleType === 'PMR_FLOOR_ADHESIVE') {
-            if (!line) throw new Error('Une ligne est requise pour un module PMR au sol.');
-            created = createBlankPmrFloorModule(lieu.name, line, accessPointLabel);
-        } else if (moduleType === 'COGNITIVE_PICTOGRAMS') {
-            if (!line) throw new Error('Une ligne est requise pour un module Pictogrammes cognitifs.');
-            created = createBlankCognitivePictogramModule(lieu.name, line);
-        } else if (moduleType === 'SIGNALETIQUE') {
-            if (line !== 'TRAM' && line !== 'AEROPORT') throw new Error('Signalétique est réservée aux lignes Tram et Aéroport Express.');
-            created = createBlankSignaletiqueModule(lieu.name, line);
-        } else if (moduleType === 'CUSTOM') {
-            if (!line) throw new Error('Une ligne est requise pour un audit configurable.');
-            if (!customAudit) throw new Error('Une définition est requise pour un audit configurable.');
-            if (!isCustomAuditAttachable(lieu.modules, customAudit.definitionId)) {
-                throw new Error(`« ${customAudit.definitionName} » est déjà présent sur ${lieu.name}.`);
-            }
-            created = createBlankCustomModule(lieu.name, line, customAudit.definitionId, customAudit.definitionName);
-        } else {
-            created = createBlankPrModule(lieu.name);
-        }
-
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => { clone.modules.push(created); });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'module', entityId: created.id, entityLabel: created.name,
-            summary: `Module ${moduleType} ajouté — ${lieu.name}`,
-        });
-        return created;
-    },
-
-    // Détachement générique (tous types) — règle absolue : détacher un
-    // module ≠ supprimer ses données. Refuse si le module contient déjà un
-    // statut, un commentaire ou une photo (cf. isModuleBlank) ; aucune
-    // suppression forcée, aucun nouveau système d'archivage de module. Sert
-    // avant tout à annuler une propagation « Appliquer au réseau » mal
-    // ciblée avant que le terrain n'ait commencé l'audit.
-    detachModuleAdmin: async (lieuId: string, moduleId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const lieu = get().lieux.find(l => l.id === lieuId);
-        if (!lieu) throw new Error(`Station introuvable : ${lieuId}`);
-        const module = lieu.modules.find(m => m.id === moduleId);
-        if (!module) throw new Error('Module introuvable.');
-        if (!isModuleBlank(module)) {
-            throw new Error(`Impossible de détacher « ${module.name} » : ce module contient déjà des données d'audit (statut, commentaire ou photo).`);
-        }
-
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            clone.modules = clone.modules.filter(m => m.id !== moduleId);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_REMOVED', entityType: 'module', entityId: moduleId, entityLabel: module.name,
-            summary: `Module ${module.type} détaché (vide) — ${lieu.name}`,
-        });
-    },
-
-    // « Appliquer au réseau » (Partie 2) — ajout pur, jamais une synchronisation
-    // destructive : ne matérialise QUE les modules manquants (computeMissingLieuIds,
-    // idempotent par construction), ne touche jamais un module déjà présent,
-    // n'en supprime jamais. Un SEUL événement consolidé par exécution (pas un
-    // par station) pour ne pas noyer le journal à l'échelle du réseau.
-    applyAuditDefinitionToNetwork: async (definition: AuditDefinition) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        if (definition.archivedAt) throw new Error(`« ${definition.name} » est archivé : impossible de l'appliquer au réseau.`);
-
-        const missingIds = computeMissingLieuIds(definition, get().lieux);
-        let created = 0;
-        let unresolved = 0;
-
-        for (const lieuId of missingIds) {
-            const lieu = get().lieux.find(l => l.id === lieuId);
-            if (!lieu) continue;
-            // Ligne du module créé : la première ligne ciblée que la station
-            // possède déjà (cohérent avec le calcul de ciblage lui-même), sinon
-            // repli sur la première ligne d'un module existant de la station.
-            // Aucune ligne résolvable (station sans aucun module existant ET
-            // definition.targetLines vide) → ignorée ici, reste matérialisable
-            // à la main via « Ajouter un module » sur la station.
-            const line = definition.targetLines.find(l => lieu.modules.some(m => m.type !== AuditModuleType.CUSTOM && m.line === l))
-                ?? lieu.modules.find(m => m.type !== AuditModuleType.CUSTOM && m.line)?.line
-                ?? definition.targetLines[0];
-            if (!line) { unresolved++; continue; }
-
-            await get().attachModuleAdmin(lieuId, 'CUSTOM', line as ModuleLine, undefined, { definitionId: definition.id, definitionName: definition.name });
-            created++;
-        }
-
-        await logEvent({
-            type: 'AUDIT_DEFINITION_APPLIED', entityType: 'auditDefinition', entityId: definition.id, entityLabel: definition.name,
-            summary: `« ${definition.name} » appliqué au réseau — ${created} module(s) créé(s)${unresolved > 0 ? `, ${unresolved} station(s) ignorée(s) (aucune ligne résolvable)` : ''}`,
-            metadata: { created, unresolved, alreadyPresent: computeDeployedCount(definition, get().lieux) - created },
-        });
-
-        return { created, unresolved };
-    },
-
-    createPrZoneAdmin: async (lieuId: string, moduleId: string, zoneName: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const zone = createPrZone(zoneName);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            if (!module) throw new Error('Module P+R introuvable.');
-            module.data.zones.push(zone);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'przone', entityId: zone.id, entityLabel: zone.name,
-            summary: `Zone P+R ajoutée — ${zone.name}`,
-        });
-        return zone;
-    },
-
-    renamePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string, newName: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            const zone = module?.data.zones.find(z => z.id === zoneId);
-            if (!zone) throw new Error('Zone P+R introuvable.');
-            zone.name = withZoneRenamed(zone, newName).name;
-        });
-    },
-
-    removePrZoneAdmin: async (lieuId: string, moduleId: string, zoneId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let zoneName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            if (!module) throw new Error('Module P+R introuvable.');
-            const zone = module.data.zones.find(z => z.id === zoneId);
-            if (!zone) throw new Error('Zone P+R introuvable.');
-            zoneName = zone.name;
-            module.data.zones = module.data.zones.filter(z => z.id !== zoneId);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_REMOVED', entityType: 'przone', entityId: zoneId, entityLabel: zoneName,
-            summary: `Zone P+R supprimée — ${zoneName}`,
-        });
-    },
-
-    createPrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, name: string, type: EquipmentType) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const equipment = createPrEquipment(name, type, get().signageReferences);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            const zone = module?.data.zones.find(z => z.id === zoneId);
-            if (!zone) throw new Error('Zone P+R introuvable.');
-            zone.equipments.push(equipment);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'przone-equipment', entityId: equipment.id, entityLabel: equipment.name,
-            summary: `Borne ${equipment.type} ajoutée — ${equipment.name}`,
-        });
-        return equipment;
-    },
-
-    renamePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, newName: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            const zone = module?.data.zones.find(z => z.id === zoneId);
-            const equipment = zone?.equipments.find(e => e.id === equipmentId);
-            if (!equipment) throw new Error('Équipement P+R introuvable.');
-            equipment.name = withEquipmentRenamed(equipment, newName).name;
-        });
-    },
-
-    // Lot 2d : surcharge (ou retrait de surcharge) du périmètre adhesiveIds
-    // d'une borne existante. Ne touche JAMAIS equipment.adhesives (les
-    // statuts déjà saisis) — withEquipmentScopeOverride ne modifie que le
-    // champ adhesiveIds, en le supprimant si adhesiveIds est vide/undefined
-    // (retour au périmètre standard du type de borne).
-    setPrEquipmentScopeAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string, adhesiveIds: string[] | undefined) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            const zone = module?.data.zones.find(z => z.id === zoneId);
-            const equipment = zone?.equipments.find(e => e.id === equipmentId);
-            if (!equipment) throw new Error('Équipement P+R introuvable.');
-            const updated = withEquipmentScopeOverride(equipment, adhesiveIds);
-            Object.assign(equipment, updated);
-            if (!('adhesiveIds' in updated)) delete equipment.adhesiveIds;
-        });
-    },
-
-    removePrEquipmentAdmin: async (lieuId: string, moduleId: string, zoneId: string, equipmentId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let equipmentName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: Pr }) | undefined;
-            const zone = module?.data.zones.find(z => z.id === zoneId);
-            if (!zone) throw new Error('Zone P+R introuvable.');
-            const equipment = zone.equipments.find(e => e.id === equipmentId);
-            if (!equipment) throw new Error('Équipement P+R introuvable.');
-            equipmentName = equipment.name;
-            zone.equipments = zone.equipments.filter(e => e.id !== equipmentId);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_REMOVED', entityType: 'przone-equipment', entityId: equipmentId, entityLabel: equipmentName,
-            summary: `Borne supprimée — ${equipmentName}`,
-        });
-    },
-
-    // ---------------------------------------------------------------
-    // Admin — parc de référence DAT/ECA d'une station. Distinct des
-    // constats terrain (handleAddDat/handleAddEca plus bas, qui restent
-    // le mécanisme « écart constaté » et posent origin: 'terrain') : ici,
-    // origin: 'reference' — le parc que Tisséo sait implanté. Un retrait
-    // archive (archivedAt) au lieu de supprimer, pour conserver
-    // l'historique de ce qui a existé (cf. types.ts::DAT/ECA).
-    // ---------------------------------------------------------------
-    addDatDirectionAdmin: async (lieuId: string, moduleId: string, name: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const direction = createDirection(name);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
-            const station = module?.data.stations[0];
-            if (!station) throw new Error('Module DAT introuvable.');
-            station.directions.push(direction);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'direction', entityId: direction.id, entityLabel: direction.name,
-            summary: `Direction ajoutée — ${direction.name}`,
-        });
-        return direction;
-    },
-
-    addDatAdmin: async (lieuId: string, moduleId: string, directionId: string, name: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const dat = createReferenceDat(name);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
-            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
-            if (!direction) throw new Error('Direction introuvable.');
-            direction.dats.push(dat);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'dat', entityId: dat.id, entityLabel: dat.name,
-            summary: `DAT de référence ajouté — ${dat.name}`,
-            metadata: { origin: 'reference' },
-        });
-        return dat;
-    },
-
-    updateDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string, fields: { name?: string; comment?: string }) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let datName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
-            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
-            const dat = direction?.dats.find(d => d.id === datId);
-            if (!dat) throw new Error('DAT introuvable.');
-            if (fields.name !== undefined) Object.assign(dat, withDatRenamed(dat, fields.name));
-            if (fields.comment !== undefined) Object.assign(dat, withDatCommentChanged(dat, fields.comment));
-            datName = dat.name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_UPDATED', entityType: 'dat', entityId: datId, entityLabel: datName,
-            summary: `DAT de référence modifié — ${datName}`,
-        });
-    },
-
-    archiveDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let datName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
-            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
-            const dat = direction?.dats.find(d => d.id === datId);
-            if (!dat) throw new Error('DAT introuvable.');
-            Object.assign(dat, withDatArchived(dat));
-            datName = dat.name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ARCHIVED', entityType: 'dat', entityId: datId, entityLabel: datName,
-            summary: `DAT retiré du parc de référence — ${datName}`,
-        });
-    },
-
-    restoreDatAdmin: async (lieuId: string, moduleId: string, directionId: string, datId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let datName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: ModeData }) | undefined;
-            const direction = module?.data.stations[0]?.directions.find(d => d.id === directionId);
-            const idx = direction?.dats.findIndex(d => d.id === datId) ?? -1;
-            if (!direction || idx === -1) throw new Error('DAT introuvable.');
-            direction.dats[idx] = withDatRestored(direction.dats[idx]);
-            datName = direction.dats[idx].name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_RESTORED', entityType: 'dat', entityId: datId, entityLabel: datName,
-            summary: `DAT restauré au parc de référence — ${datName}`,
-        });
-    },
-
-    addEcaAdmin: async (lieuId: string, moduleId: string, fields: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable' | 'origin' | 'archivedAt'>) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        const eca = createReferenceEca(fields);
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
-            if (!module) throw new Error('Module ECA introuvable.');
-            module.data.ecas.push(eca);
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ADDED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
-            summary: `ECA de référence ajouté — ${eca.name}`,
-            metadata: { origin: 'reference' },
-        });
-        return eca;
-    },
-
-    updateEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string, fields: Partial<Omit<ECA, 'id' | 'adhesives' | 'comment' | 'origin' | 'archivedAt'>>) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let ecaName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
-            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
-            if (!module || idx === -1) throw new Error('ECA introuvable.');
-            module.data.ecas[idx] = withEcaAdminUpdated(module.data.ecas[idx], fields);
-            ecaName = module.data.ecas[idx].name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_UPDATED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
-            summary: `ECA de référence modifié — ${ecaName}`,
-        });
-    },
-
-    archiveEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let ecaName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
-            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
-            if (!module || idx === -1) throw new Error('ECA introuvable.');
-            module.data.ecas[idx] = withEcaArchived(module.data.ecas[idx]);
-            ecaName = module.data.ecas[idx].name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_ARCHIVED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
-            summary: `ECA retiré du parc de référence — ${ecaName}`,
-        });
-    },
-
-    restoreEcaAdmin: async (lieuId: string, moduleId: string, ecaId: string) => {
-        assertAdminUnlocked(get().isAdminUnlocked);
-        let ecaName = '';
-        await _updateLieuById({ mode: 'byId', id: lieuId }, (clone) => {
-            const module = clone.modules.find(m => m.id === moduleId) as (AuditModule & { data: EcaData }) | undefined;
-            const idx = module?.data.ecas.findIndex(e => e.id === ecaId) ?? -1;
-            if (!module || idx === -1) throw new Error('ECA introuvable.');
-            module.data.ecas[idx] = withEcaRestored(module.data.ecas[idx]);
-            ecaName = module.data.ecas[idx].name;
-        });
-        await logEvent({
-            type: 'AUDIT_ITEM_RESTORED', entityType: 'eca', entityId: ecaId, entityLabel: ecaName,
-            summary: `ECA restauré au parc de référence — ${ecaName}`,
-        });
-    },
-
     logout: () => {
         localStorage.removeItem('tisseo-audit-auth');
         set({
             isAuthenticated: false,
-            isAdminUnlocked: false,
             activeFilter: 'ALL',
             activeAuditFilters: [],
             selectedLieuId: null,
@@ -1092,7 +549,6 @@ const useAuditStore = create<AppState>((set, get) => {
             selectedEcaId: null,
             isStatsViewActive: false,
             dashboardSearchQuery: '',
-            adminExpandedStationIds: [],
         });
     },
 
@@ -1118,12 +574,6 @@ const useAuditStore = create<AppState>((set, get) => {
     setActiveAuditFilters: (filters) => set({ activeAuditFilters: filters }),
 
     setDashboardSearchQuery: (query) => set({ dashboardSearchQuery: query }),
-
-    toggleAdminExpandedStation: (lieuId) => set(state => ({
-        adminExpandedStationIds: state.adminExpandedStationIds.includes(lieuId)
-            ? state.adminExpandedStationIds.filter(id => id !== lieuId)
-            : [...state.adminExpandedStationIds, lieuId],
-    })),
 
     selectLieu: (lieuId) => {
         set({
@@ -1296,18 +746,12 @@ const useAuditStore = create<AppState>((set, get) => {
             const station = module.data.stations.find(s => s.id === selectedStationId);
             const direction = station?.directions.find(d => d.id === selectedDirectionId);
             if (direction) {
-                // Ne compte que les DAT actifs : un DAT archivé (retiré du parc de
-                // référence, cf. types.ts::DAT.archivedAt) ne doit pas décaler la
-                // numérotation suggérée d'un nouveau DAT terrain.
-                const newDatNumber = direction.dats.filter(d => !d.archivedAt).length + 1;
+                const newDatNumber = direction.dats.length + 1;
                 const newDat: DAT = {
                     id: uuidv4(),
                     name: `DAT ${String(newDatNumber).padStart(2, '0')}`,
                     adhesives: createInitialAdhesiveStatus(ADHESIVES),
                     comment: '',
-                    // Constat terrain (écart par rapport au parc de référence) — par
-                    // opposition à un DAT de référence, ajouté via addDatAdmin.
-                    origin: 'terrain',
                 };
                 direction.dats.push(newDat);
                 createdDat = newDat;
@@ -1319,7 +763,6 @@ const useAuditStore = create<AppState>((set, get) => {
             await logEvent({
                 type: 'AUDIT_ITEM_ADDED', entityType: 'dat', entityId: dat.id, entityLabel: dat.name,
                 summary: `DAT ajouté — ${dat.name}${lieuName ? ` (${lieuName})` : ''}`,
-                metadata: { origin: 'terrain' },
             });
         }
     },
@@ -1464,9 +907,6 @@ const useAuditStore = create<AppState>((set, get) => {
                     id: uuidv4(),
                     adhesives: createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type)),
                     comment: '',
-                    // Constat terrain — par opposition à un ECA de référence, ajouté
-                    // via addEcaAdmin.
-                    origin: 'terrain',
                 };
                 module.data.ecas.push(newEca);
                 createdEca = newEca;
@@ -1478,7 +918,6 @@ const useAuditStore = create<AppState>((set, get) => {
             await logEvent({
                 type: 'AUDIT_ITEM_ADDED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
                 summary: `ECA ajouté — ${eca.name}${lieuName ? ` (${lieuName})` : ''}`,
-                metadata: { origin: 'terrain' },
             });
         }
     },
@@ -1618,217 +1057,6 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) adhesive.photo_rotation = rotation;
-        });
-    },
-
-    // -----------------------------------------------------------------
-    // Custom Audit (Partie 2) — saisie terrain d'un module CUSTOM.
-    // -----------------------------------------------------------------
-    // Recensement patrimonial dans le temps, pas une checklist par
-    // station : `occurrences` (CustomAuditOccurrence[]) sont des objets
-    // physiques individuels — plusieurs occurrences peuvent partager la
-    // même référence sur une même station (ex. 4 Plans de quartier
-    // 80×100 adhésifs à Jean-Jaurès). Chaque occurrence garde un constat
-    // COURANT (status/comment/photo/constatedAt) modifiable librement —
-    // corriger le constat courant ne crée JAMAIS d'historique. Seule
-    // l'action explicite handleCustomAuditNewConstat archive le constat
-    // courant dans previousConstats avant de repartir sur une saisie
-    // vierge : previousConstats représente des relevés passés, jamais
-    // les actions de correction de l'utilisateur.
-    //
-    // `lastCheckedAt` (au niveau du module, pas de l'occurrence) permet
-    // de distinguer « jamais vérifié » de « vérifié, aucun objet trouvé »
-    // sans occurrence fictive — mis à jour à chaque écriture terrain sur
-    // ce module (ajout d'occurrence, constat) et par l'action explicite
-    // handleCustomAuditMarkChecked.
-    // -----------------------------------------------------------------
-    handleAddCustomAuditOccurrence: async (referenceId, location) => {
-        const { selectedModuleId } = get();
-        let created: CustomAuditOccurrence | undefined;
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            if (!module) return;
-            const now = new Date().toISOString();
-            created = {
-                id: uuidv4(), referenceId, location: location?.trim() || undefined,
-                status: AdhesiveStatus.NotChecked, constatedAt: now,
-            };
-            module.data.occurrences.push(created);
-            module.data.lastCheckedAt = now;
-        });
-        if (created) {
-            await logEvent({
-                type: 'AUDIT_ITEM_ADDED', entityType: 'customAuditOccurrence', entityId: created.id,
-                entityLabel: location?.trim() || undefined,
-                summary: `Objet recensé — ${location?.trim() || 'sans emplacement précisé'}`,
-            });
-        }
-        return created!;
-    },
-
-    // Retrait — règle absolue identique à detachModuleAdmin : uniquement
-    // si l'occurrence n'a JAMAIS reçu de constat réel (encore Non
-    // contrôlée, aucun historique, aucune photo/commentaire) — sinon
-    // refus explicite. Corrige une erreur de saisie (ajout accidentel),
-    // ne supprime jamais un objet réellement recensé.
-    handleRemoveCustomAuditOccurrence: async (occurrenceId) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            if (!module) return;
-            const occ = module.data.occurrences.find(o => o.id === occurrenceId);
-            if (!occ) return;
-            const isBlank = occ.status === AdhesiveStatus.NotChecked && !occ.comment && !occ.photo_base64
-                && (occ.previousConstats ?? []).length === 0;
-            if (!isBlank) {
-                throw new Error('Impossible de retirer cet objet : un constat a déjà été saisi (utilisez le statut Absent si l\'objet a disparu).');
-            }
-            module.data.occurrences = module.data.occurrences.filter(o => o.id !== occurrenceId);
-        });
-    },
-
-    handleCustomAuditOccurrenceStatusChange: async (occurrenceId, status) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (!occ) return;
-            occ.status = status;
-            occ.constatedAt = new Date().toISOString();
-            module!.data.lastCheckedAt = occ.constatedAt;
-        });
-    },
-
-    handleCustomAuditOccurrenceCommentChange: async (occurrenceId, comment) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (occ) occ.comment = comment;
-        });
-    },
-
-    handleCustomAuditOccurrenceLocationChange: async (occurrenceId, location) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (occ) occ.location = location.trim() || undefined;
-        });
-    },
-
-    // « Nouveau constat » — SEUL point d'écriture de previousConstats.
-    // Sans effet si le constat courant est encore Non contrôlé (rien à
-    // archiver). Après archivage, le constat courant repart vierge
-    // (photo comprise — une ancienne photo ne documente pas l'état
-    // actuel) pour forcer une vraie nouvelle observation, pas une
-    // correction déguisée en nouveau relevé.
-    handleCustomAuditNewConstat: async (occurrenceId) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (!occ || occ.status === AdhesiveStatus.NotChecked) return;
-            const archived: CustomAuditConstat = { status: occ.status, comment: occ.comment, constatedAt: occ.constatedAt };
-            occ.previousConstats = [...(occ.previousConstats ?? []), archived];
-            occ.status = AdhesiveStatus.NotChecked;
-            occ.comment = undefined;
-            occ.photo_base64 = undefined;
-            occ.photo_note = undefined;
-            occ.photo_rotation = undefined;
-            occ.constatedAt = new Date().toISOString();
-        });
-    },
-
-    handleCustomAuditPhotoChange: async (occurrenceId, photo_base64) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (!occ) return;
-            if (photo_base64) {
-                occ.photo_base64 = photo_base64;
-            } else {
-                occ.photo_base64 = undefined;
-                occ.photo_note = undefined;
-                occ.photo_rotation = undefined;
-            }
-        });
-    },
-
-    handleCustomAuditPhotoNoteChange: async (occurrenceId, note) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (occ) occ.photo_note = note;
-        });
-    },
-
-    handleCustomAuditPhotoRotationChange: async (occurrenceId, rotation) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
-            if (occ) occ.photo_rotation = rotation;
-        });
-    },
-
-    // « Aucun objet trouvé » — action explicite, uniquement pertinente
-    // quand occurrences est vide : marque le module comme vérifié sans
-    // créer d'occurrence fictive. Distingue « jamais vérifié » de
-    // « vérifié, rien trouvé ».
-    handleCustomAuditMarkChecked: async () => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            if (module) module.data.lastCheckedAt = new Date().toISOString();
-        });
-    },
-
-    handleCustomAuditCommentChange: async (comment) => {
-        const { selectedModuleId } = get();
-        await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: CustomAuditData };
-            if (module) module.data.comment = comment;
-        });
-    },
-
-    handleResetCustomAudit: async () => {
-        const { selectedLieuId, selectedModuleId, lieux } = get();
-        if (!selectedLieuId || !selectedModuleId) return;
-
-        const newLieux = JSON.parse(JSON.stringify(lieux));
-        const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
-        if (!lieuToUpdate) return;
-        const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
-        if (!moduleToUpdate) return;
-
-        // Instantané AVANT la mutation, écrit en base seulement APRÈS
-        // confirmation de la persistance — même règle que
-        // handleResetPmrFloorAdhesive (Lot 2, ne jamais archiver un reset
-        // qui n'a pas réellement eu lieu). Ici, l'instantané conserve
-        // l'intégralité des occurrences ET de leur historique avant remise
-        // à zéro — la seule trace qui en subsiste après reset.
-        const snapshotBeforeReset = JSON.parse(JSON.stringify(moduleToUpdate));
-
-        const currentData = moduleToUpdate.data as CustomAuditData;
-        currentData.occurrences = [];
-        currentData.comment = '';
-        delete currentData.lastCheckedAt;
-
-        await db.lieux.put(lieuToUpdate);
-        set({ lieux: newLieux });
-
-        await saveHistoryEntry(
-            `${moduleToUpdate.name} - ${lieuToUpdate.name}`,
-            'SINGLE_AUDIT',
-            snapshotBeforeReset,
-            undefined
-        );
-        await logEvent({
-            type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToUpdate.id, entityLabel: lieuToUpdate.name,
-            summary: `${moduleToUpdate.name} réinitialisé — ${lieuToUpdate.name}`,
         });
     },
 

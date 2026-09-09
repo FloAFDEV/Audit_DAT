@@ -6,10 +6,6 @@ export enum AuditModuleType {
     PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
     COGNITIVE_PICTOGRAMS = 'COGNITIVE_PICTOGRAMS',
     SIGNALETIQUE = 'SIGNALETIQUE',
-    /** Audit configurable (Partie 2) — brique générique pour tout audit
-     *  défini en Admin (ex. Plans de quartier), à côté des types métier
-     *  fixes ci-dessus, jamais à leur place. */
-    CUSTOM = 'CUSTOM',
 }
 
 export enum TransportMode {
@@ -78,18 +74,6 @@ export interface DAT {
     adhesives: { [key: string]: AdhesiveStatus };
     comment: string;
     completionDate?: string;
-    /** Parc de référence / constat terrain — absent = 'reference' (tout le
-     *  parc historique, seedé par data/builder.ts, est réputé connu de
-     *  Tisséo). Seuls les ajouts explicites depuis le terrain reçoivent
-     *  'terrain'. Jamais réévalué automatiquement — une promotion éventuelle
-     *  ('terrain' → 'reference') reste une action explicite. */
-    origin?: 'reference' | 'terrain';
-    /** Retiré du parc de référence — même convention que Lieu/SignageReference/
-     *  AuditDefinition (archivedAt) : jamais une suppression physique pour un
-     *  DAT de référence, afin de conserver l'historique de ce qui a existé.
-     *  Un DAT archivé disparaît des écrans terrain (sélection, stats,
-     *  exports) mais reste consultable/restaurable depuis l'Admin. */
-    archivedAt?: string; // ISO
 }
 
 export interface Direction {
@@ -228,10 +212,6 @@ export interface ECA {
     comment: string;
     isNotApplicable?: boolean;
     completionDate?: string;
-    /** Parc de référence / constat terrain — même convention que DAT.origin. */
-    origin?: 'reference' | 'terrain';
-    /** Retiré du parc de référence — même convention que DAT.archivedAt. */
-    archivedAt?: string; // ISO
 }
 
 export interface EcaData {
@@ -277,98 +257,6 @@ export interface CognitivePictogramData {
 }
 
 // =================================================================
-// AUDITS CONFIGURABLES (Partie 2) — brique générique à côté des types
-// métier fixes ci-dessus, jamais à leur place (R : ne pas refactoriser
-// DAT/ECA/P+R/PMR/Signalétique/Pictogrammes pour les rendre génériques).
-// -----------------------------------------------------------------
-// Trois niveaux strictement séparés :
-//   AuditDefinition   — le PROJET d'audit : nom, icône, ciblage réseau.
-//   SignageReference  — les objets contrôlés (scope.auditType === 'CUSTOM'),
-//                        même table, même CRUD, même versioning/archivage
-//                        que le reste du référentiel — AUCUNE donnée
-//                        physique (dimensions/matière) dupliquée ici.
-//   AuditModule (type CUSTOM) — l'existence de l'audit sur une station +
-//                        les statuts RÉELLEMENT saisis, rien d'autre.
-// =================================================================
-
-/** Ciblage réseau d'un audit configurable — délibérément plat et lisible :
- *  lignes ciblées + exceptions. Pas de moteur de règles : la propagation
- *  (« Appliquer au réseau ») lit ces trois listes une fois, au moment où
- *  l'admin déclenche l'action — ce ne sont pas des règles réévaluées en
- *  permanence, jamais une source de suppression automatique. */
-export interface AuditDefinition {
-    id: string;                 // uuid technique (R1, comme SignageReference.id)
-    name: string;                // "Plans de quartier"
-    icon: string;                 // clé d'icône (data/customAuditIcons.ts, lucide-react)
-    targetLines: (MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT')[];
-    excludedLieuIds: string[];   // stations explicitement exclues du ciblage par ligne
-    includedLieuIds: string[];   // stations explicitement ajoutées hors ciblage par ligne
-    /** Retirée des futurs déploiements et de la Nomenclature courante —
-     *  JAMAIS des modules déjà matérialisés (aucune cascade, R8). */
-    archivedAt?: string; // ISO
-}
-
-/** Un constat ARCHIVÉ d'une occurrence — ce qu'elle était lors d'un relevé
- *  antérieur. Créé UNIQUEMENT par l'action explicite « Nouveau constat »
- *  (jamais par une correction du constat courant) : previousConstats
- *  représente des relevés passés, pas les actions de saisie de
- *  l'utilisateur. Pas de photo conservée ici (même principe que
- *  SignageReferenceVersion : le contenu volumineux ne se duplique pas à
- *  chaque version — seul le constat courant garde une photo vivante). */
-export interface CustomAuditConstat {
-    status: AdhesiveStatus;
-    comment?: string;
-    constatedAt: string; // ISO
-}
-
-/** UN objet physique réellement recensé sur le terrain — son identité
- *  (`id`) est celle de L'OBJET, distincte de `referenceId` (le TYPE,
- *  cf. SignageReference). Plusieurs occurrences peuvent partager la même
- *  référence sur une même station (ex. 4 Plans de quartier 80×100
- *  adhésifs à Jean-Jaurès, chacun son emplacement). status/comment/
- *  photo/constatedAt forment le constat COURANT ; previousConstats
- *  l'historique des constats antérieurs (jamais des corrections en
- *  cours de saisie — cf. CustomAuditConstat). */
-export interface CustomAuditOccurrence {
-    id: string;
-    referenceId: string;
-    /** Emplacement précis, texte libre (« Entrée rue X », « Quai 1 »). */
-    location?: string;
-    status: AdhesiveStatus;
-    comment?: string;
-    photo_base64?: string | null;
-    photo_note?: string;
-    photo_rotation?: number;
-    constatedAt: string; // ISO — date du constat COURANT
-    previousConstats?: CustomAuditConstat[];
-}
-
-/** Données d'un module CUSTOM — aucune donnée physique (dimensions,
- *  matière...) : uniquement le lien vers la définition, l'identité de la
- *  station (dénormalisée, même convention que EcaData/PMRFloorAdhesiveData),
- *  les objets physiques réellement recensés (`occurrences`, jamais
- *  pré-remplis — un module fraîchement propagé démarre à `[]`) et l'état
- *  de vérification du module lui-même. Trois états distincts, jamais
- *  confondus :
- *    - occurrences: [] et lastCheckedAt absent   → jamais vérifié
- *    - occurrences: [...]                        → objet(s) constaté(s)
- *    - occurrences: [] et lastCheckedAt présent   → vérifié, rien trouvé
- *  `lastCheckedAt` est indépendant des occurrences : jamais un objet
- *  fictif pour représenter « rien trouvé ». */
-export interface CustomAuditData {
-    id: string;
-    definitionId: string;   // AuditDefinition.id — jamais copié au-delà de cet id
-    stationName: string;
-    stationCode: string;
-    occurrences: CustomAuditOccurrence[];
-    /** Dernière visite de vérification de ce module, avec ou sans objet
-     *  trouvé — mise à jour à chaque écriture terrain (ajout d'occurrence,
-     *  constat) ET par l'action explicite « Aucun objet trouvé ». */
-    lastCheckedAt?: string; // ISO
-    comment: string;
-}
-
-// =================================================================
 // MODULES & ROOT STRUCTURE
 // =================================================================
 
@@ -384,7 +272,7 @@ export interface AuditModule {
     id: string;
     type: AuditModuleType;
     name: string;
-    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData | CustomAuditData;
+    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
     isFuture?: boolean;
     line?: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT' | '';
 }
@@ -393,14 +281,6 @@ export interface Lieu {
     id: string;
     name: string;
     modules: AuditModule[];
-    /** Lot 2b : archivage Admin d'une station — réservé aux stations
-     *  réellement abandonnées (rare). AUCUNE cascade : `modules` reste
-     *  strictement inchangé (équipements et données d'audit déjà saisies
-     *  intacts). Une station archivée disparaît du tableau de bord terrain
-     *  (LieuSelector) mais reste consultable/restaurable depuis Admin —
-     *  jamais supprimée tant qu'elle n'est pas explicitement effacée
-     *  définitivement (garde-fou séparé). */
-    archivedAt?: string; // ISO
 }
 
 export interface AuditCategoryConfig {
@@ -475,18 +355,8 @@ export interface HistoryEntry {
 export type AppEventType =
     | 'RESET_GLOBAL' | 'RESET_CATEGORY' | 'RESET_MODULE_TYPE' | 'RESET_AUDIT'
     | 'IMPORT' | 'EXPORT'
-    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED' | 'AUDIT_ITEM_UPDATED' | 'AUDIT_ITEM_ARCHIVED' | 'AUDIT_ITEM_RESTORED'
+    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED'
     | 'REFERENCE_ARBITRAGE'
-    // Lot 2a : CRUD Admin du référentiel signalétique (source unique, R1).
-    | 'REFERENCE_CREATED' | 'REFERENCE_UPDATED' | 'REFERENCE_ARCHIVED' | 'REFERENCE_RESTORED' | 'REFERENCE_DELETED'
-    // Lot 2b : CRUD Admin des stations (Lieu) — jamais de cascade sur modules.
-    | 'STATION_CREATED' | 'STATION_RENAMED' | 'STATION_ARCHIVED' | 'STATION_RESTORED' | 'STATION_DELETED'
-    // Partie 2 : CRUD Admin des audits configurables (AuditDefinition),
-    // même famille que REFERENCE_* ci-dessus. APPLIED = un seul événement
-    // consolidé par exécution de « Appliquer au réseau » (jamais un par
-    // station créée, pour ne pas noyer le journal à l'échelle du réseau).
-    | 'AUDIT_DEFINITION_CREATED' | 'AUDIT_DEFINITION_UPDATED' | 'AUDIT_DEFINITION_ARCHIVED'
-    | 'AUDIT_DEFINITION_RESTORED' | 'AUDIT_DEFINITION_DELETED' | 'AUDIT_DEFINITION_APPLIED'
     | 'DATA_MIGRATION'
     | 'PERSISTENCE_ERROR';
 
@@ -541,11 +411,7 @@ export interface SignageDimensions {
 export type SignageScope =
     | { auditType: 'DAT' }
     | { auditType: 'PR'; equipmentTypes?: EquipmentType[] }
-    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] }
-    /** Audit configurable (Partie 2) : la référence appartient à UNE
-     *  définition précise (AuditDefinition.id) — jamais résolue par famille
-     *  d'équipement comme PR/ECA, une définition n'a pas de sous-familles. */
-    | { auditType: 'CUSTOM'; definitionId: string };
+    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] };
 
 /** Localisation recommandée + consignes. `zone` est un texte court
  *  administrable (suggestions issues des valeurs existantes), pas une
@@ -625,7 +491,7 @@ export interface SignageReference {
     // --- Implantation ---
     /** R11 : dérivé de scope.auditType (dénormalisé pour index Dexie).
      *  Jamais édité indépendamment du scope. */
-    auditType: 'DAT' | 'PR' | 'ECA' | 'CUSTOM';
+    auditType: 'DAT' | 'PR' | 'ECA';
     scope: SignageScope;
 
     // --- Caractéristiques physiques ACTIVES (à plat — la lecture courante ne
@@ -650,27 +516,4 @@ export interface SignageReference {
     /** Arbitrage métier — sous-objet unique (statut, motif, historique). */
     arbitrage?: ArbitrageState;
     legacyDescription?: string; // texte d'origine intégral — filet de sécurité
-    /** Lot 2a : archivage Admin — DISTINCT d'isDisabled (qui exclut des
-     *  calculs mais reste visible/grisée au terrain). Une référence
-     *  archivée est un objet abandonné, réservé aux cas rares (R8) ; elle
-     *  disparaît des listes actives et du résolveur d'implantation
-     *  (resolveReferencesForEquipment), mais reste consultable dans les
-     *  Archives Admin — jamais supprimée tant qu'elle n'est pas
-     *  explicitement effacée définitivement (garde-fou séparé, R1). */
-    archivedAt?: string; // ISO
-}
-
-/** Assets terrain légers uniquement (R6) : image compressée, jamais un
- *  document de production. Les PDF imprimeur restent hors application. */
-export type SignageAssetKind = 'poseExample' | 'schema' | 'illustration';
-
-export interface SignageAsset {
-    id: string;
-    referenceId: string; // SignageReference.id
-    kind: SignageAssetKind;
-    blob: Blob;
-    mimeType: string;
-    label?: string;
-    forVersion?: number;
-    addedAt: string; // ISO date
 }

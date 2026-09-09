@@ -19,11 +19,10 @@
 // erreur explicite plutôt que d'afficher silencieusement une liste
 // tronquée au terrain.
 //
-// « Additions » (Lot 2a) : une référence créée en Admin, hors du
-// catalogue historique, apparaît en fin de liste dès lors que son
-// scope correspond — même résolveur générique que le moteur d'index
-// du patrimoine (resolveReferencesForEquipment), aucune logique de
-// scope dupliquée ici.
+// « Additions » : une référence hors du catalogue historique apparaît en
+// fin de liste dès lors que son scope correspond — même résolveur
+// générique que le moteur d'index du patrimoine
+// (resolveReferencesForEquipment), aucune logique de scope dupliquée ici.
 // =================================================================
 import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType } from '../types';
 import {
@@ -120,16 +119,13 @@ const additionToPrAdhesive = (ref: SignageReference): PrAdhesive => {
 };
 
 /** DAT — les 12 adhésifs historiques (contenu résolu depuis Dexie) suivis
- *  des éventuelles références DAT créées en Admin (Lot 2a), jamais insérées
- *  au milieu de l'ordre historique. Une référence ARCHIVÉE — historique ou
- *  addition — disparaît du terrain comme du reste (resolveReferencesForEquipment) ;
- *  resolve() est néanmoins appelé pour les 38 ids AVANT ce filtre, pour que
- *  le garde-fou (id historique manquant) reste actif même sur un id archivé. */
+ *  des éventuelles références DAT additionnelles, jamais insérées au milieu
+ *  de l'ordre historique. resolve() est appelé pour les 38 ids pour que le
+ *  garde-fou (id historique manquant) reste actif. */
 export const getEffectiveAdhesives = (references: SignageReference[]): Adhesive[] => {
     const byId = new Map(references.map(r => [r.id, r]));
     const historical = ADHESIVES
         .map(legacy => ({ legacy, ref: resolve(byId.get(legacy.id), legacy.id) }))
-        .filter(({ ref }) => !ref.archivedAt)
         .map(({ legacy, ref }) => toAdhesive(legacy, ref));
     const historicalIds = new Set(ADHESIVES.map(a => a.id));
     const additions = resolveReferencesForEquipment(references, 'DAT')
@@ -138,14 +134,13 @@ export const getEffectiveAdhesives = (references: SignageReference[]): Adhesive[
     return [...historical, ...additions];
 };
 
-/** ECA — historique du type d'équipement donné + additions Admin dont le
- *  scope correspond. Une référence archivée disparaît, historique ou non. */
+/** ECA — historique du type d'équipement donné + additions dont le scope
+ *  correspond. */
 export const getEffectiveEcaAdhesives = (references: SignageReference[], type: EcaEquipmentType): Adhesive[] => {
     const byId = new Map(references.map(r => [r.id, r]));
     const legacyList = getEcaAdhesives(type);
     const historical = legacyList
         .map(legacy => ({ legacy, ref: resolve(byId.get(legacy.id), legacy.id) }))
-        .filter(({ ref }) => !ref.archivedAt)
         .map(({ legacy, ref }) => toAdhesive(legacy, ref));
     const historicalIds = new Set(legacyList.map(a => a.id));
     const additions = resolveReferencesForEquipment(references, 'ECA', type)
@@ -154,17 +149,14 @@ export const getEffectiveEcaAdhesives = (references: SignageReference[], type: E
     return [...historical, ...additions];
 };
 
-/** P+R — historique du type de borne donné + additions Admin dont le scope
- *  correspond, SAUF si une surcharge locale `adhesiveIds` (Lot 2c/2d) est
- *  posée sur cette borne : liste blanche stricte, dans l'ordre de la
- *  surcharge elle-même. Une surcharge peut désigner AUSSI BIEN un id
- *  historique qu'une addition Admin (resolveReferencesForEquipment n'est pas
- *  utilisé ici : chaque id de la surcharge est résolu individuellement, pas
- *  seulement ceux qui appartiennent au catalogue papier de ce type). Comme la
- *  liste historique, un id isDisabled reste affiché (grisé côté UI) — seul un
- *  id archivé ou définitivement supprimé disparaît (même règle que le reste
- *  de ce fichier), jamais d'erreur : contrairement aux 38 ids historiques,
- *  aucune garantie de présence n'existe pour un id Admin en surcharge. */
+/** P+R — historique du type de borne donné + additions dont le scope
+ *  correspond, SAUF si une surcharge locale `adhesiveIds` est posée sur
+ *  cette borne : liste blanche stricte, dans l'ordre de la surcharge
+ *  elle-même. Une surcharge peut désigner AUSSI BIEN un id historique qu'une
+ *  addition (resolveReferencesForEquipment n'est pas utilisé ici : chaque id
+ *  de la surcharge est résolu individuellement, pas seulement ceux qui
+ *  appartiennent au catalogue papier de ce type). Comme la liste historique,
+ *  un id isDisabled reste affiché (grisé côté UI). */
 export const getEffectiveEquipmentAdhesives = (
     references: SignageReference[],
     type: EquipmentType,
@@ -176,7 +168,7 @@ export const getEffectiveEquipmentAdhesives = (
         const legacyById = new Map(getPrAdhesives(type).map(a => [a.id, a]));
         return adhesiveIds
             .map(id => byId.get(id))
-            .filter((ref): ref is SignageReference => !!ref && !ref.archivedAt)
+            .filter((ref): ref is SignageReference => !!ref)
             .map(ref => {
                 const legacy = legacyById.get(ref.id);
                 return legacy ? toPrAdhesive(legacy, ref) : additionToPrAdhesive(ref);
@@ -186,7 +178,6 @@ export const getEffectiveEquipmentAdhesives = (
     const legacyList = getLegacyEquipmentAdhesives(type);
     const historical = legacyList
         .map(legacy => ({ legacy, ref: resolve(byId.get(legacy.id), legacy.id) }))
-        .filter(({ ref }) => !ref.archivedAt)
         .map(({ legacy, ref }) => toPrAdhesive(legacy, ref));
     const historicalIds = new Set(legacyList.map(a => a.id));
     const additions = resolveReferencesForEquipment(references, 'PR', type)
@@ -194,35 +185,3 @@ export const getEffectiveEquipmentAdhesives = (
         .map(additionToPrAdhesive);
     return [...historical, ...additions];
 };
-
-// -----------------------------------------------------------------
-// Audit configurable (Partie 2) — pas de catalogue historique : une
-// référence CUSTOM n'existe QUE dans signageReferences (jamais
-// data/adhesives.ts), donc pas de fusion historique+additions à faire
-// comme ci-dessus pour DAT/ECA/P+R.
-// -----------------------------------------------------------------
-
-/** Toutes les références actives d'UNE définition (scope.auditType ===
- *  'CUSTOM' && scope.definitionId), déjà filtrées par
- *  resolveReferencesForEquipment (archivées/désactivées exclues) — juste
- *  le filtre générique déjà partagé par le reste du référentiel. */
-export const getEffectiveCustomReferences = (
-    references: SignageReference[],
-    definitionId: string,
-): SignageReference[] =>
-    resolveReferencesForEquipment(references, 'CUSTOM')
-        .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === definitionId);
-
-/** Progression (barre affichée) d'un module CUSTOM — un audit configurable
- *  n'est pas une checklist à taille fixe (le nombre d'occurrences attendu
- *  n'est jamais connu à l'avance, c'est justement ce que le relevé
- *  terrain découvre), donc pas de pourcentage de couverture comme
- *  DAT/PR/ECA. La seule question binaire pertinente est l'état de
- *  vérification du MODULE lui-même : 100% si la station a été vérifiée
- *  (au moins une occurrence recensée, ou explicitement marquée « aucun
- *  objet trouvé » via lastCheckedAt), 0% si jamais vérifiée — même
- *  distinction que CustomAuditData (cf. types.ts). Utils partagé ici
- *  pour rester testable sans harnais de rendu (tests/customAuditTerrain.test.ts). */
-export const getCustomAuditProgress = (
-    data: { occurrences: { id: string }[]; lastCheckedAt?: string },
-): number => (data.occurrences.length > 0 || !!data.lastCheckedAt) ? 100 : 0;

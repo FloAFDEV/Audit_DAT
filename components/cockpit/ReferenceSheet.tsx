@@ -237,7 +237,6 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{reference.name}</h2>
                         {reference.needsReview && <Pill tone="amber">À qualifier</Pill>}
                         {reference.isDisabled && <Pill tone="red">Désactivée</Pill>}
-                        {reference.archivedAt && <Pill tone="slate">Archivée</Pill>}
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-mono">
                         {reference.code ? `${reference.code} · ` : ''}{reference.id} · v{reference.version}

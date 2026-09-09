@@ -8,7 +8,6 @@ import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, X, Fil
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
-import { useAuditDefinitions } from '../../hooks/useAuditDefinitions';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { useSignaletiqueStationIndex } from '../../hooks/useSignaletiqueStationIndex';
 import { signaletiqueStationDefectsToMaintenanceItems } from '../../utils/cockpit/signaletiqueStationIndex';
@@ -184,11 +183,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     // lu AVANT useStats, dont la Nomenclature (adhesiveInventory) en dépend
     // désormais directement (mêmes références, jamais une deuxième source).
     const { references, isLoading: refsLoading } = useSignageReferences();
-    const { definitions: auditDefinitions } = useAuditDefinitions();
     const patrimoineIndex = usePatrimoineIndex(filteredLieux, references);
 
     // Use filtered lieux for stats calculation
-    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references, auditDefinitions);
+    const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
 
     // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
@@ -264,10 +262,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // DAT par direction (vue mono-station uniquement) : répartition déjà
     // saisie dans le référentiel (Direction.name + dats.length), jamais
-    // calculée ni stockée ailleurs — même filtre !dat.archivedAt que
-    // globalCounts.datCount (useStats), juste regroupé par direction au
-    // lieu d'être sommé à plat. N'affiche rien si une seule direction
-    // (le détail serait redondant avec le total juste au-dessus).
+    // calculée ni stockée ailleurs, juste regroupée par direction au lieu
+    // d'être sommée à plat. N'affiche rien si une seule direction (le
+    // détail serait redondant avec le total juste au-dessus).
     const datByDirection = useMemo(() => {
         if (!selectedLieuId || !selectedLieuObject) return [];
         const counts = new Map<string, number>();
@@ -275,8 +272,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             if (module.type !== AuditModuleType.DAT) continue;
             for (const station of (module.data as ModeData).stations ?? []) {
                 for (const direction of station.directions ?? []) {
-                    const activeDats = (direction.dats ?? []).filter(dat => !dat.archivedAt).length;
-                    counts.set(direction.name, (counts.get(direction.name) ?? 0) + activeDats);
+                    counts.set(direction.name, (counts.get(direction.name) ?? 0) + (direction.dats ?? []).length);
                 }
             }
         }

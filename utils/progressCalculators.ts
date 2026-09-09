@@ -52,9 +52,7 @@ export interface DirectionProgress {
 }
 
 export const getDirectionProgress = (direction: Direction): DirectionProgress => {
-    // Un DAT retiré du parc de référence (archivedAt) ne compte plus dans la
-    // progression — il n'est plus à auditer.
-    const activeDats = direction.dats.filter(d => !d.archivedAt);
+    const activeDats = direction.dats;
     const totalCount = activeDats.length;
     if (totalCount === 0) {
         return { completedCount: 0, totalCount: 0, percentage: 100, isComplete: true };
@@ -161,7 +159,7 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             const stations = (module.data as ModeData).stations ?? [];
             if (stations.length > 0) hasAuditableContent = true;
             for (const station of stations) {
-                const dats = (station.directions?.flatMap(d => d.dats ?? []) ?? []).filter(dat => !dat.archivedAt);
+                const dats = station.directions?.flatMap(d => d.dats ?? []) ?? [];
                 for (const dat of dats) {
                     const statuses = Object.values(dat.adhesives);
                     totalApplicableItems += statuses.length;
@@ -189,7 +187,7 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             break;
         }
         case AuditModuleType.ECA: {
-            const ecas = ((module.data as EcaData).ecas ?? []).filter(eca => !eca.archivedAt);
+            const ecas = (module.data as EcaData).ecas ?? [];
             if (ecas.length > 0) hasAuditableContent = true;
             for (const eca of ecas) {
                 if (eca.isNotApplicable) continue;

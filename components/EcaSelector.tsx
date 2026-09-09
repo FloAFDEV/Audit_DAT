@@ -102,9 +102,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
     };
     
     const sortedEcas = useMemo(() => {
-        // Un ECA retiré du parc de référence (archivedAt) disparaît des écrans
-        // terrain — il reste consultable/restaurable depuis l'Admin uniquement.
-        return ecaData.ecas.filter(e => !e.archivedAt).sort((a, b) => {
+        return [...ecaData.ecas].sort((a, b) => {
             const isPmrA = isPmrEcaType(a.type);
             const isPmrB = isPmrEcaType(b.type);
             

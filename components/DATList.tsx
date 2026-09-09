@@ -51,9 +51,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
     const [datToDelete, setDatToDelete] = useState<DAT | null>(null);
     const [returnHighlightId, setReturnHighlightId] = useState<string | null>(null);
 
-    // Un DAT retiré du parc de référence (archivedAt) disparaît des écrans
-    // terrain — il reste consultable/restaurable depuis l'Admin uniquement.
-    const activeDats = (direction?.dats ?? []).filter(d => !d.archivedAt);
+    const activeDats = direction?.dats ?? [];
 
     // Repositionnement au retour d'un audit (store.ts::selectDat) — cette
     // liste est entièrement remontée à chaque retour (App.tsx clé son arbre

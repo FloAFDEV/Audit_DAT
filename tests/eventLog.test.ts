@@ -120,7 +120,6 @@ describe('Intégration handleImportJsonData — IMPORT', () => {
             formatVersion: 2,
             data: [{ id: 'l1', name: 'L1', modules: [] }],
             signageReferences: [currentRef],
-            signageAssets: [],
         });
 
         await useAuditStore.getState().handleImportJsonData(payload);
@@ -129,7 +128,7 @@ describe('Intégration handleImportJsonData — IMPORT', () => {
         expect(await db.signageReferences.toArray()).toEqual([currentRef]);
     });
 
-    it("un import v1 (sans signageReferences) ne touche jamais store.signageReferences — le référentiel administré survit à un vieux backup", async () => {
+    it("un import v1 (sans signageReferences) ne touche jamais store.signageReferences — le référentiel local survit à un vieux backup", async () => {
         useAuditStore.setState({ signageReferences: [staleRef] });
         const payload = JSON.stringify({
             exportDate: new Date().toISOString(),

@@ -137,7 +137,7 @@
 
 import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
-    SignageReference, SignageSupport, CustomAuditData,
+    SignageReference, SignageSupport,
 } from '../../types';
 import { isModuleInAuditScope } from '../moduleScope';
 
@@ -238,13 +238,12 @@ export interface PatrimoineIndex {
 
 export const resolveReferencesForEquipment = (
     references: SignageReference[],
-    auditType: 'DAT' | 'PR' | 'ECA' | 'CUSTOM',
+    auditType: 'DAT' | 'PR' | 'ECA',
     equipmentType?: string,
     surchargeIds?: string[],
 ): SignageReference[] => {
     let list = references.filter(ref => {
         if (ref.isDisabled) return false;
-        if (ref.archivedAt) return false; // Lot 2a : archivée = objet abandonné, hors résolution terrain.
         if (ref.scope.auditType !== auditType) return false;
         const scopeTypes = (ref.scope as { equipmentTypes?: string[] }).equipmentTypes;
         // equipmentTypes absent = toute la famille ; présent = liste blanche.
@@ -293,7 +292,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     const refs = resolveReferencesForEquipment(references, 'DAT');
                     for (const station of (module.data as ModeData).stations ?? []) {
                         for (const direction of station.directions ?? []) {
-                            for (const dat of (direction.dats ?? []).filter(d => !d.archivedAt)) {
+                            for (const dat of direction.dats ?? []) {
                                 pushImplantations(refs, dat.adhesives ?? {}, {
                                     lieuId: lieu.id, lieuName: lieu.name,
                                     line: module.line || '?',
@@ -324,7 +323,6 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                 }
                 case AuditModuleType.ECA: {
                     for (const eca of (module.data as EcaData).ecas ?? []) {
-                        if (eca.archivedAt) continue;
                         if (eca.isNotApplicable) continue;
                         const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
                         pushImplantations(refs, eca.adhesives ?? {}, {
@@ -334,42 +332,6 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                             context: eca.accessPoint,
                             equipmentLabel: eca.name,
                             equipmentType: eca.type,
-                        });
-                    }
-                    break;
-                }
-                case AuditModuleType.CUSTOM: {
-                    // Audit configurable (Partie 2) : contrairement à
-                    // DAT/PR/ECA (un slot structurel par référence, cf.
-                    // pushImplantations/R10), un audit configurable n'a
-                    // AUCUN nombre d'emplacements présupposé par référence —
-                    // c'est justement ce que le relevé terrain découvre. Une
-                    // implantation = UNE occurrence réellement recensée, pas
-                    // une référence résolvable. Les références sont
-                    // scopées à CETTE définition (scope.definitionId).
-                    const data = module.data as CustomAuditData;
-                    const refIds = new Set(
-                        resolveReferencesForEquipment(references, 'CUSTOM')
-                            .filter(ref => ref.scope.auditType === 'CUSTOM' && ref.scope.definitionId === data.definitionId)
-                            .map(ref => ref.id)
-                    );
-                    for (const occ of data.occurrences ?? []) {
-                        // Référence depuis archivée/désactivée : plus résolvable,
-                        // disparaît du patrimoine (même règle que le reste de ce
-                        // fichier) — l'occurrence elle-même reste intacte dans
-                        // CustomAuditData (aucune suppression).
-                        if (!refIds.has(occ.referenceId)) continue;
-                        // Non applicable = non installé à cet emplacement (même
-                        // convention que pushImplantations ci-dessus).
-                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
-                        implantations.push({
-                            lieuId: lieu.id, lieuName: lieu.name,
-                            line: module.line || '?',
-                            moduleId: module.id, moduleName: module.name,
-                            context: occ.location || data.stationName,
-                            equipmentLabel: module.name,
-                            referenceId: occ.referenceId,
-                            status: occ.status,
                         });
                     }
                     break;

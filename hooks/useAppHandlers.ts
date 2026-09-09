@@ -27,13 +27,8 @@ interface PendingExport {
 const hasPhotos = (lieux: Lieu[]): boolean => {
     return lieux.some(lieu =>
         lieu.modules.some(module =>
-            (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE &&
-                (module.data as any).adhesives.some((a: any) => a.photo_base64)) ||
-            // Audits configurables (Partie 2) : mêmes photos terrain que PMR
-            // au sol, même risque de perte si seul le CSV (sans photos) est
-            // exporté — même rappel, pas un nouveau mécanisme.
-            (module.type === AuditModuleType.CUSTOM &&
-                Object.values((module.data as any).items ?? {}).some((item: any) => item.photo_base64))
+            module.type === AuditModuleType.PMR_FLOOR_ADHESIVE &&
+                (module.data as any).adhesives.some((a: any) => a.photo_base64)
         )
     );
 };
@@ -161,7 +156,7 @@ export const useAppHandlers = () => {
     };
     
     const handleExportJson = async () => {
-        // Export complet (format v2) : lieux + référentiel signalétique + assets.
+        // Export complet (format v2) : lieux + référentiel signalétique.
         const { success } = await exportLieuxToJson();
         if (success) {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(CheckCircle, { className: "h-6 w-6 text-white" }));
@@ -248,18 +243,6 @@ export const useAppHandlers = () => {
             handleResetPmrFloorAdhesiveRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Adhésifs Sol PMR', selectedModule?.data, store.handleResetPmrFloorAdhesive),
             handleResetCognitivePictogramRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Pictogrammes', selectedModule?.data, store.handleResetCognitivePictogram),
             handleResetSignaletiqueRequest: (station: Station | null | undefined) => createResetHandler('Signalétique', station, store.handleResetSignaletique),
-            handleResetCustomAuditRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Audit configurable', selectedModule?.data, store.handleResetCustomAudit),
-            handleAddCustomAuditOccurrence: store.handleAddCustomAuditOccurrence,
-            handleRemoveCustomAuditOccurrence: store.handleRemoveCustomAuditOccurrence,
-            handleCustomAuditOccurrenceStatusChange: store.handleCustomAuditOccurrenceStatusChange,
-            handleCustomAuditOccurrenceCommentChange: store.handleCustomAuditOccurrenceCommentChange,
-            handleCustomAuditOccurrenceLocationChange: store.handleCustomAuditOccurrenceLocationChange,
-            handleCustomAuditNewConstat: store.handleCustomAuditNewConstat,
-            handleCustomAuditPhotoChange: store.handleCustomAuditPhotoChange,
-            handleCustomAuditPhotoNoteChange: store.handleCustomAuditPhotoNoteChange,
-            handleCustomAuditPhotoRotationChange: store.handleCustomAuditPhotoRotationChange,
-            handleCustomAuditMarkChecked: store.handleCustomAuditMarkChecked,
-            handleCustomAuditCommentChange: store.handleCustomAuditCommentChange,
             handleSignaletiqueStatusChange: store.handleSignaletiqueStatusChange,
             handleSignaletiqueCommentChange: store.handleSignaletiqueCommentChange,
             handleSignaletiquePhotoChange: store.handleSignaletiquePhotoChange,

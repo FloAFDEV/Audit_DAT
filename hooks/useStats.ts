@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference, AuditDefinition, CustomAuditData, AdhesiveStatus,
+    SignageReference,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
@@ -25,7 +25,7 @@ const parseAdhesiveName = (name: string | undefined): { repere: string; name: st
     return { repere: '', name: name };
 };
 
-export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], auditDefinitions: AuditDefinition[] = []) => {
+export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
 
     const globalCounts = useMemo(() => {
         let datCount = 0;
@@ -70,7 +70,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
                 switch (module.type) {
                     case AuditModuleType.DAT:
                         const datsInModule = (module.data as ModeData).stations?.reduce((sum, s) =>
-                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.filter(dat => !dat.archivedAt).length || 0), 0) || 0), 0) || 0;
+                            sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
                         datCount += datsInModule;
                         if (module.line === 'A') datCountA += datsInModule;
                         else if (module.line === 'B') datCountB += datsInModule;
@@ -89,7 +89,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
                         }
                         break;
                     case AuditModuleType.ECA:
-                        const ecas = ((module.data as EcaData).ecas || []).filter(e => !e.archivedAt);
+                        const ecas = (module.data as EcaData).ecas || [];
                         ecaCount += ecas.length;
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
@@ -178,7 +178,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
             for (const module of lieu.modules) {
                 if (module.type === AuditModuleType.ECA && isModuleInAuditScope(module)) {
                     const data = module.data as EcaData;
-                    const ecas = (data.ecas || []).filter(e => !e.archivedAt);
+                    const ecas = data.ecas || [];
 
                     const lineKey = module.line === 'A' ? 'A'
                         : module.line === 'B' ? 'B'
@@ -215,8 +215,8 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
     }, [lieux]);
 
     const adhesiveInventory = useMemo(
-        () => computeAdhesiveInventory(lieux, signageReferences, auditDefinitions),
-        [lieux, signageReferences, auditDefinitions]
+        () => computeAdhesiveInventory(lieux, signageReferences),
+        [lieux, signageReferences]
     );
 
     return { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory };
@@ -228,39 +228,23 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[], a
  * harnais de rendu (ce projet n'a pas de dépendance jsdom/testing-library).
  *
  * Source des lignes DAT/P+R/ECA : signageReferences (référentiel
- * administrable), pas les catalogues statiques — une référence créée,
- * renommée ou dont les dimensions/matière ont été corrigées en Admin
- * apparaît donc automatiquement ici ; une référence archivée disparaît.
+ * signalétique, code-seedé via data/signage_seed.ts), pas les catalogues
+ * statiques — une correction de dimensions/matière faite dans le seed
+ * apparaît donc automatiquement ici après migration.
  * PMR au sol / Pictogrammes cognitifs / Signalétique restent sur leurs
- * catalogues statiques existants (hors périmètre du référentiel
- * administrable — inchangé, aucune régression possible sur ces trois-là).
+ * catalogues statiques existants (hors périmètre du référentiel signalétique
+ * — inchangé, aucune régression possible sur ces trois-là).
  *
  * Contenu (dimensions/matière) : pour une référence qui porte encore son
  * texte historique (legacyDescription), on réutilise EXACTEMENT l'ancien
  * découpage (« | » pour DAT, « // » pour P+R/ECA) — comportement identique
- * aux 39 références historiques, garanti par le test de caractérisation.
- * Une référence Admin sans texte historique (nouvelle création) utilise
- * directement ses champs structurés (dimensions/material) — c'est la
- * seule situation nouvelle, qui n'existait simplement pas avant.
+ * aux références historiques, garanti par le test de caractérisation.
  *
  * Quantités : dérivées de getEffective*Adhesives (utils/effectiveAdhesives.ts,
- * déjà utilisé par les formulaires terrain) au lieu des listes statiques —
- * une référence Admin ajoutée au périmètre DAT/P+R/ECA compte donc aussi
- * dans la quantité réseau, sans code spécifique par référence.
- *
- * Audits configurables (Partie 2, `auditDefinitions`) : une définition
- * ACTIVE (non archivée) produit une ligne par référence CUSTOM lui
- * appartenant — le nom de la définition sert de colonne « Type » (pas un
- * shortLabel figé : plusieurs définitions coexistent). Une définition
- * archivée disparaît de la Nomenclature courante (même règle que pour une
- * référence archivée) SANS toucher aux modules déjà matérialisés — leurs
- * statuts restent en base, simplement non agrégés ici. Quantité : compte
- * chaque item dont le statut n'est PAS NotApplicable (aucun bridge
- * getEffective* nécessaire, CUSTOM n'a pas de catalogue historique — les
- * clés de `items` désignent directement des ids de signageReferences).
+ * déjà utilisé par les formulaires terrain) au lieu des listes statiques.
  */
 export const computeAdhesiveInventory = (
-    lieux: Lieu[], references: SignageReference[], auditDefinitions: AuditDefinition[] = [],
+    lieux: Lieu[], references: SignageReference[],
 ): AdhesiveInventoryItem[] => {
         const inventoryMap = new Map<string, AdhesiveInventoryItem>();
         const quantityMap = new Map<string, number>();
@@ -275,7 +259,7 @@ export const computeAdhesiveInventory = (
          *  il faut la retirer d'abord pour retrouver le texte original
          *  (ad.description) que l'ancien code découpait réellement. */
         const buildRowsFromReferences = (refs: SignageReference[], auditType: string, isPr: boolean) => {
-            refs.filter(ref => !ref.archivedAt).forEach(ref => {
+            refs.forEach(ref => {
                 if (inventoryMap.has(ref.id)) return;
                 const { repere, name } = parseAdhesiveName(ref.name);
                 const legacyText = isPr
@@ -289,8 +273,7 @@ export const computeAdhesiveInventory = (
                     [material, dimensions] = legacyText.split('//').map(s => s.trim());
                 }
                 if (!dimensions && !material) {
-                    // Aucun texte historique (référence créée en Admin) :
-                    // les champs structurés réels du référentiel.
+                    // Aucun texte historique : les champs structurés du référentiel.
                     dimensions = formatDimensions(ref.dimensions);
                     material = ref.material ?? '';
                 }
@@ -316,18 +299,6 @@ export const computeAdhesiveInventory = (
 
         const ecaConfig = auditModules.find(c=>c.type === AuditModuleType.ECA);
         if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
-
-        // Audits configurables (Partie 2) — une ligne par définition ACTIVE,
-        // jamais un libellé générique : chaque audit garde son identité
-        // dans la colonne « Type ».
-        if (referencesReady) {
-            auditDefinitions.filter(def => !def.archivedAt).forEach(def => {
-                const defRefs = references.filter(
-                    r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === def.id
-                );
-                buildRowsFromReferences(defRefs, def.name, false);
-            });
-        }
 
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
         if (pmrModule) {
@@ -395,7 +366,7 @@ export const computeAdhesiveInventory = (
 
                 if (module.type === AuditModuleType.DAT && referencesReady) {
                     const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>
-                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.filter(dat => !dat.archivedAt).length || 0), 0) || 0), 0) || 0;
+                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
                     getEffectiveAdhesives(references).forEach(ad => addQty(ad.id, datsCount));
                 }
 
@@ -408,37 +379,8 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.ECA && referencesReady) {
-                    for (const eca of ((module.data as EcaData).ecas || []).filter(e => !e.archivedAt)) {
+                    for (const eca of (module.data as EcaData).ecas || []) {
                         getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
-                    }
-                }
-
-                if (module.type === AuditModuleType.CUSTOM && referencesReady) {
-                    // Quantité RECENSÉE = nombre d'objets physiques réellement
-                    // suivis (occurrences) pour cette référence — PAS une
-                    // notion de « posé »/« conforme ». Un objet constaté
-                    // Absent lors du dernier passage reste un élément du
-                    // patrimoine suivi (son historique, son emplacement, son
-                    // format restent exploitables) : il continue de compter
-                    // ici. Contrairement à DAT/PR/ECA ci-dessus (comptage
-                    // STRUCTUREL : un équipement physique porte par
-                    // construction tous ses adhésifs effectifs), un audit
-                    // configurable ne présume RIEN sur ce qu'une station
-                    // porte — c'est justement ce que le relevé terrain
-                    // découvre : la quantité est donc le nombre d'occurrences
-                    // réellement recensées, ni plus ni moins. Seul un statut
-                    // Non applicable (variante non concernée) exclut
-                    // l'occurrence, par cohérence avec le reste du fichier.
-                    const data = module.data as CustomAuditData;
-                    const defRefIds = new Set(
-                        references
-                            .filter(r => r.scope.auditType === 'CUSTOM' && r.scope.definitionId === data.definitionId && !r.archivedAt)
-                            .map(r => r.id)
-                    );
-                    for (const occ of data.occurrences ?? []) {
-                        if (!defRefIds.has(occ.referenceId)) continue; // référence depuis archivée : sort de l'inventaire courant
-                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
-                        addQty(occ.referenceId, 1);
                     }
                 }
 

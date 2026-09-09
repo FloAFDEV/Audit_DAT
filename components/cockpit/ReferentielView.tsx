@@ -405,10 +405,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
             {subSection === 'references' && (
                 <ReferencesList
-                    // Lot 2a : une référence archivée quitte la liste active (mais
-                    // reste consultable/restaurable depuis l'Admin) — les données ne
-                    // sont jamais supprimées, seulement filtrées à l'affichage.
-                    references={references.filter(r => !r.archivedAt)}
+                    references={references}
                     usageOf={(id) => index.byReference.get(id)}
                     onOpen={setOpenReferenceId}
                 />
