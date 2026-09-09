@@ -542,6 +542,7 @@ const useAuditStore = create<AppState>((set, get) => {
                                 modelId: entry.modelId,
                                 status: PLAN_QUARTIER_INITIAL_STATUS,
                                 comment: entry.comment,
+                                location: entry.location,
                                 measuredDimensions: entry.measuredDimensions,
                                 constatedAt: now,
                                 discoveredAt: now,

@@ -177,12 +177,14 @@ const buildReference = (ad: Adhesive, scope: SignageScope, legacyDescription: st
 // Plans de quartier (+ PEM 3D) — référentiel figé, 4 modèles connus.
 // -----------------------------------------------------------------
 // Dimensions confirmées : 78cm, JAMAIS 80cm (corrigé du texte historique
-// qui utilisait par erreur 80x..). Le 78x100 (sans header/footer) n'existe
-// JAMAIS en version adhésive — seul le 78x120 (avec header/footer) le peut,
-// mais sa dimension adhésive précise n'est pas encore confirmée : on ne
-// l'invente pas (dimensions laissées vides sur pdq-adhesif). PEM 3D :
-// 120x80cm, support Dibond exclusivement — aucune variante adhésive
-// présentée dans l'app tant qu'elle n'est pas une réalité observée.
+// qui utilisait par erreur 80x..). Le 78x100 (sans header/footer) est
+// TOUJOURS plastifié — jamais en version adhésive. Le 78x120 (avec
+// header/footer), lui, existe dans les deux supports : plastifié (le plus
+// courant) ou adhésif — même dimension physique, seul le support diffère,
+// d'où un modèle de référentiel dédié (pdq-adhesif) plutôt qu'un champ
+// variable sur pdq-78x120. PEM 3D : 120x80cm, support Dibond exclusivement
+// — aucune variante adhésive présentée dans l'app tant qu'elle n'est pas
+// une réalité observée.
 const PLAN_QUARTIER_REFERENCES_DATE = '2026-09-09T00:00:00.000Z';
 
 const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
@@ -206,13 +208,14 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
     },
     {
         id: 'pdq-adhesif',
-        name: 'Plan de quartier (adhésif)',
+        name: 'Plan de quartier 78×120 (adhésif)',
         auditType: 'PDQ', scope: { auditType: 'PDQ' },
         version: 1, support: 'adhesif',
-        // Dimension non confirmée — jamais inventée. Seule certitude connue :
-        // ce n'est jamais le format 78x100 (sans header/footer).
+        // Même format physique que pdq-78x120 (avec header/footer), en
+        // support adhésif au lieu de plastifié — jamais le format 78x100.
+        dimensions: { width: 78, height: 120, unit: 'cm' },
         placement: {},
-        legacyDescription: "Version adhésive d'un Plan de quartier — jamais au format 78×100. Dimension précise non encore confirmée.",
+        legacyDescription: '78 x 120 cm | Version adhésive du Plan de quartier avec header et footer — jamais au format 78×100.',
     },
     {
         id: 'pem3d-120x80',

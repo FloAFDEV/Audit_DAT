@@ -16,6 +16,11 @@ import { isModuleInAuditScope } from '../utils/moduleScope';
 import { getEffectiveAdhesives, getEffectiveEcaAdhesives, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
 
+// Id de la ligne de nomenclature cross-listée "Plans de quartier" pour le
+// 78x120 déjà tracé côté P+R (Caisse Auto, référence adca12) — cf.
+// computeAdhesiveInventory ci-dessous.
+const CAISSE_AUTO_PDQ_ID = 'pdq-caisse-auto-pr';
+
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
     const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
@@ -301,7 +306,27 @@ export const computeAdhesiveInventory = (
         if (ecaConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'ECA'), ecaConfig.shortLabel, false);
 
         const pdqConfig = auditModules.find(c=>c.type === AuditModuleType.PLAN_QUARTIER);
-        if (pdqConfig && referencesReady) buildRowsFromReferences(references.filter(r => r.auditType === 'PDQ'), pdqConfig.shortLabel, false);
+        if (pdqConfig && referencesReady) {
+            buildRowsFromReferences(references.filter(r => r.auditType === 'PDQ'), pdqConfig.shortLabel, false);
+
+            // Cross-listage : le 78x120 posé sur les Caisses Auto de P+R
+            // (adca12) est DÉJÀ tracé par l'audit P+R existant (référentiel
+            // PR_ADHESIVES_CA) — jamais ressaisi ici, jamais un second
+            // formulaire. Il apparaît quand même dans la famille "Plans de
+            // quartier" pour que le recensement réseau reste complet ; sa
+            // quantité est alimentée plus bas depuis la même boucle P+R qui
+            // calcule déjà celle d'adca12.
+            const caisseAutoRef = references.find(r => r.id === 'adca12');
+            if (caisseAutoRef && !inventoryMap.has(CAISSE_AUTO_PDQ_ID)) {
+                const dims = formatDimensions(caisseAutoRef.dimensions);
+                inventoryMap.set(CAISSE_AUTO_PDQ_ID, {
+                    id: CAISSE_AUTO_PDQ_ID, auditType: pdqConfig.shortLabel, repere: '-',
+                    name: 'Plan de quartier 78×120 (Caisse Auto P+R)',
+                    dimensions: dims, material: 'Suivi via l\'audit P+R (Caisse Auto) — statut renseigné dans ce formulaire.',
+                    quantity: 0,
+                });
+            }
+        }
 
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
         if (pmrModule) {
@@ -376,7 +401,12 @@ export const computeAdhesiveInventory = (
                 if (module.type === AuditModuleType.PR && referencesReady) {
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
-                            getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => addQty(ad.id, 1));
+                            getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => {
+                                addQty(ad.id, 1);
+                                // Cross-listage Plans de quartier (cf. plus haut) : même
+                                // exemplaire, comptage additionnel sous l'autre famille.
+                                if (ad.id === 'adca12') addQty(CAISSE_AUTO_PDQ_ID, 1);
+                            });
                         }
                     }
                 }

@@ -283,14 +283,21 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             break;
         }
         case AuditModuleType.PLAN_QUARTIER: {
-            // Pas de nombre d'emplacements présupposé (cf. types.ts) : binaire,
-            // comme les anciens audits configurables — 100% si la station a été
-            // vérifiée (au moins un exemplaire recensé, ou « aucun élément
-            // trouvé » explicite), 0% sinon.
+            // Ratio sur les exemplaires réellement recensés (comme ECA/PMR) —
+            // un exemplaire connu dès le seed initial (statut Non contrôlé)
+            // ne compte PAS comme vérifié tant qu'un agent terrain n'a pas
+            // renseigné son statut réel. Seule la station sans aucun
+            // exemplaire applicable, mais explicitement confirmée vide
+            // (`lastCheckedAt`), est à 100%.
             const data = module.data as PlanQuartierData;
-            hasAuditableContent = true;
-            totalApplicableItems = 1;
-            totalCheckedItems = (data.occurrences.length > 0 || !!data.lastCheckedAt) ? 1 : 0;
+            const relevant = data.occurrences.filter(o => o.status !== AdhesiveStatus.NotApplicable);
+            if (relevant.length > 0) {
+                hasAuditableContent = true;
+                totalApplicableItems = relevant.length;
+                totalCheckedItems = relevant.filter(o => o.status !== AdhesiveStatus.NotChecked).length;
+            } else if (data.lastCheckedAt) {
+                hasAuditableContent = true;
+            }
             break;
         }
     }
