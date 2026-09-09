@@ -17,14 +17,11 @@ interface LieuCardProps {
 }
 
 export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter }) => {
-    const { activeAuditFilters, auditModeActive } = useAuditStore();
+    const { activeAuditFilters } = useAuditStore();
     const progress = getLieuProgress(lieu, activeAuditFilters);
     const defectCount = getLieuDefectCount(lieu);
     const hasAnomaly = defectCount > 0;
     const isInProgress = progress > 0 && progress < 100;
-    // En mode audit, on atténue les lieux non commencés sans défaut.
-    // Les lieux en cours restent toujours visibles (l'auditeur est en train de les traiter).
-    const dimmed = auditModeActive && !hasAnomaly && !isInProgress;
 
     // Design system des états terrain (accent latéral lisible en 1 seconde).
     const statusClass = hasAnomaly
@@ -52,7 +49,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
-            className={`${cardBgClass} ${statusClass} lieu-card ${isInProgress ? 'is-in-progress' : ''} relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900 ${dimmed ? 'opacity-40' : ''}`}
+            className={`${cardBgClass} ${statusClass} lieu-card ${isInProgress ? 'is-in-progress' : ''} relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`}
         >
             {hasAnomaly && (
                 <span className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white dark:ring-slate-900">

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Lieu, AuditModuleType, AuditCategory, AuditCategoryConfig, ModeData } from '../types';
-import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3, ShieldAlert } from 'lucide-react';
+import { Search, ArrowUpDown, ChevronDown, LogOut, Upload, Check, BarChart3 } from 'lucide-react';
 import { gridContainerVariants } from '../hooks/motion/transitions';
 import { useFlipReflow, useBadgePulse } from '../hooks/gsap';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
@@ -74,7 +74,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
         onExportAll, onExportCurrentView, onExportJson, onImportJson, onResetCategory, onResetByModuleType, onResetAll, onRequestLogout 
     } = props;
     
-    const { activeAuditFilters, setIsStatsViewActive, auditModeActive, setAuditModeActive } = useAuditStore();
+    const { activeAuditFilters, setIsStatsViewActive } = useAuditStore();
     const gridRef = useRef<HTMLDivElement>(null);
     const activeBadgeRef = useBadgePulse(activeFilter);
     // Zustand (pas useState) : ce composant est entièrement démonté/remonté en
@@ -287,15 +287,6 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
                 </div>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
-                    <button
-                        onClick={() => setAuditModeActive(!auditModeActive)}
-                        aria-pressed={auditModeActive}
-                        className={`flex-shrink-0 p-2 rounded-full transition-colors ${auditModeActive ? 'bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400' : 'text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700'}`}
-                        title={auditModeActive ? "Désactiver le mode audit" : "Activer le mode audit (surligner les anomalies)"}
-                        aria-label="Mode audit"
-                    >
-                        <ShieldAlert className="w-5 h-5" />
-                    </button>
                     <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Ouvrir le cockpit signalétique" title="Ouvrir le cockpit signalétique">
                         <BarChart3 className="w-5 h-5" />
                     </button>
@@ -446,7 +437,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             ) : (
                 <motion.div
                     ref={gridRef}
-                    className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ${auditModeActive ? 'audit-mode' : ''}`}
+                    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
                     variants={gridContainerVariants}
                     initial="hidden"
                     animate="visible"

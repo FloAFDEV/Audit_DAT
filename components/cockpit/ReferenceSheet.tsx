@@ -10,7 +10,7 @@
 // =================================================================
 import React, { useState } from 'react';
 import {
-    ArrowLeft, Ruler, MapPin, FileText, Link2, History, Flag, Radar, Camera, ShieldCheck, PencilLine, Archive, ArchiveRestore, Lock,
+    ArrowLeft, Ruler, Link2, Flag, Radar, Camera, ShieldCheck, PencilLine, Archive, ArchiveRestore, Lock, ChevronRight, ChevronDown,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { SignageReference } from '../../types';
@@ -55,6 +55,14 @@ const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slat
 
 const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineIndex }> = ({ reference, index }) => {
     const usage = index.byReference.get(reference.id);
+    // Plusieurs lieux dépliables à la fois : on prépare une campagne en
+    // comparant des stations, pas en les ouvrant une par une.
+    const [openLieux, setOpenLieux] = useState<Set<string>>(new Set());
+    const toggleLieu = (lieuId: string) => setOpenLieux(prev => {
+        const next = new Set(prev);
+        next.has(lieuId) ? next.delete(lieuId) : next.add(lieuId);
+        return next;
+    });
     if (!usage) {
         return (
             <SheetSection title="Implantations sur le réseau" icon={<Radar className="w-4 h-4" />}>
@@ -66,27 +74,24 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
     }
     return (
         <SheetSection title="Implantations sur le réseau" icon={<Radar className="w-4 h-4" />}>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-                <div className="text-center p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40 border border-slate-200 dark:border-slate-700">
-                    <div className="text-2xl font-bold text-slate-800 dark:text-slate-100">{usage.installedCount}</div>
-                    <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-1">Exemplaires</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-100 dark:border-teal-900/30">
-                    <div className="text-2xl font-bold text-teal-700 dark:text-teal-300">{usage.okCount}</div>
-                    <div className="text-xs font-semibold uppercase text-teal-600 dark:text-teal-400 mt-1">Conformes</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30">
-                    <div className="text-2xl font-bold text-red-700 dark:text-red-300">{usage.defectCount}</div>
-                    <div className="text-xs font-semibold uppercase text-red-600 dark:text-red-400 mt-1">Non conformes</div>
-                </div>
-                <div className="text-center p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30">
-                    <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">{usage.uncheckedCount}</div>
-                    <div className="text-xs font-semibold uppercase text-amber-600 dark:text-amber-400 mt-1">Non contrôlés</div>
-                </div>
+            {/* Volumétrie : deux nombres, ceux dont on a besoin pour préparer
+                une pose. Les compteurs de statut (conformes / non conformes /
+                non contrôlés) relèvent de l'audit, pas de la consultation du
+                patrimoine — ils vivent dans Analyse des anomalies. */}
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
+                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{usage.installedCount}</span>
+                <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">exemplaires</span>
+                <span className="text-slate-300 dark:text-slate-600">·</span>
+                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{usage.lieuCount}</span>
+                <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">lieux</span>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                <Field label="Lieux concernés" value={usage.lieuCount} />
-                <Field label="Types d'équipements" value={usage.equipmentTypes.length > 0 ? usage.equipmentTypes.join(', ') : 'DAT'} />
+            <div className="mb-4">
+                {/* Familles réellement rencontrées ; à défaut, le scope de la
+                    référence — jamais un libellé supposé. */}
+                <Field
+                    label="Types d'équipements"
+                    value={usage.equipmentTypes.length > 0 ? usage.equipmentTypes.join(', ') : reference.scope.auditType}
+                />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {usage.byLine.length > 0 && (
@@ -97,20 +102,14 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                                 <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
                                     <tr>
                                         <th className="p-2.5 font-bold text-xs uppercase">Ligne</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Exemplaires</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Défauts</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-right">Exemplaires</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                                     {usage.byLine.map(l => (
                                         <tr key={l.line} className="bg-white dark:bg-slate-900">
                                             <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.line === 'P+R' ? 'P+R' : `Ligne ${l.line}`}</td>
-                                            <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">{l.installed}</td>
-                                            <td className="p-2.5 text-center">
-                                                {l.defects > 0
-                                                    ? <span className="font-bold text-red-600 dark:text-red-400">{l.defects}</span>
-                                                    : <span className="text-slate-400">—</span>}
-                                            </td>
+                                            <td className="p-2.5 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.installed}</td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -126,22 +125,56 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                                 <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
                                     <tr>
                                         <th className="p-2.5 font-bold text-xs uppercase">Lieu</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Exemplaires</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-center">Défauts</th>
+                                        <th className="p-2.5 font-bold text-xs uppercase text-right">Exemplaires</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {usage.byLieu.map(l => (
-                                        <tr key={l.lieuId} className="bg-white dark:bg-slate-900">
-                                            <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">{l.lieuName}</td>
-                                            <td className="p-2.5 text-center text-slate-600 dark:text-slate-300">{l.installed}</td>
-                                            <td className="p-2.5 text-center">
-                                                {l.defects > 0
-                                                    ? <span className="font-bold text-red-600 dark:text-red-400">{l.defects}</span>
-                                                    : <span className="text-slate-400">—</span>}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {usage.byLieu.map(l => {
+                                        const isOpen = openLieux.has(l.lieuId);
+                                        return (
+                                            <React.Fragment key={l.lieuId}>
+                                                <tr
+                                                    className="bg-white dark:bg-slate-900 cursor-pointer hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-colors"
+                                                    onClick={() => toggleLieu(l.lieuId)}
+                                                >
+                                                    <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">
+                                                        <span className="flex items-center gap-1.5">
+                                                            {isOpen
+                                                                ? <ChevronDown className="w-4 h-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
+                                                                : <ChevronRight className="w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500" />}
+                                                            {l.lieuName}
+                                                        </span>
+                                                    </td>
+                                                    <td className="p-2.5 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.installed}</td>
+                                                </tr>
+                                                {isOpen && (
+                                                    <tr className="bg-slate-50 dark:bg-slate-800/50">
+                                                        <td colSpan={2} className="px-3 py-2.5">
+                                                            {/* Un bloc par emplacement réellement présent :
+                                                                ligne, emplacement, nombre, puis les numéros
+                                                                d'équipement à poser. */}
+                                                            <ul className="space-y-2.5">
+                                                                {l.groups.map((g, i) => (
+                                                                    <li key={`${g.line}-${g.context}-${i}`}>
+                                                                        <div className="flex items-baseline justify-between gap-3">
+                                                                            <span className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
+                                                                                {g.line === 'P+R' ? 'P+R' : `Ligne ${g.line}`}
+                                                                                {g.context && <span className="font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400"> · {g.context}</span>}
+                                                                            </span>
+                                                                            <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{g.installed}</span>
+                                                                        </div>
+                                                                        <p className="mt-0.5 text-sm text-slate-700 dark:text-slate-200">
+                                                                            {g.equipmentLabels.join(' · ')}
+                                                                        </p>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </React.Fragment>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -357,53 +390,10 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             {/* Implantations (moteur d'index) */}
             <UsageSection reference={reference} index={index} />
 
-            {/* Pose recommandée */}
-            <SheetSection title="Pose recommandée" icon={<MapPin className="w-4 h-4" />}>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <Field label="Zone" value={reference.placement.zone} />
-                    <Field label="Position" value={reference.placement.position} />
-                    <Field label="Repère d'alignement" value={reference.placement.alignmentMark} />
-                </div>
-                {reference.placement.installationGuidance && (
-                    <p className="mt-3 text-sm text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-700/40 rounded-lg p-3">
-                        {reference.placement.installationGuidance}
-                    </p>
-                )}
-                {reference.legacyDescription && (
-                    <p className="mt-3 text-xs text-slate-400 dark:text-slate-500 italic">
-                        Description historique : {reference.legacyDescription}
-                    </p>
-                )}
-            </SheetSection>
-
-            {/* Documents externes */}
-            <SheetSection title="Documents externes" icon={<FileText className="w-4 h-4" />}>
-                {(reference.externalDocuments?.length ?? 0) === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucune référence documentaire connue.</p>
-                ) : (
-                    <ul className="space-y-3">
-                        {reference.externalDocuments!.map((doc, i) => (
-                            <li key={i} className="border border-slate-200 dark:border-slate-700 rounded-lg p-3">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Pill tone="teal">{doc.provider}</Pill>
-                                    <span className="text-sm font-medium text-slate-800 dark:text-slate-100 font-mono">{doc.fileReference}</span>
-                                    {doc.docVersion && <span className="text-xs text-slate-500 dark:text-slate-400">({doc.docVersion})</span>}
-                                    {doc.forVersion !== undefined && <span className="text-xs text-slate-400">→ v{doc.forVersion}</span>}
-                                </div>
-                                {doc.note && <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5">{doc.note}</p>}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-3">
-                    Les fichiers de production restent gérés hors application (références documentaires uniquement).
-                </p>
-            </SheetSection>
-
-            {/* Médias terrain — emplacement prévu, édition à venir */}
-            <SheetSection title="Médias terrain" icon={<Camera className="w-4 h-4" />}>
+            {/* Rendu terrain — emplacement prévu, édition à venir */}
+            <SheetSection title="Rendu terrain" icon={<Camera className="w-4 h-4" />}>
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                    Aucun média — photos d'exemple de pose, schémas et illustrations seront ajoutables dans une prochaine étape.
+                    Aucune photo — le rendu réel de ce visuel une fois posé sera ajoutable dans une prochaine étape.
                 </p>
             </SheetSection>
 
@@ -427,34 +417,13 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 </SheetSection>
             )}
 
-            {/* Historique des versions physiques */}
-            <SheetSection title="Historique des versions" icon={<History className="w-4 h-4" />}>
-                {(reference.previousVersions?.length ?? 0) === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                        Version initiale (v{reference.version}) — aucun changement physique enregistré.
-                    </p>
-                ) : (
-                    <ul className="space-y-2">
-                        {reference.previousVersions!.map(v => (
-                            <li key={v.version} className="text-sm text-slate-700 dark:text-slate-300">
-                                <span className="font-bold">v{v.version}</span> — {SUPPORT_LABELS[v.support]}
-                                {v.dimensions ? `, ${formatDimensions(v.dimensions)}` : ''}
-                                {v.effectiveTo && <span className="text-slate-400"> · jusqu'au {new Date(v.effectiveTo).toLocaleDateString('fr-FR')}</span>}
-                                {v.changeReason && <p className="text-xs text-slate-500 dark:text-slate-400">{v.changeReason}</p>}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </SheetSection>
-
             {/* Qualification — décision de catalogue, distincte des anomalies terrain (section Anomalies) */}
             {(reference.needsReview || reference.arbitrage) && (
                 <SheetSection title="Qualification" icon={<Flag className="w-4 h-4" />}>
                     {reference.needsReview && !reference.arbitrage && (
                         <p className="text-sm text-slate-700 dark:text-slate-300">
                             Cette référence nécessite une décision de qualification catalogue (divergence documentaire ou
-                            classement incomplet). Le détail figure dans les notes des documents externes ci-dessus —
-                            décision à prendre dans Référentiel / Qualification du référentiel.
+                            classement incomplet) — décision à prendre dans Référentiel / Qualification du référentiel.
                         </p>
                     )}
                     {reference.arbitrage && (
