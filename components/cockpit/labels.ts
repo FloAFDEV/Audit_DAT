@@ -7,13 +7,15 @@ export const SUPPORT_LABELS: Record<SignageSupport, string> = {
     dibond: 'Dibond',
     pvc: 'PVC',
     vitrophanie: 'Vitrophanie',
+    plastifie: 'Plastifié',
     autre: 'Autre',
 };
 
-export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA', string> = {
+export const AUDIT_TYPE_LABELS: Record<'DAT' | 'PR' | 'ECA' | 'PDQ', string> = {
     DAT: 'DAT',
     PR: 'P+R',
     ECA: 'ECA',
+    PDQ: 'Plans de quartier',
 };
 
 export const ARBITRAGE_LABELS: Record<ArbitrageStatus, string> = {
@@ -40,6 +42,7 @@ export const formatDimensions = (d?: SignageDimensions): string => {
 /** Décrit le scope d'implantation en clair pour la fiche et les listes. */
 export const formatScope = (scope: SignageScope): string => {
     if (scope.auditType === 'DAT') return 'Tous les DAT';
+    if (scope.auditType === 'PDQ') return 'Plans de quartier';
     const family = AUDIT_TYPE_LABELS[scope.auditType];
     if (!scope.equipmentTypes || scope.equipmentTypes.length === 0) {
         return scope.auditType === 'PR' ? 'Toutes les bornes P+R' : 'Tous les ECA';

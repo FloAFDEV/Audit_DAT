@@ -47,6 +47,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
             [AuditModuleType.PMR_FLOOR_ADHESIVE]: 4,
             [AuditModuleType.COGNITIVE_PICTOGRAMS]: 5,
             [AuditModuleType.PR]: 6,
+            [AuditModuleType.PLAN_QUARTIER]: 7,
         };
 
         // Special sorting for Jean-Jaurès

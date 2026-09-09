@@ -1,6 +1,6 @@
 import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData,
-    CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus,
+    CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus,
 } from '../types';
 
 /**
@@ -35,6 +35,9 @@ export const getLieuDefectCount = (lieu: Lieu): number => {
                 break;
             case AuditModuleType.COGNITIVE_PICTOGRAMS:
                 (module.data as CognitivePictogramData).pictograms?.forEach(p => { if (isFloorDefect(p.status)) count++; });
+                break;
+            case AuditModuleType.PLAN_QUARTIER:
+                (module.data as PlanQuartierData).occurrences?.forEach(occ => { if (isDefect(occ.status)) count++; });
                 break;
         }
     }

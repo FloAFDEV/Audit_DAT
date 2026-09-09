@@ -6,6 +6,13 @@ export enum AuditModuleType {
     PMR_FLOOR_ADHESIVE = 'PMR_FLOOR_ADHESIVE',
     COGNITIVE_PICTOGRAMS = 'COGNITIVE_PICTOGRAMS',
     SIGNALETIQUE = 'SIGNALETIQUE',
+    /** Plans de quartier (+ PEM 3D) — famille d'audit à part entière,
+     *  métro A/B/C + Tram T1 + Téléo. Référentiel figé dans le code
+     *  (4 modèles : 78x100, 78x120, adhésif 78x120, PEM 3D 120x80
+     *  dibond) ; le nombre d'exemplaires par station n'est PAS connu à
+     *  l'avance et se construit au fil du recensement terrain (cf.
+     *  PlanQuartierOccurrence.modelId optionnel). */
+    PLAN_QUARTIER = 'PLAN_QUARTIER',
 }
 
 export enum TransportMode {
@@ -257,6 +264,75 @@ export interface CognitivePictogramData {
 }
 
 // =================================================================
+// PLANS DE QUARTIER (+ PEM 3D) — famille d'audit à part entière.
+// -----------------------------------------------------------------
+// Référentiel (signageReferences, scope.auditType === 'PDQ') : 4 modèles
+// figés dans le code — jamais administrables. Audit : le nombre
+// d'exemplaires par station n'est PAS un slot structurel connu à
+// l'avance (contrairement à DAT/ECA) — c'est justement ce que le
+// recensement terrain découvre. Une occurrence peut donc référencer un
+// modèle catalogué (modelId) OU, tant qu'un objet trouvé sur le terrain
+// n'a pas encore de modèle correspondant dans le code, porter sa propre
+// description libre (adHocLabel/adHocSupport) — jamais bloquant, jamais
+// une seconde zone : une occurrence ad hoc est comptée, détaillée par
+// station, auditée et exportée exactement comme une occurrence
+// cataloguée. Le passage d'ad hoc à catalogué se fait plus tard, par
+// code + migration (jamais un formulaire d'administration).
+// =================================================================
+
+/** Constat archivé d'une occurrence — même principe que
+ *  SignageReferenceVersion : previousConstats ne représente que des
+ *  relevés passés, jamais une correction du constat courant. */
+export interface PlanQuartierConstat {
+    status: AdhesiveStatus;
+    comment?: string;
+    constatedAt: string; // ISO
+}
+
+/** UN exemplaire physique réellement recensé sur une station. */
+export interface PlanQuartierOccurrence {
+    id: string;
+    /** Référence au catalogue (signageReferences, scope 'PDQ') — absent
+     *  tant que l'objet trouvé ne correspond à aucun modèle codé. */
+    modelId?: string;
+    /** Description libre saisie au terrain quand modelId est absent —
+     *  jamais une modification silencieuse du référentiel. */
+    adHocLabel?: string;
+    adHocSupport?: SignageSupport;
+    /** Emplacement précis à la station (texte libre). */
+    location?: string;
+    /** Dimension réellement mesurée, si divergente du modèle catalogué
+     *  (ex. Empalot : modèle 78×120, mesuré 78×119) — ne remplace jamais
+     *  la dimension du modèle, vit uniquement sur l'exemplaire. */
+    measuredDimensions?: SignageDimensions;
+    status: AdhesiveStatus;
+    comment?: string;
+    /** Réservé au chantier transversal « photos par occurrence » — 0..n,
+     *  jamais limité à une seule. */
+    photos?: { id: string; base64: string; note?: string; rotation?: number }[];
+    constatedAt: string; // ISO — date du constat courant
+    previousConstats?: PlanQuartierConstat[];
+    /** Date du premier relevé — repère utile tant que modelId reste
+     *  absent (« découvert le, à intégrer au référentiel »). */
+    discoveredAt: string; // ISO
+}
+
+/** Données d'un module Plans de quartier — une entrée par station/ligne,
+ *  même trio d'états que les anciens audits configurables (jamais vérifié /
+ *  objet(s) trouvé(s) / vérifié-rien-trouvé) : occurrences: [] et
+ *  lastCheckedAt absent = jamais vérifié ; occurrences non vide = objets
+ *  constatés ; occurrences: [] et lastCheckedAt présent = vérifié, rien
+ *  trouvé. */
+export interface PlanQuartierData {
+    id: string;
+    stationName: string;
+    stationCode: string;
+    occurrences: PlanQuartierOccurrence[];
+    lastCheckedAt?: string; // ISO
+    comment: string;
+}
+
+// =================================================================
 // MODULES & ROOT STRUCTURE
 // =================================================================
 
@@ -272,7 +348,7 @@ export interface AuditModule {
     id: string;
     type: AuditModuleType;
     name: string;
-    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData;
+    data: ModeData | Pr | EcaData | PMRFloorAdhesiveData | CognitivePictogramData | PlanQuartierData;
     isFuture?: boolean;
     line?: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT' | '';
 }
@@ -393,9 +469,10 @@ export interface AppEvent {
 
 /** Liste fermée assumée : vocabulaire structurel stable.
  *  'vitrophanie' = support signalétique destiné à une pose sur vitrage.
+ *  'plastifie' = feuille plastifiée (Plans de quartier notamment).
  *  'autre' = support physique réellement rencontré mais non encore
  *  catégorisé → needsReview obligatoire jusqu'à qualification. */
-export type SignageSupport = 'adhesif' | 'dibond' | 'pvc' | 'vitrophanie' | 'autre';
+export type SignageSupport = 'adhesif' | 'dibond' | 'pvc' | 'vitrophanie' | 'plastifie' | 'autre';
 
 /** width/height individuellement optionnelles (lettrage, découpe,
  *  largeur variable — cf. BPU PICTO ligne 40). */
@@ -411,7 +488,8 @@ export interface SignageDimensions {
 export type SignageScope =
     | { auditType: 'DAT' }
     | { auditType: 'PR'; equipmentTypes?: EquipmentType[] }
-    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] };
+    | { auditType: 'ECA'; equipmentTypes?: EcaEquipmentType[] }
+    | { auditType: 'PDQ' };
 
 /** Localisation recommandée + consignes. `zone` est un texte court
  *  administrable (suggestions issues des valeurs existantes), pas une
@@ -491,7 +569,7 @@ export interface SignageReference {
     // --- Implantation ---
     /** R11 : dérivé de scope.auditType (dénormalisé pour index Dexie).
      *  Jamais édité indépendamment du scope. */
-    auditType: 'DAT' | 'PR' | 'ECA';
+    auditType: 'DAT' | 'PR' | 'ECA' | 'PDQ';
     scope: SignageScope;
 
     // --- Caractéristiques physiques ACTIVES (à plat — la lecture courante ne

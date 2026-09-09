@@ -401,6 +401,32 @@ export const createAuditDb = (name: string): AuditDb => {
     auditDefinitions: null,
 });
 
+// V17: ajout du référentiel Plans de quartier (+ PEM 3D) — 4 modèles figés
+// (pdq-78x100, pdq-78x120, pdq-adhesif, pem3d-120x80). Idempotent : n'ajoute
+// que les ids réellement absents, jamais de doublon à une réouverture.
+//   ⚠ N'ajoute JAMAIS les modules Plans de quartier eux-mêmes sur les
+//   stations existantes : ça reste une migration de contenu `lieux`,
+//   traitée dans store.ts::init() (même patron que la migration v8 LAE),
+//   pas une migration de schéma Dexie.
+    instance.version(17).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    // Jamais sur une table jamais seedée (celle-ci reçoit déjà tout via
+    // populate()) — même garde-fou que l'ajout de adbs3 en V15.
+    if (!(await table.get('ad1'))) return;
+    const freshById = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+    for (const id of ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']) {
+        const existing = await table.get(id);
+        if (existing) continue;
+        const fresh = freshById.get(id);
+        if (fresh) await table.add(fresh);
+    }
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {

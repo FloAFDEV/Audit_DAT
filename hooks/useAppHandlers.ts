@@ -243,6 +243,7 @@ export const useAppHandlers = () => {
             handleResetPmrFloorAdhesiveRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Adhésifs Sol PMR', selectedModule?.data, store.handleResetPmrFloorAdhesive),
             handleResetCognitivePictogramRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Pictogrammes', selectedModule?.data, store.handleResetCognitivePictogram),
             handleResetSignaletiqueRequest: (station: Station | null | undefined) => createResetHandler('Signalétique', station, store.handleResetSignaletique),
+            handleResetPlanQuartierRequest: (selectedModule: AuditModule | null | undefined) => createResetHandler('Plans de quartier', selectedModule?.data, store.handleResetPlanQuartier),
             handleSignaletiqueStatusChange: store.handleSignaletiqueStatusChange,
             handleSignaletiqueCommentChange: store.handleSignaletiqueCommentChange,
             handleSignaletiquePhotoChange: store.handleSignaletiquePhotoChange,

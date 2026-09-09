@@ -137,7 +137,7 @@
 
 import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
-    SignageReference, SignageSupport,
+    SignageReference, SignageSupport, PlanQuartierData,
 } from '../../types';
 import { isModuleInAuditScope } from '../moduleScope';
 
@@ -238,7 +238,7 @@ export interface PatrimoineIndex {
 
 export const resolveReferencesForEquipment = (
     references: SignageReference[],
-    auditType: 'DAT' | 'PR' | 'ECA',
+    auditType: 'DAT' | 'PR' | 'ECA' | 'PDQ',
     equipmentType?: string,
     surchargeIds?: string[],
 ): SignageReference[] => {
@@ -336,6 +336,32 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     }
                     break;
                 }
+                case AuditModuleType.PLAN_QUARTIER: {
+                    // Contrairement à DAT/PR/ECA (un slot structurel par
+                    // référence), un Plan de quartier n'a AUCUN nombre
+                    // d'emplacements présupposé — une implantation = UNE
+                    // occurrence réellement recensée. Seules les occurrences
+                    // CATALOGUÉES (modelId renseigné) alimentent ce patrimoine
+                    // référencé ; les découvertes non cataloguées (adHocLabel)
+                    // n'ont pas de référence réelle à agréger ici — elles
+                    // restent visibles et comptées côté formulaire terrain
+                    // jusqu'à leur intégration au référentiel (cf. types.ts).
+                    const data = module.data as PlanQuartierData;
+                    for (const occ of data.occurrences ?? []) {
+                        if (!occ.modelId) continue;
+                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
+                        implantations.push({
+                            lieuId: lieu.id, lieuName: lieu.name,
+                            line: module.line || '?',
+                            moduleId: module.id, moduleName: module.name,
+                            context: occ.location || data.stationName,
+                            equipmentLabel: occ.location || data.stationName,
+                            referenceId: occ.modelId,
+                            status: occ.status,
+                        });
+                    }
+                    break;
+                }
                 // PMR sol / pictos / signalétique : hors patrimoine référencé (cf. en-tête).
             }
         }
@@ -409,7 +435,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
         // Groupement par emplacement réel. L'ordre d'insertion suit le parcours
         // de l'arbre (module → station → direction/accès → équipement), donc
         // l'ordre physique du terrain : on ne le retrie pas.
-        const groupKey = `${imp.line} ${imp.context}`;
+        const groupKey = `${imp.line} ${imp.context}`;
         let group = lieuEntry.groups.get(groupKey);
         if (!group) {
             group = { line: imp.line, context: imp.context, equipmentLabels: [], installed: 0, defects: 0 };

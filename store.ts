@@ -2,13 +2,14 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
 import { getInitialSignaletiqueData } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesives, getEquipmentAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
+import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
 import { canEcaBeNotApplicable } from './data/eca_data';
@@ -129,6 +130,20 @@ interface AppState {
     handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
     handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
     handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
+
+    // Plans de quartier (+ PEM 3D) Actions — recensement patrimonial dans
+    // le temps, comme les anciens audits configurables (cf. types.ts) mais
+    // ici un type fixe et permanent.
+    handleAddPlanQuartierOccurrence: (input: { modelId?: string; adHocLabel?: string; adHocSupport?: SignageSupport; location?: string }) => Promise<PlanQuartierOccurrence>;
+    handleRemovePlanQuartierOccurrence: (occurrenceId: string) => Promise<void>;
+    handlePlanQuartierOccurrenceStatusChange: (occurrenceId: string, status: AdhesiveStatus) => Promise<void>;
+    handlePlanQuartierOccurrenceCommentChange: (occurrenceId: string, comment: string) => Promise<void>;
+    handlePlanQuartierOccurrenceLocationChange: (occurrenceId: string, location: string) => Promise<void>;
+    handlePlanQuartierMeasuredDimensionsChange: (occurrenceId: string, dimensions: SignageDimensions | undefined) => Promise<void>;
+    handlePlanQuartierNewConstat: (occurrenceId: string) => Promise<void>;
+    handlePlanQuartierMarkChecked: () => Promise<void>;
+    handlePlanQuartierCommentChange: (comment: string) => Promise<void>;
+    handleResetPlanQuartier: () => Promise<void>;
 
     // Cognitive Pictogram Actions
     handleCognitivePictogramStatusChange: (pictogramId: string, status: FloorAdhesiveStatus) => Promise<void>;
@@ -486,6 +501,55 @@ const useAuditStore = create<AppState>((set, get) => {
                         }
                     });
                 });
+
+                // DATA MIGRATION : ajouter les modules Plans de quartier (+ PEM 3D) si absents.
+                // Même patron que la migration v8 LAE : génère les données fraîches (qui
+                // incluent déjà les modules PLAN_QUARTIER vierges via data/builder.ts) et
+                // n'en extrait que les modules manquants, lieu par lieu — jamais de
+                // régénération complète, jamais de perte des modules déjà audités.
+                const hasPlanQuartierModules = data.some(l => l.modules.some(m => m.type === AuditModuleType.PLAN_QUARTIER));
+                if (!hasPlanQuartierModules) {
+                    const freshData = await generateInitialLieuxDataAsync();
+                    const freshByLieuName = new Map(freshData.map(l => [l.name, l]));
+                    data = data.map(lieu => {
+                        const freshLieu = freshByLieuName.get(lieu.name);
+                        if (!freshLieu) return lieu;
+                        const missingPdqModules = freshLieu.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER);
+                        if (missingPdqModules.length === 0) return lieu;
+                        dataChanged = true;
+                        return { ...lieu, modules: [...lieu.modules, ...missingPdqModules] };
+                    });
+
+                    // Premier jeu de données connu (data/planQuartierInitialInventory.ts) :
+                    // seedé comme des occurrences RÉELLES (cataloguées, modelId renseigné),
+                    // pas comme une découverte terrain — l'inventaire vient de l'utilisateur,
+                    // pas d'un relevé. Statut Non contrôlé (pas encore audité physiquement).
+                    const now = new Date().toISOString();
+                    for (const entry of PLAN_QUARTIER_INITIAL_INVENTORY) {
+                        const lieu = data.find(l => l.modules.some(m =>
+                            m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
+                            (m.data as PlanQuartierData).stationName === entry.stationName
+                        ));
+                        const module = lieu?.modules.find(m =>
+                            m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
+                            (m.data as PlanQuartierData).stationName === entry.stationName
+                        );
+                        if (!module) continue; // station inconnue du registre actuel — ignorée, jamais inventée
+                        const pdqData = module.data as PlanQuartierData;
+                        for (let i = 0; i < entry.quantity; i++) {
+                            pdqData.occurrences.push({
+                                id: uuidv4(),
+                                modelId: entry.modelId,
+                                status: PLAN_QUARTIER_INITIAL_STATUS,
+                                comment: entry.comment,
+                                measuredDimensions: entry.measuredDimensions,
+                                constatedAt: now,
+                                discoveredAt: now,
+                            });
+                        }
+                        dataChanged = true;
+                    }
+                }
 
                 if (dataChanged) {
                     await db.lieux.bulkPut(data);
@@ -1057,6 +1121,175 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) adhesive.photo_rotation = rotation;
+        });
+    },
+
+    // -----------------------------------------------------------------
+    // Plans de quartier (+ PEM 3D) — saisie terrain.
+    // -----------------------------------------------------------------
+    // Même esprit que les anciens audits configurables (recensement
+    // patrimonial dans le temps, occurrences comptées individuellement),
+    // mais ici un type FIXE et permanent (cf. types.ts en-tête) : une
+    // occurrence référence un modèle catalogué (modelId) ou, faute de
+    // modèle correspondant dans le code, porte sa propre description
+    // libre (adHocLabel/adHocSupport) — jamais bloquant pour le terrain.
+    // -----------------------------------------------------------------
+    handleAddPlanQuartierOccurrence: async (input) => {
+        const { selectedModuleId } = get();
+        let created: PlanQuartierOccurrence | undefined;
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            if (!module) return;
+            const now = new Date().toISOString();
+            created = {
+                id: uuidv4(),
+                modelId: input.modelId,
+                adHocLabel: input.adHocLabel?.trim() || undefined,
+                adHocSupport: input.adHocSupport,
+                location: input.location?.trim() || undefined,
+                status: AdhesiveStatus.NotChecked,
+                constatedAt: now,
+                discoveredAt: now,
+            };
+            module.data.occurrences.push(created);
+            module.data.lastCheckedAt = now;
+        });
+        if (created) {
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'planQuartierOccurrence', entityId: created.id,
+                entityLabel: input.adHocLabel?.trim() || input.location?.trim() || undefined,
+                summary: `Plan de quartier recensé — ${input.adHocLabel?.trim() || input.location?.trim() || 'sans emplacement précisé'}`,
+            });
+        }
+        return created!;
+    },
+
+    // Retrait — même règle que les anciens audits configurables : refusé
+    // dès qu'un constat réel existe (statut, commentaire, photo, mesure ou
+    // historique) ; corrige une erreur de saisie, jamais un objet réel.
+    handleRemovePlanQuartierOccurrence: async (occurrenceId) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            if (!module) return;
+            const occ = module.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ) return;
+            const isBlank = occ.status === AdhesiveStatus.NotChecked && !occ.comment && !occ.measuredDimensions
+                && (!occ.photos || occ.photos.length === 0) && (occ.previousConstats ?? []).length === 0;
+            if (!isBlank) {
+                throw new Error('Impossible de retirer cet élément : un constat a déjà été saisi (utilisez le statut Absent si l\'objet a disparu).');
+            }
+            module.data.occurrences = module.data.occurrences.filter(o => o.id !== occurrenceId);
+        });
+    },
+
+    handlePlanQuartierOccurrenceStatusChange: async (occurrenceId, status) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ) return;
+            occ.status = status;
+            occ.constatedAt = new Date().toISOString();
+            module!.data.lastCheckedAt = occ.constatedAt;
+        });
+    },
+
+    handlePlanQuartierOccurrenceCommentChange: async (occurrenceId, comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.comment = comment;
+        });
+    },
+
+    handlePlanQuartierOccurrenceLocationChange: async (occurrenceId, location) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.location = location.trim() || undefined;
+        });
+    },
+
+    // Mesure réelle divergente du modèle catalogué (ex. Empalot : modèle
+    // 78×120, mesuré 78×119) — vit uniquement sur l'exemplaire, ne
+    // remplace jamais la dimension du modèle catalogué.
+    handlePlanQuartierMeasuredDimensionsChange: async (occurrenceId, dimensions) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (occ) occ.measuredDimensions = dimensions;
+        });
+    },
+
+    // « Nouveau constat » — SEUL point d'écriture de previousConstats, sans
+    // effet si le constat courant est encore Non contrôlé.
+    handlePlanQuartierNewConstat: async (occurrenceId) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            const occ = module?.data.occurrences.find(o => o.id === occurrenceId);
+            if (!occ || occ.status === AdhesiveStatus.NotChecked) return;
+            const archived: PlanQuartierConstat = { status: occ.status, comment: occ.comment, constatedAt: occ.constatedAt };
+            occ.previousConstats = [...(occ.previousConstats ?? []), archived];
+            occ.status = AdhesiveStatus.NotChecked;
+            occ.comment = undefined;
+            occ.constatedAt = new Date().toISOString();
+        });
+    },
+
+    // « Aucun élément trouvé » — uniquement pertinent quand occurrences est
+    // vide : marque le module comme vérifié sans créer d'occurrence fictive.
+    handlePlanQuartierMarkChecked: async () => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            if (module) module.data.lastCheckedAt = new Date().toISOString();
+        });
+    },
+
+    handlePlanQuartierCommentChange: async (comment) => {
+        const { selectedModuleId } = get();
+        await _updateLieu(lieu => {
+            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PlanQuartierData };
+            if (module) module.data.comment = comment;
+        });
+    },
+
+    handleResetPlanQuartier: async () => {
+        const { selectedLieuId, selectedModuleId, lieux } = get();
+        if (!selectedLieuId || !selectedModuleId) return;
+
+        const newLieux = JSON.parse(JSON.stringify(lieux));
+        const lieuToUpdate = newLieux.find((l: Lieu) => l.id === selectedLieuId);
+        if (!lieuToUpdate) return;
+        const moduleToUpdate = lieuToUpdate.modules.find((m: AuditModule) => m.id === selectedModuleId);
+        if (!moduleToUpdate) return;
+
+        // Instantané AVANT la mutation, écrit en base seulement APRÈS
+        // confirmation de la persistance — même règle que les autres resets.
+        const snapshotBeforeReset = JSON.parse(JSON.stringify(moduleToUpdate));
+
+        const currentData = moduleToUpdate.data as PlanQuartierData;
+        currentData.occurrences = [];
+        currentData.comment = '';
+        delete currentData.lastCheckedAt;
+
+        await db.lieux.put(lieuToUpdate);
+        set({ lieux: newLieux });
+
+        await saveHistoryEntry(
+            `${moduleToUpdate.name} - ${lieuToUpdate.name}`,
+            'SINGLE_AUDIT',
+            snapshotBeforeReset,
+            undefined
+        );
+        await logEvent({
+            type: 'RESET_AUDIT', entityType: 'lieu', entityId: lieuToUpdate.id, entityLabel: lieuToUpdate.name,
+            summary: `${moduleToUpdate.name} réinitialisé — ${lieuToUpdate.name}`,
         });
     },
 

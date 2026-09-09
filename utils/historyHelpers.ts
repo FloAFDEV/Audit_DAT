@@ -1,5 +1,5 @@
 
-import { AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
+import { AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
 import { getPrAdhesives, getEcaAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 
 /**
@@ -97,6 +97,15 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
                     if(picto.status !== FloorAdhesiveStatus.NotChecked) {
                         totalApplicable++;
                         if (picto.status === FloorAdhesiveStatus.OK) totalOk++;
+                    }
+                });
+                break;
+            case AuditModuleType.PLAN_QUARTIER:
+                const pdqData = module.data as PlanQuartierData;
+                pdqData.occurrences.forEach(occ => {
+                    if (occ.status !== AdhesiveStatus.NotApplicable && occ.status !== AdhesiveStatus.NotChecked) {
+                        totalApplicable++;
+                        if (occ.status === AdhesiveStatus.OK) totalOk++;
                     }
                 });
                 break;
