@@ -239,7 +239,14 @@ const PlanQuartierOverview: React.FC<{
             entry.installed += 1;
             if (imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced) entry.defects += 1;
             const shortLabel = PDQ_DETAIL_LABELS[imp.referenceId] ?? imp.referenceId;
-            entry.formats.set(shortLabel, (entry.formats.get(shortLabel) ?? 0) + 1);
+            // (modèle, emplacement) : patrimoineIndex retombe sur le nom du
+            // lieu quand aucune implantation réelle n'est connue (occ.location
+            // absent) — un contexte qui DIFFÈRE du lieu est donc une vraie
+            // implantation à afficher ; sinon on n'invente rien, juste le
+            // modèle seul.
+            const hasRealLocation = !!imp.context && imp.context !== imp.lieuName;
+            const formatKey = hasRealLocation ? `${shortLabel} — ${imp.context}` : shortLabel;
+            entry.formats.set(formatKey, (entry.formats.get(formatKey) ?? 0) + 1);
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
         }

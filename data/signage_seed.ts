@@ -177,14 +177,21 @@ const buildReference = (ad: Adhesive, scope: SignageScope, legacyDescription: st
 // Plans de quartier (+ PEM 3D) — référentiel figé, 4 modèles connus.
 // -----------------------------------------------------------------
 // Dimensions confirmées : 78cm, JAMAIS 80cm (corrigé du texte historique
-// qui utilisait par erreur 80x..). Le 78x100 (sans header/footer) est
-// TOUJOURS plastifié — jamais en version adhésive. Le 78x120 (avec
-// header/footer), lui, existe dans les deux supports : plastifié (le plus
-// courant) ou adhésif — même dimension physique, seul le support diffère,
-// d'où un modèle de référentiel dédié (pdq-adhesif) plutôt qu'un champ
-// variable sur pdq-78x120. PEM 3D : 120x80cm, support Dibond exclusivement
-// — aucune variante adhésive présentée dans l'app tant qu'elle n'est pas
-// une réalité observée.
+// qui utilisait par erreur 80x..).
+//   - 78x100 : toujours extérieur (édicule, totem ou sucette), cadre
+//     aluminium, sans header ni footer. TOUJOURS plastifié — jamais en
+//     version adhésive.
+//   - 78x120 : header + plan + footer. Généralement sous cadre aluminium ;
+//     en agence commerciale, posé sans cadre (même composition par
+//     ailleurs). Existe dans les deux supports : plastifié (le plus
+//     courant) ou adhésif — même dimension physique, seul le support
+//     diffère, d'où un modèle de référentiel dédié (pdq-adhesif) plutôt
+//     qu'un champ variable sur pdq-78x120. Une occurrence terrain déjà
+//     rattachée à l'un des deux modèles n'est jamais reclassée vers
+//     l'autre rétroactivement : le constat terrain fait foi.
+//   - PEM 3D : 120x80cm, support Dibond exclusivement, Plan Multimodal 3D
+//     géo-orienté (jamais un simple PDQ 2D) — aucune variante adhésive
+//     présentée dans l'app tant qu'elle n'est pas une réalité observée.
 const PLAN_QUARTIER_REFERENCES_DATE = '2026-09-09T00:00:00.000Z';
 
 const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
@@ -195,7 +202,7 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
         version: 1, support: 'plastifie',
         dimensions: { width: 78, height: 100, unit: 'cm' },
         placement: {},
-        legacyDescription: '78 x 100 cm | Métro A/B/C, Tram T1, Téléo — sans header ni footer. Jamais en version adhésive.',
+        legacyDescription: '78 x 100 cm | Extérieur (édicule, totem ou sucette), cadre aluminium, sans header ni footer. Jamais en version adhésive.',
     },
     {
         id: 'pdq-78x120',
@@ -204,7 +211,7 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
         version: 1, support: 'plastifie',
         dimensions: { width: 78, height: 120, unit: 'cm' },
         placement: {},
-        legacyDescription: '78 x 120 cm | Métro A/B/C, Tram T1, Téléo — avec header et footer.',
+        legacyDescription: '78 x 120 cm | Header + plan + footer. Généralement sous cadre aluminium ; en agence commerciale, posé sans cadre.',
     },
     {
         id: 'pdq-adhesif',
@@ -215,16 +222,16 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
         // support adhésif au lieu de plastifié — jamais le format 78x100.
         dimensions: { width: 78, height: 120, unit: 'cm' },
         placement: {},
-        legacyDescription: '78 x 120 cm | Version adhésive du Plan de quartier avec header et footer — jamais au format 78×100.',
+        legacyDescription: '78 x 120 cm | Version adhésive — même composition header + plan + footer que le 78×120, jamais encadrée (support adhésif direct), jamais confondue avec le 78×100.',
     },
     {
         id: 'pem3d-120x80',
-        name: 'PEM 3D 120×80',
+        name: 'PEM 3D — Plan Multimodal 3D géo-orienté (120×80)',
         auditType: 'PDQ', scope: { auditType: 'PDQ' },
         version: 1, support: 'dibond',
         dimensions: { width: 120, height: 80, unit: 'cm' },
         placement: {},
-        legacyDescription: '120 x 80 cm | Pôles d\'échange multimodaux — support Dibond exclusivement.',
+        legacyDescription: '120 x 80 cm | Plan Multimodal 3D géo-orienté (jamais un simple PDQ 2D), implanté aux Pôles d\'échange multimodaux — support Dibond exclusivement.',
         arbitrage: { status: 'keep', reason: 'Modèle unique confirmé : 120×80cm, Dibond.', createdAt: PLAN_QUARTIER_REFERENCES_DATE },
     },
 ];

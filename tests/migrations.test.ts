@@ -335,6 +335,83 @@ describe('Migration V15 → V16 (retrait Admin — suppression auditDefinitions/
     });
 });
 
+describe('Migration V17 → V19 (rafraîchissement PDQ/PEM3D + purge CUSTOM orpheline)', () => {
+    it("rafraîchit les 4 fiches PDQ/PEM3D même si leur id existe déjà, purge les références CUSTOM orphelines, et ne touche JAMAIS lieux/occurrences", async () => {
+        const name = uniqueDbName();
+
+        // 1) Base au schéma V17 : la fiche pdq-adhesif y est encore dans son
+        //    état D'ORIGINE (sans dimensions confirmées) — exactement ce
+        //    qu'un appareil ayant fait V17 puis jamais rouvert depuis
+        //    porterait encore, puisque V17 n'ajoute QUE les ids absents.
+        //    On y ajoute aussi une référence CUSTOM orpheline (ancien Admin,
+        //    cf. V18) et un lieu réel avec une occurrence PDQ déjà constatée
+        //    sur le terrain — témoin qui doit ressortir strictement intact.
+        const v17 = new Dexie(name);
+        v17.version(17).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            events: '++id, date, type, entityType',
+        });
+        await v17.open();
+        const staleAdhesif = {
+            id: 'pdq-adhesif', name: 'Plan de quartier (adhésif)',
+            auditType: 'PDQ', scope: { auditType: 'PDQ' },
+            version: 1, support: 'adhesif', placement: {},
+            legacyDescription: "Version adhésive d'un Plan de quartier — jamais au format 78×100. Dimension précise non encore confirmée.",
+        };
+        const orphanCustom = {
+            id: 'custom-orpheline-1', name: 'PdQ Gd',
+            auditType: 'CUSTOM', scope: { auditType: 'CUSTOM', definitionId: 'def-disparue' },
+            version: 1, support: 'adhesif', dimensions: { width: 80, height: 120, unit: 'cm' }, placement: {},
+        };
+        await v17.table('signageReferences').bulkAdd([...buildSignageReferencesSeed().filter(r => r.id !== 'pdq-adhesif'), staleAdhesif, orphanCustom]);
+        const terrainOccurrence = {
+            id: 'occ-terrain-1', modelId: 'pdq-adhesif', location: 'Agence commerciale',
+            status: 'ToBeReplaced', comment: 'Coin abîmé, vu le 3 mars',
+            constatedAt: '2026-03-03T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z',
+        };
+        const lieuAvecConstat = {
+            id: 'lieu-1', name: 'Lieu Test', modules: [{
+                id: 'module-pdq-1', type: 'PLAN_QUARTIER', name: 'Plans de quartier', line: 'A',
+                data: { id: 'pdq-data-1', stationName: 'Lieu Test', stationCode: 'LT', occurrences: [terrainOccurrence], comment: '' },
+            }],
+        };
+        await v17.table('lieux').put(lieuAvecConstat);
+        v17.close();
+
+        // 2) Réouverture avec le schéma courant (V18 + V19 inclus).
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+
+        const refreshedAdhesif = await upgraded.table('signageReferences').get('pdq-adhesif');
+        expect(refreshedAdhesif.dimensions).toEqual({ width: 78, height: 120, unit: 'cm' });
+        expect(refreshedAdhesif.legacyDescription).not.toContain('non encore confirmée');
+
+        // La référence CUSTOM orpheline a disparu (V18), jamais régénérée.
+        expect(await upgraded.table('signageReferences').get('custom-orpheline-1')).toBeUndefined();
+        expect(await upgraded.table('signageReferences').where('auditType').equals('CUSTOM').count()).toBe(0);
+
+        // L'occurrence terrain — constat réel, emplacement, commentaire —
+        // ressort caractère pour caractère identique : V19 ne touche QUE
+        // signageReferences, jamais lieux.
+        const lieuAfter = await upgraded.table('lieux').get('lieu-1');
+        expect(lieuAfter.modules[0].data.occurrences).toEqual([terrainOccurrence]);
+
+        upgraded.close();
+
+        // 3) Idempotence : une réouverture ne duplique ni ne modifie plus rien.
+        const reopened = createAuditDb(name);
+        await reopened.open();
+        expect(await reopened.table('signageReferences').where('id').equals('pdq-adhesif').count()).toBe(1);
+        const lieuAfterReopen = await reopened.table('lieux').get('lieu-1');
+        expect(lieuAfterReopen.modules[0].data.occurrences).toEqual([terrainOccurrence]);
+        reopened.close();
+
+        await Dexie.delete(name);
+    });
+});
+
 describe('Robustesse — transaction de migration atomique (garantie native IndexedDB)', () => {
     it('une exception dans une fonction .upgrade() abandonne toute la transaction (aucune écriture partielle)', async () => {
         const name = uniqueDbName();

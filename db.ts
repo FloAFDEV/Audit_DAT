@@ -427,6 +427,60 @@ export const createAuditDb = (name: string): AuditDb => {
     }
 });
 
+// V18: purge les références d'une famille d'audit disparue (CUSTOM, retiré
+// avec l'Admin — cf. historique) qui subsistaient dans signageReferences
+// sur les appareils ayant créé un audit configurable avant ce retrait.
+//   ⚠ Le retrait de l'Admin avait supprimé les tables auditDefinitions et
+//   signageAssets (V16), mais jamais les lignes déjà écrites dans
+//   signageReferences par les définitions CUSTOM de l'époque — orphelines
+//   depuis, sans plus aucune destination dans l'app. Restées en base, elles
+//   se retrouvent dans chaque export, et un réimport de ce même export
+//   échouait alors intégralement (validateSignageReferences rejette tout
+//   scope.auditType hors DAT/PR/ECA/PDQ) : un aller-retour export→import
+//   cassait sur ses propres données mortes. Purge définitive, jamais
+//   régénérée (CUSTOM n'a aucun modèle de remplacement, contrairement à
+//   V17 qui, elle, complète un référentiel toujours actif).
+    instance.version(18).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    await table.where('auditType').noneOf(['DAT', 'PR', 'ECA', 'PDQ']).delete();
+});
+
+// V19: rafraîchit les MÉTADONNÉES des 4 fiches du référentiel Plans de
+// quartier (+ PEM 3D) depuis data/signage_seed.ts, même si leur id existe
+// déjà en base — contrairement à V17 qui n'ajoutait QUE les ids absents.
+//   ⚠ Portée strictement limitée à la table signageReferences (le
+//   catalogue, jamais administrable depuis l'app) : ne touche JAMAIS
+//   `lieux` ni la moindre occurrence terrain (modelId, location, status,
+//   comment, measuredDimensions...). Ces 4 fiches ne sont éditables par
+//   aucun écran de l'app — les réécrire intégralement depuis le code est
+//   donc toujours sûr, sans risque d'écraser une personnalisation locale
+//   qui n'existe pas.
+//   Sans cette migration, une correction de fiche (ex. dimension confirmée
+//   de pdq-adhesif, texte de description) ne progressait jamais au-delà
+//   du build qui l'a introduite : V17 s'arrêtait au premier `get()` non
+//   vide et ne revenait plus jamais sur l'existant.
+//   Idempotente : `table.put(fresh)` avec la même définition ne crée
+//   jamais de doublon (clé primaire = id) et ne modifie rien d'autre.
+    instance.version(19).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
+    const freshById = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+    for (const id of ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']) {
+        const fresh = freshById.get(id);
+        if (fresh) await table.put(fresh);
+    }
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {
