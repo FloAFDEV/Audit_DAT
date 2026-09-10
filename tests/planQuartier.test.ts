@@ -127,6 +127,16 @@ describe('store.ts::init() — migration : ajoute les modules PLAN_QUARTIER + in
         expect(empalotOcc).toBeDefined();
         expect(empalotOcc?.measuredDimensions).toBeUndefined();
 
+        // Arènes : les 3 PEM 3D réels portent leur implantation connue —
+        // aucun numéro d'exemplaire artificiel.
+        const arenes = useAuditStore.getState().lieux.find(l => l.name === 'Arènes');
+        const arenesPdq = arenes?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER && m.line === 'A');
+        const pem3d = (arenesPdq!.data as PlanQuartierData).occurrences.filter(o => o.modelId === 'pem3d-120x80');
+        expect(pem3d).toHaveLength(3);
+        expect(pem3d.map(o => o.comment).sort()).toEqual([
+            'Côté amphithéâtre / Tram', 'Côté gare bus', 'Proche agence / ascenseur',
+        ]);
+
         // Idempotence : une réouverture ne duplique jamais les modules ni l'inventaire.
         const countAfterFirst = data.occurrences.length;
         useAuditStore.setState({ lieux: [], isLoading: true, initError: null });
@@ -134,6 +144,84 @@ describe('store.ts::init() — migration : ajoute les modules PLAN_QUARTIER + in
         const stCyprien2 = useAuditStore.getState().lieux.find(l => l.name === 'Saint-Cyprien - République');
         const pdqModule2 = stCyprien2?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
         expect((pdqModule2!.data as PlanQuartierData).occurrences.length).toBe(countAfterFirst);
+    }, 20000);
+
+    it("renseigne l'implantation sur des exemplaires déjà semés sans commentaire, sans en créer de nouveaux", async () => {
+        // Appareil déjà provisionné AVANT que les 3 implantations d'Arènes
+        // soient connues : 3 PEM 3D vierges, sans commentaire.
+        const freshLieux = await generateInitialLieuxDataAsync();
+        const legacyLieux: Lieu[] = freshLieux.map(lieu => ({
+            ...lieu,
+            modules: lieu.modules.map(m => {
+                if (m.type !== AuditModuleType.PLAN_QUARTIER) return m;
+                const d = m.data as PlanQuartierData;
+                if (d.stationName !== 'Arènes' || m.line !== 'A') return m;
+                return {
+                    ...m,
+                    data: {
+                        ...d,
+                        occurrences: [1, 2, 3].map(n => ({
+                            id: `legacy-pem3d-${n}`, modelId: 'pem3d-120x80',
+                            status: AdhesiveStatus.NotChecked,
+                            constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z',
+                        })),
+                    },
+                };
+            }),
+        }));
+        await db.lieux.bulkPut(legacyLieux);
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+
+        await useAuditStore.getState().init();
+
+        const arenes = useAuditStore.getState().lieux.find(l => l.name === 'Arènes');
+        const module = arenes?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER && m.line === 'A');
+        const pem3d = (module!.data as PlanQuartierData).occurrences.filter(o => o.modelId === 'pem3d-120x80');
+
+        // Enrichis en place : toujours 3, avec leurs ids d'origine.
+        expect(pem3d).toHaveLength(3);
+        expect(pem3d.map(o => o.id).sort()).toEqual(['legacy-pem3d-1', 'legacy-pem3d-2', 'legacy-pem3d-3']);
+        expect(pem3d.map(o => o.comment).sort()).toEqual([
+            'Côté amphithéâtre / Tram', 'Côté gare bus', 'Proche agence / ascenseur',
+        ]);
+    }, 20000);
+
+    it("ne réécrit jamais un exemplaire déjà constaté sur le terrain", async () => {
+        const freshLieux = await generateInitialLieuxDataAsync();
+        const legacyLieux: Lieu[] = freshLieux.map(lieu => ({
+            ...lieu,
+            modules: lieu.modules.map(m => {
+                if (m.type !== AuditModuleType.PLAN_QUARTIER) return m;
+                const d = m.data as PlanQuartierData;
+                if (d.stationName !== 'Arènes' || m.line !== 'A') return m;
+                return {
+                    ...m,
+                    data: {
+                        ...d,
+                        occurrences: [
+                            // Un agent est déjà passé sur le premier.
+                            { id: 'terrain-1', modelId: 'pem3d-120x80', status: AdhesiveStatus.Absent, comment: 'Vu cassé le 3 mars', constatedAt: '2026-03-03T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                            { id: 'terrain-2', modelId: 'pem3d-120x80', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                            { id: 'terrain-3', modelId: 'pem3d-120x80', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                        ],
+                    },
+                };
+            }),
+        }));
+        await db.lieux.bulkPut(legacyLieux);
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+
+        await useAuditStore.getState().init();
+
+        const arenes = useAuditStore.getState().lieux.find(l => l.name === 'Arènes');
+        const module = arenes?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER && m.line === 'A');
+        const pem3d = (module!.data as PlanQuartierData).occurrences.filter(o => o.modelId === 'pem3d-120x80');
+
+        // Le groupe entier est laissé intact : ni écrasement, ni doublon.
+        expect(pem3d).toHaveLength(3);
+        expect(pem3d.find(o => o.id === 'terrain-1')!.comment).toBe('Vu cassé le 3 mars');
+        expect(pem3d.find(o => o.id === 'terrain-1')!.status).toBe(AdhesiveStatus.Absent);
+        expect(pem3d.find(o => o.id === 'terrain-2')!.comment).toBeUndefined();
     }, 20000);
 });
 

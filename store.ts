@@ -177,54 +177,87 @@ interface AppState {
 export const DATA_VERSION = 'v13.2';
 
 /**
- * Sème le premier recensement connu des Plans de quartier
- * (data/planQuartierInitialInventory.ts) dans des modules PLAN_QUARTIER
- * encore vierges. Occurrences RÉELLES (cataloguées, modelId renseigné) :
- * l'inventaire vient de l'exploitant, pas d'un relevé terrain — d'où le
- * statut Non contrôlé, jamais un OK inventé.
+ * Réconcilie le premier recensement connu des Plans de quartier
+ * (data/planQuartierInitialInventory.ts) avec les modules PLAN_QUARTIER.
+ * Occurrences RÉELLES (cataloguées, modelId renseigné) : l'inventaire
+ * vient de l'exploitant, pas d'un relevé terrain — d'où le statut Non
+ * contrôlé, jamais un OK inventé.
  *
- * Appliqué aux DEUX chemins d'init (base neuve et base migrée) : sans
- * cela, un appareil fraîchement provisionné démarrerait sans aucun plan,
- * là où un appareil migré les aurait tous.
+ * Appelée à CHAQUE démarrage, sur les deux chemins d'init (base neuve et
+ * base existante), et sûre à répéter :
  *
- * Idempotent par construction : n'écrit que dans un module dont la liste
- * d'occurrences est vide, donc jamais de doublon à la réouverture.
+ *  - modèle absent de la station → les exemplaires connus sont créés ;
+ *  - exemplaires déjà présents, encore vierges, en nombre identique →
+ *    seule leur implantation connue (commentaire, emplacement, mesure)
+ *    est renseignée. C'est ce qui permet d'enrichir un appareil déjà
+ *    provisionné quand l'inventaire se précise (les trois PEM 3D
+ *    géo-orientés d'Arènes) sans repasser par une base neuve ;
+ *  - dès qu'un constat terrain existe (statut saisi, commentaire, ou
+ *    historique), le seed ne touche plus à rien : le terrain fait foi.
+ *
  * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
  */
 const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
     const now = new Date().toISOString();
     let changed = false;
 
-    const findModule = (entry: typeof PLAN_QUARTIER_INITIAL_INVENTORY[number]) => {
-        for (const lieu of lieux) {
-            const module = lieu.modules.find(m =>
-                m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
-                (m.data as PlanQuartierData).stationName === entry.stationName
-            );
-            if (module) return module;
-        }
-        return undefined;
-    };
-
+    // Une même station peut porter plusieurs entrées pour un même modèle,
+    // décrivant des implantations distinctes (Ramonville : entrée bus /
+    // entrée square ; Arènes : les trois PEM 3D). Le rapprochement se fait
+    // donc par (ligne, station, modèle), pas entrée par entrée.
+    type OccurrenceSpec = Pick<PlanQuartierOccurrence, 'comment' | 'location' | 'measuredDimensions'>;
+    const groups = new Map<string, { line: string; stationName: string; modelId: string; specs: OccurrenceSpec[] }>();
     for (const entry of PLAN_QUARTIER_INITIAL_INVENTORY) {
-        const module = findModule(entry);
+        const key = `${entry.line}|${entry.stationName}|${entry.modelId}`;
+        const group = groups.get(key)
+            ?? { line: entry.line, stationName: entry.stationName, modelId: entry.modelId, specs: [] };
+        for (let i = 0; i < entry.quantity; i++) {
+            group.specs.push({ comment: entry.comment, location: entry.location, measuredDimensions: entry.measuredDimensions });
+        }
+        groups.set(key, group);
+    }
+
+    for (const group of groups.values()) {
+        const module = lieux.flatMap(l => l.modules).find(m =>
+            m.type === AuditModuleType.PLAN_QUARTIER && m.line === group.line &&
+            (m.data as PlanQuartierData).stationName === group.stationName
+        );
         if (!module) continue; // station inconnue du registre — ignorée, jamais inventée
         const pdqData = module.data as PlanQuartierData;
-        // Un module déjà renseigné (recensement terrain en cours) n'est
-        // jamais réécrit par le seed.
-        if (pdqData.occurrences.some(o => o.modelId === entry.modelId && o.location === entry.location)) continue;
-        for (let i = 0; i < entry.quantity; i++) {
-            pdqData.occurrences.push({
-                id: uuidv4(),
-                modelId: entry.modelId,
-                status: PLAN_QUARTIER_INITIAL_STATUS,
-                comment: entry.comment,
-                location: entry.location,
-                measuredDimensions: entry.measuredDimensions,
-                constatedAt: now,
-                discoveredAt: now,
-            });
+        const existing = pdqData.occurrences.filter(o => o.modelId === group.modelId);
+
+        if (existing.length === 0) {
+            for (const spec of group.specs) {
+                pdqData.occurrences.push({
+                    id: uuidv4(),
+                    modelId: group.modelId,
+                    status: PLAN_QUARTIER_INITIAL_STATUS,
+                    comment: spec.comment,
+                    location: spec.location,
+                    measuredDimensions: spec.measuredDimensions,
+                    constatedAt: now,
+                    discoveredAt: now,
+                });
+            }
+            changed = true;
+            continue;
         }
+
+        // Enrichissement : uniquement sur des exemplaires encore vierges et
+        // en nombre exactement identique — sinon on ne saurait pas lequel
+        // porte quelle implantation, et deviner reviendrait à inventer.
+        const stillBlank = existing.every(o =>
+            o.status === PLAN_QUARTIER_INITIAL_STATUS && !o.comment && !o.location
+            && !(o.previousConstats?.length)
+        );
+        const hasKnownImplantation = group.specs.some(s => s.comment || s.location || s.measuredDimensions);
+        if (existing.length !== group.specs.length || !stillBlank || !hasKnownImplantation) continue;
+
+        existing.forEach((occ, i) => {
+            occ.comment = group.specs[i].comment;
+            occ.location = group.specs[i].location;
+            occ.measuredDimensions = group.specs[i].measuredDimensions;
+        });
         changed = true;
     }
     return changed;
@@ -573,9 +606,14 @@ const useAuditStore = create<AppState>((set, get) => {
                         dataChanged = true;
                         return { ...lieu, modules: [...lieu.modules, ...missingPdqModules] };
                     });
-
-                    if (seedPlanQuartierInitialInventory(data)) dataChanged = true;
                 }
+
+                // Hors du bloc ci-dessus : la réconciliation tourne à chaque
+                // démarrage, y compris quand les modules existent déjà. C'est
+                // ce qui permet à un appareil déjà provisionné de recevoir une
+                // implantation qui se précise, sans jamais écraser un constat
+                // terrain (cf. seedPlanQuartierInitialInventory).
+                if (seedPlanQuartierInitialInventory(data)) dataChanged = true;
 
                 if (dataChanged) {
                     await db.lieux.bulkPut(data);
