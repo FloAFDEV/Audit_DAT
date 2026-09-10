@@ -66,7 +66,11 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Borderouge', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
-    { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 3 },
+    // Arènes : trois PEM 3D réels, géo-orientés différemment — distingués
+    // par leur implantation connue, jamais par un numéro d'exemplaire.
+    { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Proche agence / ascenseur' },
+    { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Côté gare bus' },
+    { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Côté amphithéâtre / Tram' },
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
 
     // --- PDQ 78x120 en agence commerciale (hors Marengo/Jean-Jaurès, déjà
