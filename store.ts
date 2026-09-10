@@ -263,6 +263,47 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
     return changed;
 };
 
+/**
+ * Réconciliation complète Plans de quartier : ajoute les modules manquants
+ * (même patron que la migration v8 LAE — extrait de generateInitialLieuxDataAsync,
+ * jamais une régénération complète) PUIS sème/enrichit l'inventaire initial
+ * connu (cf. seedPlanQuartierInitialInventory ci-dessus).
+ *
+ * Appelée à la fois par init() (démarrage) et par handleImportJsonData
+ * (immédiatement après un import) : un import v1 (antérieur à cette
+ * fonctionnalité) ne contient aucun module PLAN_QUARTIER — sans cette
+ * réconciliation, l'audit resterait invisible jusqu'au prochain rechargement
+ * complet de l'application, alors que rien n'est perdu (le module et son
+ * inventaire réapparaissent bien après un reload). Le référentiel
+ * signalétique n'est pas concerné ici : sa préservation lors d'un import v1
+ * relève de utils/signageSerializer.ts, jamais de cette fonction.
+ *
+ * Retourne le tableau de lieux (nouvelle référence si des modules ont été
+ * ajoutés) et un indicateur de changement.
+ */
+const reconcilePlanQuartier = async (lieux: Lieu[]): Promise<{ lieux: Lieu[]; changed: boolean }> => {
+    let changed = false;
+    let result = lieux;
+
+    const hasPlanQuartierModules = result.some(l => l.modules.some(m => m.type === AuditModuleType.PLAN_QUARTIER));
+    if (!hasPlanQuartierModules) {
+        const freshData = await generateInitialLieuxDataAsync();
+        const freshByLieuName = new Map(freshData.map(l => [l.name, l]));
+        result = result.map(lieu => {
+            const freshLieu = freshByLieuName.get(lieu.name);
+            if (!freshLieu) return lieu;
+            const missingPdqModules = freshLieu.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER);
+            if (missingPdqModules.length === 0) return lieu;
+            changed = true;
+            return { ...lieu, modules: [...lieu.modules, ...missingPdqModules] };
+        });
+    }
+
+    if (seedPlanQuartierInitialInventory(result)) changed = true;
+
+    return { lieux: result, changed };
+};
+
 const useAuditStore = create<AppState>((set, get) => {
     /**
      * Écrit une modification sur UNE station : clone, applique updateFn,
@@ -589,31 +630,13 @@ const useAuditStore = create<AppState>((set, get) => {
                     });
                 });
 
-                // DATA MIGRATION : ajouter les modules Plans de quartier (+ PEM 3D) si absents.
-                // Même patron que la migration v8 LAE : génère les données fraîches (qui
-                // incluent déjà les modules PLAN_QUARTIER vierges via data/builder.ts) et
-                // n'en extrait que les modules manquants, lieu par lieu — jamais de
-                // régénération complète, jamais de perte des modules déjà audités.
-                const hasPlanQuartierModules = data.some(l => l.modules.some(m => m.type === AuditModuleType.PLAN_QUARTIER));
-                if (!hasPlanQuartierModules) {
-                    const freshData = await generateInitialLieuxDataAsync();
-                    const freshByLieuName = new Map(freshData.map(l => [l.name, l]));
-                    data = data.map(lieu => {
-                        const freshLieu = freshByLieuName.get(lieu.name);
-                        if (!freshLieu) return lieu;
-                        const missingPdqModules = freshLieu.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER);
-                        if (missingPdqModules.length === 0) return lieu;
-                        dataChanged = true;
-                        return { ...lieu, modules: [...lieu.modules, ...missingPdqModules] };
-                    });
-                }
-
-                // Hors du bloc ci-dessus : la réconciliation tourne à chaque
-                // démarrage, y compris quand les modules existent déjà. C'est
-                // ce qui permet à un appareil déjà provisionné de recevoir une
-                // implantation qui se précise, sans jamais écraser un constat
-                // terrain (cf. seedPlanQuartierInitialInventory).
-                if (seedPlanQuartierInitialInventory(data)) dataChanged = true;
+                // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et
+                // sème/enrichit l'inventaire initial connu, à chaque démarrage
+                // (cf. reconcilePlanQuartier — jamais de perte des modules déjà
+                // audités, jamais un constat terrain écrasé).
+                const pdqReconciled = await reconcilePlanQuartier(data);
+                data = pdqReconciled.lieux;
+                if (pdqReconciled.changed) dataChanged = true;
 
                 if (dataChanged) {
                     await db.lieux.bulkPut(data);
@@ -1793,8 +1816,19 @@ const useAuditStore = create<AppState>((set, get) => {
             // Sauvegarde automatique des données actuelles avant remplacement par l'import.
             await _backupBeforeReset('pre-import');
             await applyImportPayload(payload);
+
+            // Un import v1 (antérieur à Plans de quartier) ne porte aucun
+            // module PLAN_QUARTIER — sans cette réconciliation immédiate,
+            // l'audit resterait invisible jusqu'au prochain rechargement
+            // complet, alors que rien n'est perdu (cf. reconcilePlanQuartier).
+            // Persistée séparément : applyImportPayload vient d'écrire
+            // payload.lieux tel quel, cette étape ne fait qu'y ajouter ce qui
+            // manquait, jamais une régénération complète.
+            const pdqReconciled = await reconcilePlanQuartier(payload.lieux);
+            if (pdqReconciled.changed) await db.lieux.bulkPut(pdqReconciled.lieux);
+
             set({
-                lieux: payload.lieux,
+                lieux: pdqReconciled.lieux,
                 // Un import v2 remplace aussi signageReferences en base
                 // (applyImportPayload) — sans cette ligne, le store restait sur
                 // l'ancien référentiel jusqu'au prochain rechargement complet,

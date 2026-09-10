@@ -3,7 +3,7 @@
 
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem
+    PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem
 } from '../types';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
@@ -240,6 +240,15 @@ const statusTranslations: { [key: string]: string } = {
     'ABSENT': 'Absent',
     'TO_REPLACE': 'À remplacer',
     'NOT_APPLICABLE': 'Non applicable',
+};
+
+/** Description courte des 4 modèles figés (data/signage_seed.ts) — mêmes
+ *  dimensions/support que le référentiel, jamais recalculées ici. */
+const PDQ_MODEL_DESCRIPTIONS: Record<string, string> = {
+    'pdq-78x100': 'Plan de quartier (sans header ni footer) | 78x100cm | Plastifié',
+    'pdq-78x120': 'Plan de quartier (avec header et footer) | 78x120cm | Plastifié',
+    'pdq-adhesif': 'Plan de quartier (adhésif) | 78x120cm | Adhésif',
+    'pem3d-120x80': 'PEM 3D | 120x80cm | Dibond',
 };
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
@@ -619,6 +628,26 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 'Description Adhésif': `Pictogramme pour orientation | ${dimensions}`,
                                 'Localisation Adhésif': '',
                                 'Commentaire': data.comment,
+                            });
+                        }
+                        break;
+                    }
+                    case AuditModuleType.PLAN_QUARTIER: {
+                        const data = module.data as PlanQuartierData;
+                        for (const occ of data.occurrences || []) {
+                            // Cataloguée (modelId) → description figée du modèle ;
+                            // découverte non cataloguée (adHocLabel) → décrite telle
+                            // quelle, jamais rattachée à un modèle qu'elle n'est pas.
+                            const description = occ.modelId
+                                ? (PDQ_MODEL_DESCRIPTIONS[occ.modelId] ?? occ.modelId)
+                                : `Découverte non cataloguée : ${occ.adHocLabel ?? '?'}${occ.adHocSupport ? ` | ${occ.adHocSupport}` : ''}`;
+                            rows.push({
+                                ...baseRow,
+                                'Élément': occ.modelId ? '' : 'Plan de quartier (non catalogué)',
+                                'Statut': statusTranslations[occ.status] || occ.status,
+                                'Description Adhésif': description,
+                                'Localisation Adhésif': occ.location || '',
+                                'Commentaire': occ.comment || '',
                             });
                         }
                         break;
