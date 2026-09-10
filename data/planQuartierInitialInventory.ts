@@ -55,6 +55,12 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
     { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
+    // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name
+    // distincts pour le même lieu physique (lieuName commun) — la ligne B
+    // orthographie "Paul Sabatier", le Téléo "Paul-Sabatier" (registre).
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (totem)' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
+    { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1 },
 
     // --- Adhésifs PDQ ---
     {
@@ -70,6 +76,7 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 3 },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
 
     // --- PDQ 78x120 en agence commerciale (1 par agence) ---
     // En agence, le support (plastifié ou adhésif) dépend de la commande

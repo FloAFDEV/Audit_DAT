@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AuditModule, AdhesiveStatus, PlanQuartierData, PlanQuartierOccurrence, SignageReference, SignageSupport, SignageDimensions } from '../types';
-import { CheckCircle2, XCircle, AlertTriangle, Ban, Trash2, PlusCircle, History, RotateCcw, ShieldCheck, Ruler } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Trash2, PlusCircle, History, RotateCcw, ShieldCheck, Ruler } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
 import { ModuleIcon } from './ModuleIcon';
 import { formatDimensions, STATUS_LABELS } from './cockpit/labels';
@@ -31,10 +31,16 @@ const STATUS_BUTTONS: { status: AdhesiveStatus; label: string; Icon: typeof Chec
   { status: AdhesiveStatus.ToBeReplaced, label: 'À remplacer', Icon: AlertTriangle,
     activeClass: 'bg-amber-500 text-white shadow-sm',
     idleClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
-  { status: AdhesiveStatus.NotApplicable, label: 'Non applicable', Icon: Ban,
-    activeClass: 'bg-slate-500 text-white shadow-sm dark:bg-slate-600',
-    idleClass: 'bg-white text-slate-600 ring-1 ring-inset ring-slate-400 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500 dark:hover:bg-slate-700' },
+  // Pas de statut "Non applicable" ici : une occurrence n'existe que si
+  // l'exemplaire est réellement présent — si l'audit ne s'applique pas à
+  // cet endroit, l'occurrence n'est simplement pas créée.
 ];
+
+// Modèles à quantité connue et fermée (donnée directement par l'exploitant,
+// jamais un recensement encore ouvert) : pas de champ Emplacement, pas de
+// date de constat/recensement, pas d'ajout d'exemplaire supplémentaire —
+// juste le statut et un commentaire éventuel.
+const FIXED_COUNT_MODEL_IDS = new Set(['pem3d-120x80']);
 
 const SUPPORT_OPTIONS: SignageSupport[] = ['plastifie', 'adhesif', 'dibond', 'pvc', 'vitrophanie', 'autre'];
 
@@ -99,7 +105,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
     setShowAdHocForm(false);
   };
 
-  const renderOccurrence = (occ: PlanQuartierOccurrence, refLabel: string) => {
+  const renderOccurrence = (occ: PlanQuartierOccurrence, refLabel: string, simplified: boolean = false) => {
     const isBlank = occ.status === AdhesiveStatus.NotChecked && !occ.comment && !occ.measuredDimensions
       && (occ.previousConstats ?? []).length === 0;
     const history = occ.previousConstats ?? [];
@@ -109,36 +115,48 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
       <li key={occ.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={occ.location ?? ''}
-                onChange={(e) => onLocationChange(occ.id, e.target.value)}
-                placeholder="Emplacement (ex. Quai direction X)"
-                className="text-sm font-medium text-slate-800 dark:text-slate-100 bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none focus:border-teal-500 py-0.5"
-              />
-              {isBlank && (
-                <button
-                  onClick={() => onRemoveOccurrence(occ.id)}
-                  className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
-                  title="Retirer (erreur de saisie — aucun constat encore saisi)"
-                  aria-label="Retirer cet exemplaire"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-              Constat du {formatDate(occ.constatedAt)} · recensé le {formatDate(occ.discoveredAt)}
-              {history.length > 0 && (
-                <button
-                  onClick={() => setExpandedHistory(prev => ({ ...prev, [occ.id]: !prev[occ.id] }))}
-                  className="ml-2 inline-flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline"
-                >
-                  <History className="w-3.5 h-3.5" /> Historique ({history.length})
-                </button>
-              )}
-            </p>
+            {!simplified && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={occ.location ?? ''}
+                  onChange={(e) => onLocationChange(occ.id, e.target.value)}
+                  placeholder="Emplacement (ex. Quai direction X)"
+                  className="text-sm font-medium text-slate-800 dark:text-slate-100 bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none focus:border-teal-500 py-0.5"
+                />
+                {isBlank && (
+                  <button
+                    onClick={() => onRemoveOccurrence(occ.id)}
+                    className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    title="Retirer (erreur de saisie — aucun constat encore saisi)"
+                    aria-label="Retirer cet exemplaire"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
+            {!simplified && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+                Constat du {formatDate(occ.constatedAt)} · recensé le {formatDate(occ.discoveredAt)}
+                {history.length > 0 && (
+                  <button
+                    onClick={() => setExpandedHistory(prev => ({ ...prev, [occ.id]: !prev[occ.id] }))}
+                    className="ml-2 inline-flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline"
+                  >
+                    <History className="w-3.5 h-3.5" /> Historique ({history.length})
+                  </button>
+                )}
+              </p>
+            )}
+            {simplified && history.length > 0 && (
+              <button
+                onClick={() => setExpandedHistory(prev => ({ ...prev, [occ.id]: !prev[occ.id] }))}
+                className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:underline"
+              >
+                <History className="w-3.5 h-3.5" /> Historique ({history.length})
+              </button>
+            )}
             {historyOpen && (
               <ul className="mt-2 space-y-1 border-l-2 border-slate-200 dark:border-slate-700 pl-3">
                 {[...history].reverse().map((c, i) => (
@@ -239,6 +257,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
           const occurrences = occurrencesByModel.get(ref.id) ?? [];
           const dimensions = formatDimensions(ref.dimensions);
           const draft = draftLocations[ref.id] ?? '';
+          const isFixedCount = FIXED_COUNT_MODEL_IDS.has(ref.id);
 
           return (
             <li key={ref.id} className="bg-slate-50/50 dark:bg-slate-900/20">
@@ -256,8 +275,9 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 </span>
               </div>
               <ul className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
-                {occurrences.map(occ => renderOccurrence(occ, ref.name))}
+                {occurrences.map(occ => renderOccurrence(occ, ref.name, isFixedCount))}
               </ul>
+              {!isFixedCount && (
               <div className="p-4 flex items-center gap-2">
                 <input
                   type="text"
@@ -273,6 +293,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                   <PlusCircle className="w-4 h-4" /> Ajouter un exemplaire
                 </button>
               </div>
+              )}
             </li>
           );
         })}
