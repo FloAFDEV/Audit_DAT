@@ -118,11 +118,14 @@ describe('store.ts::init() — migration : ajoute les modules PLAN_QUARTIER + in
         expect(data.occurrences.every(o => o.status === AdhesiveStatus.NotChecked)).toBe(true);
         expect(data.occurrences.every(o => o.modelId === 'pdq-78x100' || o.modelId === 'pdq-78x120')).toBe(true);
 
-        // Empalot : mesure particulière (78x119) jamais perdue.
+        // Empalot : 78x120 comme partout — la mesure 78x119 du relevé initial
+        // était une erreur de saisie (ce format n'existe pas), pas une
+        // divergence réelle : aucune mesure particulière ne subsiste.
         const empalot = useAuditStore.getState().lieux.find(l => l.name === 'Empalot');
         const empalotPdq = empalot?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
         const empalotOcc = (empalotPdq!.data as PlanQuartierData).occurrences.find(o => o.modelId === 'pdq-78x120');
-        expect(empalotOcc?.measuredDimensions).toEqual({ width: 78, height: 119, unit: 'cm' });
+        expect(empalotOcc).toBeDefined();
+        expect(empalotOcc?.measuredDimensions).toBeUndefined();
 
         // Idempotence : une réouverture ne duplique jamais les modules ni l'inventaire.
         const countAfterFirst = data.occurrences.length;
@@ -263,5 +266,69 @@ describe('utils/cockpit/patrimoineIndex.ts — agrégation Plans de quartier', (
     it('resolveReferencesForEquipment accepte désormais PDQ', () => {
         const pdqRefs = resolveReferencesForEquipment(REFERENCES, 'PDQ');
         expect(pdqRefs.map(r => r.id).sort()).toEqual(['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']);
+    });
+
+    it("le total réseau suit les occurrences RÉELLEMENT recensées, jamais un attendu théorique", () => {
+        // Phase de recensement : l'Aperçu doit afficher ce qui est connu à
+        // l'instant T, et grandir au fil des passages terrain — jamais un
+        // total dérivé du catalogue (4 modèles) ni un faux zéro.
+        const totalFromIndex = (lieu: Lieu) => {
+            const index = buildPatrimoineIndex([lieu], REFERENCES);
+            return ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']
+                .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
+        };
+
+        const occ = (id: string, modelId: string) => ({
+            id, modelId, status: AdhesiveStatus.NotChecked,
+            constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z',
+        });
+
+        expect(totalFromIndex(pdqLieu([]))).toBe(0);
+        expect(totalFromIndex(pdqLieu([occ('o1', 'pdq-78x100')]))).toBe(1);
+        expect(totalFromIndex(pdqLieu([
+            occ('o1', 'pdq-78x100'), occ('o2', 'pdq-78x100'), occ('o3', 'pem3d-120x80'),
+        ]))).toBe(3);
+    });
+
+    it("ventile par ligne ET par station, sans inventer de station vide", () => {
+        // Bande 3 de l'Aperçu : « où sont-ils ? ». Un lieu n'apparaît que
+        // s'il porte réellement un exemplaire.
+        const lieuA: Lieu = {
+            id: 'lieu-a', name: 'Station A',
+            modules: [{
+                id: 'm-a', type: AuditModuleType.PLAN_QUARTIER, name: 'Plans de quartier', line: 'A',
+                data: {
+                    id: 'd-a', stationName: 'Station A', stationCode: 'STA', comment: '',
+                    occurrences: [
+                        { id: 'a1', modelId: 'pdq-78x100', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                        { id: 'a2', modelId: 'pem3d-120x80', status: AdhesiveStatus.Absent, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                    ],
+                },
+            }],
+        };
+        const lieuB: Lieu = {
+            id: 'lieu-b', name: 'Station B',
+            modules: [{
+                id: 'm-b', type: AuditModuleType.PLAN_QUARTIER, name: 'Plans de quartier', line: 'TELEO',
+                data: {
+                    id: 'd-b', stationName: 'Station B', stationCode: 'STB', comment: '',
+                    occurrences: [
+                        { id: 'b1', modelId: 'pdq-78x120', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+                    ],
+                },
+            }],
+        };
+        // Lieu sans aucune occurrence : ne doit produire aucune implantation.
+        const lieuVide = pdqLieu([]);
+
+        const index = buildPatrimoineIndex([lieuA, lieuB, lieuVide], REFERENCES);
+        const pdqImplantations = index.implantations.filter(i => i.referenceId.startsWith('pdq-') || i.referenceId.startsWith('pem3d-'));
+
+        expect(pdqImplantations).toHaveLength(3);
+        expect([...new Set(pdqImplantations.map(i => i.line))].sort()).toEqual(['A', 'TELEO']);
+        expect(pdqImplantations.filter(i => i.lieuName === 'Station A')).toHaveLength(2);
+        expect(pdqImplantations.some(i => i.lieuName === 'Station Agrégation')).toBe(false);
+        // Le défaut est bien porté par l'implantation (bande « à traiter »).
+        expect(pdqImplantations.filter(i => i.status === AdhesiveStatus.Absent)).toHaveLength(1);
     });
 });

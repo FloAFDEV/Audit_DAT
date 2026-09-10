@@ -35,33 +35,30 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // l'équipement CA, data/adhesives.ts::PR_ADHESIVES_CA) — jamais
     // redondé ici. Oncopole n'a donc PAS d'entrée 78x120 ci-dessous :
     // ses 2 exemplaires (CA01/CA02) sont déjà comptés côté P+R.
-    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, comment: 'Réf. terrain : 2026b' },
+    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026b' },
+    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 78x120 2026b' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
-    {
-        stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1,
-        comment: 'Réf. terrain : 2026b', measuredDimensions: { width: 78, height: 119, unit: 'cm' },
-    },
+    // 78x120 partout, jamais 78x119 (mesure terrain erronée, corrigée).
+    { stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026b' },
     { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
     { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, comment: 'Réf. terrain : 2026' },
-    {
-        stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 3,
-        comment: 'Réf. terrain : N2026',
-    },
-    {
-        stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x120', quantity: 3,
-        comment: 'Réf. terrain : N2026',
-    },
+    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)', comment: 'Réf. terrain : N2026' },
+    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x120', quantity: 3, location: 'Mezzanine', comment: 'Réf. terrain : N2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
-    { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
+    { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 2026' },
+    // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name
+    // distincts pour le même lieu physique (lieuName commun) — la ligne B
+    // orthographie "Paul Sabatier", le Téléo "Paul-Sabatier" (registre).
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (totem)' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
+    { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1 },
+    { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée bus' },
+    { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée square' },
 
     // --- Adhésifs PDQ ---
-    {
-        stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-adhesif', quantity: 1,
-        comment: 'Réf. terrain : N2026',
-    },
-    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, comment: 'Réf. terrain : 78x120 2026b' },
+    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Réf. terrain : N2026' },
 
     // --- PEM 3D (120×80, Dibond) ---
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'JEAN_JAURES_120X80_V05_tisseo_v3_16-06-2026_imp' },
@@ -70,21 +67,21 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 3 },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
 
-    // --- PDQ 78x120 en agence commerciale (1 par agence) ---
+    // --- PDQ 78x120 en agence commerciale (hors Marengo/Jean-Jaurès, déjà
+    // listés ci-dessus avec leur station d'origine) ---
     // En agence, le support (plastifié ou adhésif) dépend de la commande
     // passée pour cette agence — les deux existent, mais l'adhésif est le
     // plus fréquent. Faute de confirmation terrain agence par agence, ces
-    // 5 exemplaires sont seedés sur le modèle adhésif (le plus probable),
-    // à corriger vers pdq-78x120 (plastifié) si le contrôle terrain montre
+    // exemplaires sont seedés sur le modèle adhésif (le plus probable), à
+    // corriger vers pdq-78x120 (plastifié) si le contrôle terrain montre
     // le contraire pour l'une d'elles.
     // Aéroport Toulouse Blagnac : la station LAE n'est pas encore en
     // service (train à venir), mais l'agence commerciale, elle, est
     // toujours ouverte au public et équipée d'un plan de quartier 78x120.
-    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
     { stationName: 'Arènes', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
-    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
     { stationName: 'Aéroport Toulouse Blagnac', line: 'AEROPORT', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
 ];
 

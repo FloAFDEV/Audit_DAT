@@ -4,8 +4,10 @@
 // « Référentiel signalétique » servi par le moteur d'index réseau
 // (contrat de plateforme : aucune donnée agrégée calculée localement).
 import React, { useMemo, useState, useEffect, useRef } from 'react';
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Building, X, Filter, Layout, BookOpenCheck } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType } from '../../types';
+// `Map` est importée sous alias : le nom brut masquerait le constructeur
+// Map natif utilisé par les agrégations de ce fichier.
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck } from 'lucide-react';
+import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -16,6 +18,7 @@ import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, SectionTitle, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
+import { formatDimensions } from './labels';
 import { useCockpitNav } from './cockpitNav';
 
 /* =====================
@@ -94,7 +97,10 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                                 <Fence className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                                 <span>Total ECA</span>
                             </span>
-                            <span className="block mt-1 text-left text-lg font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">
+                            {/* N1 — le total global doit rester le plus gros
+                                chiffre de la matrice, sinon les totaux par
+                                ligne (N2) le domineraient visuellement. */}
+                            <span className="block mt-1 text-left text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">
                                 {total}
                             </span>
                         </th>
@@ -106,9 +112,13 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                                     <CategoryIcon categoryConfig={cfg} size="sm" />
                                     <span>{label}</span>
                                 </span>
-                                <span className={`block mt-1 text-right text-sm font-bold tabular-nums ${data.total > 0 ? 'text-slate-800 dark:text-slate-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                                {/* N2 — total d'un axe : même teal que le total
+                                    global, un cran en dessous en taille. La
+                                    ventilation par ligne est une information
+                                    de décision, pas un détail secondaire. */}
+                                <span className={`block mt-1 text-right text-xl font-bold tabular-nums ${data.total > 0 ? 'text-teal-700 dark:text-teal-300' : 'text-slate-400 dark:text-slate-500'}`}>
                                     {data.total}
-                                    <span className="text-[11px] font-normal text-slate-400 dark:text-slate-500 ml-1">({data.pmr} PMR)</span>
+                                    <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">({data.pmr} PMR)</span>
                                 </span>
                             </th>
                         ))}
@@ -130,6 +140,184 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                     ))}
                 </tbody>
             </table>
+        </div>
+    );
+};
+
+/* =====================
+   Plans de quartier — lecture en trois bandes : combien au total, de quel
+   format, et où. Aucune donnée recalculée ici : tout provient de
+   patrimoineIndex (contrat de plateforme #1). Les totaux suivent donc les
+   occurrences RÉELLEMENT recensées, jamais un attendu théorique — pendant
+   la phase de recensement, ils grandissent au fil des passages terrain.
+   ===================== */
+
+/** Ordre de lecture métier des formats, indépendant de l'ordre du seed. */
+const PDQ_MODEL_ORDER = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80'];
+
+/** Libellés courts : le nom complet du référentiel (« Plan de quartier
+ *  78×100 (sans header ni footer) ») ne tient pas dans une tuile. */
+const PDQ_TILE_LABELS: Record<string, string> = {
+    'pdq-78x100': '78 × 100',
+    'pdq-78x120': '78 × 120',
+    'pdq-adhesif': 'Adhésif',
+    'pem3d-120x80': 'PEM 3D',
+    'adca12': 'Caisse Auto',
+};
+
+const PDQ_LINE_LABELS: Record<string, string> = {
+    A: 'Métro A', B: 'Métro B', C: 'Métro C',
+    TRAM: 'Tram T1', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
+};
+
+/** Le 78x120 posé sur les caisses automatiques de P+R est recensé par
+ *  l'audit P+R (référence adca12), jamais ressaisi côté Plans de quartier —
+ *  mais il compte dans le patrimoine réseau, donc il figure ici. */
+const PDQ_CAISSE_AUTO_REF_ID = 'adca12';
+
+const PlanQuartierOverview: React.FC<{
+    patrimoineIndex: any;
+    references: any[];
+    lineConfigs: Record<string, any>;
+    onOpenReference: (referenceId: string) => void;
+}> = ({ patrimoineIndex, references, lineConfigs, onOpenReference }) => {
+    const models = useMemo(() => {
+        const pdq = references.filter(r => r.auditType === 'PDQ' && !r.isDisabled);
+        return [...pdq].sort((a, b) => PDQ_MODEL_ORDER.indexOf(a.id) - PDQ_MODEL_ORDER.indexOf(b.id));
+    }, [references]);
+
+    const caisseAutoUsage = patrimoineIndex.byReference.get(PDQ_CAISSE_AUTO_REF_ID);
+
+    const tiles = useMemo(() => {
+        const fromModels = models.map(ref => {
+            const usage = patrimoineIndex.byReference.get(ref.id);
+            return {
+                id: ref.id,
+                label: PDQ_TILE_LABELS[ref.id] ?? ref.name,
+                hint: formatDimensions(ref.dimensions),
+                installed: usage?.installedCount ?? 0,
+                defects: usage?.defectCount ?? 0,
+                elsewhere: false,
+            };
+        });
+        if (caisseAutoUsage && caisseAutoUsage.installedCount > 0) {
+            fromModels.push({
+                id: PDQ_CAISSE_AUTO_REF_ID,
+                label: 'Caisse Auto P+R',
+                hint: 'suivi en audit P+R',
+                installed: caisseAutoUsage.installedCount,
+                defects: caisseAutoUsage.defectCount,
+                elsewhere: true,
+            });
+        }
+        return fromModels;
+    }, [models, patrimoineIndex, caisseAutoUsage]);
+
+    const total = tiles.reduce((sum, t) => sum + t.installed, 0);
+    const totalDefects = tiles.reduce((sum, t) => sum + t.defects, 0);
+    const caisseAutoCount = caisseAutoUsage?.installedCount ?? 0;
+
+    // Détail par ligne → station, dérivé des implantations déjà indexées.
+    // Un lieu n'apparaît que s'il porte réellement un exemplaire : pas de
+    // faux zéro, pas de station inventée.
+    const byLine = useMemo(() => {
+        const modelIds = new Set(models.map(m => m.id));
+        const lineMap = new Map<string, Map<string, { installed: number; defects: number; formats: Map<string, number> }>>();
+        for (const imp of patrimoineIndex.implantations as any[]) {
+            if (!modelIds.has(imp.referenceId)) continue;
+            const stations = lineMap.get(imp.line) ?? new Map();
+            const entry = stations.get(imp.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, number>() };
+            entry.installed += 1;
+            if (imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced) entry.defects += 1;
+            const shortLabel = PDQ_TILE_LABELS[imp.referenceId] ?? imp.referenceId;
+            entry.formats.set(shortLabel, (entry.formats.get(shortLabel) ?? 0) + 1);
+            stations.set(imp.lieuName, entry);
+            lineMap.set(imp.line, stations);
+        }
+        return [...lineMap.entries()]
+            .map(([line, stations]) => ({
+                line,
+                cfg: lineConfigs[line],
+                label: PDQ_LINE_LABELS[line] ?? line,
+                installed: [...stations.values()].reduce((s, v) => s + v.installed, 0),
+                stations: [...stations.entries()]
+                    .map(([name, v]) => ({ name, ...v }))
+                    .sort((a, b) => b.installed - a.installed || a.name.localeCompare(b.name)),
+            }))
+            .sort((a, b) => b.installed - a.installed || a.label.localeCompare(b.label));
+    }, [models, patrimoineIndex, lineConfigs]);
+
+    if (total === 0) {
+        return (
+            <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-2">
+                Aucun plan de quartier recensé pour l'instant — les totaux se rempliront au fil des passages terrain.
+            </p>
+        );
+    }
+
+    return (
+        <div className="mt-4 space-y-6">
+            {/* Bande 1 — total réseau (N1) + ce qui appelle une action (N5). */}
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+                <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                    exemplaires recensés
+                    {caisseAutoCount > 0 && <> · dont {caisseAutoCount} sur caisses auto (audit P+R)</>}
+                </span>
+                {totalDefects > 0 && (
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300">
+                        {totalDefects} à traiter
+                    </span>
+                )}
+            </div>
+
+            {/* Bande 2 — par format (N3). Vue « bureau » : préparer une commande. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {tiles.map(t => (
+                    <IndicatorTile
+                        key={t.id}
+                        size="sm"
+                        value={t.installed}
+                        label={t.label}
+                        hint={t.hint}
+                        tone={t.elsewhere ? 'sky' : 'slate'}
+                        onClick={() => onOpenReference(t.id)}
+                    />
+                ))}
+            </div>
+
+            {/* Bande 3 — par ligne puis station. Vue « terrain » : où aller. */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+                {byLine.map(({ line, cfg, label, installed, stations }) => (
+                    <div key={line}>
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1">
+                            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
+                                {label}
+                            </span>
+                            <span className="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
+                        </div>
+                        <ul className="mt-2 space-y-3">
+                            {stations.map(st => (
+                                <li key={st.name} className="flex items-start justify-between gap-3">
+                                    <span className="min-w-0">
+                                        <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{st.name}</span>
+                                        <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                                            {[...st.formats.entries()].map(([f, n]) => `${f} ×${n}`).join(' · ')}
+                                        </span>
+                                    </span>
+                                    <span className="flex-shrink-0 flex items-baseline gap-2">
+                                        {st.defects > 0 && (
+                                            <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
+                                        )}
+                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{st.installed}</span>
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                ))}
+            </div>
         </div>
     );
 };
@@ -485,7 +673,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     {/* DAT */}
                     <div>
                     <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
-                    <div className="space-y-1 mt-2">
+                    <div className="space-y-3 mt-2">
                         {selectedLieuId ? (
                             datByDirection.length > 1 && datByDirection.map(({ name, count }) => (
                                 <StatRow key={name} label={name} value={count} isSubItem />
@@ -537,7 +725,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
                         <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
                     </div>
-                    <div className="space-y-1 mt-2">
+                    <div className="space-y-3 mt-2">
                         <StatRow label="Entrée" value={ecaEntreeCount} isSubItem />
                         <StatRow label="Sortie" value={ecaSortieCount} isSubItem />
                         {ecaPmrBrasCount > 0 && (
@@ -575,14 +763,28 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                 <hr className="border-dashed border-slate-200 dark:border-slate-700" />
 
-                {/* Rangée 3 — couverture d'audit. « Stations par ligne » est une
-                    liste simple : une colonne suffit. « Audit spécifique »
-                    porte trois familles indépendantes, qui se lisent côte à
-                    côte plutôt qu'empilées — d'où le 1/3 + 2/3. */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+                {/* Rangée 2 bis — Plans de quartier (+ PEM 3D), pleine largeur
+                    comme ECA : combien au total, de quel format, puis où. */}
+                <div>
+                    <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
+                        <MapIcon className="w-5 h-5" />
+                        Plans de quartier
+                    </div>
+                    <PlanQuartierOverview
+                        patrimoineIndex={patrimoineIndex}
+                        references={references}
+                        lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
+                        onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
+                    />
+                </div>
 
-                    {/* Stations */}
-                    <div>
+                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+
+                {/* Rangée 3 — couverture d'audit, pleine largeur. Les six
+                    lignes du réseau se répartissent en colonnes plutôt que de
+                    s'empiler sous un total isolé : la rangée est occupée, et
+                    les lignes se comparent d'un seul regard. */}
+                <div>
                     {selectedLieuId ? (
                          <div className="py-4">
                             <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
@@ -596,55 +798,59 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             blocs — information non déductible de leurs seuls
                             libellés. */}
                         <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                        <div className="space-y-1 mt-2">
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
                         </div>
                         </>
                     )}
-                    </div>
+                </div>
 
-                    {/* Audits — trois familles autonomes, une colonne chacune. */}
-                    <div className="lg:col-span-2">
-                    <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
-                        <div>
-                        <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} />
-                        {selectedLieuId ? null : (
-                            <div className="space-y-1 mt-2">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
-                            </div>
-                        )}
+                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+
+                {/* Rangée 4 — Stations avec Audit Spécifique, pleine largeur.
+                    Chaque famille porte son total en N1, comme DAT, P+R et
+                    ECA : ce sont des totaux de même niveau métier, ils ne
+                    peuvent pas se lire comme un détail en pastille grise. */}
+                <div>
+                <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
+                    <div>
+                    <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
+                    {selectedLieuId ? null : (
+                        <div className="space-y-3 mt-2">
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
                         </div>
-                        <div>
-                        <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} />
-                        {selectedLieuId ? null : (
-                            <div className="space-y-1 mt-2">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
-                            </div>
-                        )}
-                        </div>
-                        <div>
-                        <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} />
-                        {selectedLieuId ? null : (
-                            <div className="space-y-1 mt-2">
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
-                                <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
-                            </div>
-                        )}
-                        </div>
+                    )}
                     </div>
+                    <div>
+                    <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} highlight="primary" />
+                    {selectedLieuId ? null : (
+                        <div className="space-y-3 mt-2">
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
+                        </div>
+                    )}
                     </div>
+                    <div>
+                    <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
+                    {selectedLieuId ? null : (
+                        <div className="space-y-3 mt-2">
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
+                        </div>
+                    )}
+                    </div>
+                </div>
                 </div>
                 </div>
             </StatCard>
