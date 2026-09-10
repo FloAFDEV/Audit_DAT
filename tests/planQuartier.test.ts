@@ -119,6 +119,15 @@ describe('store.ts::init() — migration : ajoute les modules PLAN_QUARTIER + in
         expect(data.occurrences.every(o => o.status === AdhesiveStatus.NotChecked)).toBe(true);
         expect(data.occurrences.every(o => o.modelId === 'pdq-78x100' || o.modelId === 'pdq-78x120')).toBe(true);
 
+        // Jeanne d'Arc : 4 occurrences réelles restituées (3× 78×100 +
+        // 1× 78×120) — jamais 0, jamais une occurrence inventée pour y arriver.
+        const jar = useAuditStore.getState().lieux.find(l => l.name === "Jeanne d'Arc");
+        const jarPdq = jar?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
+        const jarOccurrences = (jarPdq!.data as PlanQuartierData).occurrences;
+        expect(jarOccurrences).toHaveLength(4);
+        expect(jarOccurrences.filter(o => o.modelId === 'pdq-78x100')).toHaveLength(3);
+        expect(jarOccurrences.filter(o => o.modelId === 'pdq-78x120')).toHaveLength(1);
+
         // Empalot : 78x120 comme partout — la mesure 78x119 du relevé initial
         // était une erreur de saisie (ce format n'existe pas), pas une
         // divergence réelle : aucune mesure particulière ne subsiste.
@@ -419,6 +428,44 @@ describe('utils/cockpit/patrimoineIndex.ts — agrégation Plans de quartier', (
         expect(pdqImplantations.some(i => i.lieuName === 'Station Agrégation')).toBe(false);
         // Le défaut est bien porté par l'implantation (bande « à traiter »).
         expect(pdqImplantations.filter(i => i.status === AdhesiveStatus.Absent)).toHaveLength(1);
+    });
+
+    it("distingue les PEM 3D par leur commentaire (implantation réelle), jamais les autres modèles", () => {
+        // Le formulaire terrain masque le champ Emplacement pour PEM 3D
+        // (quantité fermée) : leur implantation réelle est donc portée par
+        // le commentaire — convention réservée à ce seul modèle.
+        const lieu = pdqLieu([
+            { id: 'p1', modelId: 'pem3d-120x80', comment: 'Proche agence / ascenseur', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'p2', modelId: 'pem3d-120x80', comment: 'Côté gare bus', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            // Un 78x100 avec un commentaire de type "référence terrain" : ce
+            // texte n'est PAS une implantation et ne doit jamais apparaître
+            // comme telle — seul le repli sur le nom de la station est attendu.
+            { id: 'p3', modelId: 'pdq-78x100', comment: 'Réf. terrain : 2026', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+        ]);
+        const index = buildPatrimoineIndex([lieu], REFERENCES);
+        const pem3dContexts = index.implantations.filter(i => i.referenceId === 'pem3d-120x80').map(i => i.context).sort();
+        expect(pem3dContexts).toEqual(['Côté gare bus', 'Proche agence / ascenseur']);
+
+        const pdqContext = index.implantations.find(i => i.referenceId === 'pdq-78x100')!.context;
+        expect(pdqContext).toBe('Station Agrégation'); // repli sur le lieu, jamais le commentaire
+    });
+
+    it("le repli sur le nom du lieu (aucune implantation connue) reste distinguable d'une implantation réelle", () => {
+        // Base de la grille (modèle, emplacement) de l'Aperçu : un contexte
+        // identique au lieu signale « rien de connu » ; un contexte différent
+        // est une vraie implantation à afficher séparément.
+        const lieu = pdqLieu([
+            { id: 'o1', modelId: 'pdq-78x100', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'o2', modelId: 'pdq-78x100', location: 'Entrée bus', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'o3', modelId: 'pdq-78x100', location: 'Entrée square', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+        ]);
+        const index = buildPatrimoineIndex([lieu], REFERENCES);
+        const implantations = index.implantations.filter(i => i.referenceId === 'pdq-78x100');
+        const hasRealLocation = (imp: typeof implantations[number]) => !!imp.context && imp.context !== imp.lieuName;
+
+        expect(implantations.find(i => i.equipmentLabel === i.lieuName || !hasRealLocation(i))).toBeDefined();
+        expect(implantations.filter(hasRealLocation).map(i => i.context).sort()).toEqual(['Entrée bus', 'Entrée square']);
+        expect(implantations.filter(i => !hasRealLocation(i))).toHaveLength(1); // o1, sans location
     });
 });
 

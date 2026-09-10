@@ -111,13 +111,42 @@ export const parseImportPayload = (jsonString: string): ParsedImportPayload => {
         return { lieux };
     }
 
-    // Format v2 : le référentiel présent doit être valide, sinon on refuse
-    // tout l'import (pas de restauration partielle silencieuse).
-    if (!validateSignageReferences(raw.signageReferences)) {
+    if (!Array.isArray(raw.signageReferences)) {
         throw new Error('Référentiel signalétique invalide dans le fichier.');
     }
 
-    return { lieux, signageReferences: raw.signageReferences };
+    // Références d'une famille d'audit disparue (ex. l'ancien Admin/CUSTOM,
+    // retiré définitivement — cf. db.ts V18) : elles n'ont plus aucune
+    // destination dans l'app. Un export ayant conservé de telles lignes
+    // orphelines ne doit jamais faire échouer la restauration de tout le
+    // reste — filtrées ici, silencieusement pour l'utilisateur (tracées en
+    // console pour le diagnostic), jamais réintégrées.
+    // Critère volontairement étroit — reconnaît UNIQUEMENT une entrée par
+    // ailleurs bien formée dont le seul défaut est un scope.auditType
+    // devenu obsolète. Toute entrée qui ne correspond pas à ce cas précis
+    // (scope absent, mal formé...) n'est PAS filtrée ici : elle reste
+    // exposée à validateSignageReferences ci-dessous, qui doit continuer à
+    // rejeter tout l'import face à une vraie corruption — jamais confondre
+    // « catégorie disparue » avec « donnée malformée ».
+    const hasObsoleteAuditType = (ref: any): boolean =>
+        !!ref && typeof ref === 'object' && ref.scope && typeof ref.scope === 'object'
+        && typeof ref.scope.auditType === 'string' && !AUDIT_TYPES.includes(ref.scope.auditType);
+
+    const knownReferences = raw.signageReferences.filter((ref: any) => !hasObsoleteAuditType(ref));
+    if (knownReferences.length !== raw.signageReferences.length) {
+        console.warn(
+            `Import : ${raw.signageReferences.length - knownReferences.length} référence(s) `
+            + "d'une famille d'audit disparue ignorée(s)."
+        );
+    }
+
+    // Le référentiel restant doit être valide, sinon on refuse tout l'import
+    // (pas de restauration partielle silencieuse face à une VRAIE corruption).
+    if (!validateSignageReferences(knownReferences)) {
+        throw new Error('Référentiel signalétique invalide dans le fichier.');
+    }
+
+    return { lieux, signageReferences: knownReferences };
 };
 
 /**

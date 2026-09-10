@@ -350,12 +350,23 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     for (const occ of data.occurrences ?? []) {
                         if (!occ.modelId) continue;
                         if (occ.status === AdhesiveStatus.NotApplicable) continue;
+                        // PEM 3D : le formulaire terrain masque le champ
+                        // Emplacement (quantité fermée, cf.
+                        // PlanQuartierAuditForm::FIXED_COUNT_MODEL_IDS) — quand
+                        // plusieurs exemplaires coexistent (ex. Arènes), leur
+                        // implantation réelle est portée par le commentaire.
+                        // Convention réservée à ce seul modèle : pour tous les
+                        // autres, le commentaire reste un texte libre/référence
+                        // qui ne doit jamais se substituer à l'emplacement.
+                        const implantationLabel = occ.location
+                            || (occ.modelId === 'pem3d-120x80' ? occ.comment : undefined)
+                            || data.stationName;
                         implantations.push({
                             lieuId: lieu.id, lieuName: lieu.name,
                             line: module.line || '?',
                             moduleId: module.id, moduleName: module.name,
-                            context: occ.location || data.stationName,
-                            equipmentLabel: occ.location || data.stationName,
+                            context: implantationLabel,
+                            equipmentLabel: implantationLabel,
                             referenceId: occ.modelId,
                             status: occ.status,
                         });
