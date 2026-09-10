@@ -483,10 +483,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
         return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
     }, [selectedLieuId, selectedLieuObject]);
 
-    // Bloc « État des anomalies » extrait en variable pour être positionné
-    // différemment selon la vue (cf. rendu ci-dessous), sans dupliquer son
-    // JSX : vue réseau inchangée (en tête), vue mono-station après les
-    // informations concrètes de la station (Référentiel + Aperçu).
+    // Bloc « État des anomalies » extrait en variable pour rester lisible
+    // séparément du reste du rendu (JSX ci-dessous, 3ᵉ section du cockpit).
     const anomaliesSection = (
         <section>
             <SectionTitle>État des anomalies</SectionTitle>
@@ -618,63 +616,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </div>
 
-            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
-                référentiel autonome (règle 7 : jamais fusionnées). Chaque
-                carte restitue un compte déjà produit ailleurs, elle ne
-                recalcule rien. Signalétique IV oriente vers Analyse des
-                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
-                cognitifs ouvrent la liste existante faute de section dédiée.
-                Vue réseau : reste en tête (comportement inchangé). Vue
-                mono-station : décalée après Référentiel + Aperçu (cf. plus
-                bas) pour que la station recherchée montre d'abord son propre
-                contenu avant son état d'anomalies. */}
-            {!selectedLieuId && anomaliesSection}
-
-            {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
-                L'exploitation se fait dans les sections Référentiel / Analyse
-                des anomalies / SAE ; les tuiles et boutons y mènent (navigation
-                transverse). */}
-            <StatCard
-                title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
-                icon={<BookOpenCheck className="w-6 h-6" />}
-            >
-                {refsLoading ? (
-                    <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
-                ) : (
-                    <>
-                        {/* Deux nombres, pas six : le référentiel est acté dans
-                            le moteur et distribué avec l'application — Synthèse
-                            en donne le volume, pas l'état d'avancement d'un
-                            contrôle (qui vit dans Analyse des anomalies). */}
-                        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
-                            <IndicatorTile value={activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                        </div>
-                        <div className="flex flex-wrap gap-3 pt-1">
-                            <button
-                                onClick={() => nav.navigate({ section: 'referentiel' })}
-                                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
-                            >
-                                Explorer le référentiel →
-                            </button>
-                            <button
-                                onClick={() => nav.navigate({ section: 'audit' })}
-                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
-                            >
-                                Voir les anomalies →
-                            </button>
-                        </div>
-                    </>
-                )}
-            </StatCard>
-
-            {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
-                l'État des anomalies. Synthèse reste une vue d'état : le
-                traitement se fait dans Analyse des anomalies (Signalétique IV)
-                ou via la liste PMR sol/Pictogrammes ci-dessus — jamais ici.
-                Principe de grille : UN SEUL NIVEAU HIÉRARCHIQUE PAR CELLULE
-                (une famille d'équipement, ou un axe de couverture) et la
-                largeur accordée suit la densité réelle du bloc. */}
+            {/* Aperçu Global du Réseau — bloc de contexte volumétrique, en
+                tête du cockpit (ordre des sections). Synthèse reste une vue
+                d'état : le traitement se fait dans Analyse des anomalies
+                (Signalétique IV) ou via la liste PMR sol/Pictogrammes plus
+                bas — jamais ici. Principe de grille : UN SEUL NIVEAU
+                HIÉRARCHIQUE PAR CELLULE (une famille d'équipement, ou un axe
+                de couverture) et la largeur accordée suit la densité réelle
+                du bloc. */}
             <StatCard
                 title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"}
                 icon={<Building className="w-6 h-6" />}
@@ -777,104 +726,140 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
                 </div>
 
-                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
-
-                {/* Rangée 2 bis — Plans de quartier (+ PEM 3D), pleine largeur
-                    comme ECA : combien au total, de quel format, puis où. */}
-                <div>
-                    <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
-                        <MapIcon className="w-5 h-5" />
-                        Plans de quartier
-                    </div>
-                    <PlanQuartierOverview
-                        patrimoineIndex={patrimoineIndex}
-                        references={references}
-                        lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
-                        onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
-                    />
-                </div>
-
-                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
-
-                {/* Rangée 3 — couverture d'audit, pleine largeur. Les six
-                    lignes du réseau se répartissent en colonnes plutôt que de
-                    s'empiler sous un total isolé : la rangée est occupée, et
-                    les lignes se comparent d'un seul regard. */}
-                <div>
-                    {selectedLieuId ? (
-                         <div className="py-4">
-                            <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
-                         </div>
-                    ) : (
-                        <>
-                        {/* Même traitement que DAT, P+R et ECA : le bloc est
-                            introduit par son total, sans titre de section.
-                            Seul « Stations avec Audit Spécifique » conserve un
-                            SectionTitle, car il regroupe réellement plusieurs
-                            blocs — information non déductible de leurs seuls
-                            libellés. */}
-                        <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
-                        </div>
-                        </>
-                    )}
-                </div>
-
-                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
-
-                {/* Rangée 4 — Stations avec Audit Spécifique, pleine largeur.
-                    Chaque famille porte son total en N1, comme DAT, P+R et
-                    ECA : ce sont des totaux de même niveau métier, ils ne
-                    peuvent pas se lire comme un détail en pastille grise. */}
-                <div>
-                <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
-                    <div>
-                    <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
-                    {selectedLieuId ? null : (
-                        <div className="space-y-3 mt-2">
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
-                        </div>
-                    )}
-                    </div>
-                    <div>
-                    <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} highlight="primary" />
-                    {selectedLieuId ? null : (
-                        <div className="space-y-3 mt-2">
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
-                        </div>
-                    )}
-                    </div>
-                    <div>
-                    <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
-                    {selectedLieuId ? null : (
-                        <div className="space-y-3 mt-2">
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
-                        </div>
-                    )}
-                    </div>
-                </div>
-                </div>
                 </div>
             </StatCard>
 
-            {/* Vue mono-station : l'état des anomalies arrive ici, après le
-                contenu concret de la station (Référentiel + Aperçu),
-                cf. commentaire sur anomaliesSection plus haut. */}
-            {selectedLieuId && anomaliesSection}
+            {/* Total Stations — couverture d'audit, pleine largeur. Les six
+                lignes du réseau se répartissent en colonnes plutôt que de
+                s'empiler sous un total isolé : la rangée est occupée, et
+                les lignes se comparent d'un seul regard. */}
+            <div>
+                {selectedLieuId ? (
+                     <div className="py-4">
+                        <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
+                     </div>
+                ) : (
+                    <>
+                    {/* Même traitement que DAT, P+R et ECA : le bloc est
+                        introduit par son total, sans titre de section.
+                        Seul « Stations avec Audit Spécifique » conserve un
+                        SectionTitle, car il regroupe réellement plusieurs
+                        blocs — information non déductible de leurs seuls
+                        libellés. */}
+                    <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                    </div>
+                    </>
+                )}
+            </div>
+
+            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
+                référentiel autonome (règle 7 : jamais fusionnées). Chaque
+                carte restitue un compte déjà produit ailleurs, elle ne
+                recalcule rien. Signalétique IV oriente vers Analyse des
+                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
+                cognitifs ouvrent la liste existante faute de section dédiée. */}
+            {anomaliesSection}
+
+            {/* Plans de quartier (+ PEM 3D), pleine largeur : combien au
+                total, de quel format, puis où. */}
+            <div>
+                <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
+                    <MapIcon className="w-5 h-5" />
+                    Plans de quartier
+                </div>
+                <PlanQuartierOverview
+                    patrimoineIndex={patrimoineIndex}
+                    references={references}
+                    lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
+                    onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
+                />
+            </div>
+
+            {/* Stations avec Audit Spécifique, pleine largeur. Chaque famille
+                porte son total en N1, comme DAT, P+R et ECA : ce sont des
+                totaux de même niveau métier, ils ne peuvent pas se lire
+                comme un détail en pastille grise. */}
+            <div>
+            <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
+                <div>
+                <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
+                {selectedLieuId ? null : (
+                    <div className="space-y-3 mt-2">
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
+                    </div>
+                )}
+                </div>
+                <div>
+                <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} highlight="primary" />
+                {selectedLieuId ? null : (
+                    <div className="space-y-3 mt-2">
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
+                    </div>
+                )}
+                </div>
+                <div>
+                <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
+                {selectedLieuId ? null : (
+                    <div className="space-y-3 mt-2">
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
+                    </div>
+                )}
+                </div>
+            </div>
+            </div>
+
+            {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
+                L'exploitation se fait dans les sections Référentiel / Analyse
+                des anomalies / SAE ; les tuiles et boutons y mènent (navigation
+                transverse). */}
+            <StatCard
+                title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
+                icon={<BookOpenCheck className="w-6 h-6" />}
+            >
+                {refsLoading ? (
+                    <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
+                ) : (
+                    <>
+                        {/* Deux nombres, pas six : le référentiel est acté dans
+                            le moteur et distribué avec l'application — Synthèse
+                            en donne le volume, pas l'état d'avancement d'un
+                            contrôle (qui vit dans Analyse des anomalies). */}
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
+                            <IndicatorTile value={activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
+                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
+                        </div>
+                        <div className="flex flex-wrap gap-3 pt-1">
+                            <button
+                                onClick={() => nav.navigate({ section: 'referentiel' })}
+                                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
+                            >
+                                Explorer le référentiel →
+                            </button>
+                            <button
+                                onClick={() => nav.navigate({ section: 'audit' })}
+                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
+                            >
+                                Voir les anomalies →
+                            </button>
+                        </div>
+                    </>
+                )}
+            </StatCard>
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
             <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />}>
