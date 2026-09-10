@@ -1,7 +1,17 @@
 
-import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
+import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
 import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
 import { getEcaProgress } from './progressCalculators';
+
+/** Description courte des 4 modèles figés (data/signage_seed.ts) — même
+ *  liste que csvExporter.ts, chacun avec sa propre présentation locale
+ *  (précédent déjà suivi pour PMR/Pictogrammes cognitifs dans ces 2 fichiers). */
+const PDQ_MODEL_NAMES: Record<string, string> = {
+    'pdq-78x100': 'Plan de quartier 78×100',
+    'pdq-78x120': 'Plan de quartier 78×120',
+    'pdq-adhesif': 'Plan de quartier 78×120 (adhésif)',
+    'pem3d-120x80': 'PEM 3D 120×80',
+};
 
 const getCategoryForModule = (module: AuditModule): AuditCategory | undefined => {
     if (module.type === AuditModuleType.PR) return 'PR';
@@ -131,6 +141,28 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                         if (p.status === FloorAdhesiveStatus.OK) okCount++;
                     });
                     break;
+                case AuditModuleType.PLAN_QUARTIER: {
+                    const data = module.data as PlanQuartierData;
+                    (data.occurrences || []).forEach(occ => {
+                        // Cataloguée → nom figé du modèle ; découverte non
+                        // cataloguée → décrite telle quelle (jamais rattachée
+                        // à un modèle qu'elle n'est pas).
+                        const elementName = occ.modelId
+                            ? (PDQ_MODEL_NAMES[occ.modelId] ?? occ.modelId)
+                            : `Découverte non cataloguée : ${occ.adHocLabel ?? '?'}`;
+                        const item: MaintenanceItem = {
+                            ...baseItem,
+                            elementName,
+                            context: occ.location || data.stationName,
+                            adhesiveName: elementName,
+                            status: occ.status as string,
+                        };
+                        if (occ.status === AdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
+                        if (occ.status === AdhesiveStatus.Absent) absent.push(item);
+                        if (occ.status === AdhesiveStatus.OK) okCount++;
+                    });
+                    break;
+                }
             }
         }
     }

@@ -13,6 +13,7 @@ import { generateInitialLieuxDataAsync } from '../data/builder';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { buildPatrimoineIndex, resolveReferencesForEquipment } from '../utils/cockpit/patrimoineIndex';
 import { AuditModuleType, AdhesiveStatus, Lieu, PlanQuartierData } from '../types';
+import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 
 describe('data/builder.ts — createPlanQuartierModule', () => {
     it('crée un module PLAN_QUARTIER vierge pour chaque station des lignes A/B/TRAM/TELEO', async () => {
@@ -418,5 +419,93 @@ describe('utils/cockpit/patrimoineIndex.ts — agrégation Plans de quartier', (
         expect(pdqImplantations.some(i => i.lieuName === 'Station Agrégation')).toBe(false);
         // Le défaut est bien porté par l'implantation (bande « à traiter »).
         expect(pdqImplantations.filter(i => i.status === AdhesiveStatus.Absent)).toHaveLength(1);
+    });
+});
+
+describe('store.ts::handleImportJsonData — réconciliation immédiate des Plans de quartier', () => {
+    beforeEach(async () => {
+        localStorage.clear();
+        await db.lieux.clear();
+        await db.signageReferences.clear();
+        await db.events.clear();
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+        useAuditStore.setState({ isLoading: false, isAuthenticated: true, initError: null });
+    });
+
+    it("un import v1 (antérieur à Plans de quartier) affiche les modules PDQ SANS reload", async () => {
+        // Sauvegarde v1 réaliste : stations connues du registre, mais aucun
+        // module PLAN_QUARTIER (comme un export fait avant cette fonctionnalité).
+        const freshLieux = await generateInitialLieuxDataAsync();
+        const legacyLieux: Lieu[] = freshLieux.map(l => ({
+            ...l, modules: l.modules.filter(m => m.type !== AuditModuleType.PLAN_QUARTIER),
+        }));
+        const v1Payload = JSON.stringify({ exportDate: '2026-01-01', data: legacyLieux });
+
+        await useAuditStore.getState().handleImportJsonData(v1Payload);
+
+        // Immédiatement après l'import, SANS appeler init() ni recharger :
+        // le module doit déjà être là, avec son inventaire initial connu.
+        const stCyprien = useAuditStore.getState().lieux.find(l => l.name === 'Saint-Cyprien - République');
+        const pdqModule = stCyprien?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
+        expect(pdqModule).toBeDefined();
+        expect((pdqModule!.data as PlanQuartierData).occurrences.length).toBeGreaterThan(0);
+
+        // Persisté en base, pas seulement en mémoire.
+        const persisted = await db.lieux.get(stCyprien!.id);
+        expect(persisted?.modules.some(m => m.type === AuditModuleType.PLAN_QUARTIER)).toBe(true);
+
+        // Le référentiel local (4 modèles PDQ) reste strictement intact —
+        // un import v1 ne le touche jamais.
+        const pdqRefs = (await db.signageReferences.toArray()).filter(r => r.auditType === 'PDQ');
+        expect(pdqRefs).toHaveLength(4);
+    }, 20000);
+
+    it("un import v2 récent (modules PDQ déjà présents) ne duplique rien", async () => {
+        const freshLieux = await generateInitialLieuxDataAsync();
+        const v2Payload = JSON.stringify({
+            exportDate: '2026-01-01', formatVersion: 2,
+            data: freshLieux, signageReferences: buildSignageReferencesSeed(),
+        });
+
+        await useAuditStore.getState().handleImportJsonData(v2Payload);
+        const stCyprien = useAuditStore.getState().lieux.find(l => l.name === 'Saint-Cyprien - République');
+        const pdqModules = stCyprien?.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER) ?? [];
+        expect(pdqModules).toHaveLength(1);
+    }, 20000);
+});
+
+describe('utils/maintenanceGenerator.ts — Plans de quartier', () => {
+    const pdqLieuForMaintenance = (occurrences: any[]): Lieu => ({
+        id: 'lieu-maint-pdq', name: 'Station Maintenance',
+        modules: [{
+            id: 'module-pdq-maint', type: AuditModuleType.PLAN_QUARTIER, name: 'Plans de quartier', line: 'A',
+            data: { id: 'pdq-data-maint', stationName: 'Station Maintenance', stationCode: 'MNT', occurrences, comment: '' },
+        }],
+    });
+
+    it('ventile les occurrences PDQ dans à remplacer / absent / OK, comme les autres familles', () => {
+        const lieu = pdqLieuForMaintenance([
+            { id: 'o1', modelId: 'pdq-78x100', status: AdhesiveStatus.ToBeReplaced, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'o2', modelId: 'pdq-78x120', status: AdhesiveStatus.Absent, location: 'Quai A', constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'o3', modelId: 'pem3d-120x80', status: AdhesiveStatus.OK, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+            { id: 'o4', modelId: 'pdq-78x100', status: AdhesiveStatus.NotChecked, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+        ]);
+
+        const summary = generateMaintenanceSummary([lieu]);
+
+        expect(summary.toBeReplaced.count).toBe(1);
+        expect(summary.toBeReplaced.items[0].elementName).toBe('Plan de quartier 78×100');
+        expect(summary.absent.count).toBe(1);
+        expect(summary.absent.items[0].context).toBe('Quai A');
+        expect(summary.okCount).toBe(1);
+        expect(summary.allDefects.count).toBe(2);
+    });
+
+    it('décrit une découverte non cataloguée sans jamais la rattacher à un modèle', () => {
+        const lieu = pdqLieuForMaintenance([
+            { id: 'o1', adHocLabel: 'Format inconnu au totem', status: AdhesiveStatus.ToBeReplaced, constatedAt: '2026-01-01T00:00:00.000Z', discoveredAt: '2026-01-01T00:00:00.000Z' },
+        ]);
+        const summary = generateMaintenanceSummary([lieu]);
+        expect(summary.toBeReplaced.items[0].elementName).toBe('Découverte non cataloguée : Format inconnu au totem');
     });
 });

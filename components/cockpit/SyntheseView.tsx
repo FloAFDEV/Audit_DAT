@@ -165,6 +165,15 @@ const PDQ_TILE_LABELS: Record<string, string> = {
     'adca12': 'Caisse Auto',
 };
 
+/** Libellés du détail par station. La tuile porte sa dimension sur une
+ *  ligne dédiée ; ici tout tient sur une seule ligne, donc les libellés
+ *  qui ne sont pas déjà un format le portent explicitement — un plan en
+ *  agence se lit « Adhésif 78 × 120 », pas « Adhésif ». */
+const PDQ_DETAIL_LABELS: Record<string, string> = {
+    ...PDQ_TILE_LABELS,
+    'pdq-adhesif': 'Adhésif 78 × 120',
+};
+
 const PDQ_LINE_LABELS: Record<string, string> = {
     A: 'Métro A', B: 'Métro B', C: 'Métro C',
     TRAM: 'Tram T1', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
@@ -229,7 +238,7 @@ const PlanQuartierOverview: React.FC<{
             const entry = stations.get(imp.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, number>() };
             entry.installed += 1;
             if (imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced) entry.defects += 1;
-            const shortLabel = PDQ_TILE_LABELS[imp.referenceId] ?? imp.referenceId;
+            const shortLabel = PDQ_DETAIL_LABELS[imp.referenceId] ?? imp.referenceId;
             entry.formats.set(shortLabel, (entry.formats.get(shortLabel) ?? 0) + 1);
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
