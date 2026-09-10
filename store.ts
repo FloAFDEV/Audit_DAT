@@ -176,6 +176,60 @@ interface AppState {
 
 export const DATA_VERSION = 'v13.2';
 
+/**
+ * Sème le premier recensement connu des Plans de quartier
+ * (data/planQuartierInitialInventory.ts) dans des modules PLAN_QUARTIER
+ * encore vierges. Occurrences RÉELLES (cataloguées, modelId renseigné) :
+ * l'inventaire vient de l'exploitant, pas d'un relevé terrain — d'où le
+ * statut Non contrôlé, jamais un OK inventé.
+ *
+ * Appliqué aux DEUX chemins d'init (base neuve et base migrée) : sans
+ * cela, un appareil fraîchement provisionné démarrerait sans aucun plan,
+ * là où un appareil migré les aurait tous.
+ *
+ * Idempotent par construction : n'écrit que dans un module dont la liste
+ * d'occurrences est vide, donc jamais de doublon à la réouverture.
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
+    const now = new Date().toISOString();
+    let changed = false;
+
+    const findModule = (entry: typeof PLAN_QUARTIER_INITIAL_INVENTORY[number]) => {
+        for (const lieu of lieux) {
+            const module = lieu.modules.find(m =>
+                m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
+                (m.data as PlanQuartierData).stationName === entry.stationName
+            );
+            if (module) return module;
+        }
+        return undefined;
+    };
+
+    for (const entry of PLAN_QUARTIER_INITIAL_INVENTORY) {
+        const module = findModule(entry);
+        if (!module) continue; // station inconnue du registre — ignorée, jamais inventée
+        const pdqData = module.data as PlanQuartierData;
+        // Un module déjà renseigné (recensement terrain en cours) n'est
+        // jamais réécrit par le seed.
+        if (pdqData.occurrences.some(o => o.modelId === entry.modelId && o.location === entry.location)) continue;
+        for (let i = 0; i < entry.quantity; i++) {
+            pdqData.occurrences.push({
+                id: uuidv4(),
+                modelId: entry.modelId,
+                status: PLAN_QUARTIER_INITIAL_STATUS,
+                comment: entry.comment,
+                location: entry.location,
+                measuredDimensions: entry.measuredDimensions,
+                constatedAt: now,
+                discoveredAt: now,
+            });
+        }
+        changed = true;
+    }
+    return changed;
+};
+
 const useAuditStore = create<AppState>((set, get) => {
     /**
      * Écrit une modification sur UNE station : clone, applique updateFn,
@@ -520,36 +574,7 @@ const useAuditStore = create<AppState>((set, get) => {
                         return { ...lieu, modules: [...lieu.modules, ...missingPdqModules] };
                     });
 
-                    // Premier jeu de données connu (data/planQuartierInitialInventory.ts) :
-                    // seedé comme des occurrences RÉELLES (cataloguées, modelId renseigné),
-                    // pas comme une découverte terrain — l'inventaire vient de l'utilisateur,
-                    // pas d'un relevé. Statut Non contrôlé (pas encore audité physiquement).
-                    const now = new Date().toISOString();
-                    for (const entry of PLAN_QUARTIER_INITIAL_INVENTORY) {
-                        const lieu = data.find(l => l.modules.some(m =>
-                            m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
-                            (m.data as PlanQuartierData).stationName === entry.stationName
-                        ));
-                        const module = lieu?.modules.find(m =>
-                            m.type === AuditModuleType.PLAN_QUARTIER && m.line === entry.line &&
-                            (m.data as PlanQuartierData).stationName === entry.stationName
-                        );
-                        if (!module) continue; // station inconnue du registre actuel — ignorée, jamais inventée
-                        const pdqData = module.data as PlanQuartierData;
-                        for (let i = 0; i < entry.quantity; i++) {
-                            pdqData.occurrences.push({
-                                id: uuidv4(),
-                                modelId: entry.modelId,
-                                status: PLAN_QUARTIER_INITIAL_STATUS,
-                                comment: entry.comment,
-                                location: entry.location,
-                                measuredDimensions: entry.measuredDimensions,
-                                constatedAt: now,
-                                discoveredAt: now,
-                            });
-                        }
-                        dataChanged = true;
-                    }
+                    if (seedPlanQuartierInitialInventory(data)) dataChanged = true;
                 }
 
                 if (dataChanged) {
@@ -563,6 +588,10 @@ const useAuditStore = create<AppState>((set, get) => {
                 set({ lieux: data });
             } else {
                 const initialData = await generateInitialLieuxDataAsync();
+                // Base neuve : le premier recensement connu est semé ici aussi,
+                // sinon un appareil fraîchement provisionné démarrerait sans
+                // aucun plan de quartier, là où un appareil migré les aurait.
+                seedPlanQuartierInitialInventory(initialData);
                 await db.lieux.bulkPut(initialData);
                 set({ lieux: initialData });
             }

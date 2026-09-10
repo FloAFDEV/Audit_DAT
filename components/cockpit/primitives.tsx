@@ -1,10 +1,23 @@
 // components/cockpit/primitives.tsx
 // =================================================================
 // Primitives UI partagées du cockpit métier.
-// Extraction PURE depuis StatsPage.tsx (aucun changement de style) :
-// toutes les sections du cockpit (Synthèse, Référentiel, Analyse des
+// Toutes les sections du cockpit (Synthèse, Référentiel, Analyse des
 // anomalies, SAE, Archives et futures) composent ces briques — jamais
 // leurs propres variantes locales.
+//
+// ÉCHELLE DES COMPTEURS — un chiffre porte le poids visuel de son niveau
+// d'importance métier, jamais celui du composant qui l'affiche :
+//
+//   N1  total global d'une famille       text-2xl  extrabold  teal
+//   N2  total d'un axe (ligne, mode)     text-xl   bold       teal
+//   N3  sous-total par type / format     text-lg   semibold   neutre
+//   N4  quantité par station             text-sm   semibold   neutre
+//   N5  compteur secondaire / contexte   text-xs   medium     atténué
+//
+// Le teal est réservé à N1/N2 — les chiffres sur lesquels on décide.
+// Le rouge n'appartient pas à cette échelle : il signale une ANOMALIE
+// (criticité), pas un niveau hiérarchique — d'où le text-3xl rouge
+// assumé d'AnomalySummaryCard, seule exception documentée.
 // =================================================================
 import React from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
@@ -50,13 +63,17 @@ export const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children
 );
 
 /** Tuile d'indicateur compacte — partagée par toutes les sections du cockpit.
- *  Cliquable si onClick est fourni (raccourci de navigation métier). */
+ *  Cliquable si onClick est fourni (raccourci de navigation métier).
+ *  `size` suit l'échelle des compteurs (cf. en-tête de fichier) : 'md' porte
+ *  un total de famille (N1), 'sm' un sous-total par type/format (N3). */
 export const IndicatorTile: React.FC<{
     value: number;
     label: string;
     tone: 'teal' | 'red' | 'amber' | 'slate' | 'sky';
+    size?: 'md' | 'sm';
+    hint?: string;
     onClick?: () => void;
-}> = ({ value, label, tone, onClick }) => {
+}> = ({ value, label, tone, size = 'md', hint, onClick }) => {
     const tones: Record<string, string> = {
         teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-700 dark:text-teal-300',
         red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300',
@@ -66,8 +83,9 @@ export const IndicatorTile: React.FC<{
     };
     const content = (
         <>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className={size === 'sm' ? 'text-lg font-semibold tabular-nums' : 'text-2xl font-bold tabular-nums'}>{value}</div>
             <div className="text-xs font-semibold uppercase mt-1 opacity-80">{label}</div>
+            {hint && <div className="text-xs font-medium mt-0.5 opacity-70">{hint}</div>}
         </>
     );
     if (onClick) {
@@ -87,16 +105,20 @@ export const StatRow: React.FC<{
   value: React.ReactNode;
   isSubItem?: boolean;
   highlight?: 'danger' | 'warning' | 'info' | 'primary' | null; // 'primary' pour les totaux
+  /** Colonne de grille étroite : réduit l'indentation des sous-items, qui
+   *  mangerait sinon un cinquième de la largeur disponible. */
+  dense?: boolean;
   onClick?: () => void;
-}> = ({ icon, label, value, isSubItem = false, highlight = null, onClick }) => {
+}> = ({ icon, label, value, isSubItem = false, highlight = null, dense = false, onClick }) => {
 
   let valueClass = isSubItem ? 'text-sm' : 'text-base';
   let labelClass = isSubItem ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300';
   let badgeClass = '';
 
   if (highlight === 'primary') {
-    // Style pour les totaux principaux (plus grand et couleur d'accent)
-    valueClass = 'text-2xl md:text-3xl font-extrabold text-teal-600 dark:text-teal-400';
+    // N1 — total global d'une famille. Une seule taille : le md:text-3xl
+    // historique faisait cohabiter deux N1 différents selon la largeur.
+    valueClass = 'text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums';
     labelClass = 'text-lg font-bold text-gray-800 dark:text-slate-100';
   } else {
     // Styles pour les alertes et sous-éléments
@@ -109,7 +131,7 @@ export const StatRow: React.FC<{
   }
 
   const content = (
-      <div className={`flex justify-between items-center ${isSubItem ? 'pl-8' : 'pl-0'} py-1`}>
+      <div className={`flex justify-between items-center gap-3 ${isSubItem ? (dense ? 'pl-3' : 'pl-6') : 'pl-0'} py-1`}>
         <div className={`flex items-center gap-3 ${labelClass}`}>
           {icon && !highlight && <div className="w-5 h-5 flex items-center justify-center">{icon}</div>}
           <div className={`${isSubItem ? 'text-sm' : 'font-medium'}`}>{label}</div>
