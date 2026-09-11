@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck } from 'lucide-react';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -17,7 +17,7 @@ import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
-import { StatCard, SectionTitle, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
+import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
 import { formatDimensions } from './labels';
 import { useCockpitNav } from './cockpitNav';
 
@@ -265,14 +265,14 @@ const PlanQuartierOverview: React.FC<{
 
     if (total === 0) {
         return (
-            <p className="text-sm text-slate-500 dark:text-slate-400 italic mt-2">
+            <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                 Aucun plan de quartier recensé pour l'instant — les totaux se rempliront au fil des passages terrain.
             </p>
         );
     }
 
     return (
-        <div className="mt-4 space-y-6">
+        <div className="space-y-6">
             {/* Bande 1 — total réseau (N1) + ce qui appelle une action (N5). */}
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
@@ -485,9 +485,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // Bloc « État des anomalies » extrait en variable pour rester lisible
     // séparément du reste du rendu (JSX ci-dessous, 2ᵉ section du cockpit).
+    // StatCard (et non plus une section nue) : même grammaire visuelle que
+    // les autres sections de premier niveau, pour une lecture uniforme
+    // terrain/bureau (cf. audit disposition — toutes les sections du
+    // cockpit sont désormais des cartes, jamais un bloc flottant sur le
+    // fond de page à côté d'un autre en carte).
     const anomaliesSection = (
-        <section>
-            <SectionTitle>État des anomalies</SectionTitle>
+        <StatCard title="État des anomalies" icon={<AlertTriangle className="w-6 h-6" />}>
             {/* Une colonne par référentiel : la grille suit le nombre réel
                 de référentiels (4), sinon la dernière carte reste orpheline
                 sur une seconde rangée aux deux tiers vide. items-start évite
@@ -535,7 +539,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     onDetail={() => setModalContent({ title: 'Anomalies Équipements Station', items: signaletiqueStationDefectItems })}
                 />
             </div>
-        </section>
+        </StatCard>
     );
 
     return (
@@ -616,36 +620,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </div>
 
-            {/* Total Stations — couverture d'audit, pleine largeur. Les six
-                lignes du réseau se répartissent en colonnes plutôt que de
-                s'empiler sous un total isolé : la rangée est occupée, et
-                les lignes se comparent d'un seul regard. */}
-            <div>
-                {selectedLieuId ? (
-                     <div className="py-4">
-                        <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
-                     </div>
-                ) : (
-                    <>
-                    {/* Même traitement que DAT, P+R et ECA : le bloc est
-                        introduit par son total, sans titre de section.
-                        Seul « Stations avec Audit Spécifique » conserve un
-                        SectionTitle, car il regroupe réellement plusieurs
-                        blocs — information non déductible de leurs seuls
-                        libellés. */}
-                    <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
-                    </div>
-                    </>
-                )}
-            </div>
-
             {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
                 référentiel autonome (règle 7 : jamais fusionnées). Chaque
                 carte restitue un compte déjà produit ailleurs, elle ne
@@ -655,12 +629,15 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             {anomaliesSection}
 
             {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
-                la couverture réseau et l'état des anomalies (ordre des
-                sections : du plus global au plus spécifique). Synthèse reste
-                une vue d'état : le traitement se fait dans Analyse des
-                anomalies (Signalétique IV) ou via la liste PMR
-                sol/Pictogrammes plus haut — jamais ici. Principe de grille :
-                UN SEUL NIVEAU HIÉRARCHIQUE PAR CELLULE (une famille
+                l'état des anomalies (ordre des sections : du plus global au
+                plus spécifique). Regroupe désormais Total Stations avec DAT,
+                P+R et ECA : ce sont toutes des familles de la même vision
+                d'ensemble du réseau, elles se lisent donc dans la même carte
+                plutôt qu'éclatées entre plusieurs blocs de niveaux visuels
+                différents. Synthèse reste une vue d'état : le traitement se
+                fait dans Analyse des anomalies (Signalétique IV) ou via la
+                liste PMR sol/Pictogrammes plus haut — jamais ici. Principe de
+                grille : UN SEUL NIVEAU HIÉRARCHIQUE PAR CELLULE (une famille
                 d'équipement, ou un axe de couverture) et la largeur accordée
                 suit la densité réelle du bloc. */}
             <StatCard
@@ -668,6 +645,29 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 icon={<Building className="w-6 h-6" />}
             >
                 <div className="space-y-8">
+
+                {/* Rangée 0 — Total Stations, pleine largeur : la mesure la
+                    plus globale de toutes (taille du réseau couvert), donc en
+                    tête de la carte, avant le détail par famille
+                    d'équipement. Les six lignes du réseau se répartissent en
+                    colonnes plutôt que de s'empiler sous un total isolé. */}
+                {!selectedLieuId && (
+                    <>
+                    <div>
+                        <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                        </div>
+                    </div>
+
+                    <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+                    </>
+                )}
 
                 {/* Rangée 1 — DAT et P+R : deux familles de volume comparable,
                     répondant à la même question (combien de points, par
@@ -768,27 +768,27 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </div>
             </StatCard>
 
-            {/* Plans de quartier (+ PEM 3D), pleine largeur : combien au
-                total, de quel format, puis où. */}
-            <div>
-                <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
-                    <MapIcon className="w-5 h-5" />
-                    Plans de quartier
-                </div>
+            {/* Plans de quartier (+ PEM 3D) — combien au total, de quel
+                format, puis où. StatCard comme les autres sections de
+                premier niveau : l'en-tête ad-hoc (icône + texte en dur) qui
+                doublait la grammaire visuelle du titre de carte a été
+                retirée au profit du titre/icône de la carte elle-même. */}
+            <StatCard title="Plans de quartier" icon={<MapIcon className="w-6 h-6" />}>
                 <PlanQuartierOverview
                     patrimoineIndex={patrimoineIndex}
                     references={references}
                     lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
                     onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
                 />
-            </div>
+            </StatCard>
 
-            {/* Stations avec Audit Spécifique, pleine largeur. Chaque famille
+            {/* Stations avec Audit Spécifique — StatCard comme les autres
+                sections de premier niveau (même grammaire visuelle que
+                Plans de quartier, Référentiel, Inventaire). Chaque famille
                 porte son total en N1, comme DAT, P+R et ECA : ce sont des
                 totaux de même niveau métier, ils ne peuvent pas se lire
                 comme un détail en pastille grise. */}
-            <div>
-            <SectionTitle>Stations avec Audit Spécifique</SectionTitle>
+            <StatCard title="Stations avec Audit Spécifique" icon={<ClipboardCheck className="w-6 h-6" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
                 <div>
                 <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
@@ -822,7 +822,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
                 </div>
             </div>
-            </div>
+            </StatCard>
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
