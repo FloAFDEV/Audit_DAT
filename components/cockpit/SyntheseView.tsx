@@ -484,7 +484,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     }, [selectedLieuId, selectedLieuObject]);
 
     // Bloc « État des anomalies » extrait en variable pour rester lisible
-    // séparément du reste du rendu (JSX ci-dessous, 3ᵉ section du cockpit).
+    // séparément du reste du rendu (JSX ci-dessous, 2ᵉ section du cockpit).
     const anomaliesSection = (
         <section>
             <SectionTitle>État des anomalies</SectionTitle>
@@ -616,14 +616,53 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
             </div>
 
-            {/* Aperçu Global du Réseau — bloc de contexte volumétrique, en
-                tête du cockpit (ordre des sections). Synthèse reste une vue
-                d'état : le traitement se fait dans Analyse des anomalies
-                (Signalétique IV) ou via la liste PMR sol/Pictogrammes plus
-                bas — jamais ici. Principe de grille : UN SEUL NIVEAU
-                HIÉRARCHIQUE PAR CELLULE (une famille d'équipement, ou un axe
-                de couverture) et la largeur accordée suit la densité réelle
-                du bloc. */}
+            {/* Total Stations — couverture d'audit, pleine largeur. Les six
+                lignes du réseau se répartissent en colonnes plutôt que de
+                s'empiler sous un total isolé : la rangée est occupée, et
+                les lignes se comparent d'un seul regard. */}
+            <div>
+                {selectedLieuId ? (
+                     <div className="py-4">
+                        <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
+                     </div>
+                ) : (
+                    <>
+                    {/* Même traitement que DAT, P+R et ECA : le bloc est
+                        introduit par son total, sans titre de section.
+                        Seul « Stations avec Audit Spécifique » conserve un
+                        SectionTitle, car il regroupe réellement plusieurs
+                        blocs — information non déductible de leurs seuls
+                        libellés. */}
+                    <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                    </div>
+                    </>
+                )}
+            </div>
+
+            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
+                référentiel autonome (règle 7 : jamais fusionnées). Chaque
+                carte restitue un compte déjà produit ailleurs, elle ne
+                recalcule rien. Signalétique IV oriente vers Analyse des
+                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
+                cognitifs ouvrent la liste existante faute de section dédiée. */}
+            {anomaliesSection}
+
+            {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
+                la couverture réseau et l'état des anomalies (ordre des
+                sections : du plus global au plus spécifique). Synthèse reste
+                une vue d'état : le traitement se fait dans Analyse des
+                anomalies (Signalétique IV) ou via la liste PMR
+                sol/Pictogrammes plus haut — jamais ici. Principe de grille :
+                UN SEUL NIVEAU HIÉRARCHIQUE PAR CELLULE (une famille
+                d'équipement, ou un axe de couverture) et la largeur accordée
+                suit la densité réelle du bloc. */}
             <StatCard
                 title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"}
                 icon={<Building className="w-6 h-6" />}
@@ -728,44 +767,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                 </div>
             </StatCard>
-
-            {/* Total Stations — couverture d'audit, pleine largeur. Les six
-                lignes du réseau se répartissent en colonnes plutôt que de
-                s'empiler sous un total isolé : la rangée est occupée, et
-                les lignes se comparent d'un seul regard. */}
-            <div>
-                {selectedLieuId ? (
-                     <div className="py-4">
-                        <p className="text-gray-500 dark:text-slate-400 italic">Détails de la station affichés.</p>
-                     </div>
-                ) : (
-                    <>
-                    {/* Même traitement que DAT, P+R et ECA : le bloc est
-                        introduit par son total, sans titre de section.
-                        Seul « Stations avec Audit Spécifique » conserve un
-                        SectionTitle, car il regroupe réellement plusieurs
-                        blocs — information non déductible de leurs seuls
-                        libellés. */}
-                    <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                    <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
-                    </div>
-                    </>
-                )}
-            </div>
-
-            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
-                référentiel autonome (règle 7 : jamais fusionnées). Chaque
-                carte restitue un compte déjà produit ailleurs, elle ne
-                recalcule rien. Signalétique IV oriente vers Analyse des
-                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
-                cognitifs ouvrent la liste existante faute de section dédiée. */}
-            {anomaliesSection}
 
             {/* Plans de quartier (+ PEM 3D), pleine largeur : combien au
                 total, de quel format, puis où. */}
