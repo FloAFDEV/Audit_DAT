@@ -29,23 +29,25 @@ export interface PlanQuartierInitialEntry {
 
 export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // --- Plans de quartier plastifiés ---
-    // NB : le 78x120 sur caisse automatique de P+R (Arènes, Argoulets,
-    // Balma-Gramont, Basso Cambo, Borderouge, Ramonville, Oncopole) est
-    // DÉJÀ tracé par l'audit P+R existant (référence adca12/adca13 sur
-    // l'équipement CA, data/adhesives.ts::PR_ADHESIVES_CA) — jamais
-    // redondé ici. Oncopole n'a donc PAS d'entrée 78x120 ci-dessous :
-    // ses 2 exemplaires (CA01/CA02) sont déjà comptés côté P+R.
+    // NB : les plans posés sur les caisses automatiques de P+R (Arènes,
+    // Argoulets, Balma-Gramont, Basso Cambo, Borderouge, Ramonville,
+    // Oncopole) ne figurent PAS dans cette liste, mais ils appartiennent
+    // bien au patrimoine Plans de quartier : ils sont dérivés de la
+    // structure P+R elle-même (un exemplaire par équipement de type CA),
+    // par store.ts::migratePrCaisseAutoPlansDeQuartier. Les lister ici en
+    // dur les dupliquerait, et figerait une quantité qui doit suivre le
+    // parc réel de caisses automatiques.
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026b' },
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 78x120 2026b' },
-    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
+    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
     // 78x120 partout, jamais 78x119 (mesure terrain erronée, corrigée).
     { stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026b' },
     { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
-    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, comment: 'Réf. terrain : 2026' },
+    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)', comment: 'Réf. terrain : N2026' },
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x120', quantity: 3, location: 'Mezzanine', comment: 'Réf. terrain : N2026' },
-    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, comment: 'Réf. terrain : 2026' },
+    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
     { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 2026' },
     // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name

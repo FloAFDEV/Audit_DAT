@@ -159,6 +159,13 @@ export interface ImplantationRef {
     /** "DAT 02", "BS01", "Valideur 3"... */
     equipmentLabel: string;
     equipmentType?: string;
+    /** Nature du support d'implantation, quand la famille la porte (Plans de
+     *  quartier : caisse automatique de P+R, AbriTram...). Absent = le cas
+     *  courant de la famille. Classification métier reprise telle quelle de
+     *  l'occurrence : le moteur la transporte, il ne la déduit jamais d'un
+     *  texte libre — c'est ce qui permet aux vues de compter « combien sur
+     *  caisse auto ? » sans relire l'arbre d'audit (règle 1). */
+    implantationContext?: string;
     /** Statut constaté ; clé absente de la map = NotChecked (R10). */
     status: AdhesiveStatus;
 }
@@ -369,6 +376,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                             equipmentLabel: implantationLabel,
                             referenceId: occ.modelId,
                             status: occ.status,
+                            implantationContext: occ.implantationContext,
                         });
                     }
                     break;

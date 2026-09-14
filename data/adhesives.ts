@@ -50,7 +50,14 @@ export const PR_ADHESIVES_CA: PrAdhesive[] = [
     { id: 'adca7', name: 'Repère 7 - Récupération ticket', description: 'Adhésif « caisse-P+r-gauche-rustine-ticket-P+r_ 2025-02-14 » // 8,2x5,5cm', location: 'En bas à droite au niveau du distributeur de ticket suite à un paiement via caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca7.pdf' },
     { id: 'adca8', name: 'Repère 8 - Ticket rechargeable', description: 'Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 » // 14,9x10,9cm', location: 'En bas a gauche à l’opposé du n°7', referentiel: '//serveur/docs/PNR/CA/ref-adca8.pdf', isDisabled: true },
     { id: 'adca9', name: 'Repère 9 - Adhésif « Tarifs + coordonnées Parc Relais »', description: 'Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée // 34x8cm', location: 'En haut de la caisse auto, au dessus de l’écran principal', referentiel: '//serveur/docs/PNR/CA/ref-adca9.pdf' },
-    { id: 'adca12', name: 'Plan de quartier', description: 'Fiche plan de quartier au format 78x120cm', location: 'Sur la vitre latérale de la caisse auto, côté extérieur, visible par les usagers', referentiel: '' },
+    // Suspendu ici depuis que les plans de quartier ont UN SEUL patrimoine :
+    // l'exemplaire posé sur cette caisse est désormais une occurrence de
+    // l'audit Plans de quartier de la station (contexte « caisse auto »),
+    // d'où son état se renseigne. La référence n'est jamais supprimée (R1) et
+    // reste visible ici, grisée, pour que l'historique de la borne se lise
+    // encore. Son dos gris (adca13) reste, lui, suivi sur la caisse : c'est
+    // une pièce de la borne, comptée à part, jamais un plan de plus.
+    { id: 'adca12', name: 'Plan de quartier', description: 'Fiche plan de quartier au format 78x120cm — suivi dans l\'audit Plans de quartier de la station', location: 'Sur la vitre latérale de la caisse auto, côté extérieur, visible par les usagers', referentiel: '', isDisabled: true },
     { id: 'adca13', name: 'Dos gris verso', description: 'Dos gris au format 78x120cm', location: 'Placé au verso de la fiche "Plan de quartier"', referentiel: '' }
 ];
 

@@ -162,7 +162,6 @@ const PDQ_TILE_LABELS: Record<string, string> = {
     'pdq-78x120': '78 × 120',
     'pdq-adhesif': 'Adhésif',
     'pem3d-120x80': 'PEM 3D',
-    'adca12': 'Caisse Auto',
 };
 
 /** Libellés du détail par station. La tuile porte sa dimension sur une
@@ -179,10 +178,20 @@ const PDQ_LINE_LABELS: Record<string, string> = {
     TRAM: 'Tram T1', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
 };
 
-/** Le 78x120 posé sur les caisses automatiques de P+R est recensé par
- *  l'audit P+R (référence adca12), jamais ressaisi côté Plans de quartier —
- *  mais il compte dans le patrimoine réseau, donc il figure ici. */
-const PDQ_CAISSE_AUTO_REF_ID = 'adca12';
+/** Contexte d'implantation « caisse automatique de P+R » — porté par
+ *  l'occurrence elle-même depuis l'unification du patrimoine, plus par un
+ *  audit voisin (cf. store.ts::migratePrCaisseAutoPlansDeQuartier). */
+const PDQ_CAISSE_AUTO_CONTEXT = 'pr-caisse-auto';
+
+/** Modèle posé dans ce contexte : adhésif 78×120 (métier confirmé). */
+const PDQ_CAISSE_AUTO_MODEL_ID = 'pdq-adhesif';
+
+/** Dos gris opaque contre-collé au verso d'un plan posé sur la vitre d'une
+ *  caisse automatique. PIÈCE du même exemplaire, jamais un plan de plus :
+ *  affiché à part, avec son propre total, et jamais additionné au patrimoine
+ *  Plans de quartier. Reste suivi sur la caisse (audit P+R), d'où sa lecture
+ *  par référence et non par occurrence. */
+const PDQ_BACKING_REF_ID = 'adca13';
 
 const PlanQuartierOverview: React.FC<{
     patrimoineIndex: any;
@@ -195,36 +204,34 @@ const PlanQuartierOverview: React.FC<{
         return [...pdq].sort((a, b) => PDQ_MODEL_ORDER.indexOf(a.id) - PDQ_MODEL_ORDER.indexOf(b.id));
     }, [references]);
 
-    const caisseAutoUsage = patrimoineIndex.byReference.get(PDQ_CAISSE_AUTO_REF_ID);
-
-    const tiles = useMemo(() => {
-        const fromModels = models.map(ref => {
-            const usage = patrimoineIndex.byReference.get(ref.id);
-            return {
-                id: ref.id,
-                label: PDQ_TILE_LABELS[ref.id] ?? ref.name,
-                hint: formatDimensions(ref.dimensions),
-                installed: usage?.installedCount ?? 0,
-                defects: usage?.defectCount ?? 0,
-                elsewhere: false,
-            };
-        });
-        if (caisseAutoUsage && caisseAutoUsage.installedCount > 0) {
-            fromModels.push({
-                id: PDQ_CAISSE_AUTO_REF_ID,
-                label: 'Caisse Auto P+R',
-                hint: 'suivi en audit P+R',
-                installed: caisseAutoUsage.installedCount,
-                defects: caisseAutoUsage.defectCount,
-                elsewhere: true,
-            });
-        }
-        return fromModels;
-    }, [models, patrimoineIndex, caisseAutoUsage]);
+    const tiles = useMemo(() => models.map(ref => {
+        const usage = patrimoineIndex.byReference.get(ref.id);
+        return {
+            id: ref.id,
+            label: PDQ_TILE_LABELS[ref.id] ?? ref.name,
+            hint: formatDimensions(ref.dimensions),
+            installed: usage?.installedCount ?? 0,
+            defects: usage?.defectCount ?? 0,
+        };
+    }), [models, patrimoineIndex]);
 
     const total = tiles.reduce((sum, t) => sum + t.installed, 0);
     const totalDefects = tiles.reduce((sum, t) => sum + t.defects, 0);
-    const caisseAutoCount = caisseAutoUsage?.installedCount ?? 0;
+
+    // Combien de ces plans sont posés sur une caisse automatique de P+R ?
+    // Lu sur le contexte porté par l'implantation, jamais deviné d'un libellé.
+    const caisseAutoCount = useMemo(() => {
+        const modelIds = new Set(models.map(m => m.id));
+        return (patrimoineIndex.implantations as any[]).filter(
+            imp => modelIds.has(imp.referenceId) && imp.implantationContext === PDQ_CAISSE_AUTO_CONTEXT
+        ).length;
+    }, [models, patrimoineIndex]);
+
+    // Dos gris verso : pièce associée, comptée pour elle-même (stock,
+    // remplacement) — jamais agrégée au total des plans.
+    const caisseAutoModel = references.find(r => r.id === PDQ_CAISSE_AUTO_MODEL_ID);
+    const backingRef = references.find(r => r.id === PDQ_BACKING_REF_ID);
+    const backingCount = patrimoineIndex.byReference.get(PDQ_BACKING_REF_ID)?.installedCount ?? 0;
 
     // Détail par ligne → station, dérivé des implantations déjà indexées.
     // Un lieu n'apparaît que s'il porte réellement un exemplaire : pas de
@@ -250,12 +257,19 @@ const PlanQuartierOverview: React.FC<{
             // implantation à afficher ; sinon on n'invente rien, juste le
             // modèle seul.
             const hasRealLocation = !!imp.context && imp.context !== imp.lieuName;
-            const formatKey = hasRealLocation ? `${shortLabel}|${imp.context}` : shortLabel;
+            // Le contexte d'implantation se lit AVANT l'emplacement précis :
+            // « P+R / Caisse auto CA01 — zone » répond d'un coup d'œil à
+            // « où est ce plan ? », là où la seule zone laisserait croire à
+            // une implantation en station.
+            const detail = hasRealLocation
+                ? (imp.implantationContext === PDQ_CAISSE_AUTO_CONTEXT ? `P+R / ${imp.context}` : imp.context)
+                : undefined;
+            const formatKey = detail ? `${shortLabel}|${detail}` : shortLabel;
             const existing = entry.formats.get(formatKey);
             if (existing) {
                 existing.count += 1;
             } else {
-                entry.formats.set(formatKey, { label: shortLabel, detail: hasRealLocation ? imp.context : undefined, count: 1 });
+                entry.formats.set(formatKey, { label: shortLabel, detail, count: 1 });
             }
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
@@ -287,8 +301,7 @@ const PlanQuartierOverview: React.FC<{
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                    exemplaires recensés
-                    {caisseAutoCount > 0 && <> · dont {caisseAutoCount} sur caisses auto (audit P+R)</>}
+                    plans de quartier recensés
                 </span>
                 {totalDefects > 0 && (
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300">
@@ -306,11 +319,46 @@ const PlanQuartierOverview: React.FC<{
                         value={t.installed}
                         label={t.label}
                         hint={t.hint}
-                        tone={t.elsewhere ? 'sky' : 'slate'}
+                        tone="slate"
                         onClick={() => onOpenReference(t.id)}
                     />
                 ))}
             </div>
+
+            {/* Chaque information a SA ligne, écrite en toutes lettres : rien
+                ici ne se déduit d'un autre chiffre (« dont … », soustraction
+                mentale). Un agent qui prépare une commande ou une tournée doit
+                pouvoir lire une ligne et agir, sans recalculer. */}
+            {(caisseAutoCount > 0 || backingCount > 0) && (
+                <div className="rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+                    {caisseAutoCount > 0 && (
+                        <div className="flex items-baseline gap-3 px-3 py-2">
+                            <span className="w-10 flex-shrink-0 text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{caisseAutoCount}</span>
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    Plans posés sur caisse automatique de P+R
+                                </span>
+                                <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                                    Adhésif {formatDimensions(caisseAutoModel?.dimensions)} · déjà inclus dans le total ci-dessus
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                    {backingCount > 0 && (
+                        <div className="flex items-baseline gap-3 px-3 py-2">
+                            <span className="w-10 flex-shrink-0 text-lg font-bold text-slate-700 dark:text-slate-200 tabular-nums">{backingCount}</span>
+                            <span className="min-w-0">
+                                <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                    {backingRef?.name ?? 'Dos gris verso'} — pièce à commander à part
+                                </span>
+                                <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                                    {formatDimensions(backingRef?.dimensions)} · contre-collé au verso d'un plan sur caisse automatique · n'est PAS un plan de quartier, hors du total ci-dessus
+                                </span>
+                            </span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Bande 3 — par ligne puis station. Vue « terrain » : où aller. */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">

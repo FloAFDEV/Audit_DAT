@@ -89,11 +89,11 @@ const ARBITRAGE_DECISIONS: Record<string, { status: ArbitrageStatus; reason: str
     },
     'adca12': {
         status: 'keep',
-        reason: "Support confirmé : adhésif simple, format 78x120 cm, posé sur la vitre latérale extérieure des caisses automatiques.",
+        reason: "Support confirmé : adhésif simple, format 78x120 cm, posé sur la vitre latérale extérieure des caisses automatiques. Référence conservée mais désactivée côté P+R : l'exemplaire appartient au patrimoine Plans de quartier (contexte caisse auto), où il est recensé et audité — ici il ferait doublon.",
     },
     'adca13': {
         status: 'keep',
-        reason: "Verso de adca12 (dos gris), même format 78x120 cm, adhésif simple.",
+        reason: "Verso de adca12 (dos gris), même format 78x120 cm, adhésif simple. Reste suivi sur la caisse automatique : c'est une pièce physique à remplacer pour elle-même, comptée indépendamment, jamais un plan de quartier supplémentaire.",
     },
     'eca-r-1': {
         status: 'remove',

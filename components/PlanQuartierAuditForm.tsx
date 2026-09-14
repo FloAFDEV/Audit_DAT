@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { AuditModule, AdhesiveStatus, PlanQuartierData, PlanQuartierOccurrence, SignageReference, SignageSupport, SignageDimensions } from '../types';
-import { CheckCircle2, XCircle, AlertTriangle, Trash2, PlusCircle, History, RotateCcw, ShieldCheck, Ruler, ExternalLink } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Trash2, PlusCircle, History, RotateCcw, ShieldCheck, Ruler } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
 import { ModuleIcon } from './ModuleIcon';
 import { formatDimensions, STATUS_LABELS } from './cockpit/labels';
@@ -19,10 +19,6 @@ interface PlanQuartierAuditFormProps {
   onCommentChange: (comment: string) => void;
   onReset: () => void;
   onBack: () => void;
-  /** Plans de quartier de ce lieu déjà recensés par un AUTRE audit (aujourd'hui
-   *  les caisses automatiques de P+R, suivies via la référence adca12). */
-  relatedAudit?: { moduleId: string; moduleName: string; count: number };
-  onOpenRelatedAudit?: (moduleId: string) => void;
 }
 
 const STATUS_BUTTONS: { status: AdhesiveStatus; label: string; Icon: typeof CheckCircle2; activeClass: string; idleClass: string }[] = [
@@ -59,7 +55,6 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
   const {
     module, signageReferences, onAddOccurrence, onRemoveOccurrence, onStatusChange, onOccurrenceCommentChange,
     onLocationChange, onMeasuredDimensionsChange, onNewConstat, onMarkChecked, onCommentChange, onReset, onBack,
-    relatedAudit, onOpenRelatedAudit,
   } = props;
   const data = module.data as PlanQuartierData;
 
@@ -239,26 +234,6 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
       comment={data.comment}
       onCommentChange={onCommentChange}
     >
-      {relatedAudit && (
-        <div className="p-4 bg-sky-50 dark:bg-sky-900/20 border-b border-sky-200 dark:border-sky-800 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-sky-800 dark:text-sky-200">
-            <span className="font-semibold">
-              {relatedAudit.count} plan{relatedAudit.count > 1 ? 's' : ''} de quartier
-            </span>{' '}
-            de ce lieu {relatedAudit.count > 1 ? 'sont recensés' : 'est recensé'} sur les caisses automatiques —
-            leur état se renseigne dans « {relatedAudit.moduleName} », pas ici.
-          </p>
-          {onOpenRelatedAudit && (
-            <button
-              onClick={() => onOpenRelatedAudit(relatedAudit.moduleId)}
-              className="flex-shrink-0 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-sky-600 text-white hover:bg-sky-500 whitespace-nowrap"
-            >
-              <ExternalLink className="w-4 h-4" /> Ouvrir cet audit
-            </button>
-          )}
-        </div>
-      )}
-
       {data.occurrences.length === 0 && (
         <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-dashed border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-slate-500 dark:text-slate-400">

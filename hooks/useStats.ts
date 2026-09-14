@@ -16,11 +16,6 @@ import { isModuleInAuditScope } from '../utils/moduleScope';
 import { getEffectiveAdhesives, getEffectiveEcaAdhesives, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
 
-// Id de la ligne de nomenclature cross-listée "Plans de quartier" pour le
-// 78x120 déjà tracé côté P+R (Caisse Auto, référence adca12) — cf.
-// computeAdhesiveInventory ci-dessous.
-const CAISSE_AUTO_PDQ_ID = 'pdq-caisse-auto-pr';
-
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
     const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
@@ -277,11 +272,13 @@ export const computeAdhesiveInventory = (
                 } else if (legacyText.includes('//')) {
                     [material, dimensions] = legacyText.split('//').map(s => s.trim());
                 }
-                if (!dimensions && !material) {
-                    // Aucun texte historique : les champs structurés du référentiel.
-                    dimensions = formatDimensions(ref.dimensions);
-                    material = ref.material ?? '';
-                }
+                // Repli sur les champs structurés du référentiel, champ par
+                // champ : certaines fiches décrivent leur format en toutes
+                // lettres (« ... au format 78x120cm »), sans le séparateur que
+                // le découpage historique attend — la colonne Dimensions
+                // restait alors vide alors que la donnée existe.
+                if (!dimensions && ref.dimensions) dimensions = formatDimensions(ref.dimensions);
+                if (!material) material = ref.material ?? '';
                 inventoryMap.set(ref.id, { id: ref.id, auditType, repere, name, dimensions, material, quantity: 0 });
             });
         };
@@ -307,25 +304,13 @@ export const computeAdhesiveInventory = (
 
         const pdqConfig = auditModules.find(c=>c.type === AuditModuleType.PLAN_QUARTIER);
         if (pdqConfig && referencesReady) {
+            // Plus de ligne « cross-listée » pour les caisses automatiques :
+            // leurs plans sont devenus de vraies occurrences du patrimoine
+            // Plans de quartier (cf. store.ts::migratePrCaisseAutoPlansDeQuartier),
+            // comptées comme les autres sous leur modèle réel (pdq-adhesif).
+            // Les reporter une seconde fois depuis la boucle P+R donnerait
+            // exactement le double comptage que cette migration supprime.
             buildRowsFromReferences(references.filter(r => r.auditType === 'PDQ'), pdqConfig.shortLabel, false);
-
-            // Cross-listage : le 78x120 posé sur les Caisses Auto de P+R
-            // (adca12) est DÉJÀ tracé par l'audit P+R existant (référentiel
-            // PR_ADHESIVES_CA) — jamais ressaisi ici, jamais un second
-            // formulaire. Il apparaît quand même dans la famille "Plans de
-            // quartier" pour que le recensement réseau reste complet ; sa
-            // quantité est alimentée plus bas depuis la même boucle P+R qui
-            // calcule déjà celle d'adca12.
-            const caisseAutoRef = references.find(r => r.id === 'adca12');
-            if (caisseAutoRef && !inventoryMap.has(CAISSE_AUTO_PDQ_ID)) {
-                const dims = formatDimensions(caisseAutoRef.dimensions);
-                inventoryMap.set(CAISSE_AUTO_PDQ_ID, {
-                    id: CAISSE_AUTO_PDQ_ID, auditType: pdqConfig.shortLabel, repere: '-',
-                    name: 'Plan de quartier 78×120 (Caisse Auto P+R)',
-                    dimensions: dims, material: 'Suivi via l\'audit P+R (Caisse Auto) — statut renseigné dans ce formulaire.',
-                    quantity: 0,
-                });
-            }
         }
 
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
@@ -402,10 +387,12 @@ export const computeAdhesiveInventory = (
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
                             getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => {
+                                // Une référence suspendue n'est plus posée sur le
+                                // parc : sa ligne reste au catalogue (R1), mais
+                                // lui garder une quantité ferait commander des
+                                // exemplaires d'un objet qu'on ne pose plus.
+                                if (ad.isDisabled) return;
                                 addQty(ad.id, 1);
-                                // Cross-listage Plans de quartier (cf. plus haut) : même
-                                // exemplaire, comptage additionnel sous l'autre famille.
-                                if (ad.id === 'adca12') addQty(CAISSE_AUTO_PDQ_ID, 1);
                             });
                         }
                     }

@@ -263,6 +263,110 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
     return changed;
 };
 
+/** Référence historique du plan de quartier posé sur la vitre latérale des
+ *  caisses automatiques de P+R, et de son dos gris opaque contre-collé au
+ *  verso (cf. data/adhesives.ts::PR_ADHESIVES_CA). */
+const CAISSE_AUTO_PDQ_REFERENCE_ID = 'adca12';
+const CAISSE_AUTO_PDQ_BACKING_ID = 'adca13';
+/** Modèle du patrimoine PDQ correspondant : adhésif 78x120, même composition
+ *  header + plan + footer, posé sans cadre (métier confirmé). */
+const CAISSE_AUTO_PDQ_MODEL_ID = 'pdq-adhesif';
+
+/**
+ * Un plan de quartier posé sur une caisse automatique est un plan de quartier
+ * comme un autre : il appartient au patrimoine PDQ, pas à un second patrimoine
+ * parallèle. Historiquement il n'y était pourtant pas — il n'existait que comme
+ * un statut d'adhésif (adca12) sur l'équipement CA de l'audit P+R, donc
+ * invisible dans le détail par station des Plans de quartier.
+ *
+ * Cette fonction le rapatrie : UNE occurrence PDQ par caisse automatique,
+ * jamais deux. Ce qu'elle préserve, et comment :
+ *  - le STATUT constaté → repris tel quel depuis adca12 (jamais réinitialisé) ;
+ *  - le CONTEXTE d'implantation → implantationContext + location (zone et nom
+ *    de la caisse), pour que « combien de plans sur caisse auto ? » reste une
+ *    question à laquelle on répond sans rouvrir l'audit P+R ;
+ *  - le DOS GRIS (adca13) → companionReferenceIds : c'est une pièce du MÊME
+ *    exemplaire physique, jamais un plan de plus. Elle garde son comptage
+ *    propre là où elle est déjà suivie (audit P+R), d'où le simple lien ici ;
+ *  - la DATE → completionDate de la caisse quand son audit est terminé (seule
+ *    date réelle disponible) ; sinon la date de migration, qui n'est alors
+ *    que la date de création de l'enregistrement — le statut Non contrôlé dit
+ *    déjà qu'aucun constat n'a eu lieu. Aucune date de constat n'est inventée.
+ *  - le COMMENTAIRE de la caisse n'est PAS recopié : il porte sur toute la
+ *    borne (tous ses adhésifs), l'attribuer au seul plan serait une erreur.
+ *
+ * Idempotence : l'occurrence porte un id déterministe dérivé de l'équipement
+ * source. Relancée à chaque démarrage et après chaque import, la fonction
+ * reconnaît ce qu'elle a déjà écrit et ne duplique rien ; elle met seulement
+ * à jour le statut tant que l'occurrence n'a pas été constatée côté PDQ.
+ *
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
+    const now = new Date().toISOString();
+    let changed = false;
+
+    for (const lieu of lieux) {
+        const prModules = lieu.modules.filter(m => m.type === AuditModuleType.PR);
+        if (prModules.length === 0) continue;
+
+        // Destination : le module Plans de quartier du même lieu. Un pôle
+        // multi-lignes en porte plusieurs (Arènes : A et T1) — on prend le
+        // premier, car l'exemplaire est rattaché au LIEU (son parking), pas à
+        // une ligne de transport.
+        const pdqModule = lieu.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
+        if (!pdqModule) continue; // P+R sans station connue — jamais inventée
+        const pdqData = pdqModule.data as PlanQuartierData;
+
+        for (const prModule of prModules) {
+            for (const zone of (prModule.data as Pr).zones ?? []) {
+                for (const equip of zone.equipments ?? []) {
+                    if (equip.type !== EquipmentType.CA) continue;
+                    // Dérogation locale : une caisse dont la liste blanche
+                    // d'adhésifs exclut le plan n'en porte pas.
+                    if (equip.adhesiveIds && !equip.adhesiveIds.includes(CAISSE_AUTO_PDQ_REFERENCE_ID)) continue;
+
+                    const status = equip.adhesives?.[CAISSE_AUTO_PDQ_REFERENCE_ID] ?? AdhesiveStatus.NotChecked;
+                    // Non applicable = pas de plan sur cette caisse : on ne
+                    // crée pas un exemplaire que le terrain a déclaré absent
+                    // du parc (différent d'« absent », qui est une anomalie).
+                    if (status === AdhesiveStatus.NotApplicable) continue;
+
+                    const occurrenceId = `pdq-ca-${equip.id}`;
+                    const existing = pdqData.occurrences.find(o => o.id === occurrenceId);
+
+                    if (existing) {
+                        // Déjà migré. Tant que le plan n'a pas été constaté
+                        // côté PDQ, l'audit P+R reste sa source de statut ;
+                        // dès qu'il l'a été, le patrimoine PDQ fait foi.
+                        const untouchedSincePdq = !existing.comment && !(existing.previousConstats?.length);
+                        if (untouchedSincePdq && existing.status !== status) {
+                            existing.status = status;
+                            changed = true;
+                        }
+                        continue;
+                    }
+
+                    const audited = status !== AdhesiveStatus.NotChecked;
+                    pdqData.occurrences.push({
+                        id: occurrenceId,
+                        modelId: CAISSE_AUTO_PDQ_MODEL_ID,
+                        status,
+                        location: `Caisse auto ${equip.name} — ${zone.name}`,
+                        implantationContext: 'pr-caisse-auto',
+                        companionReferenceIds: [CAISSE_AUTO_PDQ_BACKING_ID],
+                        constatedAt: (audited && equip.completionDate) || now,
+                        discoveredAt: (audited && equip.completionDate) || now,
+                    });
+                    changed = true;
+                }
+            }
+        }
+    }
+
+    return changed;
+};
+
 /**
  * Réconciliation complète Plans de quartier : ajoute les modules manquants
  * (même patron que la migration v8 LAE — extrait de generateInitialLieuxDataAsync,
@@ -300,6 +404,7 @@ const reconcilePlanQuartier = async (lieux: Lieu[]): Promise<{ lieux: Lieu[]; ch
     }
 
     if (seedPlanQuartierInitialInventory(result)) changed = true;
+    if (migratePrCaisseAutoPlansDeQuartier(result)) changed = true;
 
     return { lieux: result, changed };
 };
@@ -650,9 +755,12 @@ const useAuditStore = create<AppState>((set, get) => {
             } else {
                 const initialData = await generateInitialLieuxDataAsync();
                 // Base neuve : le premier recensement connu est semé ici aussi,
-                // sinon un appareil fraîchement provisionné démarrerait sans
-                // aucun plan de quartier, là où un appareil migré les aurait.
+                // et les plans des caisses automatiques y sont rapatriés de la
+                // même façon — sinon un appareil fraîchement provisionné
+                // démarrerait avec un patrimoine incomplet, là où un appareil
+                // migré l'aurait complet.
                 seedPlanQuartierInitialInventory(initialData);
+                migratePrCaisseAutoPlansDeQuartier(initialData);
                 await db.lieux.bulkPut(initialData);
                 set({ lieux: initialData });
             }

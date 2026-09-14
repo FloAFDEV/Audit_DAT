@@ -14,6 +14,7 @@ import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { buildPatrimoineIndex, resolveReferencesForEquipment } from '../utils/cockpit/patrimoineIndex';
 import { AuditModuleType, AdhesiveStatus, Lieu, PlanQuartierData } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
+import { buildFullExportPayload, parseImportPayload } from '../utils/signageSerializer';
 
 describe('data/builder.ts — createPlanQuartierModule', () => {
     it('crée un module PLAN_QUARTIER vierge pour chaque station des lignes A/B/TRAM/TELEO', async () => {
@@ -554,5 +555,174 @@ describe('utils/maintenanceGenerator.ts — Plans de quartier', () => {
         ]);
         const summary = generateMaintenanceSummary([lieu]);
         expect(summary.toBeReplaced.items[0].elementName).toBe('Découverte non cataloguée : Format inconnu au totem');
+    });
+});
+
+// =================================================================
+// UN SEUL PATRIMOINE : les plans posés sur les caisses automatiques
+// de P+R appartiennent au patrimoine Plans de quartier, plus à un
+// second patrimoine parallèle (ils n'étaient qu'un statut d'adhésif
+// sur la borne, donc invisibles par station).
+// =================================================================
+describe('store.ts — plans de quartier des caisses automatiques de P+R', () => {
+    beforeEach(async () => {
+        localStorage.clear();
+        await db.lieux.clear();
+        await db.signageReferences.clear();
+        useAuditStore.setState({
+            lieux: [], isLoading: true, isAuthenticated: false, initError: null,
+            selectedLieuId: null, selectedModuleId: null,
+        });
+    });
+
+    const pdqOccurrences = (lieux: Lieu[]) => lieux.flatMap(l => l.modules
+        .filter(m => m.type === AuditModuleType.PLAN_QUARTIER)
+        .flatMap(m => (m.data as PlanQuartierData).occurrences));
+
+    /** Appareil déjà provisionné : les modules existent, l'audit P+R aussi. */
+    const provisionLegacyDevice = async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        await db.lieux.bulkPut(lieux);
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+    };
+
+    it('crée UNE occurrence par caisse automatique, avec son contexte et son dos gris', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        const caisseAuto = pdqOccurrences(useAuditStore.getState().lieux)
+            .filter(o => o.implantationContext === 'pr-caisse-auto');
+
+        // 10 caisses automatiques sur le réseau (Arènes, Argoulets,
+        // Balma-Gramont, Basso Cambo 1 chacune ; Borderouge, Ramonville,
+        // Oncopole 2 chacune) → 10 plans, jamais 20 (le dos gris n'en est pas un).
+        expect(caisseAuto).toHaveLength(10);
+        expect(caisseAuto.every(o => o.modelId === 'pdq-adhesif')).toBe(true);
+        expect(caisseAuto.every(o => o.companionReferenceIds?.includes('adca13'))).toBe(true);
+        // L'emplacement nomme la caisse ET sa zone : exploitable en tournée.
+        expect(caisseAuto.every(o => /^Caisse auto .+ — .+/.test(o.location ?? ''))).toBe(true);
+        // Aucun commentaire recopié depuis la borne (il porte sur tous ses
+        // adhésifs, pas sur le seul plan).
+        expect(caisseAuto.every(o => !o.comment)).toBe(true);
+    });
+
+    it('Borderouge restitue ses 3 plans : 1 PEM 3D + 2 sur caisses automatiques', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        const borderouge = useAuditStore.getState().lieux.find(l => l.name === 'Borderouge');
+        const occurrences = pdqOccurrences([borderouge!]);
+
+        expect(occurrences).toHaveLength(3);
+        expect(occurrences.filter(o => o.modelId === 'pem3d-120x80')).toHaveLength(1);
+        const caisseAuto = occurrences.filter(o => o.implantationContext === 'pr-caisse-auto');
+        expect(caisseAuto).toHaveLength(2);
+        // Deux caisses distinctes, jamais deux fois la même.
+        expect(new Set(caisseAuto.map(o => o.location)).size).toBe(2);
+    });
+
+    it('reprend le statut constaté côté P+R, sans inventer de date de constat', async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const borderouge = lieux.find(l => l.name === 'Borderouge')!;
+        const prModule = borderouge.modules.find(m => m.type === AuditModuleType.PR)!;
+        const caisse = (prModule.data as any).zones
+            .flatMap((z: any) => z.equipments).find((e: any) => e.type === 'CA')!;
+        caisse.adhesives['adca12'] = AdhesiveStatus.ToBeReplaced;
+        caisse.completionDate = '2026-03-04T10:00:00.000Z';
+        await db.lieux.bulkPut(lieux);
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+
+        await useAuditStore.getState().init();
+
+        const migrated = pdqOccurrences(useAuditStore.getState().lieux)
+            .find(o => o.id === `pdq-ca-${caisse.id}`)!;
+        expect(migrated.status).toBe(AdhesiveStatus.ToBeReplaced);
+        // Seule date réelle disponible : celle de l'audit de la caisse.
+        expect(migrated.constatedAt).toBe('2026-03-04T10:00:00.000Z');
+    });
+
+    it('est idempotente : relancée, elle ne duplique rien', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+        const first = pdqOccurrences(useAuditStore.getState().lieux).length;
+
+        await useAuditStore.getState().init();
+        await useAuditStore.getState().init();
+        const after = pdqOccurrences(useAuditStore.getState().lieux);
+
+        expect(after).toHaveLength(first);
+        expect(new Set(after.map(o => o.id)).size).toBe(after.length);
+    });
+
+    it('ne réécrit jamais un constat déjà posé côté Plans de quartier', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        // Le terrain constate le plan dans l'audit PDQ...
+        const lieux = useAuditStore.getState().lieux;
+        const borderouge = lieux.find(l => l.name === 'Borderouge')!;
+        const pdqModule = borderouge.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER)!;
+        const occ = (pdqModule.data as PlanQuartierData).occurrences
+            .find(o => o.implantationContext === 'pr-caisse-auto')!;
+        occ.status = AdhesiveStatus.OK;
+        occ.comment = 'Constat terrain du jour';
+        await db.lieux.put(borderouge);
+
+        // ...puis l'application redémarre : le constat fait foi.
+        await useAuditStore.getState().init();
+
+        const reloaded = pdqOccurrences(useAuditStore.getState().lieux).find(o => o.id === occ.id)!;
+        expect(reloaded.status).toBe(AdhesiveStatus.OK);
+        expect(reloaded.comment).toBe('Constat terrain du jour');
+    });
+
+    it('aucun double comptage : adca12 ne produit plus d\'implantation, adca13 garde la sienne', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        const references = await db.signageReferences.toArray();
+        const index = buildPatrimoineIndex(useAuditStore.getState().lieux, references);
+
+        // Le plan de la caisse est compté UNE fois, sous son modèle PDQ.
+        expect(index.byReference.get('adca12')?.installedCount ?? 0).toBe(0);
+        expect(index.byReference.get('pdq-adhesif')?.installedCount).toBe(15);
+        // Le dos gris reste une pièce comptée pour elle-même.
+        expect(index.byReference.get('adca13')?.installedCount).toBe(10);
+
+        // Total patrimoine Plans de quartier : 48, pas 58.
+        const pdqTotal = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']
+            .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
+        expect(pdqTotal).toBe(48);
+    });
+
+    it('le contexte d\'implantation survit à un export/import complet', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        const payload = await buildFullExportPayload();
+        const parsed = parseImportPayload(JSON.stringify(payload));
+        const roundTripped = pdqOccurrences(parsed.lieux)
+            .filter(o => o.implantationContext === 'pr-caisse-auto');
+
+        expect(roundTripped).toHaveLength(10);
+        expect(roundTripped.every(o => o.companionReferenceIds?.includes('adca13'))).toBe(true);
+        expect(roundTripped.every(o => (o.location ?? '').startsWith('Caisse auto '))).toBe(true);
+    });
+
+    it('les 78×100 extérieurs portent leur emplacement Édicule', async () => {
+        await provisionLegacyDevice();
+        await useAuditStore.getState().init();
+
+        const lieux = useAuditStore.getState().lieux;
+        const occurrencesOf = (name: string) => pdqOccurrences([lieux.find(l => l.name === name)!])
+            .filter(o => o.modelId === 'pdq-78x100');
+
+        expect(occurrencesOf("Jeanne d'Arc")).toHaveLength(3);
+        expect(occurrencesOf("Jeanne d'Arc").every(o => o.location === 'Édicule (extérieur)')).toBe(true);
+        expect(occurrencesOf('Saint-Cyprien - République')).toHaveLength(3);
+        expect(occurrencesOf('Saint-Cyprien - République').every(o => o.location === 'Édicule (extérieur)')).toBe(true);
+        // François Verdier : UN seul exemplaire, jamais trois.
+        expect(occurrencesOf('François Verdier')).toHaveLength(1);
+        expect(occurrencesOf('François Verdier')[0].location).toBe('Édicule (extérieur)');
     });
 });

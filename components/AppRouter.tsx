@@ -1,5 +1,5 @@
 import React, { lazy, useEffect } from 'react';
-import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, EquipmentType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone, SignageReference } from '../types';
+import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone, SignageReference } from '../types';
 import LieuSelector from './LieuSelector';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
 
@@ -228,21 +228,11 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
 
     // Plans de quartier (+ PEM 3D) Form
     if (selectedModule?.type === AuditModuleType.PLAN_QUARTIER) {
-        // Les plans posés sur les caisses automatiques du même lieu sont
-        // recensés par l'audit P+R (référence adca12) — signalé ici avec un
-        // accès direct, jamais ressaisi dans ce formulaire.
-        const prModule = selectedLieu?.modules.find(m => m.type === AuditModuleType.PR);
-        const caisseCount = prModule
-            ? (prModule.data as Pr).zones.reduce(
-                (sum, z) => sum + z.equipments.filter(e => e.type === EquipmentType.CA).length, 0)
-            : 0;
-        const relatedAudit = prModule && caisseCount > 0
-            ? { moduleId: prModule.id, moduleName: prModule.name, count: caisseCount }
-            : undefined;
-
+        // Plus de renvoi vers l'audit P+R : les plans posés sur les caisses
+        // automatiques sont désormais des exemplaires de CE formulaire
+        // (contexte « caisse auto »), plus un patrimoine parallèle à aller
+        // consulter ailleurs.
         return <PlanQuartierAuditForm
-            relatedAudit={relatedAudit}
-            onOpenRelatedAudit={(moduleId) => handlers.selectModule(moduleId)}
             module={selectedModule}
             signageReferences={signageReferences}
             onAddOccurrence={handlers.handleAddPlanQuartierOccurrence}

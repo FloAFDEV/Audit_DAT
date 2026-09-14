@@ -301,6 +301,19 @@ export interface PlanQuartierOccurrence {
     adHocSupport?: SignageSupport;
     /** Emplacement précis à la station (texte libre). */
     location?: string;
+    /** Nature du support d'implantation — classification MÉTIER stable,
+     *  distincte de `location` (texte libre, reformulable au terrain) :
+     *  elle seule permet de répondre durablement à « combien de plans sur
+     *  caisse automatique ? ». Absent = implantation en station (défaut
+     *  rétrocompatible : tous les exemplaires antérieurs le sont). */
+    implantationContext?: 'pr-caisse-auto' | 'abritram';
+    /** Références du catalogue qui composent le MÊME exemplaire physique,
+     *  jamais un exemplaire de plus (1 plan physique = 1 occurrence).
+     *  Cas connu : le dos gris opaque contre-collé au verso d'un plan posé
+     *  sur la vitre d'une caisse automatique (adca13). Ces pièces gardent
+     *  leur comptage propre là où elles sont déjà suivies — ici on ne
+     *  conserve que le lien, jamais un second plan de quartier. */
+    companionReferenceIds?: string[];
     /** Dimension réellement mesurée, si divergente du modèle catalogué
      *  (ex. Empalot : modèle 78×120, mesuré 78×119) — ne remplace jamais
      *  la dimension du modèle, vit uniquement sur l'exemplaire. */

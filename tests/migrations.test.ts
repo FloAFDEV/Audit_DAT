@@ -445,3 +445,63 @@ describe('Robustesse — transaction de migration atomique (garantie native Inde
         await Dexie.delete(name);
     });
 });
+
+describe('Migration V20 (plan de quartier des caisses automatiques : un seul patrimoine)', () => {
+    it('désactive adca12 sans écraser les modifications locales, laisse adca13 active et ne touche pas aux lieux', async () => {
+        const name = uniqueDbName();
+
+        // Base au schéma V19 : adca12 y est encore ACTIVE (elle comptait alors
+        // un exemplaire par caisse automatique), et porte une modification
+        // locale antérieure que V13 s'engage à ne jamais écraser.
+        const v19 = new Dexie(name);
+        v19.version(19).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            events: '++id, date, type, entityType',
+        });
+        await v19.open();
+        const seed = buildSignageReferencesSeed().filter(r => r.id !== 'adca12');
+        const localAdca12 = {
+            id: 'adca12', name: 'Plan de quartier', auditType: 'PR',
+            scope: { auditType: 'PR', equipmentTypes: ['CA'] },
+            version: 1, support: 'adhesif', placement: {},
+            material: 'Modification locale antérieure',
+            dimensions: { width: 78, height: 120, unit: 'cm' },
+        };
+        await v19.table('signageReferences').bulkAdd([...seed, localAdca12]);
+        const lieu = {
+            id: 'lieu-pr-1', name: 'Borderouge', modules: [{
+                id: 'module-pr-1', type: 'PR', name: 'Audit Bornes P+R',
+                data: { id: 'pr-1', name: 'Borderouge', zones: [{
+                    id: 'z1', name: 'Zone', equipments: [{
+                        id: 'ca01', name: 'CA01', type: 'CA', comment: 'Caisse repeinte',
+                        adhesives: { adca12: 'ToBeReplaced', adca13: 'OK' },
+                    }],
+                }] },
+            }],
+        };
+        await v19.table('lieux').put(lieu);
+        v19.close();
+
+        // Réouverture au schéma courant → V20 s'applique.
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+
+        const adca12 = await upgraded.table('signageReferences').get('adca12');
+        expect(adca12.isDisabled).toBe(true);
+        // Le reste de la fiche appartient à l'installation : jamais écrasé.
+        expect(adca12.material).toBe('Modification locale antérieure');
+
+        // Le dos gris reste une pièce active de la borne.
+        const adca13 = await upgraded.table('signageReferences').get('adca13');
+        expect(adca13.isDisabled).toBeUndefined();
+
+        // Aucune donnée terrain touchée : le statut constaté sur la caisse
+        // reste disponible pour la reprise par le patrimoine PDQ (store.ts).
+        const reloaded = await upgraded.table('lieux').get('lieu-pr-1');
+        expect(reloaded).toEqual(lieu);
+
+        upgraded.close();
+    });
+});
