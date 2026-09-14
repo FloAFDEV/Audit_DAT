@@ -187,13 +187,19 @@ export const DATA_VERSION = 'v13.2';
  * base existante), et sûre à répéter :
  *
  *  - modèle absent de la station → les exemplaires connus sont créés ;
- *  - exemplaires déjà présents, encore vierges, en nombre identique →
- *    seule leur implantation connue (commentaire, emplacement, mesure)
- *    est renseignée. C'est ce qui permet d'enrichir un appareil déjà
- *    provisionné quand l'inventaire se précise (les trois PEM 3D
- *    géo-orientés d'Arènes) sans repasser par une base neuve ;
- *  - dès qu'un constat terrain existe (statut saisi, commentaire, ou
- *    historique), le seed ne touche plus à rien : le terrain fait foi.
+ *  - exemplaires déjà présents mais JAMAIS CONSTATÉS sur le terrain →
+ *    l'inventaire connu reste la vérité de référence : leur implantation
+ *    est alignée dessus (emplacement précisé ou corrigé, mesure), et les
+ *    exemplaires manquants sont ajoutés si l'inventaire s'est enrichi.
+ *    C'est ce qui permet à un appareil déjà provisionné de bénéficier
+ *    d'une précision d'inventaire (les trois PEM 3D géo-orientés
+ *    d'Arènes, les sorties d'édicule d'Université Paul Sabatier) sans
+ *    repasser par une base neuve ;
+ *  - dès qu'un constat terrain existe (statut saisi ou historique de
+ *    constats), le seed ne touche plus à ce groupe : le terrain fait foi.
+ *    Un commentaire déjà saisi n'est jamais écrasé, et aucun exemplaire
+ *    n'est jamais supprimé — l'inventaire complète et précise, il ne
+ *    retire pas ce que le terrain a vu.
  *
  * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
  */
@@ -243,22 +249,48 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
             continue;
         }
 
-        // Enrichissement : uniquement sur des exemplaires encore vierges et
-        // en nombre exactement identique — sinon on ne saurait pas lequel
-        // porte quelle implantation, et deviner reviendrait à inventer.
-        const stillBlank = existing.every(o =>
-            o.status === PLAN_QUARTIER_INITIAL_STATUS && !o.comment && !o.location
-            && !(o.previousConstats?.length)
+        // Le terrain a-t-il constaté quelque chose sur ce groupe ? Si oui, il
+        // fait foi et l'inventaire n'y touche plus. Sinon, l'inventaire connu
+        // reste la référence : il peut préciser une implantation, la corriger,
+        // et compléter un exemplaire découvert depuis.
+        const constatedByField = existing.some(o =>
+            o.status !== PLAN_QUARTIER_INITIAL_STATUS || (o.previousConstats?.length ?? 0) > 0
         );
-        const hasKnownImplantation = group.specs.some(s => s.comment || s.location || s.measuredDimensions);
-        if (existing.length !== group.specs.length || !stillBlank || !hasKnownImplantation) continue;
+        // Plus d'exemplaires en base que d'exemplaires connus : c'est le
+        // terrain (ou un ajout manuel) qui a raison, on ne réaligne rien et on
+        // ne supprime jamais.
+        if (constatedByField || existing.length > group.specs.length) continue;
 
-        existing.forEach((occ, i) => {
-            occ.comment = group.specs[i].comment;
-            occ.location = group.specs[i].location;
-            occ.measuredDimensions = group.specs[i].measuredDimensions;
+        group.specs.forEach((spec, i) => {
+            const occ = existing[i];
+            if (!occ) {
+                // L'inventaire s'est enrichi depuis le dernier démarrage.
+                pdqData.occurrences.push({
+                    id: uuidv4(),
+                    modelId: group.modelId,
+                    status: PLAN_QUARTIER_INITIAL_STATUS,
+                    comment: spec.comment,
+                    location: spec.location,
+                    measuredDimensions: spec.measuredDimensions,
+                    constatedAt: now,
+                    discoveredAt: now,
+                });
+                changed = true;
+                return;
+            }
+            // Implantation : l'inventaire est la référence tant qu'aucun
+            // constat n'existe — un emplacement précisé (« Édicule (totem) »
+            // → « Édicule — sortie côté Fac ») doit atteindre les appareils
+            // déjà provisionnés, pas seulement les installations neuves.
+            if (occ.location !== spec.location) { occ.location = spec.location; changed = true; }
+            if (occ.measuredDimensions !== spec.measuredDimensions) {
+                occ.measuredDimensions = spec.measuredDimensions;
+                changed = true;
+            }
+            // Le commentaire, lui, peut avoir été saisi au terrain sans
+            // changement de statut : on ne le remplace jamais, on le complète.
+            if (!occ.comment && spec.comment) { occ.comment = spec.comment; changed = true; }
         });
-        changed = true;
     }
     return changed;
 };

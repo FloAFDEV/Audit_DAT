@@ -8,6 +8,7 @@ import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
@@ -387,11 +388,14 @@ export const computeAdhesiveInventory = (
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
                             getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => {
-                                // Une référence suspendue n'est plus posée sur le
-                                // parc : sa ligne reste au catalogue (R1), mais
-                                // lui garder une quantité ferait commander des
-                                // exemplaires d'un objet qu'on ne pose plus.
-                                if (ad.isDisabled) return;
+                                // Une référence dont le patrimoine a été repris
+                                // par un autre référentiel n'a plus de quantité
+                                // ICI : elle est comptée là-bas, et l'additionner
+                                // des deux côtés compterait deux fois le même
+                                // objet. Une simple désactivation, elle, ne change
+                                // rien au comptage historique (cf. la distinction
+                                // dans data/signage_seed.ts).
+                                if (REFERENCES_MIGRATED_TO_PLAN_QUARTIER.has(ad.id)) return;
                                 addQty(ad.id, 1);
                             });
                         }

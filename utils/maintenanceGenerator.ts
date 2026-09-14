@@ -9,6 +9,7 @@ import { getEcaProgress } from './progressCalculators';
 const PDQ_MODEL_NAMES: Record<string, string> = {
     'pdq-78x100': 'Plan de quartier 78×100',
     'pdq-78x120': 'Plan de quartier 78×120',
+    'pdq-78x120-dibond': 'Plan de quartier 78×120 (dibond)',
     'pdq-adhesif': 'Plan de quartier 78×120 (adhésif)',
     'pem3d-120x80': 'PEM 3D 120×80',
 };

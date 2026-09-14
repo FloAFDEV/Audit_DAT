@@ -247,6 +247,7 @@ const statusTranslations: { [key: string]: string } = {
 const PDQ_MODEL_DESCRIPTIONS: Record<string, string> = {
     'pdq-78x100': 'Plan de quartier (sans header ni footer) | 78x100cm | Plastifié',
     'pdq-78x120': 'Plan de quartier (avec header et footer) | 78x120cm | Plastifié',
+    'pdq-78x120-dibond': 'Plan de quartier (avec header et footer) | 78x120cm | Dibond, sur grillage',
     'pdq-adhesif': 'Plan de quartier (adhésif) | 78x120cm | Adhésif',
     'pem3d-120x80': 'PEM 3D | 120x80cm | Dibond',
 };

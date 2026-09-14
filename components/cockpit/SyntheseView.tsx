@@ -153,7 +153,7 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
    ===================== */
 
 /** Ordre de lecture métier des formats, indépendant de l'ordre du seed. */
-const PDQ_MODEL_ORDER = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80'];
+const PDQ_MODEL_ORDER = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80'];
 
 /** Libellés courts : le nom complet du référentiel (« Plan de quartier
  *  78×100 (sans header ni footer) ») ne tient pas dans une tuile. */
@@ -161,6 +161,7 @@ const PDQ_TILE_LABELS: Record<string, string> = {
     'pdq-78x100': '78 × 100',
     'pdq-78x120': '78 × 120',
     'pdq-adhesif': 'Adhésif',
+    'pdq-78x120-dibond': 'Dibond',
     'pem3d-120x80': 'PEM 3D',
 };
 
@@ -171,6 +172,7 @@ const PDQ_TILE_LABELS: Record<string, string> = {
 const PDQ_DETAIL_LABELS: Record<string, string> = {
     ...PDQ_TILE_LABELS,
     'pdq-adhesif': 'Adhésif 78 × 120',
+    'pdq-78x120-dibond': 'Dibond 78 × 120',
 };
 
 const PDQ_LINE_LABELS: Record<string, string> = {

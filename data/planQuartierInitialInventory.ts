@@ -53,11 +53,21 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name
     // distincts pour le même lieu physique (lieuName commun) — la ligne B
     // orthographie "Paul Sabatier", le Téléo "Paul-Sabatier" (registre).
-    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (totem)' },
+    // Les deux 78x100 sont sur les édicules des deux sorties, distinguées par
+    // la sortie qu'elles desservent (et non par un numéro d'exemplaire).
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule — sortie côté Fac' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule — sortie côté gare bus' },
+    // Deux 78x120 en station : l'emplacement précis du second reste à
+    // confirmer au terrain — jamais recopié de celui du premier.
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1 },
     { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1 },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée bus' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée square' },
+    // Silos des P+R : un exemplaire sous cadre aluminium au rez-de-chaussée
+    // de chaque silo (le 78x120 plastifié EST le modèle encadré).
+    { stationName: 'Argoulets', line: 'A', modelId: 'pdq-78x120', quantity: 1, location: 'Silo P+R — RDC, cadre aluminium' },
+    { stationName: 'Balma-Gramont', line: 'A', modelId: 'pdq-78x120', quantity: 1, location: 'Silo P+R — RDC, cadre aluminium' },
 
     // --- Adhésifs PDQ ---
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Réf. terrain : N2026' },
@@ -87,6 +97,10 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // service (train à venir), mais l'agence commerciale, elle, est
     // toujours ouverte au public et équipée d'un plan de quartier 78x120.
     { stationName: 'Arènes', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
+    // Dibond sur grillage : troisième 78x120 d'Arènes, distinct de celui de
+    // l'agence (adhésif) et de celui de la caisse auto — même format, support
+    // différent parce que l'implantation est en extérieur exposé.
+    { stationName: 'Arènes', line: 'A', modelId: 'pdq-78x120-dibond', quantity: 1, location: 'P+R 2 (Arènes Est – Parking isolé) — sur grillage' },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
     { stationName: 'Aéroport Toulouse Blagnac', line: 'AEROPORT', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
 ];

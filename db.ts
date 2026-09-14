@@ -507,6 +507,24 @@ export const createAuditDb = (name: string): AuditDb => {
     await table.update('adca12', { isDisabled: true });
 });
 
+// V21 — nouveau modèle du catalogue Plans de quartier : le 78x120 dibond,
+// posé directement sur le grillage d'un parking relais (ni cadre aluminium,
+// ni adhésif). Un appareil déjà provisionné ne le connaîtrait jamais sans
+// cette migration : le seed ne s'applique qu'à une base neuve.
+// Id inédit : aucune modification locale ne peut exister, le put est donc
+// sans risque d'écrasement.
+    instance.version(21).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
+    const fresh = buildSignageReferencesSeed().find(r => r.id === 'pdq-78x120-dibond');
+    if (fresh) await table.put(fresh);
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {
