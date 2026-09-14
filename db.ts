@@ -481,6 +481,50 @@ export const createAuditDb = (name: string): AuditDb => {
     }
 });
 
+// V20 — un seul patrimoine pour les plans de quartier.
+// Le plan posé sur une caisse automatique de P+R était suivi comme un adhésif
+// de la borne (adca12). Il appartient désormais au patrimoine Plans de quartier
+// (store.ts::migratePrCaisseAutoPlansDeQuartier, qui crée l'occurrence et
+// reprend son statut) : la référence est donc désactivée ici pour qu'elle
+// cesse de produire un second exemplaire du même objet physique.
+// Jamais supprimée (R1) : elle reste lisible, grisée, sur la fiche de la
+// caisse. adca13 (dos gris) est rafraîchie avec elle mais RESTE ACTIVE —
+// c'est une pièce de la borne, comptée pour elle-même.
+// Écriture CHIRURGICALE, volontairement : un put du seed complet écraserait
+// les modifications locales antérieures que V13 s'engage explicitement à ne
+// jamais toucher (cf. tests/migrations.test.ts). Seul le drapeau qui change
+// de sens ici est posé ; le reste de la fiche (nom, matière, description,
+// arbitrage) appartient à l'installation.
+// Strictement limitée à signageReferences — aucune donnée terrain touchée.
+    instance.version(20).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('adca12'))) return; // jamais sur une table jamais seedée
+    await table.update('adca12', { isDisabled: true });
+});
+
+// V21 — nouveau modèle du catalogue Plans de quartier : le 78x120 dibond,
+// posé directement sur le grillage d'un parking relais (ni cadre aluminium,
+// ni adhésif). Un appareil déjà provisionné ne le connaîtrait jamais sans
+// cette migration : le seed ne s'applique qu'à une base neuve.
+// Id inédit : aucune modification locale ne peut exister, le put est donc
+// sans risque d'écrasement.
+    instance.version(21).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
+    const fresh = buildSignageReferencesSeed().find(r => r.id === 'pdq-78x120-dibond');
+    if (fresh) await table.put(fresh);
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {

@@ -8,6 +8,7 @@ import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
@@ -15,11 +16,6 @@ import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInAuditScope } from '../utils/moduleScope';
 import { getEffectiveAdhesives, getEffectiveEcaAdhesives, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
-
-// Id de la ligne de nomenclature cross-listée "Plans de quartier" pour le
-// 78x120 déjà tracé côté P+R (Caisse Auto, référence adca12) — cf.
-// computeAdhesiveInventory ci-dessous.
-const CAISSE_AUTO_PDQ_ID = 'pdq-caisse-auto-pr';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
@@ -277,11 +273,13 @@ export const computeAdhesiveInventory = (
                 } else if (legacyText.includes('//')) {
                     [material, dimensions] = legacyText.split('//').map(s => s.trim());
                 }
-                if (!dimensions && !material) {
-                    // Aucun texte historique : les champs structurés du référentiel.
-                    dimensions = formatDimensions(ref.dimensions);
-                    material = ref.material ?? '';
-                }
+                // Repli sur les champs structurés du référentiel, champ par
+                // champ : certaines fiches décrivent leur format en toutes
+                // lettres (« ... au format 78x120cm »), sans le séparateur que
+                // le découpage historique attend — la colonne Dimensions
+                // restait alors vide alors que la donnée existe.
+                if (!dimensions && ref.dimensions) dimensions = formatDimensions(ref.dimensions);
+                if (!material) material = ref.material ?? '';
                 inventoryMap.set(ref.id, { id: ref.id, auditType, repere, name, dimensions, material, quantity: 0 });
             });
         };
@@ -307,25 +305,13 @@ export const computeAdhesiveInventory = (
 
         const pdqConfig = auditModules.find(c=>c.type === AuditModuleType.PLAN_QUARTIER);
         if (pdqConfig && referencesReady) {
+            // Plus de ligne « cross-listée » pour les caisses automatiques :
+            // leurs plans sont devenus de vraies occurrences du patrimoine
+            // Plans de quartier (cf. store.ts::migratePrCaisseAutoPlansDeQuartier),
+            // comptées comme les autres sous leur modèle réel (pdq-adhesif).
+            // Les reporter une seconde fois depuis la boucle P+R donnerait
+            // exactement le double comptage que cette migration supprime.
             buildRowsFromReferences(references.filter(r => r.auditType === 'PDQ'), pdqConfig.shortLabel, false);
-
-            // Cross-listage : le 78x120 posé sur les Caisses Auto de P+R
-            // (adca12) est DÉJÀ tracé par l'audit P+R existant (référentiel
-            // PR_ADHESIVES_CA) — jamais ressaisi ici, jamais un second
-            // formulaire. Il apparaît quand même dans la famille "Plans de
-            // quartier" pour que le recensement réseau reste complet ; sa
-            // quantité est alimentée plus bas depuis la même boucle P+R qui
-            // calcule déjà celle d'adca12.
-            const caisseAutoRef = references.find(r => r.id === 'adca12');
-            if (caisseAutoRef && !inventoryMap.has(CAISSE_AUTO_PDQ_ID)) {
-                const dims = formatDimensions(caisseAutoRef.dimensions);
-                inventoryMap.set(CAISSE_AUTO_PDQ_ID, {
-                    id: CAISSE_AUTO_PDQ_ID, auditType: pdqConfig.shortLabel, repere: '-',
-                    name: 'Plan de quartier 78×120 (Caisse Auto P+R)',
-                    dimensions: dims, material: 'Suivi via l\'audit P+R (Caisse Auto) — statut renseigné dans ce formulaire.',
-                    quantity: 0,
-                });
-            }
         }
 
         const pmrModule = auditModules.find(c=>c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
@@ -402,10 +388,15 @@ export const computeAdhesiveInventory = (
                     for (const zone of (module.data as Pr).zones) {
                         for (const equip of zone.equipments) {
                             getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => {
+                                // Une référence dont le patrimoine a été repris
+                                // par un autre référentiel n'a plus de quantité
+                                // ICI : elle est comptée là-bas, et l'additionner
+                                // des deux côtés compterait deux fois le même
+                                // objet. Une simple désactivation, elle, ne change
+                                // rien au comptage historique (cf. la distinction
+                                // dans data/signage_seed.ts).
+                                if (REFERENCES_MIGRATED_TO_PLAN_QUARTIER.has(ad.id)) return;
                                 addQty(ad.id, 1);
-                                // Cross-listage Plans de quartier (cf. plus haut) : même
-                                // exemplaire, comptage additionnel sous l'autre famille.
-                                if (ad.id === 'adca12') addQty(CAISSE_AUTO_PDQ_ID, 1);
                             });
                         }
                     }

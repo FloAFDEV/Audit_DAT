@@ -121,7 +121,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "",
+    "dimensions": "78 × 120 cm",
     "id": "adca13",
     "material": "Dos gris au format 78x120cm",
     "name": "Dos gris verso",
@@ -130,11 +130,11 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "",
+    "dimensions": "78 × 120 cm",
     "id": "adca12",
-    "material": "Fiche plan de quartier au format 78x120cm",
+    "material": "Fiche plan de quartier au format 78x120cm — suivi dans l'audit Plans de quartier de la station",
     "name": "Plan de quartier",
-    "quantity": 10,
+    "quantity": 0,
     "repere": "",
   },
   {
@@ -391,12 +391,12 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "78 × 120 cm",
-    "id": "pdq-caisse-auto-pr",
-    "material": "Suivi via l'audit P+R (Caisse Auto) — statut renseigné dans ce formulaire.",
-    "name": "Plan de quartier 78×120 (Caisse Auto P+R)",
-    "quantity": 10,
-    "repere": "-",
+    "dimensions": "78 x 120 cm",
+    "id": "pdq-78x120-dibond",
+    "material": "Version dibond — même composition header + plan + footer que le 78×120, montée directement sur grillage en extérieur (ni cadre aluminium, ni adhésif).",
+    "name": "Plan de quartier 78×120 (dibond)",
+    "quantity": 0,
+    "repere": "",
   },
   {
     "auditType": "PMR au Sol",

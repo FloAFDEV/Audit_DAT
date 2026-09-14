@@ -89,11 +89,11 @@ const ARBITRAGE_DECISIONS: Record<string, { status: ArbitrageStatus; reason: str
     },
     'adca12': {
         status: 'keep',
-        reason: "Support confirmé : adhésif simple, format 78x120 cm, posé sur la vitre latérale extérieure des caisses automatiques.",
+        reason: "Support confirmé : adhésif simple, format 78x120 cm, posé sur la vitre latérale extérieure des caisses automatiques. Référence conservée mais désactivée côté P+R : l'exemplaire appartient au patrimoine Plans de quartier (contexte caisse auto), où il est recensé et audité — ici il ferait doublon.",
     },
     'adca13': {
         status: 'keep',
-        reason: "Verso de adca12 (dos gris), même format 78x120 cm, adhésif simple.",
+        reason: "Verso de adca12 (dos gris), même format 78x120 cm, adhésif simple. Reste suivi sur la caisse automatique : c'est une pièce physique à remplacer pour elle-même, comptée indépendamment, jamais un plan de quartier supplémentaire.",
     },
     'eca-r-1': {
         status: 'remove',
@@ -116,6 +116,25 @@ const SAME_AS: Record<string, string[]> = {
     'adbs3': ['adbe3', 'adca9'],
     'adca9': ['adbe3', 'adbs3'],
 };
+
+/**
+ * Références dont le PATRIMOINE A CHANGÉ DE MAIN : l'objet existe toujours sur
+ * le terrain, mais il est désormais recensé et compté par un autre référentiel.
+ * Elles ne sont donc plus une quantité à commander ICI — le nouveau
+ * propriétaire du patrimoine porte ce compte, et l'additionner des deux côtés
+ * reviendrait à compter deux fois le même objet physique.
+ *
+ * À distinguer d'une référence simplement désactivée (adca8, eca-r-1) : celle-là
+ * n'a pas changé de propriétaire, elle est retirée du catalogue actif, et son
+ * comptage historique reste inchangé — une désactivation n'est pas une
+ * migration, et ne doit jamais se comporter comme telle.
+ */
+export const REFERENCES_MIGRATED_TO_PLAN_QUARTIER: ReadonlySet<string> = new Set([
+    // Plan de quartier de la vitre des caisses automatiques : devenu une
+    // occurrence du patrimoine Plans de quartier (contexte « caisse auto »),
+    // cf. store.ts::migratePrCaisseAutoPlansDeQuartier.
+    'adca12',
+]);
 
 // Associations physiques posées ensemble (recto/verso). Symétrie maintenue ici
 // au seed ; en administration, c'est une responsabilité de l'écran (R1).
@@ -223,6 +242,20 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
         dimensions: { width: 78, height: 120, unit: 'cm' },
         placement: {},
         legacyDescription: '78 x 120 cm | Version adhésive — même composition header + plan + footer que le 78×120, jamais encadrée (support adhésif direct), jamais confondue avec le 78×100.',
+    },
+    {
+        id: 'pdq-78x120-dibond',
+        name: 'Plan de quartier 78×120 (dibond)',
+        auditType: 'PDQ', scope: { auditType: 'PDQ' },
+        version: 1, support: 'dibond',
+        // Même plan, même format que le 78x120 : seul le support change, pour
+        // une pose en extérieur exposé (grillage de parking) où ni le
+        // plastifié sous cadre ni l'adhésif ne tiennent. Modèle distinct et
+        // non un champ variable, pour la même raison que pdq-adhesif : le
+        // support commande la fabrication et le remplacement.
+        dimensions: { width: 78, height: 120, unit: 'cm' },
+        placement: { zone: 'Extérieur — grillage de parking relais' },
+        legacyDescription: '78 x 120 cm | Version dibond — même composition header + plan + footer que le 78×120, montée directement sur grillage en extérieur (ni cadre aluminium, ni adhésif).',
     },
     {
         id: 'pem3d-120x80',

@@ -187,13 +187,19 @@ export const DATA_VERSION = 'v13.2';
  * base existante), et sûre à répéter :
  *
  *  - modèle absent de la station → les exemplaires connus sont créés ;
- *  - exemplaires déjà présents, encore vierges, en nombre identique →
- *    seule leur implantation connue (commentaire, emplacement, mesure)
- *    est renseignée. C'est ce qui permet d'enrichir un appareil déjà
- *    provisionné quand l'inventaire se précise (les trois PEM 3D
- *    géo-orientés d'Arènes) sans repasser par une base neuve ;
- *  - dès qu'un constat terrain existe (statut saisi, commentaire, ou
- *    historique), le seed ne touche plus à rien : le terrain fait foi.
+ *  - exemplaires déjà présents mais JAMAIS CONSTATÉS sur le terrain →
+ *    l'inventaire connu reste la vérité de référence : leur implantation
+ *    est alignée dessus (emplacement précisé ou corrigé, mesure), et les
+ *    exemplaires manquants sont ajoutés si l'inventaire s'est enrichi.
+ *    C'est ce qui permet à un appareil déjà provisionné de bénéficier
+ *    d'une précision d'inventaire (les trois PEM 3D géo-orientés
+ *    d'Arènes, les sorties d'édicule d'Université Paul Sabatier) sans
+ *    repasser par une base neuve ;
+ *  - dès qu'un constat terrain existe (statut saisi ou historique de
+ *    constats), le seed ne touche plus à ce groupe : le terrain fait foi.
+ *    Un commentaire déjà saisi n'est jamais écrasé, et aucun exemplaire
+ *    n'est jamais supprimé — l'inventaire complète et précise, il ne
+ *    retire pas ce que le terrain a vu.
  *
  * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
  */
@@ -243,23 +249,153 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
             continue;
         }
 
-        // Enrichissement : uniquement sur des exemplaires encore vierges et
-        // en nombre exactement identique — sinon on ne saurait pas lequel
-        // porte quelle implantation, et deviner reviendrait à inventer.
-        const stillBlank = existing.every(o =>
-            o.status === PLAN_QUARTIER_INITIAL_STATUS && !o.comment && !o.location
-            && !(o.previousConstats?.length)
+        // Le terrain a-t-il constaté quelque chose sur ce groupe ? Si oui, il
+        // fait foi et l'inventaire n'y touche plus. Sinon, l'inventaire connu
+        // reste la référence : il peut préciser une implantation, la corriger,
+        // et compléter un exemplaire découvert depuis.
+        const constatedByField = existing.some(o =>
+            o.status !== PLAN_QUARTIER_INITIAL_STATUS || (o.previousConstats?.length ?? 0) > 0
         );
-        const hasKnownImplantation = group.specs.some(s => s.comment || s.location || s.measuredDimensions);
-        if (existing.length !== group.specs.length || !stillBlank || !hasKnownImplantation) continue;
+        // Plus d'exemplaires en base que d'exemplaires connus : c'est le
+        // terrain (ou un ajout manuel) qui a raison, on ne réaligne rien et on
+        // ne supprime jamais.
+        if (constatedByField || existing.length > group.specs.length) continue;
 
-        existing.forEach((occ, i) => {
-            occ.comment = group.specs[i].comment;
-            occ.location = group.specs[i].location;
-            occ.measuredDimensions = group.specs[i].measuredDimensions;
+        group.specs.forEach((spec, i) => {
+            const occ = existing[i];
+            if (!occ) {
+                // L'inventaire s'est enrichi depuis le dernier démarrage.
+                pdqData.occurrences.push({
+                    id: uuidv4(),
+                    modelId: group.modelId,
+                    status: PLAN_QUARTIER_INITIAL_STATUS,
+                    comment: spec.comment,
+                    location: spec.location,
+                    measuredDimensions: spec.measuredDimensions,
+                    constatedAt: now,
+                    discoveredAt: now,
+                });
+                changed = true;
+                return;
+            }
+            // Implantation : l'inventaire est la référence tant qu'aucun
+            // constat n'existe — un emplacement précisé (« Édicule (totem) »
+            // → « Édicule — sortie côté Fac ») doit atteindre les appareils
+            // déjà provisionnés, pas seulement les installations neuves.
+            if (occ.location !== spec.location) { occ.location = spec.location; changed = true; }
+            if (occ.measuredDimensions !== spec.measuredDimensions) {
+                occ.measuredDimensions = spec.measuredDimensions;
+                changed = true;
+            }
+            // Le commentaire, lui, peut avoir été saisi au terrain sans
+            // changement de statut : on ne le remplace jamais, on le complète.
+            if (!occ.comment && spec.comment) { occ.comment = spec.comment; changed = true; }
         });
-        changed = true;
     }
+    return changed;
+};
+
+/** Référence historique du plan de quartier posé sur la vitre latérale des
+ *  caisses automatiques de P+R, et de son dos gris opaque contre-collé au
+ *  verso (cf. data/adhesives.ts::PR_ADHESIVES_CA). */
+const CAISSE_AUTO_PDQ_REFERENCE_ID = 'adca12';
+const CAISSE_AUTO_PDQ_BACKING_ID = 'adca13';
+/** Modèle du patrimoine PDQ correspondant : adhésif 78x120, même composition
+ *  header + plan + footer, posé sans cadre (métier confirmé). */
+const CAISSE_AUTO_PDQ_MODEL_ID = 'pdq-adhesif';
+
+/**
+ * Un plan de quartier posé sur une caisse automatique est un plan de quartier
+ * comme un autre : il appartient au patrimoine PDQ, pas à un second patrimoine
+ * parallèle. Historiquement il n'y était pourtant pas — il n'existait que comme
+ * un statut d'adhésif (adca12) sur l'équipement CA de l'audit P+R, donc
+ * invisible dans le détail par station des Plans de quartier.
+ *
+ * Cette fonction le rapatrie : UNE occurrence PDQ par caisse automatique,
+ * jamais deux. Ce qu'elle préserve, et comment :
+ *  - le STATUT constaté → repris tel quel depuis adca12 (jamais réinitialisé) ;
+ *  - le CONTEXTE d'implantation → implantationContext + location (zone et nom
+ *    de la caisse), pour que « combien de plans sur caisse auto ? » reste une
+ *    question à laquelle on répond sans rouvrir l'audit P+R ;
+ *  - le DOS GRIS (adca13) → companionReferenceIds : c'est une pièce du MÊME
+ *    exemplaire physique, jamais un plan de plus. Elle garde son comptage
+ *    propre là où elle est déjà suivie (audit P+R), d'où le simple lien ici ;
+ *  - la DATE → completionDate de la caisse quand son audit est terminé (seule
+ *    date réelle disponible) ; sinon la date de migration, qui n'est alors
+ *    que la date de création de l'enregistrement — le statut Non contrôlé dit
+ *    déjà qu'aucun constat n'a eu lieu. Aucune date de constat n'est inventée.
+ *  - le COMMENTAIRE de la caisse n'est PAS recopié : il porte sur toute la
+ *    borne (tous ses adhésifs), l'attribuer au seul plan serait une erreur.
+ *
+ * Idempotence : l'occurrence porte un id déterministe dérivé de l'équipement
+ * source. Relancée à chaque démarrage et après chaque import, la fonction
+ * reconnaît ce qu'elle a déjà écrit et ne duplique rien ; elle met seulement
+ * à jour le statut tant que l'occurrence n'a pas été constatée côté PDQ.
+ *
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
+    const now = new Date().toISOString();
+    let changed = false;
+
+    for (const lieu of lieux) {
+        const prModules = lieu.modules.filter(m => m.type === AuditModuleType.PR);
+        if (prModules.length === 0) continue;
+
+        // Destination : le module Plans de quartier du même lieu. Un pôle
+        // multi-lignes en porte plusieurs (Arènes : A et T1) — on prend le
+        // premier, car l'exemplaire est rattaché au LIEU (son parking), pas à
+        // une ligne de transport.
+        const pdqModule = lieu.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER);
+        if (!pdqModule) continue; // P+R sans station connue — jamais inventée
+        const pdqData = pdqModule.data as PlanQuartierData;
+
+        for (const prModule of prModules) {
+            for (const zone of (prModule.data as Pr).zones ?? []) {
+                for (const equip of zone.equipments ?? []) {
+                    if (equip.type !== EquipmentType.CA) continue;
+                    // Dérogation locale : une caisse dont la liste blanche
+                    // d'adhésifs exclut le plan n'en porte pas.
+                    if (equip.adhesiveIds && !equip.adhesiveIds.includes(CAISSE_AUTO_PDQ_REFERENCE_ID)) continue;
+
+                    const status = equip.adhesives?.[CAISSE_AUTO_PDQ_REFERENCE_ID] ?? AdhesiveStatus.NotChecked;
+                    // Non applicable = pas de plan sur cette caisse : on ne
+                    // crée pas un exemplaire que le terrain a déclaré absent
+                    // du parc (différent d'« absent », qui est une anomalie).
+                    if (status === AdhesiveStatus.NotApplicable) continue;
+
+                    const occurrenceId = `pdq-ca-${equip.id}`;
+                    const existing = pdqData.occurrences.find(o => o.id === occurrenceId);
+
+                    if (existing) {
+                        // Déjà migré. Tant que le plan n'a pas été constaté
+                        // côté PDQ, l'audit P+R reste sa source de statut ;
+                        // dès qu'il l'a été, le patrimoine PDQ fait foi.
+                        const untouchedSincePdq = !existing.comment && !(existing.previousConstats?.length);
+                        if (untouchedSincePdq && existing.status !== status) {
+                            existing.status = status;
+                            changed = true;
+                        }
+                        continue;
+                    }
+
+                    const audited = status !== AdhesiveStatus.NotChecked;
+                    pdqData.occurrences.push({
+                        id: occurrenceId,
+                        modelId: CAISSE_AUTO_PDQ_MODEL_ID,
+                        status,
+                        location: `Caisse auto ${equip.name} — ${zone.name}`,
+                        implantationContext: 'pr-caisse-auto',
+                        companionReferenceIds: [CAISSE_AUTO_PDQ_BACKING_ID],
+                        constatedAt: (audited && equip.completionDate) || now,
+                        discoveredAt: (audited && equip.completionDate) || now,
+                    });
+                    changed = true;
+                }
+            }
+        }
+    }
+
     return changed;
 };
 
@@ -300,6 +436,7 @@ const reconcilePlanQuartier = async (lieux: Lieu[]): Promise<{ lieux: Lieu[]; ch
     }
 
     if (seedPlanQuartierInitialInventory(result)) changed = true;
+    if (migratePrCaisseAutoPlansDeQuartier(result)) changed = true;
 
     return { lieux: result, changed };
 };
@@ -650,9 +787,12 @@ const useAuditStore = create<AppState>((set, get) => {
             } else {
                 const initialData = await generateInitialLieuxDataAsync();
                 // Base neuve : le premier recensement connu est semé ici aussi,
-                // sinon un appareil fraîchement provisionné démarrerait sans
-                // aucun plan de quartier, là où un appareil migré les aurait.
+                // et les plans des caisses automatiques y sont rapatriés de la
+                // même façon — sinon un appareil fraîchement provisionné
+                // démarrerait avec un patrimoine incomplet, là où un appareil
+                // migré l'aurait complet.
                 seedPlanQuartierInitialInventory(initialData);
+                migratePrCaisseAutoPlansDeQuartier(initialData);
                 await db.lieux.bulkPut(initialData);
                 set({ lieux: initialData });
             }

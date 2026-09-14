@@ -257,14 +257,14 @@ describe('Migration V14 → V15 (qualification statique de 8 références + adbs
             support: 'adhesif', placement: {}, legacyDescription: 'Dimensions: 2,5x2,5cm | ...',
         });
 
-        expect(await table.count()).toBe(11); // 6 seedées + adbs3 (V15) + 4 modèles Plans de quartier (V17)
+        expect(await table.count()).toBe(12); // 6 seedées + adbs3 (V15) + 4 modèles PDQ (V17) + le 78x120 dibond (V21)
 
         upgraded.close();
 
         // 3) Réouverture — idempotence : ni duplication de adbs3, ni re-patch destructeur.
         const reopened = createAuditDb(name);
         await reopened.open();
-        expect(await reopened.table('signageReferences').count()).toBe(11);
+        expect(await reopened.table('signageReferences').count()).toBe(12);
         const adca12Again = await reopened.table('signageReferences').get('adca12');
         expect(adca12Again.material).toBe('Modification locale antérieure');
         reopened.close();
@@ -328,7 +328,7 @@ describe('Migration V15 → V16 (retrait Admin — suppression auditDefinitions/
         expect(upgraded.tables.map(t => t.name)).not.toContain('signageAssets');
         // Le reste des tables et leur contenu restent strictement intacts.
         expect(await upgraded.table('lieux').count()).toBe(1);
-        expect(await upgraded.table('signageReferences').count()).toBe(43);
+        expect(await upgraded.table('signageReferences').count()).toBe(44);
         upgraded.close();
 
         await Dexie.delete(name);
@@ -443,5 +443,65 @@ describe('Robustesse — transaction de migration atomique (garantie native Inde
         reopened.close();
 
         await Dexie.delete(name);
+    });
+});
+
+describe('Migration V20 (plan de quartier des caisses automatiques : un seul patrimoine)', () => {
+    it('désactive adca12 sans écraser les modifications locales, laisse adca13 active et ne touche pas aux lieux', async () => {
+        const name = uniqueDbName();
+
+        // Base au schéma V19 : adca12 y est encore ACTIVE (elle comptait alors
+        // un exemplaire par caisse automatique), et porte une modification
+        // locale antérieure que V13 s'engage à ne jamais écraser.
+        const v19 = new Dexie(name);
+        v19.version(19).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            events: '++id, date, type, entityType',
+        });
+        await v19.open();
+        const seed = buildSignageReferencesSeed().filter(r => r.id !== 'adca12');
+        const localAdca12 = {
+            id: 'adca12', name: 'Plan de quartier', auditType: 'PR',
+            scope: { auditType: 'PR', equipmentTypes: ['CA'] },
+            version: 1, support: 'adhesif', placement: {},
+            material: 'Modification locale antérieure',
+            dimensions: { width: 78, height: 120, unit: 'cm' },
+        };
+        await v19.table('signageReferences').bulkAdd([...seed, localAdca12]);
+        const lieu = {
+            id: 'lieu-pr-1', name: 'Borderouge', modules: [{
+                id: 'module-pr-1', type: 'PR', name: 'Audit Bornes P+R',
+                data: { id: 'pr-1', name: 'Borderouge', zones: [{
+                    id: 'z1', name: 'Zone', equipments: [{
+                        id: 'ca01', name: 'CA01', type: 'CA', comment: 'Caisse repeinte',
+                        adhesives: { adca12: 'ToBeReplaced', adca13: 'OK' },
+                    }],
+                }] },
+            }],
+        };
+        await v19.table('lieux').put(lieu);
+        v19.close();
+
+        // Réouverture au schéma courant → V20 s'applique.
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+
+        const adca12 = await upgraded.table('signageReferences').get('adca12');
+        expect(adca12.isDisabled).toBe(true);
+        // Le reste de la fiche appartient à l'installation : jamais écrasé.
+        expect(adca12.material).toBe('Modification locale antérieure');
+
+        // Le dos gris reste une pièce active de la borne.
+        const adca13 = await upgraded.table('signageReferences').get('adca13');
+        expect(adca13.isDisabled).toBeUndefined();
+
+        // Aucune donnée terrain touchée : le statut constaté sur la caisse
+        // reste disponible pour la reprise par le patrimoine PDQ (store.ts).
+        const reloaded = await upgraded.table('lieux').get('lieu-pr-1');
+        expect(reloaded).toEqual(lieu);
+
+        upgraded.close();
     });
 });

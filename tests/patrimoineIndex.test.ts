@@ -153,7 +153,10 @@ describe('buildPatrimoineIndex', () => {
     it('P+R : surcharge locale respectée + isDisabled exclu', () => {
         const index = buildPatrimoineIndex([prLieu()], REFERENCES);
 
-        // BE01 : 4 références BE ; BE11 : 1 seule (surcharge) ; CA01 : 5 (6 CA - adca8 disabled).
+        // BE01 : 4 références BE ; BE11 : 1 seule (surcharge) ; CA01 : 4
+        // (6 refs CA moins adca8 et adca12, toutes deux désactivées — adca12
+        // parce que le plan de quartier de la caisse appartient désormais au
+        // patrimoine Plans de quartier, cf. store.ts).
         const be01 = index.implantations.filter(i => i.equipmentLabel === 'BE01');
         const be11 = index.implantations.filter(i => i.equipmentLabel === 'BE11');
         const ca01 = index.implantations.filter(i => i.equipmentLabel === 'CA01');
@@ -161,8 +164,12 @@ describe('buildPatrimoineIndex', () => {
         expect(be11).toHaveLength(1);
         expect(be11[0].referenceId).toBe('adbe3');
         expect(be11[0].status).toBe(AdhesiveStatus.ToBeReplaced);
-        expect(ca01).toHaveLength(5);
+        expect(ca01).toHaveLength(4);
         expect(ca01.map(i => i.referenceId)).not.toContain('adca8');
+        expect(ca01.map(i => i.referenceId)).not.toContain('adca12');
+        // Le dos gris, lui, reste suivi sur la caisse : c'est une pièce de la
+        // borne, comptée pour elle-même, jamais un plan de quartier.
+        expect(ca01.map(i => i.referenceId)).toContain('adca13');
         // Ligne P+R et contexte zone présents sur chaque implantation.
         expect(be01[0].line).toBe('P+R');
         expect(be01[0].context).toBe('Zone Est');
@@ -266,7 +273,7 @@ describe('buildPatrimoineIndex', () => {
 
         expect(index.byLine.get('A')?.installed).toBe(12);
         expect(index.byLine.get('A')?.defects).toBe(1);
-        expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 5); // BE01 + BE11 + CA01
+        expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 4); // BE01 + BE11 + CA01
         expect(index.byLine.get('B')?.installed).toBeGreaterThan(0);
         // Cohérence : somme des lignes = total.
         let sum = 0;
