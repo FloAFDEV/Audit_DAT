@@ -231,11 +231,16 @@ const PlanQuartierOverview: React.FC<{
     // faux zéro, pas de station inventée.
     const byLine = useMemo(() => {
         const modelIds = new Set(models.map(m => m.id));
-        const lineMap = new Map<string, Map<string, { installed: number; defects: number; formats: Map<string, number> }>>();
+        // formats : une entrée structurée {label, detail, count} par (modèle,
+        // emplacement) plutôt qu'une chaîne concaténée — la mise en forme
+        // (gras/atténué/troncature) se fait à l'affichage, sans reconstituer
+        // le détail à partir d'un texte joint (fragile dès qu'un libellé
+        // contient lui-même un tiret).
+        const lineMap = new Map<string, Map<string, { installed: number; defects: number; formats: Map<string, { label: string; detail?: string; count: number }> }>>();
         for (const imp of patrimoineIndex.implantations as any[]) {
             if (!modelIds.has(imp.referenceId)) continue;
             const stations = lineMap.get(imp.line) ?? new Map();
-            const entry = stations.get(imp.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, number>() };
+            const entry = stations.get(imp.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, { label: string; detail?: string; count: number }>() };
             entry.installed += 1;
             if (imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced) entry.defects += 1;
             const shortLabel = PDQ_DETAIL_LABELS[imp.referenceId] ?? imp.referenceId;
@@ -245,8 +250,13 @@ const PlanQuartierOverview: React.FC<{
             // implantation à afficher ; sinon on n'invente rien, juste le
             // modèle seul.
             const hasRealLocation = !!imp.context && imp.context !== imp.lieuName;
-            const formatKey = hasRealLocation ? `${shortLabel} — ${imp.context}` : shortLabel;
-            entry.formats.set(formatKey, (entry.formats.get(formatKey) ?? 0) + 1);
+            const formatKey = hasRealLocation ? `${shortLabel}|${imp.context}` : shortLabel;
+            const existing = entry.formats.get(formatKey);
+            if (existing) {
+                existing.count += 1;
+            } else {
+                entry.formats.set(formatKey, { label: shortLabel, detail: hasRealLocation ? imp.context : undefined, count: 1 });
+            }
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
         }
@@ -313,21 +323,48 @@ const PlanQuartierOverview: React.FC<{
                             </span>
                             <span className="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
                         </div>
-                        <ul className="mt-2 space-y-3">
+                        {/* Une carte par station plutôt qu'une ligne : au-delà
+                            de deux références, une chaîne jointe par « · »
+                            devient illisible (dimensions, emplacements et
+                            quantités se mélangent). Ici : nom + total station
+                            (teal, comme les autres totaux de l'app) en
+                            en-tête, puis une ligne par (modèle, emplacement)
+                            avec sa quantité en pastille bien distincte. */}
+                        <ul className="mt-2 space-y-2.5">
                             {stations.map(st => (
-                                <li key={st.name} className="flex items-start justify-between gap-3">
-                                    <span className="min-w-0">
-                                        <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{st.name}</span>
-                                        <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-                                            {[...st.formats.entries()].map(([f, n]) => `${f} ×${n}`).join(' · ')}
+                                <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                                    <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
+                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{st.name}</span>
+                                        <span className="flex-shrink-0 flex items-baseline gap-2">
+                                            {st.defects > 0 && (
+                                                <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
+                                            )}
+                                            <span className="text-base font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{st.installed}</span>
+                                            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">équipements</span>
                                         </span>
-                                    </span>
-                                    <span className="flex-shrink-0 flex items-baseline gap-2">
-                                        {st.defects > 0 && (
-                                            <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
-                                        )}
-                                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{st.installed}</span>
-                                    </span>
+                                    </div>
+                                    <ul className="space-y-1">
+                                        {[...st.formats.values()].map(fmt => (
+                                            <li key={`${fmt.label}|${fmt.detail ?? ''}`} className="flex items-center justify-between gap-3">
+                                                <span className="min-w-0">
+                                                    <span
+                                                        className="block text-xs font-semibold text-slate-700 dark:text-slate-200 truncate"
+                                                        title={fmt.detail ? `${fmt.label} — ${fmt.detail}` : fmt.label}
+                                                    >
+                                                        {fmt.label}
+                                                    </span>
+                                                    {fmt.detail && (
+                                                        <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 truncate" title={fmt.detail}>
+                                                            {fmt.detail}
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
+                                                    ×{fmt.count}
+                                                </span>
+                                            </li>
+                                        ))}
+                                    </ul>
                                 </li>
                             ))}
                         </ul>
