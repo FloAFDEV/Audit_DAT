@@ -40,15 +40,19 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026b' },
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 78x120 2026b' },
     { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
-    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
+    // 78x120 sans emplacement plus précis connu que « en station » : le
+    // catalogue (data/signage_seed.ts) décrit déjà ce modèle comme posé sous
+    // cadre aluminium par défaut (hors agence commerciale, listée séparément
+    // avec sa propre localisation) — label repris tel quel, rien d'inventé.
+    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026' },
     // 78x120 partout, jamais 78x119 (mesure terrain erronée, corrigée).
-    { stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026b' },
-    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
+    { stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026b' },
+    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026' },
     { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)', comment: 'Réf. terrain : N2026' },
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x120', quantity: 3, location: 'Mezzanine', comment: 'Réf. terrain : N2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
-    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, comment: 'Réf. terrain : 2026' },
+    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026' },
     { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 2026' },
     // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name
     // distincts pour le même lieu physique (lieuName commun) — la ligne B
@@ -60,8 +64,8 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // Deux 78x120 en station : l'emplacement précis du second reste à
     // confirmer au terrain — jamais recopié de celui du premier.
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
-    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1 },
-    { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1 },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
+    { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée bus' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée square' },
     // Silos des P+R : un exemplaire sous cadre aluminium au rez-de-chaussée
@@ -81,6 +85,7 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Borderouge', line: 'B', modelId: 'pem3d-120x80', quantity: 1, location: 'Pupitre · dos gris RAL 7016' },
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
+    { stationName: 'Balma-Gramont', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     // Arènes : trois PEM 3D réels, géo-orientés différemment — distingués
     // par leur implantation connue, jamais par un numéro d'exemplaire.
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Proche agence / ascenseur' },
@@ -104,6 +109,10 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // l'agence (adhésif) et de celui de la caisse auto — même format, support
     // différent parce que l'implantation est en extérieur exposé.
     { stationName: 'Arènes', line: 'A', modelId: 'pdq-78x120-dibond', quantity: 1, location: 'P+R 2 (Arènes Est – Parking isolé) — sur grillage' },
+    // Même principe à Borderouge : un plan Dibond fixé au grillage du P+R le
+    // plus éloigné, distinct des deux adhésifs de caisse auto (déjà dérivés
+    // de la structure P+R elle-même, cf. commentaire en tête de fichier).
+    { stationName: 'Borderouge', line: 'B', modelId: 'pdq-78x120-dibond', quantity: 1, location: 'P+R 2 — le plus éloigné — fixation sur grillage' },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
     { stationName: 'Aéroport Toulouse Blagnac', line: 'AEROPORT', modelId: 'pdq-adhesif', quantity: 1, location: 'Agence commerciale', comment: 'Support à confirmer sur le terrain (plastifié ou adhésif selon la commande).' },
 ];

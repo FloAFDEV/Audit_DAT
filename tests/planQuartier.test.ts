@@ -606,15 +606,16 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         expect(caisseAuto.every(o => !o.comment)).toBe(true);
     });
 
-    it('Borderouge restitue ses 3 plans : 1 PEM 3D + 2 sur caisses automatiques', async () => {
+    it('Borderouge restitue ses 4 plans : 1 PEM 3D + 1 Dibond (grillage) + 2 sur caisses automatiques', async () => {
         await provisionLegacyDevice();
         await useAuditStore.getState().init();
 
         const borderouge = useAuditStore.getState().lieux.find(l => l.name === 'Borderouge');
         const occurrences = pdqOccurrences([borderouge!]);
 
-        expect(occurrences).toHaveLength(3);
+        expect(occurrences).toHaveLength(4);
         expect(occurrences.filter(o => o.modelId === 'pem3d-120x80')).toHaveLength(1);
+        expect(occurrences.filter(o => o.modelId === 'pdq-78x120-dibond')).toHaveLength(1);
         const caisseAuto = occurrences.filter(o => o.implantationContext === 'pr-caisse-auto');
         expect(caisseAuto).toHaveLength(2);
         // Deux caisses distinctes, jamais deux fois la même.
@@ -691,14 +692,14 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
 
         // Ventilation complète du patrimoine — le total ne masque jamais
         // d'où il vient, et les 10 plans de caisse auto n'y comptent qu'une
-        // fois (sinon 62 au lieu de 52).
+        // fois (sinon 64 au lieu de 54).
         expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(14);
         expect(index.byReference.get('pdq-78x120')?.installedCount).toBe(13);
-        expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(1);
-        expect(index.byReference.get('pem3d-120x80')?.installedCount).toBe(9);
+        expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(2);
+        expect(index.byReference.get('pem3d-120x80')?.installedCount).toBe(10);
         const pdqTotal = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80']
             .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
-        expect(pdqTotal).toBe(52);
+        expect(pdqTotal).toBe(54);
     });
 
     it('le contexte d\'implantation survit à un export/import complet', async () => {
