@@ -849,9 +849,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         nommer la section. Toutes les configs de ligne sont
                         transmises : la matrice choisit elle-même ses colonnes
                         selon les données ECA, et doit pouvoir en afficher une
-                        nouvelle sans changement ici. */}
-                    <div className="flex items-center gap-3 text-lg font-bold text-gray-800 dark:text-slate-100">
-                        <Fence className="w-5 h-5" />
+                        nouvelle sans changement ici.
+                        Pas d'icône ici : même niveau visuel que Total Stations /
+                        DAT (Distributeurs) / Nombre de P+R juste au-dessus, qui
+                        n'en affichent pas non plus à ce niveau (StatRow masque
+                        l'icône dès que highlight="primary" est posé — cf. le
+                        rendu mono-lieu de cette même ligne, StatRow ci-dessus). */}
+                    <div className="text-lg font-bold text-gray-800 dark:text-slate-100">
                         ECA (Valideurs)
                     </div>
                     <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} total={globalCounts.ecaCount} />
