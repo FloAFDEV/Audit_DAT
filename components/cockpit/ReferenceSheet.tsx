@@ -34,10 +34,16 @@ const LineBadge: React.FC<{ line: string }> = ({ line }) => {
 
 /* ---------- briques locales de la fiche ---------- */
 
+/** Titre de section — même grammaire que StatCard (cf. primitives.tsx) :
+ *  cercle teal clair + icône teal, jamais une icône nue. Cercle réduit
+ *  (w-8 au lieu de w-12) pour rester à l'échelle d'un h3, mais mêmes
+ *  classes de couleur — aucune nouvelle variante. */
 const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
-        <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
-            <span className="text-teal-600 dark:text-teal-400">{icon}</span>
+        <h3 className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
+                {icon}
+            </div>
             {title}
         </h3>
         {children}
