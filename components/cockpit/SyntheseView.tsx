@@ -175,6 +175,21 @@ const PDQ_DETAIL_LABELS: Record<string, string> = {
     'pdq-78x120-dibond': 'Dibond 78 × 120',
 };
 
+/** IndicatorTile affiche `label` PUIS `hint` sur sa propre ligne : passer
+ *  « 78 × 100 » en label et « 78 × 100 cm » en hint redirait deux fois la
+ *  même information (cf. audit UI). Le format EST le nom du modèle pour
+ *  78×100/78×120 (aucun mot à ajouter) ; les autres modèles précisent leur
+ *  support avant la dimension — jamais l'inverse d'un doublon, jamais une
+ *  dimension recalculée hors du référentiel (toujours formatDimensions). */
+const pdqTileLabel = (modelId: string, dims: string): string => {
+    switch (modelId) {
+        case 'pdq-adhesif': return `Adhésif · ${dims}`;
+        case 'pdq-78x120-dibond': return `Dibond · ${dims}`;
+        case 'pem3d-120x80': return `PEM 3D · ${dims}`;
+        default: return dims; // pdq-78x100 / pdq-78x120 : le format EST le nom.
+    }
+};
+
 const PDQ_LINE_LABELS: Record<string, string> = {
     A: 'Métro A', B: 'Métro B', C: 'Métro C',
     TRAM: 'Tram T1', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
@@ -210,8 +225,7 @@ const PlanQuartierOverview: React.FC<{
         const usage = patrimoineIndex.byReference.get(ref.id);
         return {
             id: ref.id,
-            label: PDQ_TILE_LABELS[ref.id] ?? ref.name,
-            hint: formatDimensions(ref.dimensions),
+            label: pdqTileLabel(ref.id, formatDimensions(ref.dimensions)),
             installed: usage?.installedCount ?? 0,
             defects: usage?.defectCount ?? 0,
         };
@@ -320,44 +334,37 @@ const PlanQuartierOverview: React.FC<{
                         size="sm"
                         value={t.installed}
                         label={t.label}
-                        hint={t.hint}
                         tone="slate"
                         onClick={() => onOpenReference(t.id)}
                     />
                 ))}
             </div>
 
-            {/* Chaque information a SA ligne, écrite en toutes lettres : rien
-                ici ne se déduit d'un autre chiffre (« dont … », soustraction
-                mentale). Un agent qui prépare une commande ou une tournée doit
-                pouvoir lire une ligne et agir, sans recalculer. */}
+            {/* Caisse auto + dos gris : deux tuiles du même composant que la
+                bande précédente (jamais un bloc à la charte différente), pour
+                que l'association visuelle (côte à côte) et la distinction de
+                comptage (teal = inclus, slate = à part) se lisent d'un
+                regard — chaque hint le redit en toutes lettres, rien à
+                déduire. */}
             {(caisseAutoCount > 0 || backingCount > 0) && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 divide-y divide-slate-100 dark:divide-slate-800">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-xl">
                     {caisseAutoCount > 0 && (
-                        <div className="flex items-baseline gap-3 px-3 py-2">
-                            <span className="w-10 flex-shrink-0 text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{caisseAutoCount}</span>
-                            <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    Plans posés sur caisse automatique de P+R
-                                </span>
-                                <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    Adhésif {formatDimensions(caisseAutoModel?.dimensions)} · déjà inclus dans le total ci-dessus
-                                </span>
-                            </span>
-                        </div>
+                        <IndicatorTile
+                            size="sm"
+                            value={caisseAutoCount}
+                            label="Caisse auto P+R"
+                            hint={`Adhésif ${formatDimensions(caisseAutoModel?.dimensions)} · inclus dans le total`}
+                            tone="teal"
+                        />
                     )}
                     {backingCount > 0 && (
-                        <div className="flex items-baseline gap-3 px-3 py-2">
-                            <span className="w-10 flex-shrink-0 text-lg font-bold text-slate-700 dark:text-slate-200 tabular-nums">{backingCount}</span>
-                            <span className="min-w-0">
-                                <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                                    {backingRef?.name ?? 'Dos gris verso'} — pièce à commander à part
-                                </span>
-                                <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">
-                                    {formatDimensions(backingRef?.dimensions)} · contre-collé au verso d'un plan sur caisse automatique · n'est PAS un plan de quartier, hors du total ci-dessus
-                                </span>
-                            </span>
-                        </div>
+                        <IndicatorTile
+                            size="sm"
+                            value={backingCount}
+                            label="Dos gris associé"
+                            hint={`RAL 7016 · ${formatDimensions(backingRef?.dimensions)} · à commander séparément, hors total`}
+                            tone="slate"
+                        />
                     )}
                 </div>
             )}
