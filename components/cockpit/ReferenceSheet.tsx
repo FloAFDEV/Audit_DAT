@@ -10,10 +10,10 @@
 // distribuée avec le build — sa correction se fait dans le code source,
 // jamais depuis l'application (aucune administration locale).
 // =================================================================
-import React, { useState } from 'react';
-import { ArrowLeft, Ruler, Link2, Flag, Radar, ChevronRight, ChevronDown } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { ArrowLeft, Ruler, Link2, Flag, Radar } from 'lucide-react';
 import { SignageReference } from '../../types';
-import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
+import { PatrimoineIndex, ReferenceUsage } from '../../utils/cockpit/patrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
 import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
@@ -44,12 +44,19 @@ const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: R
     </section>
 );
 
-const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => (
-    <div className="flex flex-col gap-0.5">
-        <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">{label}</span>
-        <span className="text-sm text-slate-800 dark:text-slate-100">{value ?? <span className="text-slate-400">—</span>}</span>
-    </div>
-);
+/** Une caractéristique ABSENTE n'est pas une caractéristique vide : on ne
+ *  l'affiche pas du tout. Un « Matière — » sous un « Support : Dibond » se lit
+ *  comme une contradiction, alors que la matière n'a simplement pas de valeur
+ *  distincte du support pour ce modèle. */
+const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => {
+    if (value === undefined || value === null || value === '') return null;
+    return (
+        <div className="flex flex-col gap-0.5">
+            <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">{label}</span>
+            <span className="text-sm text-slate-800 dark:text-slate-100">{value}</span>
+        </div>
+    );
+};
 
 const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slate' | 'teal' }> = ({ children, tone = 'slate' }) => {
     const tones = {
@@ -61,18 +68,123 @@ const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slat
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 };
 
+/** Deux libellés désignent-ils la même chose ? Insensible à la casse, aux
+ *  accents et à la ponctuation de liaison : le registre orthographie certains
+ *  pôles différemment selon la ligne qui les dessert. */
+const sameLabel = (a: string, b: string): boolean => {
+    const normalize = (s: string) => s
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]/g, '');
+    return normalize(a) === normalize(b);
+};
+
 /* ---------- sections de la fiche ---------- */
+
+/**
+ * Répartition d'une référence : UNE seule lecture, du général au précis —
+ * ligne, puis station, puis implantation. La fiche présentait auparavant
+ * « Par ligne » et « Par lieu » côte à côte : deux tableaux qui redisaient la
+ * même chose, avec la ligne répétée sur chaque station et l'emplacement
+ * répété sous son propre intitulé.
+ *
+ * Aucune donnée nouvelle : tout vient de usage.byLieu, dont chaque groupe
+ * porte déjà sa ligne (cf. ImplantationGroup) — on la remonte d'un cran pour
+ * qu'elle soit dite une fois, pas à chaque station.
+ */
+const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
+    const byLine = useMemo(() => {
+        const lines = new Map<string, {
+            line: string; installed: number;
+            lieux: Map<string, { lieuName: string; installed: number; implantations: Map<string, number> }>;
+        }>();
+        for (const lieu of usage.byLieu) {
+            for (const group of lieu.groups) {
+                const entry = lines.get(group.line) ?? { line: group.line, installed: 0, lieux: new Map() };
+                entry.installed += group.installed;
+                const lieuEntry = entry.lieux.get(lieu.lieuId)
+                    ?? { lieuName: lieu.lieuName, installed: 0, implantations: new Map<string, number>() };
+                lieuEntry.installed += group.installed;
+                // L'implantation n'est dite que si elle apprend quelque chose :
+                // quand elle reprend le nom de la station (aucun emplacement
+                // précis connu), la répéter sous le titre du groupe n'ajoute
+                // rien et allonge la lecture. Comparaison tolérante, car un
+                // même lieu s'écrit parfois différemment selon la ligne qui le
+                // dessert (« Université Paul Sabatier » côté métro,
+                // « Université Paul-Sabatier » côté Téléo).
+                if (group.context && !sameLabel(group.context, lieu.lieuName)) {
+                    // Un même emplacement portant plusieurs exemplaires est dit
+                    // une fois, avec sa quantité — le répéter à l'identique
+                    // allonge la fiche sans rien apprendre (un DAT peut avoir
+                    // quatre exemplaires « Salle des billets »).
+                    lieuEntry.implantations.set(
+                        group.context,
+                        (lieuEntry.implantations.get(group.context) ?? 0) + group.installed,
+                    );
+                }
+                entry.lieux.set(lieu.lieuId, lieuEntry);
+                lines.set(group.line, entry);
+            }
+        }
+        return [...lines.values()]
+            .map(l => ({
+                ...l,
+                lieux: [...l.lieux.values()].sort((a, b) => b.installed - a.installed || a.lieuName.localeCompare(b.lieuName)),
+            }))
+            .sort((a, b) => b.installed - a.installed || a.line.localeCompare(b.line));
+    }, [usage]);
+
+    if (byLine.length === 0) return null;
+
+    return (
+        // Deux colonnes dès le desktop, empilées en dessous : chaque ligne de
+        // transport est un bloc autonome, jamais une cellule d'un tableau (d'où
+        // disparaît aussi la colonne vide de l'ancienne mise en page).
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
+            {byLine.map(({ line, installed, lieux }) => (
+                <section key={line}>
+                    <div className="flex items-baseline justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1.5">
+                        <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                            <LineBadge line={line} />
+                            {line === 'P+R' ? 'Parcs relais' : `Ligne ${line}`}
+                        </span>
+                        <span className="flex items-baseline gap-1.5 flex-shrink-0">
+                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{installed}</span>
+                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                                exemplaire{installed > 1 ? 's' : ''}
+                            </span>
+                        </span>
+                    </div>
+                    <ul className="mt-2 space-y-2">
+                        {lieux.map(lieu => (
+                            <li key={lieu.lieuName}>
+                                <div className="flex items-baseline justify-between gap-3">
+                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{lieu.lieuName}</span>
+                                    <span className="flex-shrink-0 text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lieu.installed}</span>
+                                </div>
+                                {lieu.implantations.size > 0 && (
+                                    <ul className="mt-0.5 space-y-0.5">
+                                        {[...lieu.implantations.entries()].map(([label, count]) => (
+                                            <li
+                                                key={label}
+                                                className="text-xs text-slate-500 dark:text-slate-400 break-words pl-3 border-l border-slate-200 dark:border-slate-700"
+                                            >
+                                                {label}
+                                                {count > 1 && <span className="font-semibold text-slate-600 dark:text-slate-300"> ×{count}</span>}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+            ))}
+        </div>
+    );
+};
 
 const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineIndex }> = ({ reference, index }) => {
     const usage = index.byReference.get(reference.id);
-    // Plusieurs lieux dépliables à la fois : on prépare une campagne en
-    // comparant des stations, pas en les ouvrant une par une.
-    const [openLieux, setOpenLieux] = useState<Set<string>>(new Set());
-    const toggleLieu = (lieuId: string) => setOpenLieux(prev => {
-        const next = new Set(prev);
-        next.has(lieuId) ? next.delete(lieuId) : next.add(lieuId);
-        return next;
-    });
     if (!usage) {
         return (
             <SheetSection title="Implantations sur le réseau" icon={<Radar className="w-4 h-4" />}>
@@ -84,119 +196,19 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
     }
     return (
         <SheetSection title="Implantations sur le réseau" icon={<Radar className="w-4 h-4" />}>
-            {/* Volumétrie : deux nombres, ceux dont on a besoin pour préparer
-                une pose. Les compteurs de statut (conformes / non conformes /
-                non contrôlés) relèvent de l'audit, pas de la consultation du
-                patrimoine — ils vivent dans Analyse des anomalies. */}
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 mb-4">
-                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{usage.installedCount}</span>
-                <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">exemplaires</span>
-                <span className="text-slate-300 dark:text-slate-600">·</span>
-                <span className="text-2xl font-bold text-slate-800 dark:text-slate-100">{usage.lieuCount}</span>
-                <span className="text-sm font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">lieux</span>
-            </div>
-            <div className="mb-4">
-                {/* Familles réellement rencontrées ; à défaut, le scope de la
-                    référence — jamais un libellé supposé. */}
-                <Field
-                    label="Types d'équipements"
-                    value={usage.equipmentTypes.length > 0 ? usage.equipmentTypes.join(', ') : reference.scope.auditType}
-                />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {usage.byLine.length > 0 && (
-                    <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Par ligne</h4>
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
-                                    <tr>
-                                        <th className="p-2.5 font-bold text-xs uppercase">Ligne</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-right">Exemplaires</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {usage.byLine.map(l => (
-                                        <tr key={l.line} className="bg-white dark:bg-slate-900">
-                                            <td className="p-2.5">
-                                                <span className="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-100">
-                                                    <LineBadge line={l.line} />
-                                                    {l.line === 'P+R' ? null : `Ligne ${l.line}`}
-                                                </span>
-                                            </td>
-                                            <td className="p-2.5 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.installed}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-                {usage.byLieu.length > 0 && (
-                    <div>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">Par lieu</h4>
-                        <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-600 dark:text-slate-300">
-                                    <tr>
-                                        <th className="p-2.5 font-bold text-xs uppercase">Lieu</th>
-                                        <th className="p-2.5 font-bold text-xs uppercase text-right">Exemplaires</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {usage.byLieu.map(l => {
-                                        const isOpen = openLieux.has(l.lieuId);
-                                        return (
-                                            <React.Fragment key={l.lieuId}>
-                                                <tr
-                                                    className="bg-white dark:bg-slate-900 cursor-pointer hover:bg-teal-50/60 dark:hover:bg-slate-800 transition-colors"
-                                                    onClick={() => toggleLieu(l.lieuId)}
-                                                >
-                                                    <td className="p-2.5 font-medium text-slate-800 dark:text-slate-100">
-                                                        <span className="flex items-center gap-1.5">
-                                                            {isOpen
-                                                                ? <ChevronDown className="w-4 h-4 flex-shrink-0 text-teal-600 dark:text-teal-400" />
-                                                                : <ChevronRight className="w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500" />}
-                                                            {l.lieuName}
-                                                        </span>
-                                                    </td>
-                                                    <td className="p-2.5 text-right tabular-nums text-slate-600 dark:text-slate-300">{l.installed}</td>
-                                                </tr>
-                                                {isOpen && (
-                                                    <tr className="bg-slate-50 dark:bg-slate-800/50">
-                                                        <td colSpan={2} className="px-3 py-2.5">
-                                                            {/* Un bloc par emplacement réellement présent :
-                                                                ligne, emplacement, nombre, puis les numéros
-                                                                d'équipement à poser. */}
-                                                            <ul className="space-y-2.5">
-                                                                {l.groups.map((g, i) => (
-                                                                    <li key={`${g.line}-${g.context}-${i}`}>
-                                                                        <div className="flex items-baseline justify-between gap-3">
-                                                                            <span className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                                                                                <LineBadge line={g.line} />
-                                                                                {g.line === 'P+R' ? null : `Ligne ${g.line}`}
-                                                                                {g.context && <span className="font-medium normal-case tracking-normal text-slate-500 dark:text-slate-400"> · {g.context}</span>}
-                                                                            </span>
-                                                                            <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200">{g.installed}</span>
-                                                                        </div>
-                                                                        <p className="mt-0.5 text-sm text-slate-700 dark:text-slate-200">
-                                                                            {g.equipmentLabels.join(' · ')}
-                                                                        </p>
-                                                                    </li>
-                                                                ))}
-                                                            </ul>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </React.Fragment>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                )}
-            </div>
+            {/* La volumétrie est dite une fois, en en-tête de fiche. Les
+                compteurs de statut (conformes / non conformes / non contrôlés)
+                relèvent de l'audit, pas de la consultation du patrimoine — ils
+                vivent dans Analyse des anomalies. */}
+            {/* Familles réellement rencontrées. Absente pour les familles
+                qui n'ont pas de type d'équipement (Plans de quartier) : le
+                champ disparaît au lieu d'afficher le scope à sa place. */}
+            {usage.equipmentTypes.length > 0 && (
+                <div className="mb-4">
+                    <Field label="Types d'équipements" value={usage.equipmentTypes.join(', ')} />
+                </div>
+            )}
+            <UsageBreakdown usage={usage} />
         </SheetSection>
     );
 };
@@ -210,6 +222,7 @@ interface ReferenceSheetProps {
 }
 
 const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference }) => {
+    const usage = index.byReference.get(reference.id);
     const refName = (id: string) => references.find(r => r.id === id)?.name ?? id;
     const linked = (id: string) => (
         <button
@@ -238,7 +251,21 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         {reference.needsReview && <Pill tone="amber">À qualifier</Pill>}
                         {reference.isDisabled && <Pill tone="red">Désactivée</Pill>}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-mono">
+                    {/* Volumétrie d'abord : « combien, et à combien d'endroits »
+                        est la question qu'on se pose en ouvrant une fiche. */}
+                    {usage && (
+                        <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
+                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{usage.installedCount}</span>
+                            <span className="text-slate-600 dark:text-slate-300">exemplaire{usage.installedCount > 1 ? 's' : ''}</span>
+                            <span className="text-slate-300 dark:text-slate-600">·</span>
+                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
+                            <span className="text-slate-600 dark:text-slate-300">lieu{usage.lieuCount > 1 ? 'x' : ''}</span>
+                        </p>
+                    )}
+                    {/* L'identifiant technique reste consultable, mais il ne
+                        dispute plus la place au nom : ce n'est pas ce qu'on
+                        vient chercher ici. */}
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
                         {reference.code ? `${reference.code} · ` : ''}{reference.id} · v{reference.version}
                     </p>
                 </div>

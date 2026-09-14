@@ -74,8 +74,11 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
 
     // --- PEM 3D (120×80, Dibond) ---
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'JEAN_JAURES_120X80_V05_tisseo_v3_16-06-2026_imp' },
-    { stationName: 'Ramonville', line: 'B', modelId: 'pem3d-120x80', quantity: 1, comment: 'RAMONVILLE_120X80_V05_tisseo_v4_01-09-2026_imp' },
-    { stationName: 'Borderouge', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
+    // Pupitre : mode de pose propre à CES exemplaires, pas une caractéristique
+    // du modèle PEM 3D (ailleurs il est fixé au mur ou collé) — il vit donc sur
+    // l'implantation, jamais sur la fiche de référence.
+    { stationName: 'Ramonville', line: 'B', modelId: 'pem3d-120x80', quantity: 1, location: 'Pupitre · dos gris RAL 7016', comment: 'RAMONVILLE_120X80_V05_tisseo_v4_01-09-2026_imp' },
+    { stationName: 'Borderouge', line: 'B', modelId: 'pem3d-120x80', quantity: 1, location: 'Pupitre · dos gris RAL 7016' },
     { stationName: 'Argoulets', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     { stationName: 'Basso Cambo', line: 'A', modelId: 'pem3d-120x80', quantity: 1 },
     // Arènes : trois PEM 3D réels, géo-orientés différemment — distingués
@@ -83,7 +86,7 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Proche agence / ascenseur' },
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Côté gare bus' },
     { stationName: 'Arènes', line: 'A', modelId: 'pem3d-120x80', quantity: 1, comment: 'Côté amphithéâtre / Tram' },
-    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pem3d-120x80', quantity: 1 },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pem3d-120x80', quantity: 1, location: 'Pupitre · dos gris RAL 7016' },
 
     // --- PDQ 78x120 en agence commerciale (hors Marengo/Jean-Jaurès, déjà
     // listés ci-dessus avec leur station d'origine) ---
