@@ -48,9 +48,4 @@ export const withArbitrageDecision = (
 ): SignageReference => ({
     ...reference,
     arbitrage: applyArbitrageDecision(reference.arbitrage, status, reason, now),
-    // Lot 2a : une décision d'arbitrage EST la qualification demandée — sans
-    // cette ligne, needsReview restait vrai indéfiniment (bug pré-existant :
-    // la référence ne quittait jamais « À qualifier » dans
-    // ReferenceQualificationView malgré une décision enregistrée).
-    needsReview: false,
 });

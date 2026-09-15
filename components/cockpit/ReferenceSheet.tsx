@@ -254,7 +254,6 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{reference.name}</h2>
-                        {reference.needsReview && <Pill tone="amber">À qualifier</Pill>}
                         {reference.isDisabled && <Pill tone="red">Désactivée</Pill>}
                     </div>
                     {/* Volumétrie d'abord : « combien, et à combien d'endroits »
@@ -311,28 +310,20 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             )}
 
             {/* Qualification — décision de catalogue, distincte des anomalies terrain (section Anomalies) */}
-            {(reference.needsReview || reference.arbitrage) && (
+            {reference.arbitrage && (
                 <SheetSection title="Qualification" icon={<Flag className="w-4 h-4" />}>
-                    {reference.needsReview && !reference.arbitrage && (
+                    <div className="space-y-1">
                         <p className="text-sm text-slate-700 dark:text-slate-300">
-                            Cette référence nécessite une décision de qualification catalogue (divergence documentaire ou
-                            classement incomplet) — décision à prendre dans Référentiel / Qualification du référentiel.
+                            <span className="font-semibold">{ARBITRAGE_LABELS[reference.arbitrage.status]}</span>
+                            {reference.arbitrage.reason ? ` — ${reference.arbitrage.reason}` : ''}
                         </p>
-                    )}
-                    {reference.arbitrage && (
-                        <div className="space-y-1">
-                            <p className="text-sm text-slate-700 dark:text-slate-300">
-                                <span className="font-semibold">{ARBITRAGE_LABELS[reference.arbitrage.status]}</span>
-                                {reference.arbitrage.reason ? ` — ${reference.arbitrage.reason}` : ''}
+                        {reference.arbitrage.updatedAt && (
+                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                                Décidé le {new Date(reference.arbitrage.updatedAt).toLocaleDateString('fr-FR')}
+                                {(reference.arbitrage.history?.length ?? 0) > 0 ? ` · ${reference.arbitrage.history!.length} décision(s) antérieure(s)` : ''}
                             </p>
-                            {reference.arbitrage.updatedAt && (
-                                <p className="text-xs text-slate-400 dark:text-slate-500">
-                                    Décidé le {new Date(reference.arbitrage.updatedAt).toLocaleDateString('fr-FR')}
-                                    {(reference.arbitrage.history?.length ?? 0) > 0 ? ` · ${reference.arbitrage.history!.length} décision(s) antérieure(s)` : ''}
-                                </p>
-                            )}
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </SheetSection>
             )}
         </div>

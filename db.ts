@@ -359,7 +359,11 @@ export const createAuditDb = (name: string): AuditDb => {
         const existing = await table.get(id);
         const fresh = freshById.get(id);
         if (!existing || !fresh) continue;
-        const { needsReview, ...rest } = existing;
+        // needsReview n'existe plus dans SignageReference (retiré, cf.
+        // Référentiel à qualifier) : cast local pour continuer à dépouiller
+        // ce champ légataire sur les enregistrements V14 déjà persistés,
+        // sans rouvrir ce champ dans le modèle courant.
+        const { needsReview, ...rest } = existing as SignageReference & { needsReview?: boolean };
         await table.put({
             ...rest,
             support: fresh.support,

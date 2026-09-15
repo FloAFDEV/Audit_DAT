@@ -164,11 +164,6 @@ const PDQ_MODEL_ORDER = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-
 const pdqSupportName = (ref: { id: string; support: string }): string =>
     ref.id === 'pem3d-120x80' ? 'PEM 3D' : (SUPPORT_LABELS[ref.support as keyof typeof SUPPORT_LABELS] ?? ref.support);
 
-const PDQ_LINE_LABELS: Record<string, string> = {
-    A: 'Métro A', B: 'Métro B', C: 'Métro C',
-    TRAM: 'Tram T1', TELEO: 'Téléo', AEROPORT: 'Aéroport Express',
-};
-
 /** Contexte d'implantation « caisse automatique de P+R » — porté par
  *  l'occurrence elle-même depuis l'unification du patrimoine, plus par un
  *  audit voisin (cf. store.ts::migratePrCaisseAutoPlansDeQuartier). */
@@ -277,7 +272,9 @@ const PlanQuartierOverview: React.FC<{
             .map(([line, stations]) => ({
                 line,
                 cfg: lineConfigs[line],
-                label: PDQ_LINE_LABELS[line] ?? line,
+                // Nom de ligne déjà porté par lineConfigs (AUDIT_CATEGORIES,
+                // seule source du libellé) — jamais un deuxième « A → Métro A ».
+                label: lineConfigs[line]?.label ?? line,
                 installed: [...stations.values()].reduce((s, v) => s + v.installed, 0),
                 stations: [...stations.entries()]
                     .map(([name, v]) => ({ name, ...v }))

@@ -33,7 +33,7 @@ const resetDb = async () => {
 /**
  * Simule une correction faite dans le seed/une migration sur ad3 :
  * tous les champs administrables sensibles sont touchés (externalDocuments,
- * needsReview, previousVersions, sameAs, pairedWith, material, dimensions).
+ * previousVersions, sameAs, pairedWith, material, dimensions).
  */
 const enrichAd3 = async (): Promise<SignageReference> => {
     const ad3 = (await db.signageReferences.get('ad3'))!;
@@ -57,7 +57,6 @@ const enrichAd3 = async (): Promise<SignageReference> => {
         ],
         sameAs: ['ad4'],
         pairedWith: 'ad5',
-        needsReview: true,
         placement: { zone: 'face-avant', position: 'haute', alignmentMark: 'butée platine CB', installationGuidance: 'Nettoyer avant pose.' },
     };
     await db.signageReferences.put(enriched);
@@ -129,7 +128,6 @@ describe('Export complet (format v2)', () => {
         const exported = payload.signageReferences.find(r => r.id === 'ad3')!;
         // Conservation exhaustive des champs sensibles du contrat.
         expect(exported.externalDocuments).toEqual(enriched.externalDocuments);
-        expect(exported.needsReview).toBe(true);
         expect(exported.previousVersions).toEqual(enriched.previousVersions);
         expect(exported.sameAs).toEqual(['ad4']);
         expect(exported.pairedWith).toBe('ad5');
