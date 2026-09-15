@@ -8,8 +8,11 @@
 // partout, combien faut-il prévoir ? » sans refaire un audit.
 // Sous-navigation pilotée par les données : Références (catalogue +
 // quantités déjà visibles par référence) et Implantations (parc terrain,
-// répartitions déjà visibles par support/ligne), plus Qualification
-// du référentiel (qualité du catalogue, jamais un constat terrain).
+// répartitions déjà visibles par support/ligne). Pas d'onglet
+// « Qualification du référentiel » séparé : les décisions de qualité du
+// catalogue (arbitrage) se lisent directement sur la fiche de chaque
+// référence concernée — le mécanisme (useArbitrage) reste disponible,
+// mais n'a plus d'écran dédié dans la navigation.
 // Pas d'onglet « Inventaire réseau » séparé : le besoin (quantité
 // installée, stations, lignes) est déjà couvert par ces deux vues et par
 // la fiche de vie — un onglet de plus aurait été un doublon, jamais une
@@ -19,12 +22,11 @@
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Scale, Search, LucideIcon } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Search, LucideIcon } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
-import ReferenceQualificationView from './ReferenceQualificationView';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
 
@@ -305,31 +307,30 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
 /* ================= Conteneur de section ================= */
 
-type ReferentielSubKey = 'references' | 'implantations' | 'qualification';
+type ReferentielSubKey = 'references' | 'implantations';
 
 const SUB_SECTIONS: { key: ReferentielSubKey; label: string; Icon: LucideIcon }[] = [
-    { key: 'references',    label: 'Références',                 Icon: BookOpenCheck },
-    { key: 'implantations', label: 'Implantations',               Icon: MapPinned },
-    { key: 'qualification', label: 'Qualification du référentiel', Icon: Scale },
+    { key: 'references',    label: 'Références',     Icon: BookOpenCheck },
+    { key: 'implantations', label: 'Implantations',   Icon: MapPinned },
 ];
 
 const isReferentielSubKey = (v: string): v is ReferentielSubKey =>
-    v === 'references' || v === 'implantations' || v === 'qualification';
+    v === 'references' || v === 'implantations';
 
 interface ReferentielViewProps {
     lieux: Lieu[];
 }
 
 const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
-    const { references, isLoading, reload } = useSignageReferences();
+    const { references, isLoading } = useSignageReferences();
     const index = usePatrimoineIndex(lieux, references);
     const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<ReferentielSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
 
     // Navigation transverse : une autre section peut demander l'ouverture
-    // d'un sous-onglet précis (ex. « Qualifier le référentiel → ») ou
-    // d'une fiche précise — consommé une fois pris en compte.
+    // d'un sous-onglet précis (ex. « Implantations → ») ou d'une fiche
+    // précise — consommé une fois pris en compte.
     useEffect(() => {
         if (nav.pendingSubSection && isReferentielSubKey(nav.pendingSubSection)) {
             setSubSection(nav.pendingSubSection);
@@ -401,13 +402,6 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                 <ImplantationsExplorer
                     references={references}
                     index={index}
-                    onOpenReference={setOpenReferenceId}
-                />
-            )}
-            {subSection === 'qualification' && (
-                <ReferenceQualificationView
-                    references={references}
-                    onReload={reload}
                     onOpenReference={setOpenReferenceId}
                 />
             )}
