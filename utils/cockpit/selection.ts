@@ -18,7 +18,7 @@
 // Les consommateurs liront ce contrat plus tard ; jamais l'inverse.
 // Analyse des anomalies n'est plus le propriétaire de la notion de
 // sélection : c'est un producteur parmi d'autres (Référentiel/
-// Références, Implantations, Qualification du référentiel, futures vues).
+// Références, Implantations, futures vues).
 //
 // Persistance : l'id est renouvelé à chaque calcul (une Selection n'est
 // pas encore enregistrée en base). La persistance viendra avec le

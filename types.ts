@@ -532,8 +532,9 @@ export interface ExternalDocumentRef {
     note?: string;
 }
 
-/** Qualification du référentiel (onglet « Qualification du référentiel »
- *  de Référentiel) — SOUS-OBJET UNIQUE, jamais de champs plats éparpillés.
+/** Qualification du référentiel (arbitrage catalogue, lu sur la fiche de
+ *  chaque référence concernée — pas d'écran dédié) — SOUS-OBJET UNIQUE,
+ *  jamais de champs plats éparpillés.
  *  Portée volontairement restreinte au CATALOGUE (la fiche référence
  *  elle-même est-elle correcte/complète ?) — ne concerne jamais un
  *  constat terrain : un item absent/dégradé/non conforme est une

@@ -12,18 +12,18 @@ import { createContext, useContext } from 'react';
 // l'application produit une INFORMATION (item, quantité, implantations,
 // contexte de pose) — jamais la chaîne aval (achat, fabrication,
 // organisation, pose), qui reste du ressort du SAE (hors application).
-// La qualification du catalogue (ex-Arbitrages) n'est pas un étage du
-// flux opérationnel : c'est un sous-onglet de Référentiel, réservé aux
-// questions de qualité de donnée (le référentiel est-il correct ?),
-// jamais aux constats terrain.
+// La qualification du catalogue (arbitrage : garder/retirer/documenter
+// une référence, avec motif et historique) n'est pas un étage du flux
+// opérationnel — elle se lit sur la fiche de la référence concernée,
+// jamais un constat terrain.
 export type CockpitSectionKey = 'synthese' | 'referentiel' | 'audit' | 'historique';
 
 export interface CockpitNavigation {
     /** Change de section ; `subSection` cible un onglet interne à la
      *  section (générique — chaque section interprète sa propre valeur,
-     *  ex. Référentiel : 'references' | 'implantations' | 'qualification') ;
-     *  si `referenceId` est fourni, la section Référentiel ouvrira la
-     *  fiche de vie correspondante à l'activation. */
+     *  ex. Référentiel : 'references' | 'implantations') ; si
+     *  `referenceId` est fourni, la section Référentiel ouvrira la fiche
+     *  de vie correspondante à l'activation. */
     navigate: (target: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => void;
     /** Référence en attente d'ouverture (consommée par ReferentielView). */
     pendingReferenceId: string | null;
