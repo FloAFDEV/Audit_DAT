@@ -65,12 +65,19 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
   const [activeSection, setActiveSection] = useState<CockpitSectionKey>('synthese');
   const [pendingReferenceId, setPendingReferenceId] = useState<string | null>(null);
   const [pendingSubSection, setPendingSubSection] = useState<string | null>(null);
+  const [referenceReturnSection, setReferenceReturnSection] = useState<CockpitSectionKey | null>(null);
 
   const nav = useMemo(() => ({
       navigate: ({ section, subSection, referenceId }: { section: CockpitSectionKey; subSection?: string; referenceId?: string }) => {
           if (subSection) setPendingSubSection(subSection);
           // Une fiche demandée s'ouvre toujours dans Référentiel (fiche unique).
           if (referenceId) {
+              // Raccourci croisé depuis une autre section (ex. une tuile de
+              // Synthèse) : mémorise d'où l'on vient pour que le bouton
+              // retour de la fiche y ramène, au lieu de laisser Référentiel
+              // sur sa première page. Ouvrir une fiche DEPUIS Référentiel
+              // (ex. la liste des références) ne change rien : on y reste déjà.
+              setReferenceReturnSection(activeSection !== 'referentiel' ? activeSection : null);
               setPendingReferenceId(referenceId);
               setActiveSection('referentiel');
           } else {
@@ -81,7 +88,14 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
       consumePendingReference: () => setPendingReferenceId(null),
       pendingSubSection,
       consumePendingSubSection: () => setPendingSubSection(null),
-  }), [pendingReferenceId, pendingSubSection]);
+      referenceReturnSection,
+      closeReference: () => {
+          if (referenceReturnSection) {
+              setActiveSection(referenceReturnSection);
+              setReferenceReturnSection(null);
+          }
+      },
+  }), [pendingReferenceId, pendingSubSection, activeSection, referenceReturnSection]);
 
   return (
     <CockpitNavContext.Provider value={nav}>

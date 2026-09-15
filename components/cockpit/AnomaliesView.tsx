@@ -31,11 +31,11 @@
 // =================================================================
 import React, { useMemo, useState } from 'react';
 import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download, Layout } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, AdhesiveStatus, AuditCategory } from '../../types';
+import { Lieu, MaintenanceItem, AuditModuleType, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { useSignaletiqueStationIndex } from '../../hooks/useSignaletiqueStationIndex';
-import { signaletiqueStationDefectsToMaintenanceItems } from '../../utils/cockpit/signaletiqueStationIndex';
+import { signaletiqueStationDefectsToMaintenanceItems, LINE_TO_CATEGORY } from '../../utils/cockpit/signaletiqueStationIndex';
 import {
     buildMaintenanceActions, MAINTENANCE_GROUP_MODES, MaintenanceGroupMode, MaintenanceAction,
     URGENCY_BAND_LABELS, UrgencyBand,
@@ -48,12 +48,8 @@ import { SectionTitle, AnomalySummaryCard } from './primitives';
 // MaintenanceListModal/exportMaintenanceListToCsv tels quels (aucune nouvelle
 // couche de mapping permanente — colocalisé ici, un seul usage : la liste
 // détaillée/export vit désormais dans Analyse des anomalies, pas Synthèse).
-// Ligne → catégorie : même correspondance que getCategoryForModule
-// (utils/maintenanceGenerator.ts), simplement dérivée de imp.line.
-const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
-    'A': 'METRO_A', 'B': 'METRO_B', 'C': 'METRO_C',
-    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'AEROPORT', 'P+R': 'PR',
-};
+// Ligne → catégorie dérivée de imp.line : LINE_TO_CATEGORY importée de
+// signaletiqueStationIndex (même correspondance, une seule table).
 
 const BAND_ORDER: UrgencyBand[] = ['urgent', 'a_planifier', 'surveillance'];
 

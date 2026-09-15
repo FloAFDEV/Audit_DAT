@@ -11,6 +11,14 @@
 // titre que Références et Implantations — une question de qualité de
 // donnée, pas une étape du flux opérationnel.
 //
+// Journal des décisions déjà tranchées (ARBITRAGE_DECISIONS, cf.
+// data/signage_seed.ts) — consultable et modifiable ici si une décision
+// doit changer. La file d'attente interactive (« À qualifier ») a été
+// retirée : le référentiel est une donnée statique distribuée avec le
+// build (aucune administration locale) et needsReview n'était plus
+// jamais positionné nulle part — la section restait donc vide en
+// permanence.
+//
 // Écrit dans signageReferences via useArbitrage (seule mutation de ce
 // module) : sous-objet unique `arbitrage` (R1 : "remove" n'efface
 // jamais la référence, seulement la décision).
@@ -147,64 +155,38 @@ interface ReferenceQualificationViewProps {
 const ReferenceQualificationView: React.FC<ReferenceQualificationViewProps> = ({ references, onReload, onOpenReference }) => {
     const { decide } = useArbitrage();
 
-    const pending = useMemo(() => references.filter(r => r.needsReview), [references]);
-    const decided = useMemo(() => references.filter(r => !r.needsReview && r.arbitrage), [references]);
+    const decided = useMemo(() => references.filter(r => r.arbitrage), [references]);
 
     const handleDecide = async (reference: SignageReference, status: ArbitrageStatus, reason: string) => {
         await decide(reference, status, reason || undefined);
         onReload();
     };
 
-    if (pending.length === 0 && decided.length === 0) {
+    if (decided.length === 0) {
         return (
             <div className="py-16 text-center text-slate-500 dark:text-slate-400">
                 <Scale className="w-10 h-10 mx-auto mb-3 opacity-40" />
-                <p className="font-medium">Aucune qualification en attente.</p>
-                <p className="text-sm mt-1">Le référentiel ne signale aucune divergence à trancher.</p>
+                <p className="font-medium">Aucune décision de qualification enregistrée.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8">
-            <section>
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-3">
-                    À qualifier ({pending.length})
-                </h3>
-                {pending.length === 0 ? (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucune référence en attente.</p>
-                ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {pending.map(ref => (
-                            <QualificationCard
-                                key={ref.id}
-                                reference={ref}
-                                onOpenReference={onOpenReference}
-                                onDecide={(status, reason) => handleDecide(ref, status, reason)}
-                            />
-                        ))}
-                    </div>
-                )}
-            </section>
-
-            {decided.length > 0 && (
-                <section>
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-3">
-                        Décisions enregistrées ({decided.length})
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {decided.map(ref => (
-                            <QualificationCard
-                                key={ref.id}
-                                reference={ref}
-                                onOpenReference={onOpenReference}
-                                onDecide={(status, reason) => handleDecide(ref, status, reason)}
-                            />
-                        ))}
-                    </div>
-                </section>
-            )}
-        </div>
+        <section>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-3">
+                Décisions enregistrées ({decided.length})
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {decided.map(ref => (
+                    <QualificationCard
+                        key={ref.id}
+                        reference={ref}
+                        onOpenReference={onOpenReference}
+                        onDecide={(status, reason) => handleDecide(ref, status, reason)}
+                    />
+                ))}
+            </div>
+        </section>
     );
 };
 

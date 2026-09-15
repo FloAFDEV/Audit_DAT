@@ -49,21 +49,10 @@ describe('applyArbitrageDecision', () => {
 });
 
 describe('withArbitrageDecision — sous-objet unique, référence non mutée en place', () => {
-    it("ajoute le champ 'arbitrage' et ferme la qualification ('needsReview'), aucun autre champ plat", () => {
+    it("ajoute le champ 'arbitrage', aucun autre champ plat", () => {
         const updated = withArbitrageDecision(baseRef, 'to_document', 'test', '2026-07-21T00:00:00.000Z');
         const newKeys = Object.keys(updated).filter(k => !(k in baseRef));
-        expect(newKeys.sort()).toEqual(['arbitrage', 'needsReview']);
-    });
-
-    it("une décision d'arbitrage ferme needsReview même s'il était vrai (bug de qualification qui ne se refermait jamais)", () => {
-        const refNeedingReview: SignageReference = { ...baseRef, needsReview: true };
-        const updated = withArbitrageDecision(refNeedingReview, 'keep', undefined, '2026-07-21T00:00:00.000Z');
-        expect(updated.needsReview).toBe(false);
-    });
-
-    it('needsReview reste false si la référence ne le demandait déjà pas', () => {
-        const updated = withArbitrageDecision(baseRef, 'remove', undefined, '2026-07-21T00:00:00.000Z');
-        expect(updated.needsReview).toBe(false);
+        expect(newKeys.sort()).toEqual(['arbitrage']);
     });
 
     it("ne mute pas l'objet original (immutabilité)", () => {

@@ -31,11 +31,13 @@ import { Lieu, AuditModuleType, ModeData, EquipmentStatusType, MaintenanceItem, 
 import { isModuleInAuditScope } from '../moduleScope';
 
 // Ligne -> catégorie : même correspondance que getCategoryForModule
-// (utils/maintenanceGenerator.ts) / LINE_TO_CATEGORY (AnomaliesView.tsx),
-// pour que la colonne "Ligne" de l'export CSV reste renseignée.
-const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
+// (utils/maintenanceGenerator.ts, signature différente — opère sur un
+// AuditModule complet, pas seulement sa ligne), pour que la colonne
+// "Ligne" de l'export CSV reste renseignée. Exportée : AnomaliesView
+// consomme cette même table plutôt que d'en tenir une copie.
+export const LINE_TO_CATEGORY: Record<string, AuditCategory> = {
     'A': 'METRO_A', 'B': 'METRO_B', 'C': 'METRO_C',
-    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'AEROPORT', 'P+R': 'PR',
+    'TRAM': 'TRAM', 'TELEO': 'TELEO', 'AEROPORT': 'LAE', 'P+R': 'PR',
 };
 
 export interface SignaletiqueStationItemRef {

@@ -45,7 +45,7 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
                 // permanente (cf. data/builder.ts::createDatModule/createSignaletiqueModule) ;
                 // ajouté explicitement pour ne plus dépendre silencieusement de cette
                 // invariante distante.
-                if (!module.isFuture || activeFilter === 'METRO_C' || activeFilter === 'AEROPORT') {
+                if (!module.isFuture || activeFilter === 'METRO_C' || activeFilter === 'LAE') {
                     types.add(module.type);
                 }
             }

@@ -55,7 +55,14 @@ export enum EcaEquipmentType {
     PMRVantauxReversible = "PMR à vantaux réversible",
 }
 
-export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'AEROPORT' | 'LAE';
+// 'AEROPORT' n'existe QUE comme valeur de Module.line (topologie réseau) —
+// jamais comme clé de AuditCategory (couleurs/config visuelle), qui ne
+// connaît que 'LAE' (cf. AUDIT_CATEGORIES, data/config.ts). Un ancien
+// membre fantôme 'AEROPORT' a longtemps coexisté ici avec 'LAE', et 3
+// endroits l'avaient à tort utilisé comme clé de catégorie — retiré (cf.
+// passe DRY) : la CategoryIcon et la colonne CSV « Ligne » restaient
+// vides pour les lignes Aéroport Express dans ces 3 cas précis.
+export type AuditCategory = 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'TELEO' | 'PR' | 'LAE';
 
 // =================================================================
 // DATA STRUCTURES
@@ -483,8 +490,8 @@ export interface AppEvent {
 /** Liste fermée assumée : vocabulaire structurel stable.
  *  'vitrophanie' = support signalétique destiné à une pose sur vitrage.
  *  'plastifie' = feuille plastifiée (Plans de quartier notamment).
- *  'autre' = support physique réellement rencontré mais non encore
- *  catégorisé → needsReview obligatoire jusqu'à qualification. */
+ *  'autre' = support physique réellement rencontré mais non catégorisable
+ *  dans les autres valeurs (ex. affichage digital intégré). */
 export type SignageSupport = 'adhesif' | 'dibond' | 'pvc' | 'vitrophanie' | 'plastifie' | 'autre';
 
 /** width/height individuellement optionnelles (lettrage, découpe,
@@ -603,7 +610,6 @@ export interface SignageReference {
     sameAs?: string[];   // équivalences métier (comptage commun) — jamais de fusion
     pairedWith?: string; // association physique (ex. recto/verso adca12/adca13)
     isDisabled?: boolean;
-    needsReview?: boolean; // tâche d'administration en attente (divergence, qualification)
     /** Arbitrage métier — sous-objet unique (statut, motif, historique). */
     arbitrage?: ArbitrageState;
     legacyDescription?: string; // texte d'origine intégral — filet de sécurité

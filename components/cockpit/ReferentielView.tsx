@@ -39,7 +39,6 @@ interface ReferencesListProps {
 const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, onOpen }) => {
     const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
     const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
-    const [onlyReview, setOnlyReview] = useState(false);
     const [query, setQuery] = useState('');
 
     const filtered = useMemo(() => {
@@ -47,7 +46,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
         return references.filter(r => {
             if (family !== 'ALL' && r.auditType !== family) return false;
             if (support !== 'ALL' && r.support !== support) return false;
-            if (onlyReview && !r.needsReview) return false;
             if (q && !(
                 r.name.toLowerCase().includes(q) ||
                 r.id.toLowerCase().includes(q) ||
@@ -56,9 +54,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
             )) return false;
             return true;
         });
-    }, [references, family, support, onlyReview, query]);
-
-    const reviewCount = useMemo(() => references.filter(r => r.needsReview).length, [references]);
+    }, [references, family, support, query]);
 
     return (
         <div className="space-y-4">
@@ -101,16 +97,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                         <option key={s} value={s}>{SUPPORT_LABELS[s]}</option>
                     ))}
                 </select>
-                <button
-                    onClick={() => setOnlyReview(v => !v)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                        onlyReview
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-300'
-                    }`}
-                >
-                    À qualifier ({reviewCount})
-                </button>
             </div>
 
             {/* Liste */}
@@ -125,7 +111,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Posés</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Docs</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -140,7 +125,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                                     <td className="p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
-                                            {ref.needsReview && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">À qualifier</span>}
                                             {ref.isDisabled && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">Désactivée</span>}
                                         </div>
                                         <span className="block font-mono text-xs text-slate-400 dark:text-slate-500 mt-0.5">
@@ -153,15 +137,12 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                                     <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-400 font-normal">—</span>}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
-                                    <td className="p-3 text-center text-slate-500 dark:text-slate-400 hidden lg:table-cell">
-                                        {(ref.externalDocuments?.length ?? 0) > 0 ? ref.externalDocuments!.length : '—'}
-                                    </td>
                                 </tr>
                             );
                         })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={8} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                                <td colSpan={7} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                                     Aucune référence ne correspond aux filtres.
                                 </td>
                             </tr>
@@ -376,7 +357,13 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     reference={reference}
                     references={references}
                     index={index}
-                    onBack={() => setOpenReferenceId(null)}
+                    onBack={() => {
+                        setOpenReferenceId(null);
+                        // Si la fiche a été ouverte depuis une autre section
+                        // (ex. une tuile de Synthèse), y revenir plutôt que
+                        // de rester sur la première page de Référentiel.
+                        nav.closeReference();
+                    }}
                     onOpenReference={setOpenReferenceId}
                 />
             );
