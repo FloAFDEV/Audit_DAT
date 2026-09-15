@@ -33,24 +33,33 @@ const getCategoryInfo = (categoryConfig: AuditCategoryConfig, isFuture: boolean)
 // FIX: Added the missing CategoryIconProps interface to define the component's props.
 interface CategoryIconProps {
     categoryConfig?: AuditCategoryConfig;
-    size?: 'sm' | 'md';
+    size?: 'xs' | 'sm' | 'md';
     isFuture?: boolean;
     asDiv?: boolean;
 }
 
+/** Un seul jeu de tailles, dérivé du même barème pour les 3 formats — jamais
+ *  une nouvelle échelle de couleurs/icônes : seule la taille varie.
+ *  xs (20px) : badge de ligne répété à chaque ligne d'une longue liste
+ *  (ex. stations Plans de quartier) — assez discret pour ne pas alourdir,
+ *  toujours identifiable grâce à sa couleur (seul signal qui compte ici). */
+const SIZE_CONFIG = {
+    xs: { box: 'w-5 h-5', text: 'text-[9px] font-bold', pill: 'h-5 px-1.5', radius: 'rounded-[6px]', globe: 'w-3 h-3' },
+    sm: { box: 'w-7 h-7', text: 'text-xs font-bold', pill: 'h-7 px-2', radius: 'rounded-[8px]', globe: 'w-4 h-4' },
+    md: { box: 'w-8 h-8', text: 'text-sm font-bold', pill: 'h-8 px-2.5', radius: 'rounded-[9px]', globe: 'w-4.5 h-4.5' },
+} as const;
+
 export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size = 'md', isFuture = false, asDiv = false }) => {
     // sm : 28px → meilleure lisibilité terrain + contraste AA renforcé
-    const sizeClasses = size === 'md' ? 'w-8 h-8' : 'w-7 h-7';
-    const textSize = size === 'md' ? 'text-sm font-bold' : 'text-xs font-bold';
+    const { box: sizeClasses, text: textSize, pill: pillSizing, radius } = SIZE_CONFIG[size];
 
     if (!categoryConfig) { // For "Tout le réseau"
-        const radius = size === 'md' ? 'rounded-[9px]' : 'rounded-[8px]';
         return (
             <div
                 className={`line-badge flex-shrink-0 flex items-center justify-center ${radius} bg-sky-500 text-white shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 ${sizeClasses}`}
                 title="Tout le réseau"
             >
-                <Globe className={size === 'md' ? 'w-4.5 h-4.5' : 'w-4 h-4'} />
+                <Globe className={SIZE_CONFIG[size].globe} />
             </div>
         );
     }
@@ -58,9 +67,7 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
     const { shortLabel, colors } = categoryConfig;
     const isLongLabel = (shortLabel?.length || 0) >= 3;
 
-    const sizing = size === 'md'
-        ? (isLongLabel ? `h-8 px-2.5 ${textSize}` : `${sizeClasses} ${textSize}`)
-        : (isLongLabel ? `h-7 px-2 ${textSize}` : `${sizeClasses} ${textSize}`);
+    const sizing = isLongLabel ? `${pillSizing} ${textSize}` : `${sizeClasses} ${textSize}`;
 
     const info = getCategoryInfo(categoryConfig, isFuture);
 
@@ -75,7 +82,6 @@ export const CategoryIcon: React.FC<CategoryIconProps> = ({ categoryConfig, size
         }
     };
 
-    const radius = size === 'md' ? 'rounded-[9px]' : 'rounded-[8px]';
     const commonClasses = `line-badge flex-shrink-0 flex items-center justify-center ${radius} font-bold shadow-[0_1px_3px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.22)] ring-1 ring-black/10 transition-opacity ${sizing} ${colors.badgeText}`;
 
     if (asDiv) {
