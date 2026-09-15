@@ -33,6 +33,15 @@ export interface CockpitNavigation {
     pendingSubSection: string | null;
     /** À appeler une fois le sous-onglet activé, pour vider la demande. */
     consumePendingSubSection: () => void;
+    /** Section à laquelle revenir en fermant la fiche de référence ouverte
+     *  par un raccourci croisé (ex. une tuile de Synthèse) — null quand la
+     *  fiche a été ouverte depuis Référentiel lui-même (retour sur place,
+     *  comportement inchangé : jamais de retour « vers nulle part »). */
+    referenceReturnSection: CockpitSectionKey | null;
+    /** À appeler par le bouton retour de la fiche : revient à
+     *  `referenceReturnSection` si présent (et le vide), sinon ne fait rien
+     *  (la section ciblée gère alors la fermeture de la fiche elle-même). */
+    closeReference: () => void;
 }
 
 export const CockpitNavContext = createContext<CockpitNavigation | null>(null);

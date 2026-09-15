@@ -18,7 +18,7 @@ import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
-import { formatDimensions } from './labels';
+import { formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
 
 /* =====================
@@ -155,40 +155,14 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
 /** Ordre de lecture métier des formats, indépendant de l'ordre du seed. */
 const PDQ_MODEL_ORDER = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80'];
 
-/** Libellés courts : le nom complet du référentiel (« Plan de quartier
- *  78×100 (sans header ni footer) ») ne tient pas dans une tuile. */
-const PDQ_TILE_LABELS: Record<string, string> = {
-    'pdq-78x100': '78 × 100',
-    'pdq-78x120': '78 × 120',
-    'pdq-adhesif': 'Adhésif',
-    'pdq-78x120-dibond': 'Dibond',
-    'pem3d-120x80': 'PEM 3D',
-};
-
-/** Libellés du détail par station. La tuile porte sa dimension sur une
- *  ligne dédiée ; ici tout tient sur une seule ligne, donc les libellés
- *  qui ne sont pas déjà un format le portent explicitement — un plan en
- *  agence se lit « Adhésif 78 × 120 », pas « Adhésif ». */
-const PDQ_DETAIL_LABELS: Record<string, string> = {
-    ...PDQ_TILE_LABELS,
-    'pdq-adhesif': 'Adhésif 78 × 120',
-    'pdq-78x120-dibond': 'Dibond 78 × 120',
-};
-
-/** IndicatorTile affiche `label` PUIS `hint` sur sa propre ligne : passer
- *  « 78 × 100 » en label et « 78 × 100 cm » en hint redirait deux fois la
- *  même information (cf. audit UI). Le format EST le nom du modèle pour
- *  78×100/78×120 (aucun mot à ajouter) ; les autres modèles précisent leur
- *  support avant la dimension — jamais l'inverse d'un doublon, jamais une
- *  dimension recalculée hors du référentiel (toujours formatDimensions). */
-const pdqTileLabel = (modelId: string, dims: string): string => {
-    switch (modelId) {
-        case 'pdq-adhesif': return `Adhésif · ${dims}`;
-        case 'pdq-78x120-dibond': return `Dibond · ${dims}`;
-        case 'pem3d-120x80': return `PEM 3D · ${dims}`;
-        default: return dims; // pdq-78x100 / pdq-78x120 : le format EST le nom.
-    }
-};
+/** Nom de support affiché devant la dimension — dérivé du référentiel
+ *  (ref.support, jamais recalculé/deviné ni recopié en dur par modèle) :
+ *  Plastifié pour les deux modèles plastifiés (78×100/78×120), Adhésif,
+ *  Dibond… PEM 3D reste un nom de produit à part : il partage le support
+ *  Dibond avec pdq-78x120-dibond, mais les deux ne doivent jamais se
+ *  confondre sous le même libellé. */
+const pdqSupportName = (ref: { id: string; support: string }): string =>
+    ref.id === 'pem3d-120x80' ? 'PEM 3D' : (SUPPORT_LABELS[ref.support as keyof typeof SUPPORT_LABELS] ?? ref.support);
 
 const PDQ_LINE_LABELS: Record<string, string> = {
     A: 'Métro A', B: 'Métro B', C: 'Métro C',
@@ -225,11 +199,20 @@ const PlanQuartierOverview: React.FC<{
         const usage = patrimoineIndex.byReference.get(ref.id);
         return {
             id: ref.id,
-            label: pdqTileLabel(ref.id, formatDimensions(ref.dimensions)),
+            label: `${pdqSupportName(ref)} · ${formatDimensions(ref.dimensions)}`,
             installed: usage?.installedCount ?? 0,
             defects: usage?.defectCount ?? 0,
         };
     }), [models, patrimoineIndex]);
+
+    // Même construction que la tuile, réutilisée dans le détail par station
+    // ci-dessous (séparateur différent, contexte de lecture en ligne plutôt
+    // qu'empilé) — un seul calcul du support par référence, jamais deux
+    // libellés qui pourraient diverger.
+    const pdqShortLabels = useMemo(
+        () => new Map(models.map(ref => [ref.id, `${pdqSupportName(ref)} ${formatDimensions(ref.dimensions)}`])),
+        [models]
+    );
 
     const total = tiles.reduce((sum, t) => sum + t.installed, 0);
     const totalDefects = tiles.reduce((sum, t) => sum + t.defects, 0);
@@ -266,7 +249,7 @@ const PlanQuartierOverview: React.FC<{
             const entry = stations.get(imp.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, { label: string; detail?: string; count: number }>() };
             entry.installed += 1;
             if (imp.status === AdhesiveStatus.Absent || imp.status === AdhesiveStatus.ToBeReplaced) entry.defects += 1;
-            const shortLabel = PDQ_DETAIL_LABELS[imp.referenceId] ?? imp.referenceId;
+            const shortLabel = pdqShortLabels.get(imp.referenceId) ?? imp.referenceId;
             // (modèle, emplacement) : patrimoineIndex retombe sur le nom du
             // lieu quand aucune implantation réelle n'est connue (occ.location
             // absent) — un contexte qui DIFFÈRE du lieu est donc une vraie

@@ -376,7 +376,13 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     reference={reference}
                     references={references}
                     index={index}
-                    onBack={() => setOpenReferenceId(null)}
+                    onBack={() => {
+                        setOpenReferenceId(null);
+                        // Si la fiche a été ouverte depuis une autre section
+                        // (ex. une tuile de Synthèse), y revenir plutôt que
+                        // de rester sur la première page de Référentiel.
+                        nav.closeReference();
+                    }}
                     onOpenReference={setOpenReferenceId}
                 />
             );
