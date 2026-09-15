@@ -391,7 +391,16 @@ const PlanQuartierOverview: React.FC<{
                             {stations.map(st => (
                                 <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
                                     <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
-                                        <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{st.name}</span>
+                                        {/* Badge de ligne répété à chaque station (en plus de celui
+                                            du header de colonne juste au-dessus) : après plusieurs
+                                            écrans de scroll sur ~90 stations, le header n'est plus
+                                            visible — sans ce rappel, on perd le contexte de ligne.
+                                            Même CategoryIcon, taille xs (plus discrète que le sm du
+                                            header) : aucun nouveau badge, juste une taille de plus. */}
+                                        <span className="flex items-center gap-1.5 min-w-0">
+                                            {cfg && <CategoryIcon categoryConfig={cfg} size="xs" />}
+                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{st.name}</span>
+                                        </span>
                                         <span className="flex-shrink-0 flex items-baseline gap-2">
                                             {st.defects > 0 && (
                                                 <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
