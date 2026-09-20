@@ -48,6 +48,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [heroImageFailed, setHeroImageFailed] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -97,6 +98,24 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             La plateforme de gestion et d'analyse de la signalétique Information Voyageur, pensée pour le terrain.
           </p>
         </div>
+
+        {/* Photo terrain réelle (recadrée depuis le visuel de référence,
+            sans le faux formulaire ni les badges/mascotte fictifs) —
+            desktop uniquement, poids négligeable (~45 Ko), dégradée vers
+            le panneau si elle ne charge pas (cf. audit performance). */}
+        {!heroImageFailed && (
+          <div className="relative mt-8 hidden lg:block max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
+            <img
+              src="/images/login-hero.jpg"
+              alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
+              className="h-40 w-full object-cover"
+              loading="eager"
+              decoding="async"
+              onError={() => setHeroImageFailed(true)}
+            />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent to-neutral-950/80" />
+          </div>
+        )}
 
         {/* Étapes du pipeline produit — masquées sur mobile pour garder le
             hero compact (le formulaire reste la priorité, cf. audit). */}
