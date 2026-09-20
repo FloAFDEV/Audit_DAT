@@ -104,11 +104,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             desktop uniquement, poids négligeable (~45 Ko), dégradée vers
             le panneau si elle ne charge pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-8 hidden lg:block max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
+          <div className="relative mt-8 hidden lg:block overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
-              className="h-40 w-full object-cover"
+              className="h-56 w-full object-cover"
               loading="eager"
               decoding="async"
               onError={() => setHeroImageFailed(true)}
