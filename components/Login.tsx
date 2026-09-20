@@ -99,21 +99,33 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </p>
         </div>
 
-        {/* Photo terrain réelle (recadrée depuis le visuel de référence,
-            sans le faux formulaire ni les badges/mascotte fictifs) —
-            desktop uniquement, poids négligeable (~45 Ko), dégradée vers
-            le panneau si elle ne charge pas (cf. audit performance). */}
+        {/* Photo terrain réelle (scène complète du visuel de référence :
+            portique de station, agent, mascotte — sans le faux formulaire).
+            Les badges de fonctionnalités incrustés dans la photo source
+            (dont « Géolocalisation », inexistante) sont masqués par un
+            bandeau opaque et remplacés par nos vraies fonctionnalités.
+            Desktop uniquement, dégradée vers le panneau si elle ne charge
+            pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-8 hidden lg:block overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
+          <div className="relative mt-8 hidden lg:block aspect-[1090/630] w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
-              className="h-56 w-full object-cover"
+              className="h-full w-full object-cover"
               loading="eager"
               decoding="async"
               onError={() => setHeroImageFailed(true)}
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent to-neutral-950/80" />
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/40 via-transparent to-transparent" />
+            {/* Bandeau de remplacement des badges factices de la photo source */}
+            <div className="absolute left-[67%] top-[5%] flex h-[51%] w-[30%] flex-col justify-center gap-2 rounded-lg bg-neutral-950/85 p-2 backdrop-blur-sm ring-1 ring-white/10">
+              {FEATURES.map(({ label, Icon }) => (
+                <div key={label} className="flex items-center gap-1.5 rounded bg-white/5 px-1.5 py-1">
+                  <Icon className="h-3 w-3 flex-shrink-0 text-teal-400" aria-hidden="true" />
+                  <span className="truncate text-[9px] font-medium leading-tight text-neutral-200">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
