@@ -9,7 +9,7 @@ interface ToastContentProps {
 }
 
 const CustomToastContent: React.FC<ToastContentProps> = ({ IconComponent, title, message }) => (
-    <div className="max-w-sm w-full bg-white dark:bg-neutral-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 dark:ring-white/10">
+    <div className="max-w-sm w-full bg-white dark:bg-slate-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5 dark:ring-white/10">
         <div className="p-4 flex items-center gap-4">
             <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center">
                 {IconComponent}

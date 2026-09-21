@@ -309,13 +309,13 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     currentStatus: EquipmentStatusType | 'NotChecked',
     onChange: (status: EquipmentStatusType | 'NotChecked') => void
   ) => {
-    const okOpt = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const absentOpt = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOpt = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-neutral-700/50 dark:text-orange-300 dark:ring-teal-600', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOpt = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
+    const absentOpt = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
+    const toReplaceOpt = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
     const subOptions = [okOpt, absentOpt, toReplaceOpt];
 
     return (
-      <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-teal-700">
+      <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-slate-700">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
             <Flag className="w-4 h-4 text-indigo-400 flex-shrink-0" />
@@ -343,14 +343,14 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   };
 
   const renderPhotoSection = (category: keyof SignaletiqueData, dir: SignDir, index: number, item: any) => (
-    <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-teal-700 flex flex-col gap-4">
+    <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-4">
         <button
           onClick={() => handlePhotoUploadClick(category, dir, index)}
           className={`flex items-center justify-center p-2 rounded-lg transition-all duration-75 active:scale-95 ${
             item.photo_base64
               ? 'bg-teal-50 text-teal-600 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:ring-teal-800'
-              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-neutral-700 dark:text-slate-400 dark:hover:bg-neutral-600'
+              : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
           }`}
           title={item.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
         >
@@ -373,7 +373,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             value={item.comment || ''}
             onChange={(e) => onCommentChange(category, dir, index, e.target.value)}
             placeholder="Observation..."
-            className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-neutral-900 border border-gray-100 dark:border-teal-700 rounded-md focus:ring-2 focus:ring-teal-500 outline-none text-gray-700 dark:text-slate-300 transition-all"
+            className="w-full pl-9 pr-3 py-1.5 text-sm bg-gray-50 dark:bg-slate-900 border border-gray-100 dark:border-slate-700 rounded-md focus:ring-2 focus:ring-teal-500 outline-none text-gray-700 dark:text-slate-300 transition-all"
           />
         </div>
       </div>
@@ -392,7 +392,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           </button>
           <div className="flex-1">
             {item.photo_note ? (
-              <p className="text-sm text-gray-600 dark:text-slate-300 italic p-3 bg-slate-100 dark:bg-neutral-700/50 rounded-md whitespace-pre-wrap">{item.photo_note}</p>
+              <p className="text-sm text-gray-600 dark:text-slate-300 italic p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md whitespace-pre-wrap">{item.photo_note}</p>
             ) : (
               <p className="text-sm text-gray-400 dark:text-slate-500 italic">Aucune note pour cette photo.</p>
             )}
@@ -411,23 +411,23 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   ) => {
     if (!item) return null;
 
-    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-neutral-700/50 dark:text-amber-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
-    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-neutral-700/50 dark:text-orange-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
+    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
+    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
+    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
 
     const options = category === 'totem'
       ? [okOption, degradedOption]
       : [okOption, absentOption, toReplaceOption];
 
     return (
-      <div key={`${category}-${dirKey}`} className="p-6 hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors border-b border-gray-100 dark:border-teal-700 last:border-0">
+      <div key={`${category}-${dirKey}`} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-700 last:border-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{endpointLabel}</h3>
               {item.dimensions && (
-                <span className="px-2 py-0.5 bg-gray-100 dark:bg-neutral-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
                   {item.dimensions}
                 </span>
               )}
@@ -467,11 +467,11 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     const itemsArr = (signaletique[category] as any)?.[dir] ?? [];
     const itemName = `${baseLabel} ${itemsArr.length > 1 ? `#${index + 1}` : ''}`.trim();
 
-    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-neutral-700/50 dark:text-amber-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
-    const hsOption = { value: EquipmentStatusType.HS, label: 'HS', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-neutral-700/50 dark:text-orange-300 dark:ring-teal-600 dark:hover:bg-neutral-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
+    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
+    const hsOption = { value: EquipmentStatusType.HS, label: 'HS', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
+    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
+    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
 
     let options = [okOption, absentOption, toReplaceOption];
     if (category === 'biv') options = [okOption, degradedOption, hsOption];
@@ -481,13 +481,13 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     const displayedDimensions = category === 'planQuartier' ? PLAN_QUARTIER_DISPLAY_DIMENSIONS : item.dimensions;
 
     return (
-      <div key={`${category}-${dir}-${index}`} className="p-6 hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors border-b border-gray-100 dark:border-teal-700 last:border-0">
+      <div key={`${category}-${dir}-${index}`} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-700 last:border-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-1">
               <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{itemName}</h3>
               {displayedDimensions && (
-                <span className="px-2 py-0.5 bg-gray-100 dark:bg-neutral-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
+                <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
                   {displayedDimensions}
                 </span>
               )}
@@ -522,8 +522,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   };
 
   const renderCategorySection = (category: keyof SignaletiqueData, children: React.ReactNode) => (
-    <div className="bg-white dark:bg-neutral-800 shadow-sm border-b border-gray-200 dark:border-teal-700 overflow-hidden">
-      <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-teal-700">
+    <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
+      <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-xl">
             {CATEGORY_ICONS[category]}
@@ -531,7 +531,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>
         </div>
       </div>
-      <div className="divide-y divide-gray-100 dark:divide-teal-700">
+      <div className="divide-y divide-gray-100 dark:divide-slate-700">
         {children}
       </div>
     </div>
@@ -568,7 +568,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         comment={station.comment}
         onCommentChange={onStationCommentChange}
       >
-        <div className="space-y-6 bg-slate-50 dark:bg-neutral-900/30">
+        <div className="space-y-6 bg-slate-50 dark:bg-slate-900/30">
 
           {/* ── TOTEM : extrémité de la direction sélectionnée uniquement ── */}
           {renderCategorySection('totem', renderSelectedEndpoint('totem'))}

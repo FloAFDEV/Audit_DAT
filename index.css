@@ -86,7 +86,7 @@
   background: linear-gradient(160deg, #fff 70%, rgba(251, 191, 36, 0.07) 100%);
 }
 .dark .lieu-card.is-in-progress {
-  background: linear-gradient(160deg, rgb(38 38 38) 70%, rgba(251, 191, 36, 0.09) 100%);
+  background: linear-gradient(160deg, rgb(30 41 59) 70%, rgba(251, 191, 36, 0.09) 100%);
 }
 
 /* --- États DAT : accent latéral lisible en 1 seconde ----------------------

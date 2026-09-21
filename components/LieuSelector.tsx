@@ -33,7 +33,7 @@ const SearchResultItem: React.FC<{ lieu: Lieu; onClick: () => void }> = ({ lieu,
 
     return (
         <li
-            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-neutral-700"
+            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700"
             onClick={onClick}
         >
             <div className="flex items-center gap-x-3">
@@ -231,7 +231,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
-        const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900';
+        const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900';
         if (activeFilter === catKey) return `${baseClasses} font-medium`;
         return `${baseClasses} border-transparent text-slate-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)] font-normal`;
     };
@@ -287,7 +287,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">Tableau de Bord des Audits</h2>
                 </div>
                  <div className="flex items-center gap-x-2 sm:gap-x-4 self-end sm:self-center">
-                    <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors" aria-label="Ouvrir le cockpit signalétique" title="Ouvrir le cockpit signalétique">
+                    <button onClick={() => setIsStatsViewActive(true)} className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Ouvrir le cockpit signalétique" title="Ouvrir le cockpit signalétique">
                         <BarChart3 className="w-5 h-5" />
                     </button>
                     <ThemeSelector />
@@ -300,7 +300,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
 
             <div className="mb-6">
                 <div className="hidden sm:block">
-                    <div className="border-b border-gray-200 dark:border-teal-700">
+                    <div className="border-b border-gray-200 dark:border-slate-700">
                         <nav className="-mb-px flex flex-wrap gap-x-8" aria-label="Tabs">
                             {/* FIX: Cast to `unknown` to allow custom CSS properties, resolving a TypeScript error where '--hover-color' was not recognized on the CSSProperties type. */}
                             <button onClick={() => onFilterChange('ALL')} className={getTabButtonClass('ALL')} style={{ ...getTabButtonStyle('ALL'), '--hover-color': getCategoryHoverColor('ALL') } as unknown as React.CSSProperties}>
@@ -323,7 +323,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 </div>
                  <div className="sm:hidden">
                     <div className="relative" ref={mobileMenuRef}>
-                        <button type="button" className="relative w-full cursor-default rounded-md bg-white dark:bg-neutral-800 py-2 pl-3 pr-10 text-left text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 focus:outline-none focus:ring-2 focus:ring-teal-500 sm:text-sm sm:leading-6" onClick={() => setIsMobileMenuOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={isMobileMenuOpen}>
+                        <button type="button" className="relative w-full cursor-default rounded-md bg-white dark:bg-slate-800 py-2 pl-3 pr-10 text-left text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:outline-none focus:ring-2 focus:ring-teal-500 sm:text-sm sm:leading-6" onClick={() => setIsMobileMenuOpen(prev => !prev)} aria-haspopup="listbox" aria-expanded={isMobileMenuOpen}>
                              <span className="flex items-center justify-between w-full">
                                 <span className="flex items-center">
                                     <CategoryIcon categoryConfig={activeCategoryConfig} size="sm" asDiv />
@@ -335,8 +335,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                         </button>
 
                         {isMobileMenuOpen && (
-                            <ul className="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-neutral-800 py-1 text-base shadow-lg ring-1 ring-black dark:ring-teal-600 ring-opacity-5 focus:outline-none sm:text-sm">
-                                <li className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-neutral-700" onClick={() => { onFilterChange('ALL'); setIsMobileMenuOpen(false); }}>
+                            <ul className="absolute z-10 mt-1 w-full rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg ring-1 ring-black dark:ring-slate-600 ring-opacity-5 focus:outline-none sm:text-sm">
+                                <li className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange('ALL'); setIsMobileMenuOpen(false); }}>
                                     <div className="flex items-center justify-between w-full">
                                         <div className="flex items-center">
                                             <CategoryIcon size="sm" asDiv />
@@ -347,7 +347,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                     {activeFilter === 'ALL' && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-600 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
                                 </li>
                                 {AUDIT_CATEGORIES.map(cat => (
-                                    <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-neutral-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
+                                    <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
                                         <div className="flex items-center justify-between w-full">
                                             <div className="flex items-center">
                                                 <CategoryIcon categoryConfig={cat} size="sm" asDiv />
@@ -373,9 +373,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                     </div>
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-neutral-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-teal-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base" autoComplete="off" />
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base" autoComplete="off" />
                     {isDropdownOpen && (
-                        <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-neutral-800 py-1 text-base shadow-lg border border-gray-200 dark:border-teal-600 focus:outline-none sm:text-sm">
+                        <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
                             {(!searchResults?.inCategory || searchResults.inCategory.length === 0) && (!searchResults?.others || searchResults.others.length === 0) && searchQuery.trim() && (
                                 <li className="relative select-none py-2 px-4 text-gray-500">Aucun résultat trouvé.</li>
                             )}
@@ -384,8 +384,8 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                             ))}
                             {(searchResults?.others || []).length > 0 && (
                                 <li className="relative py-2">
-                                    <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-gray-300 dark:border-teal-600" /></div>
-                                    <div className="relative flex justify-center"><span className="bg-white dark:bg-neutral-800 px-3 text-sm font-medium text-gray-500 dark:text-slate-400">Résultats dans d'autres catégories</span></div>
+                                    <div className="absolute inset-0 flex items-center" aria-hidden="true"><div className="w-full border-t border-gray-300 dark:border-slate-600" /></div>
+                                    <div className="relative flex justify-center"><span className="bg-white dark:bg-slate-800 px-3 text-sm font-medium text-gray-500 dark:text-slate-400">Résultats dans d'autres catégories</span></div>
                                 </li>
                             )}
                             {(searchResults?.others || []).map(lieu => (
@@ -398,7 +398,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     {showInverter && (
                         <button 
                             onClick={toggleOrderReversed} 
-                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-normal text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-neutral-800 dark:text-slate-300 dark:ring-teal-700 dark:hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900" 
+                            className="w-full sm:w-auto inline-flex items-center justify-center gap-x-2 rounded-md bg-white px-3 py-2 text-sm font-normal text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 transition-colors hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700 dark:hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900" 
                             title="Inverser l'ordre des stations"
                         >
                             <ArrowUpDown className="h-5 w-5" />
@@ -430,7 +430,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
             </div>
 
             {(!orderedLieuxForDisplay || orderedLieuxForDisplay.length === 0) ? (
-                 <div className="text-center p-12 bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-slate-100 dark:border-teal-700">
+                 <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
                     <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun lieu</h3>
                     <p className="mt-1 text-sm font-light text-slate-500 dark:text-slate-400">Aucun lieu n'est disponible pour les filtres actifs.</p>
                 </div>

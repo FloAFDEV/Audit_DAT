@@ -64,7 +64,7 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
     // Ligne du périmètre pas encore équipée : fond très léger sur sa colonne et
     // total atténué — le vide se lit comme un état du réseau, pas comme une
     // donnée manquante. La teinte disparaît d'elle-même au premier équipement.
-    const mutedCell = 'bg-slate-50/70 dark:bg-neutral-800/30';
+    const mutedCell = 'bg-slate-50/70 dark:bg-slate-800/30';
 
     // Types affichés : ceux présents sur au moins une ligne du périmètre. Un
     // type absent partout n'apparaît pas ; absent d'une seule ligne, il
@@ -85,7 +85,7 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                 quitte à défiler horizontalement dans ce conteneur. */}
             <table className="w-full min-w-[30rem] table-fixed text-sm">
                 <thead>
-                    <tr className="border-b border-slate-200 dark:border-teal-700">
+                    <tr className="border-b border-slate-200 dark:border-slate-700">
                         <th scope="col" className="w-[34%] py-2 pr-3 align-bottom text-left">
                             {/* Cellule d'angle : le total global rejoint ici le
                                 même niveau de hiérarchie que les totaux par
@@ -124,7 +124,7 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                         ))}
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-teal-800/70">
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
                     {rows.map(({ label, type }) => (
                         <tr key={type}>
                             <th scope="row" className="py-1.5 pr-3 text-left text-xs font-normal text-slate-500 dark:text-slate-400 truncate">{label}</th>
@@ -353,7 +353,7 @@ const PlanQuartierOverview: React.FC<{
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
                 {byLine.map(({ line, cfg, label, installed, stations }) => (
                     <div key={line}>
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-teal-700 pb-1">
+                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1">
                             <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                                 {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
                                 {label}
@@ -369,8 +369,8 @@ const PlanQuartierOverview: React.FC<{
                             avec sa quantité en pastille bien distincte. */}
                         <ul className="mt-2 space-y-2.5">
                             {stations.map(st => (
-                                <li key={st.name} className="rounded-lg border border-slate-200 dark:border-teal-700 p-2.5">
-                                    <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-teal-700">
+                                <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                                    <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
                                         {/* Badge de ligne répété à chaque station (en plus de celui
                                             du header de colonne juste au-dessus) : après plusieurs
                                             écrans de scroll sur ~90 stations, le header n'est plus
@@ -405,7 +405,7 @@ const PlanQuartierOverview: React.FC<{
                                                         </span>
                                                     )}
                                                 </span>
-                                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-700 text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
+                                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
                                                     ×{fmt.count}
                                                 </span>
                                             </li>
@@ -645,7 +645,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         className={`block w-full rounded-lg border py-3 pl-10 pr-10 text-sm shadow-sm focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base transition-colors ${
                             selectedLieuId
                             ? 'border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:border-teal-500/50 dark:text-teal-100 placeholder:text-teal-700 dark:placeholder:text-teal-300 font-semibold'
-                            : 'border-gray-300 bg-white text-gray-900 dark:border-teal-600 dark:bg-neutral-700 dark:text-white placeholder:text-gray-400'
+                            : 'border-gray-300 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-gray-400'
                         }`}
                     />
                     {selectedLieuId && (
@@ -662,10 +662,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 </div>
 
                 {isFilterDropdownOpen && (
-                    <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-neutral-800 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
+                    <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
                         {/* Option "Tout le réseau" */}
                         <li
-                            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-neutral-700 font-medium border-b border-gray-100 dark:border-teal-700"
+                            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700 font-medium border-b border-gray-100 dark:border-slate-700"
                             onClick={() => {
                                 setSelectedLieuId(null);
                                 setFilterQuery('');
@@ -685,7 +685,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             filterOptions.map((lieu) => (
                                 <li
                                     key={lieu.id}
-                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-neutral-700"
+                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700"
                                     onClick={() => {
                                         setSelectedLieuId(lieu.id);
                                         setFilterQuery('');
@@ -748,7 +748,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         </div>
                     </div>
 
-                    <hr className="border-dashed border-slate-200 dark:border-teal-700" />
+                    <hr className="border-dashed border-slate-200 dark:border-slate-700" />
                     </>
                 )}
 
@@ -795,7 +795,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                 </div>
 
-                <hr className="border-dashed border-slate-200 dark:border-teal-700" />
+                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
 
                 {/* Rangée 2 — ECA sur toute la largeur. C'est le bloc le plus
                     dense de la carte (4 lignes × jusqu'à 8 types) : lui donner
@@ -940,7 +940,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             </button>
                             <button
                                 onClick={() => nav.navigate({ section: 'audit' })}
-                                className="px-4 py-2 rounded-lg bg-white dark:bg-neutral-700 border border-slate-200 dark:border-teal-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-neutral-600 text-sm font-semibold transition-colors"
+                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
                             >
                                 Voir les anomalies →
                             </button>
@@ -961,14 +961,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     placeholder="Rechercher par nom, type ou repère..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="block w-full rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                    className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
                     />
                 </div>
 
                 {/* Desktop/tablette : tableau complet. */}
-                <div className="hidden sm:block overflow-auto max-h-96 border border-slate-200 dark:border-teal-700 rounded-lg shadow-inner">
+                <div className="hidden sm:block overflow-auto max-h-96 border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
                     <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-neutral-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
+                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Type</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Rep.</th>
@@ -978,9 +978,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">Qté réseau</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-teal-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredInventory.map((item, idx) => (
-                        <tr key={item.id} className={`hover:bg-teal-50/50 dark:hover:bg-neutral-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-neutral-900' : 'bg-slate-50 dark:bg-neutral-800'}`}>
+                        <tr key={item.id} className={`hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
                             <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
@@ -1006,7 +1006,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     en ligne, pas masquées silencieusement). */}
                 <div className="sm:hidden space-y-2 max-h-96 overflow-auto">
                     {filteredInventory.map(item => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-900">
+                        <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                             <div className="min-w-0">
                                 <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400 truncate">
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}

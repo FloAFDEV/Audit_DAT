@@ -32,7 +32,7 @@ const TramDirectionSelector: React.FC<TramDirectionSelectorProps> = ({ lieu, onS
     return (
         <div>
             <div className="flex items-center gap-4 mb-8">
-                <button onClick={onBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors" aria-label="Retour">
+                <button onClick={onBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Retour">
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex items-center gap-3">
@@ -49,7 +49,7 @@ const TramDirectionSelector: React.FC<TramDirectionSelectorProps> = ({ lieu, onS
                     <button
                         key={direction.id}
                         onClick={() => handleSelectDirection(direction.id)}
-                        className="bg-white dark:bg-neutral-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600"
+                        className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
                     >
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-4">
