@@ -62,11 +62,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-neutral-950">
-      {/* ============ Hero — identité de marque, volontairement fixe
-          (indépendante du thème clair/sombre de l'app : un écran de
-          connexion premium à part, cf. audit) ============ */}
-      <div className="relative overflow-hidden bg-neutral-950 px-6 py-8 sm:px-10 sm:py-10 lg:w-1/2 lg:px-14 lg:py-16 flex flex-col">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-neutral-950">
+      {/* ============ Hero — identité de marque, adaptée au thème
+          clair/sombre de l'app (cf. store.ts::applyTheme / classe .dark
+          sur <html>) ============ */}
+      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-8 sm:px-10 sm:py-10 lg:w-1/2 lg:px-14 lg:py-16 flex flex-col">
         {/* Texture décorative légère — CSS pur, aucune image à charger */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -76,8 +76,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           }}
           aria-hidden="true"
         />
-        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-600/20 blur-3xl" aria-hidden="true" />
-        <div className="pointer-events-none absolute -bottom-32 -left-16 h-64 w-64 rounded-full bg-teal-500/10 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-24 -right-24 h-72 w-72 rounded-full bg-teal-600/10 dark:bg-teal-600/20 blur-3xl" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-32 -left-16 h-64 w-64 rounded-full bg-teal-500/5 dark:bg-teal-500/10 blur-3xl" aria-hidden="true" />
 
         {/* Logo — composant partagé inchangé (teal), réutilisé tel quel */}
         <div className="relative flex items-center gap-3">
@@ -85,16 +85,16 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <Logo className="h-6 w-6" />
           </div>
           <div>
-            <p className="text-lg font-bold tracking-tight text-white">AuditRef</p>
-            <p className="text-[11px] font-medium uppercase tracking-widest text-teal-400">Auditer · Contrôler · Valoriser</p>
+            <p className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">AuditRef</p>
+            <p className="text-[11px] font-medium uppercase tracking-widest text-teal-600 dark:text-teal-400">Auditer · Contrôler · Valoriser</p>
           </div>
         </div>
 
         <div className="relative mt-8 lg:mt-16 max-w-md">
-          <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-slate-900 dark:text-white">
             Des audits terrain plus simples, plus rapides, plus fiables.
           </h1>
-          <p className="mt-3 text-sm text-neutral-400 hidden sm:block">
+          <p className="mt-3 text-sm text-slate-600 dark:text-neutral-400 hidden sm:block">
             La plateforme de gestion et d'analyse de la signalétique Information Voyageur, pensée pour le terrain.
           </p>
         </div>
@@ -107,7 +107,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             Desktop uniquement, dégradée vers le panneau si elle ne charge
             pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-8 hidden lg:block aspect-[1090/630] w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-white/10">
+          <div className="relative mt-8 hidden lg:block aspect-[1090/630] w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
@@ -133,14 +133,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             hero compact (le formulaire reste la priorité, cf. audit). */}
         <div className="relative mt-8 hidden sm:grid grid-cols-2 gap-3 max-w-md">
           {PIPELINE_BADGES.map(({ label, Icon }) => (
-            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/5 px-3.5 py-3">
-              <Icon className="h-4 w-4 flex-shrink-0 text-teal-400" aria-hidden="true" />
-              <span className="text-xs font-medium text-neutral-200">{label}</span>
+            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3.5 py-3">
+              <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
+              <span className="text-xs font-medium text-slate-700 dark:text-neutral-200">{label}</span>
             </div>
           ))}
         </div>
 
-        <p className="relative mt-8 hidden lg:block text-sm italic text-neutral-500">
+        <p className="relative mt-8 hidden lg:block text-sm italic text-slate-500 dark:text-neutral-500">
           Plus qu'un outil, une solution terrain.
         </p>
 
@@ -148,10 +148,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="relative mt-auto pt-10 hidden lg:grid grid-cols-2 gap-x-6 gap-y-5">
           {FEATURES.map(({ label, desc, Icon }) => (
             <div key={label} className="flex items-start gap-2.5">
-              <Icon className="h-4 w-4 flex-shrink-0 text-teal-500 mt-0.5" aria-hidden="true" />
+              <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-500 mt-0.5" aria-hidden="true" />
               <div>
-                <p className="text-xs font-semibold text-white">{label}</p>
-                <p className="mt-0.5 text-[11px] text-neutral-500">{desc}</p>
+                <p className="text-xs font-semibold text-slate-900 dark:text-white">{label}</p>
+                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-neutral-500">{desc}</p>
               </div>
             </div>
           ))}
@@ -159,28 +159,28 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       </div>
 
       {/* ============ Formulaire de connexion — logique inchangée ============ */}
-      <div className="flex justify-center bg-neutral-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-neutral-900">
+      <div className="flex justify-center bg-white dark:bg-neutral-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-slate-50 lg:dark:bg-neutral-900">
         <motion.div initial="initial" animate="enter" variants={pageVariants} className="w-full max-w-sm">
           <div className="mb-6 text-center lg:text-left">
-            <h1 className="text-xl font-bold text-white">
-              Bienvenue sur <span className="text-teal-400">AuditRef</span>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+              Bienvenue sur <span className="text-teal-600 dark:text-teal-400">AuditRef</span>
             </h1>
-            <p className="mt-1 text-sm text-neutral-400">
+            <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
               Votre solution pour des audits terrain simples, rapides et efficaces.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6 shadow-2xl sm:p-8">
-            <h2 className="text-lg font-bold text-white">Connexion</h2>
-            <p className="mt-1 text-sm text-neutral-400">Accédez à votre espace AuditRef</p>
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 shadow-2xl sm:p-8">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Connexion</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">Accédez à votre espace AuditRef</p>
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
               <div>
-                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-neutral-400">
+                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
                   Mot de passe
                 </label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" aria-hidden="true" />
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-neutral-500" aria-hidden="true" />
                   <input
                     id="password"
                     name="password"
@@ -192,7 +192,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       setPassword(e.target.value);
                       if (error) setError("");
                     }}
-                    className="block w-full rounded-lg border border-white/10 bg-white/5 py-2.5 pl-10 pr-10 text-sm text-white placeholder:text-neutral-500 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    className="block w-full rounded-lg border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                     placeholder="Mot de passe"
                     aria-invalid={!!error}
                     aria-describedby={error ? "password-error" : undefined}
@@ -200,7 +200,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 transition-colors hover:text-neutral-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-500 transition-colors hover:text-slate-600 dark:hover:text-neutral-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -209,7 +209,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               </div>
 
               {error && (
-                <p id="password-error" className="text-sm font-medium text-red-400" role="alert">
+                <p id="password-error" className="text-sm font-medium text-red-600 dark:text-red-400" role="alert">
                   {error}
                 </p>
               )}
@@ -217,7 +217,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <button
                 type="submit"
                 disabled={!password}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-neutral-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
               >
                 Se connecter
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -225,11 +225,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </form>
           </div>
 
-          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-neutral-500">
+          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-slate-500 dark:text-neutral-500">
             AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
             <a
               href="mailto:florent.perez@tisseo.fr?subject=Contact%20depuis%20AuditRef"
-              className="font-normal normal-case text-teal-400 hover:underline"
+              className="font-normal normal-case text-teal-600 dark:text-teal-400 hover:underline"
             >
               Contact
             </a>{" "}
