@@ -33,7 +33,7 @@ export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title,
   <div className="flex items-center gap-4">
     <button
       onClick={onBack}
-      className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors"
+      className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-neutral-700 transition-colors"
       aria-label="Retour"
     >
       <ArrowLeft className="w-5 h-5" />
@@ -47,7 +47,7 @@ export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title,
 
 // StatCard optimisé pour l'esthétique
 export const StatCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, icon, children, className = '' }) => (
-  <section className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-teal-500/10 dark:border-slate-700/50 ${className}`}>
+  <section className={`bg-white dark:bg-neutral-800 rounded-xl shadow-lg p-6 border border-teal-500/10 dark:border-teal-700/50 ${className}`}>
     <div className="flex items-center gap-4 mb-5">
       <div className="w-12 h-12 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
         {icon}
@@ -78,7 +78,7 @@ export const IndicatorTile: React.FC<{
         teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-700 dark:text-teal-300',
         red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300',
         amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300',
-        slate: 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
+        slate: 'bg-slate-50 dark:bg-neutral-700/30 border-slate-200 dark:border-teal-700 text-slate-700 dark:text-slate-300',
         sky:   'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/30 text-sky-700 dark:text-sky-300',
     };
     const content = (
@@ -127,7 +127,7 @@ export const StatRow: React.FC<{
                  highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
                  isSubItem
                     ? 'font-medium text-slate-800 dark:text-slate-200'
-                    : 'font-semibold px-2 py-0.5 rounded text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-700';
+                    : 'font-semibold px-2 py-0.5 rounded text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-neutral-700';
   }
 
   const content = (
@@ -146,7 +146,7 @@ export const StatRow: React.FC<{
       <button
         onClick={onClick}
         disabled={numericValue === 0}
-        className="w-full text-left rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 -mx-2 px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+        className="w-full text-left rounded-md hover:bg-slate-100 dark:hover:bg-neutral-700/50 -mx-2 px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
       >
         {content}
       </button>
@@ -184,8 +184,8 @@ export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, ti
     // ECA_TYPE_ROWS). Le détail n'a de toute façon rien à montrer à 0.
     if (!hasAnomalies) {
         return (
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 flex items-center gap-2 min-w-0">
-                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500">
+            <div className="rounded-lg border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-800 px-3 py-2 flex items-center gap-2 min-w-0">
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-neutral-700 text-slate-400 dark:text-slate-500">
                     {icon}
                 </div>
                 <span className="text-sm text-slate-500 dark:text-slate-400 truncate">
@@ -196,10 +196,10 @@ export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, ti
     }
 
     return (
-        <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}>
+        <div className={`rounded-xl border p-4 shadow-sm flex flex-col gap-3 ${hasAnomalies ? 'border-red-200 dark:border-red-900/60 bg-red-50 dark:bg-red-950/40' : 'border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-800'}`}>
             <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                    <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${hasAnomalies ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
+                    <div className={`flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full ${hasAnomalies ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-400' : 'bg-slate-100 dark:bg-neutral-700 text-slate-500 dark:text-slate-400'}`}>
                         {icon}
                     </div>
                     {/* Le titre passe à la ligne plutôt que d'être tronqué : en
@@ -234,7 +234,7 @@ export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, ti
             <button
                 onClick={onDetail}
                 disabled={detailDisabled}
-                className="mt-auto inline-flex items-center justify-center gap-1 text-sm font-semibold rounded-lg px-3 py-2.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-auto inline-flex items-center justify-center gap-1 text-sm font-semibold rounded-lg px-3 py-2.5 bg-white dark:bg-neutral-700 border border-slate-200 dark:border-teal-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-neutral-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
                 {detailLabel} <ChevronRight className="w-4 h-4" />
             </button>

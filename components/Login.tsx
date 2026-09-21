@@ -36,12 +36,14 @@ const PIPELINE_BADGES = [
 
 /** Fonctionnalités réellement vraies aujourd'hui — pas de promesse
  *  (sécurité serveur, export XLSX/PDF) que l'app ne tient pas : c'est un
- *  mot de passe partagé côté client et un export CSV + sauvegarde JSON. */
+ *  mot de passe partagé côté client et un export CSV + sauvegarde JSON.
+ *  Affichées uniquement dans le bandeau incrusté sur la photo du hero
+ *  (pas de second bandeau en pied de page, pour tenir sans scroll). */
 const FEATURES = [
-  { label: "Mode hors ligne", desc: "Travaillez partout, même sans réseau.", Icon: WifiOff },
-  { label: "Données locales", desc: "Rien ne quitte l'appareil sans export volontaire.", Icon: ShieldCheck },
-  { label: "Simple à utiliser", desc: "Conçu pour le terrain, pas pour un bureau.", Icon: Zap },
-  { label: "Export & sauvegarde", desc: "CSV et sauvegarde JSON en un clic.", Icon: Download },
+  { label: "Mode hors ligne", Icon: WifiOff },
+  { label: "Données locales", Icon: ShieldCheck },
+  { label: "Simple à utiliser", Icon: Zap },
+  { label: "Export & sauvegarde", Icon: Download },
 ];
 
 const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
@@ -66,7 +68,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       {/* ============ Hero — identité de marque, adaptée au thème
           clair/sombre de l'app (cf. store.ts::applyTheme / classe .dark
           sur <html>) ============ */}
-      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-8 sm:px-10 sm:py-10 lg:w-1/2 lg:px-14 lg:py-16 flex flex-col">
+      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-8 sm:px-10 sm:py-10 lg:w-1/2 lg:px-14 lg:py-10 flex flex-col justify-center">
         {/* Texture décorative légère — CSS pur, aucune image à charger */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -90,7 +92,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div className="relative mt-8 lg:mt-16 max-w-md">
+        <div className="relative mt-8 lg:mt-10 max-w-md">
           <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-slate-900 dark:text-white">
             Des audits terrain plus simples, plus rapides, plus fiables.
           </h1>
@@ -107,7 +109,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             Desktop uniquement, dégradée vers le panneau si elle ne charge
             pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-8 hidden lg:block aspect-[1090/630] w-full overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
+          <div className="relative mt-6 hidden lg:block aspect-[1090/630] w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
@@ -118,7 +120,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/40 via-transparent to-transparent" />
             {/* Bandeau de remplacement des badges factices de la photo source */}
-            <div className="absolute left-[67%] top-[5%] flex h-[51%] w-[30%] flex-col justify-center gap-2 rounded-lg bg-neutral-950/85 p-2 backdrop-blur-sm ring-1 ring-white/10">
+            <div className="absolute left-[67%] top-[5%] flex h-[51%] w-[30%] flex-col justify-center gap-1.5 rounded-lg bg-neutral-950/85 p-1.5 backdrop-blur-sm ring-1 ring-white/10">
               {FEATURES.map(({ label, Icon }) => (
                 <div key={label} className="flex items-center gap-1.5 rounded bg-white/5 px-1.5 py-1">
                   <Icon className="h-3 w-3 flex-shrink-0 text-teal-400" aria-hidden="true" />
@@ -130,32 +132,22 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         )}
 
         {/* Étapes du pipeline produit — masquées sur mobile pour garder le
-            hero compact (le formulaire reste la priorité, cf. audit). */}
-        <div className="relative mt-8 hidden sm:grid grid-cols-2 gap-3 max-w-md">
+            hero compact (le formulaire reste la priorité, cf. audit). Les
+            fonctionnalités (FEATURES) ne sont plus dupliquées ici : elles
+            sont déjà visibles dans le bandeau incrusté sur la photo
+            ci-dessus, cf. tenue en une page sans scroll (cf. audit). */}
+        <div className="relative mt-6 hidden sm:grid grid-cols-2 gap-2.5 max-w-md">
           {PIPELINE_BADGES.map(({ label, Icon }) => (
-            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3.5 py-3">
+            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3.5 py-2.5">
               <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
               <span className="text-xs font-medium text-slate-700 dark:text-neutral-200">{label}</span>
             </div>
           ))}
         </div>
 
-        <p className="relative mt-8 hidden lg:block text-sm italic text-slate-500 dark:text-neutral-500">
+        <p className="relative mt-6 hidden lg:block text-sm italic text-slate-500 dark:text-neutral-500">
           Plus qu'un outil, une solution terrain.
         </p>
-
-        {/* Bandeau de fonctionnalités — desktop uniquement (pied du hero) */}
-        <div className="relative mt-auto pt-10 hidden lg:grid grid-cols-2 gap-x-6 gap-y-5">
-          {FEATURES.map(({ label, desc, Icon }) => (
-            <div key={label} className="flex items-start gap-2.5">
-              <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-500 mt-0.5" aria-hidden="true" />
-              <div>
-                <p className="text-xs font-semibold text-slate-900 dark:text-white">{label}</p>
-                <p className="mt-0.5 text-[11px] text-slate-500 dark:text-neutral-500">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ============ Formulaire de connexion — logique inchangée ============ */}

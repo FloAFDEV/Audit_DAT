@@ -66,12 +66,12 @@ const AccessPointItem: React.FC<{
                         onChange={(e) => setName(e.target.value)}
                         onBlur={handleSave}
                         onKeyDown={handleKeyDown}
-                        className="text-lg font-semibold text-gray-900 bg-white border border-teal-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-slate-900 dark:text-slate-100 dark:border-teal-400"
+                        className="text-lg font-semibold text-gray-900 bg-white border border-teal-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-neutral-900 dark:text-slate-100 dark:border-teal-400"
                     />
                 ) : (
                     <div className="flex items-center gap-2">
                          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate">{name}</h3>
-                         <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-full hover:bg-gray-200 text-gray-600 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700">
+                         <button onClick={() => setIsEditing(true)} className="p-1.5 rounded-full hover:bg-gray-200 text-gray-600 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-neutral-700">
                             <Edit className="w-4 h-4" />
                         </button>
                     </div>
@@ -91,7 +91,7 @@ const AccessPointItem: React.FC<{
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.OK
                                 ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
-                                : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                                : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600 dark:hover:bg-neutral-700'
                         }`}
                     >
                         <CheckCircle2 className="w-5 h-5 mr-2" />
@@ -102,7 +102,7 @@ const AccessPointItem: React.FC<{
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.ToBeReplaced
                                 ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
-                                : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                                : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700'
                         }`}
                     >
                         <XCircle className="w-5 h-5 mr-2" />
@@ -158,7 +158,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
             comment={cogData.comment}
             onCommentChange={onCommentChange}
             footer={
-                <div className="p-6 border-t border-gray-200 dark:border-slate-700">
+                <div className="p-6 border-t border-gray-200 dark:border-teal-700">
                     <button
                         onClick={onAddAccessPoint}
                         className="w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
@@ -169,14 +169,14 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                 </div>
             }
         >
-            <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+            <ul className="divide-y divide-gray-200 dark:divide-teal-700">
                 {cogData.pictograms.length === 0 ? (
                     <li className="text-center p-8">
                         <p className="text-gray-500 dark:text-slate-400">Aucun accès défini pour cette station.</p>
                     </li>
                 ) : (
                     cogData.pictograms.map((pictogram) => (
-                         <li key={pictogram.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                         <li key={pictogram.id} className="p-6 hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
                             <AccessPointItem 
                                 pictogram={pictogram}
                                 dimensions={getCognitivePictogramDimension(cogData.stationCode, pictogram.accessPointName)}

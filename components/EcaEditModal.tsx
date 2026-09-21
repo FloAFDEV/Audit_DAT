@@ -76,11 +76,11 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
             onClick={onClose}
         >
             <div
-                className="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+                className="relative transform overflow-hidden rounded-lg bg-white dark:bg-neutral-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
                 onClick={(e) => e.stopPropagation()}
             >
                 <form onSubmit={handleSubmit}>
-                    <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    <div className="bg-white dark:bg-neutral-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
                         <h3 className="text-lg font-bold leading-6 text-gray-900 dark:text-white" id="modal-title">
                             {eca ? 'Modifier' : 'Ajouter'} un ECA
                         </h3>
@@ -97,7 +97,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
                                         required
-                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
+                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
                                     />
                                 </div>
                             </div>
@@ -112,7 +112,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         value={accessPoint}
                                         onChange={(e) => setAccessPoint(e.target.value)}
                                         required
-                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
+                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
                                     />
                                 </div>
                             </div>
@@ -125,7 +125,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         id="type"
                                         value={type}
                                         onChange={(e) => setType(e.target.value as EcaEquipmentType)}
-                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
+                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
                                     >
                                         {EDITABLE_ECA_TYPES.map((t) => (
                                             <option key={t} value={t}>{getEcaTypeLabel(t)}</option>
@@ -168,13 +168,13 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         onChange={(e) => setNumber(parseInt(e.target.value, 10) || 1)}
                                         required
                                         min="1"
-                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
+                                        className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-neutral-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
                                     />
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div className="bg-gray-50 dark:bg-slate-800/50 dark:border-t dark:border-slate-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <div className="bg-gray-50 dark:bg-neutral-800/50 dark:border-t dark:border-teal-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
                         <button
                             type="submit"
                             className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
@@ -184,7 +184,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                         <button
                             type="button"
                             onClick={onClose}
-                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
+                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-neutral-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 hover:bg-gray-50 dark:hover:bg-neutral-600 sm:mt-0 sm:w-auto"
                         >
                             Annuler
                         </button>

@@ -41,7 +41,7 @@ const getProgressBarColor = (status: ProgressStatus) => {
         case ProgressStatus.Completed:
             return 'bg-teal-500 dark:bg-teal-600';
         default:
-            return 'bg-gray-400 dark:bg-slate-500';
+            return 'bg-gray-400 dark:bg-neutral-500';
     }
 };
 
@@ -130,11 +130,11 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
          *  quelques centaines de pixels au lieu de rester collé). "Ajouter
          *  un DAT" reste hors de la zone sticky sur mobile : pas
          *  indispensable en continu, on évite d'alourdir la barre. */}
-        <div className="sticky top-0 z-10 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sm:static sm:py-0 sm:bg-transparent sm:border-0 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="sticky top-0 z-10 py-2 bg-slate-50 dark:bg-neutral-900 border-b border-slate-200 dark:border-teal-700 sm:static sm:py-0 sm:bg-transparent sm:border-0 sm:mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div className="flex items-start gap-4">
                 <button
                     onClick={onBack}
-                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-slate-700"
+                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-neutral-700"
                     aria-label="Retour"
                 >
                     <ArrowLeft className="w-6 h-6" />
@@ -144,7 +144,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                     <div>
                         <div className="flex items-center gap-2">
                             <p className="text-sm font-light text-slate-500 dark:text-slate-400">{station.name}</p>
-                            <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded">
                                 {station.code}
                             </span>
                         </div>
@@ -174,7 +174,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
         </button>
         
         {activeDats.length === 0 ? (
-            <div className="text-center p-12 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-100 dark:border-slate-700">
+            <div className="text-center p-12 bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-slate-100 dark:border-teal-700">
                 <Ticket className="mx-auto h-12 w-12 text-slate-400 dark:text-slate-500" />
                 <h3 className="mt-2 text-sm font-medium text-slate-900 dark:text-slate-100">Aucun DAT</h3>
                 <p className="mt-1 text-sm font-light text-slate-500 dark:text-slate-400">Aucun DAT n'est enregistré pour cette direction.</p>
@@ -202,7 +202,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                             className={`p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full cursor-pointer group ${
                                 isReturnHighlighted
                                     ? 'bg-teal-50 dark:bg-teal-900/20 ring-2 ring-teal-500 dark:ring-teal-400'
-                                    : 'bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600'
+                                    : 'bg-white dark:bg-neutral-800 dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600'
                             }`}
                         >
                             <div className="flex items-center justify-between">
@@ -217,12 +217,12 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                             onKeyDown={(e) => handleKeyDown(e, dat.id)}
                                             onClick={(e) => e.stopPropagation()}
                                             autoFocus
-                                            className="text-lg font-medium tracking-tight text-slate-900 bg-white border border-teal-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-slate-900 dark:text-slate-100 dark:border-teal-400"
+                                            className="text-lg font-medium tracking-tight text-slate-900 bg-white border border-teal-500 rounded-md px-2 py-1 -my-1 w-full dark:bg-neutral-900 dark:text-slate-100 dark:border-teal-400"
                                         />
                                     ) : (
                                         <div className="flex items-center flex-1 min-w-0">
                                             <p className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{dat.name}</p>
-                                            <button onClick={(e) => handleEditClick(e, dat)} className="p-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors ml-2 flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700">
+                                            <button onClick={(e) => handleEditClick(e, dat)} className="p-2 rounded-full hover:bg-slate-200 text-slate-600 transition-colors ml-2 flex-shrink-0 dark:text-slate-400 dark:hover:bg-neutral-700">
                                                 <Pencil className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -242,7 +242,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                                     </span>
                                     <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                 </div>
-                                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
                                     <div className={`${getProgressBarColor(progress.status)} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                 </div>
                             </div>

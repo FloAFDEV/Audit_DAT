@@ -83,9 +83,9 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                 {history.map((entry) => {
                     const { day, month, year, time } = getDateParts(entry.date);
                     return (
-                        <div key={entry.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-0 flex hover:shadow-md transition-shadow overflow-hidden group">
+                        <div key={entry.id} className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-slate-200 dark:border-teal-700 p-0 flex hover:shadow-md transition-shadow overflow-hidden group">
                             {/* Gauche : Date */}
-                            <div className="flex flex-col items-center justify-center min-w-[90px] bg-slate-50 dark:bg-slate-700/50 border-r border-slate-200 dark:border-slate-700 py-4">
+                            <div className="flex flex-col items-center justify-center min-w-[90px] bg-slate-50 dark:bg-neutral-700/50 border-r border-slate-200 dark:border-teal-700 py-4">
                                 <span className="text-2xl font-bold text-gray-700 dark:text-slate-200 leading-none">{day}</span>
                                 <span className="text-xs font-bold uppercase text-gray-500 dark:text-slate-400 mt-1">{month}</span>
                                 <span className="text-xs text-gray-400 dark:text-slate-500 mt-2">{year}</span>
@@ -113,7 +113,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                                         entry.score >= 90 ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300' :
                                         entry.score >= 50 ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300' :
                                         entry.score > 0 ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300' :
-                                        'bg-slate-200 text-slate-600 dark:bg-slate-700 dark:text-slate-400' // Style neutre pour 0%
+                                        'bg-slate-200 text-slate-600 dark:bg-neutral-700 dark:text-slate-400' // Style neutre pour 0%
                                     }`}>
                                         {entry.score > 0 ? `${entry.score}%` : '-'}
                                     </span>
@@ -121,7 +121,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                             </button>
 
                             {/* Action : Supprimer */}
-                            <div className="flex items-center pr-4 pl-2 border-l border-slate-100 dark:border-slate-700">
+                            <div className="flex items-center pr-4 pl-2 border-l border-slate-100 dark:border-teal-700">
                                 <button
                                     onClick={() => setEntryToDelete(entry)}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
@@ -213,7 +213,7 @@ const EventJournal: React.FC = () => {
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                             filter === g.key
                                 ? 'bg-teal-600 text-white'
-                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-neutral-700 dark:text-slate-300 dark:hover:bg-neutral-600'
                         }`}
                     >
                         {g.label}
@@ -224,7 +224,7 @@ const EventJournal: React.FC = () => {
             {filtered.length === 0 ? (
                 <p className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">Aucun événement dans cette catégorie.</p>
             ) : (
-                <ul className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
+                <ul className="divide-y divide-slate-100 dark:divide-teal-800 border border-slate-200 dark:border-teal-700 rounded-xl overflow-hidden bg-white dark:bg-neutral-800">
                     {filtered.map(event => {
                         const Icon = EVENT_ICON[event.type] ?? ScrollText;
                         const isError = event.type === 'PERSISTENCE_ERROR';

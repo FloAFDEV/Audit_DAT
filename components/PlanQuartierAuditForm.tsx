@@ -24,13 +24,13 @@ interface PlanQuartierAuditFormProps {
 const STATUS_BUTTONS: { status: AdhesiveStatus; label: string; Icon: typeof CheckCircle2; activeClass: string; idleClass: string }[] = [
   { status: AdhesiveStatus.OK, label: 'OK', Icon: CheckCircle2,
     activeClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500',
-    idleClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
+    idleClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600 dark:hover:bg-neutral-700' },
   { status: AdhesiveStatus.Absent, label: 'Absent', Icon: XCircle,
     activeClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500',
-    idleClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
+    idleClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700' },
   { status: AdhesiveStatus.ToBeReplaced, label: 'À remplacer', Icon: AlertTriangle,
     activeClass: 'bg-amber-500 text-white shadow-sm',
-    idleClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
+    idleClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-neutral-700/50 dark:text-amber-300 dark:ring-teal-600 dark:hover:bg-neutral-700' },
   // Pas de statut "Non applicable" ici : une occurrence n'existe que si
   // l'exemplaire est réellement présent — si l'audit ne s'applique pas à
   // cet endroit, l'occurrence n'est simplement pas créée.
@@ -110,7 +110,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
     const historyOpen = !!expandedHistory[occ.id];
 
     return (
-      <li key={occ.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+      <li key={occ.id} className="p-6 hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div className="flex-1 min-w-0">
             {!simplified && (
@@ -120,7 +120,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                   value={occ.location ?? ''}
                   onChange={(e) => onLocationChange(occ.id, e.target.value)}
                   placeholder="Emplacement (ex. Quai direction X)"
-                  className="text-sm font-medium text-slate-800 dark:text-slate-100 bg-transparent border-b border-dashed border-slate-300 dark:border-slate-600 focus:outline-none focus:border-teal-500 py-0.5"
+                  className="text-sm font-medium text-slate-800 dark:text-slate-100 bg-transparent border-b border-dashed border-slate-300 dark:border-teal-600 focus:outline-none focus:border-teal-500 py-0.5"
                 />
                 {isBlank && (
                   <button
@@ -156,7 +156,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
               </button>
             )}
             {historyOpen && (
-              <ul className="mt-2 space-y-1 border-l-2 border-slate-200 dark:border-slate-700 pl-3">
+              <ul className="mt-2 space-y-1 border-l-2 border-slate-200 dark:border-teal-700 pl-3">
                 {[...history].reverse().map((c, i) => (
                   <li key={i} className="text-xs text-slate-500 dark:text-slate-400">
                     <span className="font-semibold">{formatDate(c.constatedAt)}</span> — {STATUS_LABELS[c.status] ?? c.status}
@@ -179,13 +179,13 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
           </div>
         </div>
 
-        <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700">
+        <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-teal-700">
           <textarea
             value={occ.comment ?? ''}
             onChange={(e) => onOccurrenceCommentChange(occ.id, e.target.value)}
             placeholder="Commentaire sur cet exemplaire (facultatif)..."
             rows={1}
-            className="w-full text-sm bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-md p-2 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
+            className="w-full text-sm bg-slate-50 dark:bg-neutral-800/50 border border-slate-200 dark:border-teal-700 rounded-md p-2 resize-none focus:outline-none focus:ring-1 focus:ring-teal-500"
           />
           <div className="flex flex-wrap items-center gap-3 mt-3">
             <label className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
@@ -200,12 +200,12 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 if (!m) { if (!e.target.value.trim()) onMeasuredDimensionsChange(occ.id, undefined); return; }
                 onMeasuredDimensionsChange(occ.id, { width: parseFloat(m[1].replace(',', '.')), height: parseFloat(m[2].replace(',', '.')), unit: 'cm' });
               }}
-              className="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-teal-500"
+              className="text-sm bg-white dark:bg-neutral-800 border border-slate-200 dark:border-teal-700 rounded-md px-2 py-1 w-28 focus:outline-none focus:ring-1 focus:ring-teal-500"
             />
             <button
               onClick={() => onNewConstat(occ.id)}
               disabled={occ.status === AdhesiveStatus.NotChecked}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-neutral-700 dark:text-slate-200 dark:hover:bg-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed"
               title={occ.status === AdhesiveStatus.NotChecked ? 'Aucun constat à archiver pour l\'instant' : 'Archiver ce constat et démarrer un nouveau relevé'}
             >
               <RotateCcw className="w-4 h-4" /> Nouveau constat
@@ -235,7 +235,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
       onCommentChange={onCommentChange}
     >
       {data.occurrences.length === 0 && (
-        <div className="p-6 bg-slate-50 dark:bg-slate-800/50 border-b border-dashed border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="p-6 bg-slate-50 dark:bg-neutral-800/50 border-b border-dashed border-gray-200 dark:border-teal-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {data.lastCheckedAt
               ? <>Dernière vérification le {formatDate(data.lastCheckedAt)} — aucun élément trouvé.</>
@@ -243,21 +243,21 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
           </p>
           <button
             onClick={onMarkChecked}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-200 dark:ring-slate-600 dark:hover:bg-slate-700 whitespace-nowrap"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-white text-slate-700 ring-1 ring-inset ring-slate-300 hover:bg-slate-50 dark:bg-neutral-700/50 dark:text-slate-200 dark:ring-teal-600 dark:hover:bg-neutral-700 whitespace-nowrap"
           >
             <ShieldCheck className="w-4 h-4" /> Confirmer : aucun élément trouvé
           </button>
         </div>
       )}
 
-      <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+      <ul className="divide-y divide-gray-200 dark:divide-teal-700">
         {models.map((ref) => {
           const occurrences = occurrencesByModel.get(ref.id) ?? [];
           const dimensions = formatDimensions(ref.dimensions);
           const isFixedCount = FIXED_COUNT_MODEL_IDS.has(ref.id);
 
           return (
-            <li key={ref.id} className="bg-slate-50/50 dark:bg-slate-900/20">
+            <li key={ref.id} className="bg-slate-50/50 dark:bg-neutral-900/20">
               <div className="p-6 pb-3 flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
@@ -271,7 +271,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                   {occurrences.length} recensé{occurrences.length > 1 ? 's' : ''}
                 </span>
               </div>
-              <ul className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+              <ul className="divide-y divide-gray-200 dark:divide-teal-700 bg-white dark:bg-neutral-800">
                 {occurrences.map(occ => renderOccurrence(occ, ref.name, isFixedCount))}
               </ul>
             </li>
@@ -288,7 +288,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 Élément trouvé sur le terrain qui ne correspond à aucun modèle connu — reste compté et audité normalement, à intégrer au référentiel lors d'une prochaine mise à jour du code.
               </p>
             </div>
-            <ul className="divide-y divide-gray-200 dark:divide-slate-700 bg-white dark:bg-slate-800">
+            <ul className="divide-y divide-gray-200 dark:divide-teal-700 bg-white dark:bg-neutral-800">
               {adHocOccurrences.map(occ => renderOccurrence(occ, occ.adHocLabel ?? 'découverte'))}
             </ul>
           </li>
@@ -309,13 +309,13 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 value={adHocLabel}
                 onChange={(e) => setAdHocLabel(e.target.value)}
                 placeholder="Description libre (obligatoire)"
-                className="w-full text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                className="w-full text-sm bg-white dark:bg-neutral-800 border border-slate-200 dark:border-teal-700 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-teal-500"
               />
               <div className="flex flex-wrap gap-2">
                 <select
                   value={adHocSupport}
                   onChange={(e) => setAdHocSupport(e.target.value as SignageSupport)}
-                  className="text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5"
+                  className="text-sm bg-white dark:bg-neutral-800 border border-slate-200 dark:border-teal-700 rounded-md px-2 py-1.5"
                 >
                   {SUPPORT_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
@@ -324,11 +324,11 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                   value={adHocLocation}
                   onChange={(e) => setAdHocLocation(e.target.value)}
                   placeholder="Emplacement (facultatif)"
-                  className="flex-1 min-w-[160px] text-sm bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1.5"
+                  className="flex-1 min-w-[160px] text-sm bg-white dark:bg-neutral-800 border border-slate-200 dark:border-teal-700 rounded-md px-2 py-1.5"
                 />
               </div>
               <div className="flex gap-2 justify-end">
-                <button onClick={() => setShowAdHocForm(false)} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Annuler</button>
+                <button onClick={() => setShowAdHocForm(false)} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-neutral-700 rounded-md">Annuler</button>
                 <button onClick={handleAddAdHoc} disabled={!adHocLabel.trim()} className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-40">Ajouter</button>
               </div>
             </div>

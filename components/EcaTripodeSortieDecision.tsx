@@ -30,12 +30,12 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
 
 
   return (
-    <div className="bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-hidden max-w-2xl mx-auto">
+    <div className="bg-white dark:bg-neutral-800 shadow-lg rounded-xl overflow-hidden max-w-2xl mx-auto">
       <div className="p-6">
         <div className="flex items-start gap-4">
           <button
             onClick={onBack}
-            className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+            className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-neutral-700 dark:hover:text-slate-200"
             aria-label="Retour"
           >
             <ArrowLeft className="w-6 h-6" />
@@ -60,7 +60,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
           </div>
         </div>
       </div>
-      <div className="p-6 border-t border-gray-200 dark:border-slate-700">
+      <div className="p-6 border-t border-gray-200 dark:border-teal-700">
         <h3 className="text-lg font-semibold text-center text-gray-900 dark:text-slate-100">Confirmation pour {typeDescription}</h3>
         <p className="text-center text-gray-600 dark:text-slate-400 mt-2">
           {/* FIX: Removed `formatEcaTypeForDisplay` call around `mainText` as `mainText` is already a descriptive string. */}
@@ -77,7 +77,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
           </button>
           <button
             onClick={onAudit}
-            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-white dark:bg-slate-700 text-gray-800 dark:text-slate-200 shadow-lg ring-1 ring-inset ring-gray-200 dark:ring-slate-600 hover:ring-teal-500 dark:hover:ring-teal-400 hover:bg-gray-50 dark:hover:bg-slate-600 transition-all duration-200 transform hover:scale-105"
+            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-white dark:bg-neutral-700 text-gray-800 dark:text-slate-200 shadow-lg ring-1 ring-inset ring-gray-200 dark:ring-teal-600 hover:ring-teal-500 dark:hover:ring-teal-400 hover:bg-gray-50 dark:hover:bg-neutral-600 transition-all duration-200 transform hover:scale-105"
           >
             <Edit3 className="w-10 h-10 mb-3 text-teal-500 dark:text-teal-400" />
             <span className="text-lg font-semibold">Auditer les adhésifs</span>

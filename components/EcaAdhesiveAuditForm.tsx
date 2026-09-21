@@ -93,7 +93,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.OK
                   ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
-                  : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                  : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-neutral-700/50 dark:text-teal-300 dark:ring-teal-600 dark:hover:bg-neutral-700'
               }`}
             >
               <CheckCircle2 className="w-5 h-5 mr-2" />
@@ -104,7 +104,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.Absent
                   ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
-                  : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                  : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-neutral-700/50 dark:text-red-300 dark:ring-teal-600 dark:hover:bg-neutral-700'
               }`}
             >
               <XCircle className="w-5 h-5 mr-2" />
@@ -115,7 +115,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.ToBeReplaced
                   ? 'bg-amber-500 text-white shadow-sm'
-                  : 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                  : 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-neutral-700/50 dark:text-amber-300 dark:ring-teal-600 dark:hover:bg-neutral-700'
               }`}
             >
               <AlertTriangle className="w-5 h-5 mr-2" />
@@ -126,8 +126,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                 onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.NotApplicable ? AdhesiveStatus.NotChecked : AdhesiveStatus.NotApplicable)}
                 className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                   currentStatus === AdhesiveStatus.NotApplicable
-                    ? 'bg-slate-500 text-white shadow-sm dark:bg-slate-600'
-                    : 'bg-white text-slate-600 ring-1 ring-inset ring-slate-400 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500 dark:hover:bg-slate-700'
+                    ? 'bg-slate-500 text-white shadow-sm dark:bg-neutral-600'
+                    : 'bg-white text-slate-600 ring-1 ring-inset ring-slate-400 hover:bg-slate-50 dark:bg-neutral-700/50 dark:text-slate-300 dark:ring-teal-500 dark:hover:bg-neutral-700'
                 }`}
               >
                 <Ban className="w-5 h-5 mr-2" />
@@ -157,17 +157,17 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
       comment={eca.comment}
       onCommentChange={onCommentChange}
     >
-      <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+      <ul className="divide-y divide-gray-200 dark:divide-teal-700">
         {ungrouped.map(adhesive => (
-            <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+            <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-neutral-800/50 transition-colors">
                 {renderAdhesiveItem(adhesive)}
             </li>
         ))}
         {Object.keys(groups).map((groupId) => {
           const groupData = groups[groupId]!;
           return (
-            <li key={groupId} className="p-6 bg-slate-50/50 dark:bg-slate-800/50">
-                <div className="mb-4 bg-slate-100 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700">
+            <li key={groupId} className="p-6 bg-slate-50/50 dark:bg-neutral-800/50">
+                <div className="mb-4 bg-slate-100 dark:bg-neutral-900/50 p-3 rounded-lg border border-slate-200 dark:border-teal-700">
                     <h3 className="text-lg font-bold text-gray-900 dark:text-slate-100">{groupData.groupName || 'Groupe'}</h3>
                     <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Un ou plusieurs pictogrammes peuvent être présents. Marquez comme 'Non applicable' ceux qui ne sont pas nécessaires pour cet équipement.</p>
                 </div>

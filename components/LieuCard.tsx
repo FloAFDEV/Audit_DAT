@@ -28,7 +28,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
         ? 'status-error'
         : (isInProgress ? 'status-warning' : 'status-ok');
 
-    const cardBgClass = 'bg-white dark:bg-slate-800';
+    const cardBgClass = 'bg-white dark:bg-neutral-800';
     
     const stationCodes = (lieu?.modules || [])
         .filter(m => m.type === AuditModuleType.DAT)
@@ -49,10 +49,10 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onSelect(); }}
-            className={`${cardBgClass} ${statusClass} lieu-card ${isInProgress ? 'is-in-progress' : ''} relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-slate-700/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`}
+            className={`${cardBgClass} ${statusClass} lieu-card ${isInProgress ? 'is-in-progress' : ''} relative p-4 rounded-lg shadow transition-[opacity] duration-200 text-left w-full group flex flex-col h-full dark:ring-1 dark:ring-teal-700/50 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900`}
         >
             {hasAnomaly && (
-                <span className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white dark:ring-slate-900">
+                <span className="absolute -top-2 -right-2 z-10 flex items-center gap-1 rounded-full bg-red-600 px-2 py-0.5 text-[11px] font-bold text-white shadow-md ring-2 ring-white dark:ring-neutral-900">
                     <AlertTriangle className="w-3 h-3" />
                     {defectCount}
                 </span>
@@ -80,7 +80,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                         {Math.round(progress)}%
                     </span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-slate-700">
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-neutral-700">
                     <div className={`${progressBarColor} h-2.5 rounded-full`} style={{ width: `${progress}%` }}></div>
                 </div>
             </div>

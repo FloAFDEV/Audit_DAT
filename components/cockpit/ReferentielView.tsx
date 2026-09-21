@@ -71,7 +71,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                         placeholder="Rechercher (nom, id, code, matière)…"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        className="block w-full rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
                     />
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
@@ -82,7 +82,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                                 family === f
                                     ? 'bg-teal-600 text-white'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-neutral-700 dark:text-slate-300 dark:hover:bg-neutral-600'
                             }`}
                         >
                             {f === 'ALL' ? 'Toutes familles' : AUDIT_TYPE_LABELS[f]}
@@ -92,7 +92,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                 <select
                     value={support}
                     onChange={e => setSupport(e.target.value as 'ALL' | SignageSupport)}
-                    className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
+                    className="rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
                 >
                     <option value="ALL">Tous supports</option>
                     {(Object.keys(SUPPORT_LABELS) as SignageSupport[]).map(s => (
@@ -102,9 +102,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
             </div>
 
             {/* Liste */}
-            <div className="overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
+            <div className="overflow-auto border border-slate-200 dark:border-teal-700 rounded-lg shadow-inner">
                 <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
+                    <thead className="sticky top-0 bg-slate-100 dark:bg-neutral-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
@@ -115,14 +115,14 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-teal-800">
                         {filtered.map((ref, idx) => {
                             const usage = usageOf(ref.id);
                             return (
                                 <tr
                                     key={ref.id}
                                     onClick={() => onOpen(ref.id)}
-                                    className={`cursor-pointer hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}
+                                    className={`cursor-pointer hover:bg-teal-50/50 dark:hover:bg-neutral-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-neutral-900' : 'bg-slate-50 dark:bg-neutral-800'}`}
                                 >
                                     <td className="p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
@@ -165,7 +165,7 @@ const STATUS_BADGE: Record<string, string> = {
     [AdhesiveStatus.OK]: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
     [AdhesiveStatus.Absent]: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
     [AdhesiveStatus.ToBeReplaced]: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
-    [AdhesiveStatus.NotChecked]: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    [AdhesiveStatus.NotChecked]: 'bg-slate-100 text-slate-600 dark:bg-neutral-700 dark:text-slate-300',
 };
 
 interface ImplantationsExplorerProps {
@@ -206,7 +206,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
             {/* « Combien de Dibond ? de PVC ?... » — servi par l'index */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 {supportEntries.map(([support, counts]) => (
-                    <div key={support} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-center">
+                    <div key={support} className="p-3 rounded-lg border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-800 text-center">
                         <div className="text-xl font-bold text-slate-800 dark:text-slate-100">{counts.installed}</div>
                         <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-0.5">{SUPPORT_LABELS[support]}</div>
                         {counts.defects > 0 && <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">{counts.defects} défaut{counts.defects > 1 ? 's' : ''}</div>}
@@ -225,13 +225,13 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                         placeholder="Rechercher (lieu, équipement, référence)…"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        className="block w-full rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
                     />
                 </div>
                 <select
                     value={line}
                     onChange={e => setLine(e.target.value)}
-                    className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
+                    className="rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
                 >
                     <option value="ALL">Toutes lignes</option>
                     {lines.map(l => <option key={l} value={l}>{l === 'P+R' ? 'P+R' : `Ligne ${l}`}</option>)}
@@ -239,7 +239,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                 <select
                     value={status}
                     onChange={e => setStatus(e.target.value)}
-                    className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
+                    className="rounded-full border border-slate-200 dark:border-teal-700 bg-white dark:bg-neutral-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
                 >
                     <option value="ALL">Tous statuts</option>
                     <option value="DEFECT">Non conformes (absents + à remplacer)</option>
@@ -249,9 +249,9 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
             </div>
 
             {/* Table des implantations */}
-            <div className="overflow-auto max-h-[32rem] border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
+            <div className="overflow-auto max-h-[32rem] border border-slate-200 dark:border-teal-700 rounded-lg shadow-inner">
                 <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
+                    <thead className="sticky top-0 bg-slate-100 dark:bg-neutral-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Lieu</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Contexte</th>
@@ -260,11 +260,11 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Statut</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-100 dark:divide-teal-800">
                         {filtered.slice(0, 500).map((imp, i) => {
                             const ref = refById.get(imp.referenceId);
                             return (
-                                <tr key={`${imp.moduleId}-${imp.equipmentLabel}-${imp.referenceId}-${i}`} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
+                                <tr key={`${imp.moduleId}-${imp.equipmentLabel}-${imp.referenceId}-${i}`} className={`${i % 2 === 0 ? 'bg-white dark:bg-neutral-900' : 'bg-slate-50 dark:bg-neutral-800'}`}>
                                     <td className="p-3 whitespace-nowrap font-medium text-slate-800 dark:text-slate-100">
                                         {imp.lieuName}
                                         <span className="block text-[11px] text-slate-400">{imp.line === 'P+R' ? 'P+R' : `Ligne ${imp.line}`}</span>
@@ -382,7 +382,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
                             subSection === key
                                 ? 'bg-teal-600 text-white shadow-sm'
-                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
+                                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-neutral-800 dark:text-slate-300 dark:border-teal-700 dark:hover:bg-neutral-700'
                         }`}
                     >
                         <Icon className="w-4 h-4" />

@@ -66,13 +66,13 @@ const BAND_STYLE: Record<UrgencyBand, { icon: React.ReactNode; badge: string; bo
     },
     surveillance: {
         icon: <Eye className="w-4 h-4" />,
-        badge: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
-        border: 'border-slate-200 dark:border-slate-700',
+        badge: 'bg-slate-100 text-slate-700 dark:bg-neutral-700 dark:text-slate-300',
+        border: 'border-slate-200 dark:border-teal-700',
     },
 };
 
 const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: string) => void; referenceKey: boolean }> = ({ action, onOpenReference, referenceKey }) => (
-    <div className={`bg-white dark:bg-slate-800 rounded-xl border p-4 shadow-sm ${BAND_STYLE[action.band].border}`}>
+    <div className={`bg-white dark:bg-neutral-800 rounded-xl border p-4 shadow-sm ${BAND_STYLE[action.band].border}`}>
         <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
                 <h4 className="font-bold text-slate-900 dark:text-slate-100 truncate">{action.label}</h4>
@@ -96,11 +96,11 @@ const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: st
                 </span>
             )}
             {!referenceKey && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 dark:bg-neutral-700/50 dark:text-slate-300">
                     {action.referenceCount} référence{action.referenceCount > 1 ? 's' : ''}
                 </span>
             )}
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 dark:bg-slate-700/50 dark:text-slate-300">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-50 text-slate-600 dark:bg-neutral-700/50 dark:text-slate-300">
                 {action.lieuCount} lieu{action.lieuCount > 1 ? 'x' : ''}
             </span>
         </div>
@@ -190,7 +190,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                                             mode === key
                                                 ? 'bg-teal-600 text-white'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-neutral-700 dark:text-slate-300 dark:hover:bg-neutral-600'
                                         }`}
                                     >
                                         {label}
@@ -199,7 +199,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                             </div>
                             <button
                                 onClick={() => setShowListModal(true)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-white dark:bg-neutral-700 border border-slate-200 dark:border-teal-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-neutral-600 transition-colors"
                             >
                                 <Download className="w-3.5 h-3.5" /> Voir en liste / Exporter
                             </button>
@@ -239,7 +239,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                 )}
             </section>
 
-            <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+            <hr className="border-dashed border-slate-200 dark:border-teal-700" />
 
             {/* Équipements Station — référentiel autonome distinct de la
                 Signalétique IV (règle 7), jamais fusionné dans les cartes par

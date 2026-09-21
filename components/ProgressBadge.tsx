@@ -33,7 +33,7 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({ progress, isActive
             backgroundClass = 'bg-teal-100 dark:bg-teal-900/50';
             textColorClass = 'text-teal-800 dark:text-teal-300';
         } else {
-            backgroundClass = 'bg-slate-200 dark:bg-slate-700';
+            backgroundClass = 'bg-slate-200 dark:bg-neutral-700';
             if (roundedProgress === 0) {
                 textColorClass = 'text-slate-500 dark:text-slate-400';
             } else {

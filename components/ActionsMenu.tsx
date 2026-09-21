@@ -68,14 +68,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                     <div className={`fixed inset-0 z-10 bg-black/10 dark:bg-black/40 backdrop-blur-[2px] ${isClosing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`} onClick={handleClose} />
                     <div
                         onAnimationEnd={handleAnimationEnd}
-                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
+                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-neutral-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-teal-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
                             {isViewFiltered && (
                                 <>
                                     <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export Personnalisé</p></div>
-                                    <button onClick={() => { onExportCurrentView(); handleClose(); }} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                    <button onClick={() => { onExportCurrentView(); handleClose(); }} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <span className="flex-1 min-w-0 truncate">Sélection actuelle (CSV)</span>
                                         <div className="flex items-center gap-1.5 flex-shrink-0">
                                             <CategoryIcon categoryConfig={categoryConfig} size="sm" />
@@ -85,26 +85,26 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                                             })}
                                         </div>
                                     </button>
-                                    <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
+                                    <div className="border-t border-gray-200 dark:border-teal-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
                                 </>
                             )}
                             <div className="sm:grid sm:grid-cols-2 sm:gap-x-2">
                                 <div>
                                     <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des données par ligne</p></div>
-                                    <button onClick={() => { onExportAll(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                    <button onClick={() => { onExportAll(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <CategoryIcon size="sm" /><span>Réseau complet (CSV)</span>
                                     </button>
                                     {AUDIT_CATEGORIES.map(cat => (
-                                        <button key={`export-${cat.key}`} onClick={() => { onExportByCategory(cat.key); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                        <button key={`export-${cat.key}`} onClick={() => { onExportByCategory(cat.key); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                             <CategoryIcon categoryConfig={cat} size="sm" /><span>{cat.label} (CSV)</span>
                                         </button>
                                     ))}
                                 </div>
-                                <div className="sm:border-l sm:border-gray-200 sm:dark:border-slate-700 sm:pl-2">
+                                <div className="sm:border-l sm:border-gray-200 sm:dark:border-teal-700 sm:pl-2">
                                     <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des audits par type</p></div>
                                     {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
-                                        <button key={`export-module-${type}`} onClick={() => { onExportByModuleType(type); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
-                                            <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-slate-600 rounded-md"><Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" /></div>
+                                        <button key={`export-module-${type}`} onClick={() => { onExportByModuleType(type); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                            <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-neutral-600 rounded-md"><Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" /></div>
                                             <span>{label.replace('Audits ', '').replace('Audits ', '')} (CSV)</span>
                                         </button>
                                     ))}
@@ -180,40 +180,40 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                     <div className={`fixed inset-0 z-10 bg-black/10 dark:bg-black/40 backdrop-blur-[2px] ${isClosing ? 'backdrop-fade-out' : 'backdrop-fade-in'}`} onClick={handleClose} />
                     <div
                         onAnimationEnd={handleAnimationEnd}
-                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-slate-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-slate-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
+                        className={`fixed top-1/2 left-1/2 w-72 sm:w-[36rem] max-h-[85vh] overflow-y-auto rounded-md bg-white dark:bg-neutral-800 shadow-2xl ring-1 ring-black ring-opacity-5 dark:ring-teal-700 focus:outline-none z-20 ${isClosing ? 'menu-out-animate' : 'menu-in-animate'}`}
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
                             <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Sauvegarde & Restauration</p></div>
-                            <button onClick={() => { onExportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                            <button onClick={() => { onExportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Download className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Sauvegarder les données (.json)</span>
                             </button>
-                            <button onClick={() => { onImportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                            <button onClick={() => { onImportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Upload className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Restaurer une sauvegarde (.json)</span>
                             </button>
                             {lastBackupDate && (
                                 <>
-                                    <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay(false) }} />
+                                    <div className="border-t border-gray-200 dark:border-teal-700 my-1 separator-animate" style={{ animationDelay: getDelay(false) }} />
                                     <div className="px-4 py-1 menu-item-animate" style={{ animationDelay: getDelay() }}>
                                         <p className="text-xs text-gray-400 dark:text-slate-500">
                                             Dernier backup auto : {new Date(lastBackupDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>
-                                    <button onClick={() => { onDownloadLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                    <button onClick={() => { onDownloadLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <Download className="w-4 h-4 text-teal-500 dark:text-teal-400" /><span>Télécharger le backup auto (.json)</span>
                                     </button>
-                                    <button onClick={() => { onRestoreFromLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                    <button onClick={() => { onRestoreFromLastBackup(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-neutral-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <Upload className="w-4 h-4 text-teal-500 dark:text-teal-400" /><span>Restaurer depuis le backup auto</span>
                                     </button>
                                 </>
                             )}
-                            <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
-                            <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
+                            <div className="border-t border-gray-200 dark:border-teal-700 my-1 separator-animate" style={{ animationDelay: getDelay() }} />
+                            <button onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 hover:bg-slate-50 dark:hover:bg-neutral-700/50 title-animate" aria-expanded={isDangerZoneOpen} style={{ animationDelay: getDelay() }}>
                                 <div className="flex items-center gap-3"><DatabaseBackup className="w-4 h-4" /><span>Zone de Danger – Actions irréversibles</span></div>
                                 <ChevronDown className={`h-5 w-5 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
                             </button>
                            {isDangerZoneOpen && (
-                                <div className="p-2 border-t border-gray-200 dark:border-slate-700">
+                                <div className="p-2 border-t border-gray-200 dark:border-teal-700">
                                     <div className="px-2 pt-2">
                                         <p className="text-xs text-gray-500 dark:text-slate-400">Remet à zéro les données d'audit pour les catégories sélectionnées.</p>
                                     </div>
