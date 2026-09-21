@@ -68,7 +68,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       {/* ============ Hero — identité de marque, adaptée au thème
           clair/sombre de l'app (cf. store.ts::applyTheme / classe .dark
           sur <html>) ============ */}
-      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-8 sm:px-10 sm:py-10 lg:w-1/2 lg:px-14 lg:py-10 flex flex-col justify-center">
+      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-10 sm:px-10 sm:py-12 lg:w-1/2 lg:px-16 lg:py-14 flex flex-col lg:justify-center">
         {/* Texture décorative légère — CSS pur, aucune image à charger */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -92,11 +92,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
         </div>
 
-        <div className="relative mt-8 lg:mt-10 max-w-md">
-          <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-slate-900 dark:text-white">
+        <div className="relative mt-8 lg:mt-10 max-w-2xl">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-slate-900 dark:text-white">
             Des audits terrain plus simples, plus rapides, plus fiables.
           </h1>
-          <p className="mt-3 text-sm text-slate-600 dark:text-neutral-400 hidden sm:block">
+          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-neutral-400">
             La plateforme de gestion et d'analyse de la signalétique Information Voyageur, pensée pour le terrain.
           </p>
         </div>
@@ -106,10 +106,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             Les badges de fonctionnalités incrustés dans la photo source
             (dont « Géolocalisation », inexistante) sont masqués par un
             bandeau opaque et remplacés par nos vraies fonctionnalités.
-            Desktop uniquement, dégradée vers le panneau si elle ne charge
-            pas (cf. audit performance). */}
+            Visible sur tous les formats (mobile compris, cf. brief
+            « présentation prioritaire ») ; dégradée vers le panneau si
+            elle ne charge pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-6 hidden lg:block aspect-[1090/630] w-full max-w-md overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
+          <div className="relative mt-6 lg:mt-8 aspect-[1090/630] w-full max-w-2xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
@@ -120,23 +121,23 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             />
             <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-neutral-950/40 via-transparent to-transparent" />
             {/* Bandeau de remplacement des badges factices de la photo source */}
-            <div className="absolute left-[67%] top-[5%] flex h-[51%] w-[30%] flex-col justify-center gap-1.5 rounded-lg bg-neutral-950/85 p-1.5 backdrop-blur-sm ring-1 ring-white/10">
+            <div className="absolute left-[57%] top-[5%] flex h-[51%] w-[40%] sm:left-[67%] sm:w-[30%] flex-col justify-center gap-1.5 rounded-lg bg-neutral-950/85 p-1.5 backdrop-blur-sm ring-1 ring-white/10">
               {FEATURES.map(({ label, Icon }) => (
                 <div key={label} className="flex items-center gap-1.5 rounded bg-white/5 px-1.5 py-1">
                   <Icon className="h-3 w-3 flex-shrink-0 text-teal-400" aria-hidden="true" />
-                  <span className="truncate text-[9px] font-medium leading-tight text-neutral-200">{label}</span>
+                  <span className="truncate text-[8px] sm:text-[9px] font-medium leading-tight text-neutral-200">{label}</span>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        {/* Étapes du pipeline produit — masquées sur mobile pour garder le
-            hero compact (le formulaire reste la priorité, cf. audit). Les
-            fonctionnalités (FEATURES) ne sont plus dupliquées ici : elles
-            sont déjà visibles dans le bandeau incrusté sur la photo
-            ci-dessus, cf. tenue en une page sans scroll (cf. audit). */}
-        <div className="relative mt-6 hidden sm:grid grid-cols-2 gap-2.5 max-w-md">
+        {/* Étapes du pipeline produit — visibles sur tous les formats
+            (mobile compris) : la présentation AuditRef doit être complète
+            avant le formulaire, cf. brief. Les fonctionnalités (FEATURES)
+            restent uniquement dans le bandeau incrusté sur la photo, pas
+            dupliquées ici. */}
+        <div className="relative mt-6 lg:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl">
           {PIPELINE_BADGES.map(({ label, Icon }) => (
             <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3.5 py-2.5">
               <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
@@ -145,16 +146,29 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           ))}
         </div>
 
-        <p className="relative mt-6 hidden lg:block text-sm italic text-slate-500 dark:text-neutral-500">
+        <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-neutral-500">
           Plus qu'un outil, une solution terrain.
         </p>
       </div>
 
-      {/* ============ Formulaire de connexion — logique inchangée ============ */}
-      <div className="flex justify-center bg-white dark:bg-neutral-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-slate-50 lg:dark:bg-neutral-900">
-        <motion.div initial="initial" animate="enter" variants={pageVariants} className="w-full max-w-sm">
+      {/* ============ Formulaire de connexion — logique inchangée. Texture
+          et halo repris à l'identique du panneau gauche pour que les deux
+          zones appartiennent visuellement au même écran, au lieu d'un
+          panneau riche face à un panneau plat (cf. rééquilibrage). ============ */}
+      <div className="relative overflow-hidden flex justify-center bg-white dark:bg-neutral-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-slate-50 lg:dark:bg-neutral-900">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-[0.35]"
+          style={{
+            backgroundImage: "radial-gradient(circle at 1px 1px, rgba(20,184,166,0.15) 1px, transparent 0)",
+            backgroundSize: "28px 28px",
+          }}
+          aria-hidden="true"
+        />
+        <div className="pointer-events-none absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-teal-600/10 dark:bg-teal-600/20 blur-3xl" aria-hidden="true" />
+
+        <motion.div initial="initial" animate="enter" variants={pageVariants} className="relative w-full max-w-md">
           <div className="mb-6 text-center lg:text-left">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               Bienvenue sur <span className="text-teal-600 dark:text-teal-400">AuditRef</span>
             </h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
@@ -162,7 +176,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-6 shadow-2xl sm:p-8">
+          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 shadow-2xl sm:p-10">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Connexion</h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">Accédez à votre espace AuditRef</p>
 
