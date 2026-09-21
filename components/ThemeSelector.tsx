@@ -12,7 +12,7 @@ const ThemeSelector: React.FC = () => {
     return (
         <button
             onClick={toggleTheme}
-            className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors"
+            className="flex-shrink-0 p-2 rounded-full text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
             aria-label={theme === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair'}
             title={theme === 'light' ? 'Passer au thème sombre' : 'Passer au thème clair'}
         >

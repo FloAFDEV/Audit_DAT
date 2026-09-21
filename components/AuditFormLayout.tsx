@@ -85,7 +85,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
         // silencieusement position: sticky de tout descendant (constaté en direct :
         // le header restait figé en haut de la carte au lieu de suivre le scroll de
         // la page) — `clip` clippe visuellement sans ce piège.
-        <div className="relative bg-white dark:bg-neutral-800 shadow-lg rounded-xl overflow-clip">
+        <div className="relative bg-white dark:bg-slate-800 shadow-lg rounded-xl overflow-clip">
             {/* Sentinelle de déclenchement du mode compact — absolument
              *  positionnée par rapport à la carte (relative ci-dessus),
              *  hauteur fixe indépendante du header : quand elle sort
@@ -108,7 +108,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
              *  Le conteneur borne naturellement le sticky à la hauteur de la
              *  carte : il cesse de coller une fois la carte entièrement défilée,
              *  sans JS ni position: fixed. */}
-            <div className="sticky top-0 z-10 bg-white dark:bg-neutral-800 border-b border-gray-200 dark:border-teal-700">
+            <div className="sticky top-0 z-10 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
                 {/* Variante compacte — mobile uniquement, affichée une fois le
                  *  seuil de scroll franchi. Ne remplace pas la variante complète
                  *  dans le DOM : les deux existent, une seule a une hauteur non
@@ -124,7 +124,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                         <div className="flex items-start gap-2 px-3 py-2">
                             <button
                                 onClick={onBack}
-                                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-neutral-700 dark:hover:text-slate-200"
+                                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                                 aria-label="Retour"
                             >
                                 <ArrowLeft className="w-5 h-5" />
@@ -177,7 +177,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                 <div className="flex items-center sm:items-start gap-2 sm:gap-4 flex-1 min-w-0">
                                     <button
                                         onClick={onBack}
-                                        className="p-1.5 sm:p-2 sm:mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-neutral-700 dark:hover:text-slate-200"
+                                        className="p-1.5 sm:p-2 sm:mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
                                         aria-label="Retour"
                                     >
                                         <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
@@ -213,7 +213,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                     <span className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400">Progression</span>
                                     <span className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
                                 </div>
-                                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
+                                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                                     <div className={`${progressBarColor} h-2 rounded-full transition-all duration-75`} style={{ width: `${progress}%` }}></div>
                                 </div>
                             </div>
@@ -224,7 +224,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
 
             {children}
 
-            <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-teal-700 dark:bg-neutral-800/50">
+            <div className="p-6 border-t border-gray-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50">
                 <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 mb-2">Commentaires</h3>
                 <p className="text-sm font-light text-slate-500 dark:text-slate-400 mb-4">Remarques ou des détails sur l'incident si nécessaire.</p>
                 <VoiceInput

@@ -136,11 +136,11 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
              *  haut de l'écran après quelques centaines de pixels au lieu de
              *  rester collé). "Ajouter un ECA" reste hors zone sticky sur
              *  mobile : pas indispensable en continu. */}
-            <div className="sticky top-0 z-10 py-2 bg-slate-50 dark:bg-neutral-900 border-b border-slate-200 dark:border-teal-700 sm:static sm:py-0 sm:bg-transparent sm:border-0 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="sticky top-0 z-10 py-2 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sm:static sm:py-0 sm:bg-transparent sm:border-0 sm:mb-8 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="flex items-start gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-neutral-700"
+                        className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors dark:text-slate-400 dark:hover:bg-slate-700"
                         aria-label="Retour"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -173,7 +173,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
             </button>
 
             {sortedEcas.length === 0 ? (
-                 <div className="text-center p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md">
+                 <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
                     <Fence className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun ECA</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun valideur n'est enregistré pour cette station.</p>
@@ -184,7 +184,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                         const progress = getEcaProgress(eca);
                         const isNotApplicable = eca.isNotApplicable;
 
-                        const progressBarColor = isNotApplicable ? 'bg-slate-400 dark:bg-neutral-600' : 'bg-teal-500 dark:bg-teal-600';
+                        const progressBarColor = isNotApplicable ? 'bg-slate-400 dark:bg-slate-600' : 'bg-teal-500 dark:bg-teal-600';
                         
                         const statusLabelColor = isNotApplicable
                             ? 'text-slate-500 dark:text-slate-400'
@@ -205,11 +205,11 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                 className={`p-4 rounded-xl shadow-lg transition-all duration-75 w-full text-left group ${
                                     isReturnHighlighted
                                         ? 'bg-teal-50 dark:bg-teal-900/20 ring-2 ring-teal-500 dark:ring-teal-400'
-                                        : 'bg-white dark:bg-neutral-800 dark:ring-1 dark:ring-teal-700/50'
+                                        : 'bg-white dark:bg-slate-800 dark:ring-1 dark:ring-slate-700/50'
                                 } ${
                                     isNotApplicable
                                     ? 'opacity-70 cursor-default'
-                                    : 'hover:shadow-xl dark:hover:ring-teal-600'
+                                    : 'hover:shadow-xl dark:hover:ring-slate-600'
                                 }`}
                             >
                                 <div className="flex items-center justify-between">
@@ -252,7 +252,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                         </span>
                                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress.percentage)}%</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
+                                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                                         <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                     </div>
                                 </div>

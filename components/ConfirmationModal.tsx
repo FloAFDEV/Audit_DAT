@@ -143,10 +143,10 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             onClick={onClose}
         >
         <div 
-            className="relative transform overflow-hidden rounded-lg bg-white dark:bg-neutral-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg dark:ring-1 dark:ring-teal-400/70"
+            className="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg dark:ring-1 dark:ring-teal-400/70"
             onClick={(e) => e.stopPropagation()}
         >
-            <div className="bg-white dark:bg-neutral-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+            <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
                 {mainIcon || (
                     <div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 dark:bg-red-900/30 sm:mx-0 sm:h-10 sm:w-10">
@@ -179,7 +179,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                 value={userInput}
                                 onChange={(e) => setUserInput(e.target.value.trim())}
                                 onKeyDown={handleKeyDown}
-                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-neutral-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 leading-6"
+                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 leading-6"
                                 placeholder="****"
                                 maxLength={4}
                                 autoComplete="off"
@@ -191,7 +191,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </div>
             </div>
             </div>
-            <div className="bg-gray-50 dark:bg-neutral-800/50 dark:border-t dark:border-teal-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+            <div className="bg-gray-50 dark:bg-slate-800/50 dark:border-t dark:border-slate-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
                 type="button"
                 onClick={onConfirm}
@@ -203,7 +203,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <button
                 type="button"
                 onClick={onClose}
-                className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-neutral-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-teal-600 hover:bg-gray-50 dark:hover:bg-neutral-600 sm:mt-0 sm:w-auto"
+                className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
             >
                 {cancelLabel}
             </button>

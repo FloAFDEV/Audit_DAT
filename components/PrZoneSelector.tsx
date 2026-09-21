@@ -84,7 +84,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
       <div className="flex items-center gap-4 mb-8">
         <button
           onClick={onBack}
-          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors"
+          className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
           aria-label="Retour"
         >
           <ArrowLeft className="w-6 h-6" />
@@ -108,7 +108,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
             <button
               key={zone.id}
               onClick={() => onSelectZone(zone.id)}
-              className="bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600"
+              className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -130,7 +130,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
                     {Math.round(progress)}%
                   </span>
                 </div>
-                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
+                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                   <div
                     className={`${progressBarColor} h-2 rounded-full`}
                     style={{ width: `${progress}%` }}

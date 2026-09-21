@@ -64,11 +64,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-neutral-950">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-slate-950">
       {/* ============ Hero — identité de marque, adaptée au thème
           clair/sombre de l'app (cf. store.ts::applyTheme / classe .dark
           sur <html>) ============ */}
-      <div className="relative overflow-hidden bg-white dark:bg-neutral-950 px-6 py-10 sm:px-10 sm:py-12 lg:w-1/2 lg:px-16 lg:py-14 flex flex-col lg:justify-center">
+      <div className="relative overflow-hidden bg-white dark:bg-slate-950 px-6 py-10 sm:px-10 sm:py-12 lg:w-1/2 lg:px-16 lg:py-14 flex flex-col lg:justify-center">
         {/* Texture décorative légère — CSS pur, aucune image à charger */}
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
@@ -96,7 +96,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-slate-900 dark:text-white">
             Des audits terrain plus simples, plus rapides, plus fiables.
           </h1>
-          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-neutral-400">
+          <p className="mt-3 text-sm sm:text-base text-slate-600 dark:text-slate-400">
             La plateforme de gestion et d'analyse de la signalétique Information Voyageur, pensée pour le terrain.
           </p>
         </div>
@@ -110,7 +110,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             « présentation prioritaire ») ; dégradée vers le panneau si
             elle ne charge pas (cf. audit performance). */}
         {!heroImageFailed && (
-          <div className="relative mt-6 lg:mt-8 aspect-[1090/630] w-full max-w-2xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-white/10">
+          <div className="relative mt-6 lg:mt-8 aspect-[1090/630] w-full max-w-2xl overflow-hidden rounded-2xl shadow-2xl ring-1 ring-slate-900/10 dark:ring-slate-700/50">
             <img
               src="/images/login-hero.jpg"
               alt="Agent sur le terrain consultant l'application AuditRef sur une tablette"
@@ -139,14 +139,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             dupliquées ici. */}
         <div className="relative mt-6 lg:mt-8 grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-w-2xl">
           {PIPELINE_BADGES.map(({ label, Icon }) => (
-            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 px-3.5 py-2.5">
+            <div key={label} className="flex items-center gap-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 px-3.5 py-2.5">
               <Icon className="h-4 w-4 flex-shrink-0 text-teal-600 dark:text-teal-400" aria-hidden="true" />
-              <span className="text-xs font-medium text-slate-700 dark:text-neutral-200">{label}</span>
+              <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{label}</span>
             </div>
           ))}
         </div>
 
-        <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-neutral-500">
+        <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-slate-500">
           Plus qu'un outil, une solution terrain.
         </p>
       </div>
@@ -155,7 +155,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           et halo repris à l'identique du panneau gauche pour que les deux
           zones appartiennent visuellement au même écran, au lieu d'un
           panneau riche face à un panneau plat (cf. rééquilibrage). ============ */}
-      <div className="relative overflow-hidden flex justify-center bg-white dark:bg-neutral-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-slate-50 lg:dark:bg-neutral-900">
+      <div className="relative overflow-hidden flex justify-center bg-white dark:bg-slate-950 px-4 py-10 sm:px-6 lg:flex-1 lg:items-center lg:bg-slate-50 lg:dark:bg-slate-900">
         <div
           className="pointer-events-none absolute inset-0 opacity-[0.35]"
           style={{
@@ -171,22 +171,22 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
               Bienvenue sur <span className="text-teal-600 dark:text-teal-400">AuditRef</span>
             </h1>
-            <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               Votre solution pour des audits terrain simples, rapides et efficaces.
             </p>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.03] p-7 shadow-2xl sm:p-10">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-7 shadow-2xl sm:p-10">
             <h2 className="text-lg font-bold text-slate-900 dark:text-white">Connexion</h2>
-            <p className="mt-1 text-sm text-slate-600 dark:text-neutral-400">Accédez à votre espace AuditRef</p>
+            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">Accédez à votre espace AuditRef</p>
 
             <form className="mt-6 space-y-4" onSubmit={handleSubmit} noValidate>
               <div>
-                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-neutral-400">
+                <label htmlFor="password" className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                   Mot de passe
                 </label>
                 <div className="relative">
-                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-neutral-500" aria-hidden="true" />
+                  <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-slate-500" aria-hidden="true" />
                   <input
                     id="password"
                     name="password"
@@ -198,7 +198,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       setPassword(e.target.value);
                       if (error) setError("");
                     }}
-                    className="block w-full rounded-lg border border-slate-300 dark:border-white/10 bg-slate-50 dark:bg-white/5 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-neutral-500 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                     placeholder="Mot de passe"
                     aria-invalid={!!error}
                     aria-describedby={error ? "password-error" : undefined}
@@ -206,7 +206,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-neutral-500 transition-colors hover:text-slate-600 dark:hover:text-neutral-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 transition-colors hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -223,7 +223,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <button
                 type="submit"
                 disabled={!password}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
               >
                 Se connecter
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -231,7 +231,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </form>
           </div>
 
-          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-slate-500 dark:text-neutral-500">
+          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-slate-500 dark:text-slate-500">
             AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
             <a
               href="mailto:florent.perez@tisseo.fr?subject=Contact%20depuis%20AuditRef"

@@ -103,7 +103,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
       <Header title="Cockpit Signalétique" onBack={onBack} />
 
       {/* Navigation par sections (registre) */}
-      <div className="border-b border-gray-200 dark:border-teal-700 mb-6">
+      <div className="border-b border-gray-200 dark:border-slate-700 mb-6">
         <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Sections du cockpit">
             {COCKPIT_SECTIONS.map(({ key, label, Icon }) => (
                 <button
@@ -113,7 +113,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                         activeSection === key
                             ? 'border-teal-500 text-teal-600 dark:text-teal-400'
                             : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-teal-600/70 hover:border-teal-500/30 dark:hover:text-teal-400/70 dark:hover:border-teal-400/30'
-                    } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2 transition-colors rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900`}
+                    } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2 transition-colors rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`}
                 >
                     <Icon className="w-4 h-4" />
                     {label}

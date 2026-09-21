@@ -39,7 +39,7 @@ const LineBadge: React.FC<{ line: string }> = ({ line }) => {
  *  (w-8 au lieu de w-12) pour rester à l'échelle d'un h3, mais mêmes
  *  classes de couleur — aucune nouvelle variante. */
 const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
-    <section className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-slate-200 dark:border-teal-700 p-5">
+    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
                 {icon}
@@ -69,7 +69,7 @@ const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slat
         amber: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300',
         red: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
         teal: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
-        slate: 'bg-slate-100 text-slate-700 dark:bg-neutral-700 dark:text-slate-300',
+        slate: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300',
     };
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 };
@@ -148,7 +148,7 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
             {byLine.map(({ line, installed, lieux }) => (
                 <section key={line}>
-                    <div className="flex items-baseline justify-between gap-3 border-b border-slate-200 dark:border-teal-700 pb-1.5">
+                    <div className="flex items-baseline justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1.5">
                         <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
                             <LineBadge line={line} />
                             {line === 'P+R' ? 'Parcs relais' : `Ligne ${line}`}
@@ -172,7 +172,7 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
                                         {[...lieu.implantations.entries()].map(([label, count]) => (
                                             <li
                                                 key={label}
-                                                className="text-xs text-slate-500 dark:text-slate-400 break-words pl-3 border-l border-slate-200 dark:border-teal-700"
+                                                className="text-xs text-slate-500 dark:text-slate-400 break-words pl-3 border-l border-slate-200 dark:border-slate-700"
                                             >
                                                 {label}
                                                 {count > 1 && <span className="font-semibold text-slate-600 dark:text-slate-300"> ×{count}</span>}
@@ -246,7 +246,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             <div className="flex items-start gap-3">
                 <button
                     onClick={onBack}
-                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-neutral-700 transition-colors flex-shrink-0"
+                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
                     aria-label="Retour à la liste"
                 >
                     <ArrowLeft className="w-5 h-5" />
