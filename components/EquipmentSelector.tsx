@@ -48,7 +48,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors"
                         aria-label="Retour"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -64,7 +64,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
             </div>
 
             {(!zone || !zone.equipments || zone.equipments.length === 0) ? (
-                 <div className="text-center p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md">
+                 <div className="text-center p-8 bg-white dark:bg-neutral-800 rounded-lg shadow-md">
                     <Ticket className="mx-auto h-12 w-12 text-gray-400 dark:text-slate-500" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900 dark:text-slate-100">Aucun équipement</h3>
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun équipement n'est enregistré pour cette zone du P+R.</p>
@@ -80,7 +80,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                             <button
                                 key={equipment.id}
                                 onClick={() => onSelectEquipment(equipment.id)}
-                                className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                                className="bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600"
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -101,7 +101,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                                         </span>
                                         <span className="text-sm font-semibold text-gray-700 dark:text-slate-300">{Math.round(progress)}%</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
                                         <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress}%` }}></div>
                                     </div>
                                 </div>

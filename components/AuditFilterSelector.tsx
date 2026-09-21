@@ -31,7 +31,7 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
     }
 
     return (
-        <div className="mb-6 p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-gray-200 dark:border-slate-700">
+        <div className="mb-6 p-4 bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-gray-200 dark:border-teal-700">
             <label className="text-sm font-semibold text-gray-700 dark:text-slate-300 mb-3 block">Filtrer par type d'audit :</label>
             <div className="flex flex-wrap gap-3">
                 {availableAuditTypes.map(type => {
@@ -44,7 +44,7 @@ export const AuditFilterSelector: React.FC<AuditFilterSelectorProps> = ({ availa
                             className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-[10px] transition-all duration-200 active:scale-95 ring-1 ring-black/5 ${
                                 isActive
                                 ? 'bg-teal-600 text-white shadow-md ring-teal-700/20'
-                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600'
+                                : 'bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-neutral-700 dark:text-slate-200 dark:hover:bg-neutral-600'
                             }`}
                         >
                             <ModuleIcon type={type} className="w-4 h-4" />

@@ -67,7 +67,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
         return (
             <div>
                  <div className="flex items-center gap-4 mb-8">
-                    <button onClick={handleBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Retour">
+                    <button onClick={handleBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors" aria-label="Retour">
                         <ArrowLeft className="w-6 h-6" />
                     </button>
                     <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                     <button
                                         key={direction.id}
                                         onClick={() => onSelectDirection(direction.id)}
-                                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                                        className="bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600"
                                     >
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -110,7 +110,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                                                         {progress.completedCount} / {progress.totalCount} DATs
                                                     </span>
                                                 </div>
-                                                <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                                <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
                                                     <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${progress.percentage}%` }}></div>
                                                 </div>
                                             </div>
@@ -128,7 +128,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
     return (
         <div>
             <div className="flex items-center gap-4 mb-8">
-                <button onClick={onBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors" aria-label="Retour">
+                <button onClick={onBack} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors" aria-label="Retour">
                     <ArrowLeft className="w-6 h-6" />
                 </button>
                 <div className="flex items-center gap-3">
@@ -149,12 +149,12 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                      <button
                         key={s.id}
                         onClick={() => onSelectStation(s.id)}
-                        className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
+                        className="bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-teal-700/50 dark:hover:ring-teal-600"
                         disabled={outOfScope}
                     >
                          <div className={`flex items-center justify-between ${outOfScope ? 'opacity-50' : ''}`}>
                             <div className="flex items-center gap-4">
-                                <div className="p-3 bg-gray-100 dark:bg-slate-700 rounded-lg">
+                                <div className="p-3 bg-gray-100 dark:bg-neutral-700 rounded-lg">
                                     <MapPin className="w-6 h-6 text-gray-600 dark:text-slate-300" />
                                 </div>
                                 <div>

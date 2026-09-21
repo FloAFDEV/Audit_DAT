@@ -16,7 +16,7 @@ import { useAppHandlers } from './hooks/useAppHandlers';
 
 // A simple loading spinner component
 const Loader: React.FC = () => (
-  <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900" role="status" aria-live="polite">
+  <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-neutral-900" role="status" aria-live="polite">
     <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-teal-500" aria-label="Chargement en cours..."></div>
   </div>
 );
@@ -25,7 +25,7 @@ const Loader: React.FC = () => (
 // cet échec passait inaperçu et l'utilisateur atterrissait sur un tableau de
 // bord vide, indiscernable d'un réseau réellement sans lieu (cf. store.ts::init).
 const InitErrorScreen: React.FC<{ message: string }> = ({ message }) => (
-  <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900 p-8" role="alert">
+  <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-neutral-900 p-8" role="alert">
     <div className="max-w-md text-center">
       <h1 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">Chargement impossible</h1>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{message}</p>
@@ -177,7 +177,7 @@ const App: React.FC = () => {
     }
     
     return (
-        <main className="bg-slate-50 dark:bg-slate-900 min-h-screen flex flex-col">
+        <main className="bg-slate-50 dark:bg-neutral-900 min-h-screen flex flex-col">
             {showSuccessAnimation && <SuccessAnimation />}
             <Toaster position="top-center" reverseOrder={false} toastOptions={{ style: { background: 'transparent', boxShadow: 'none', padding: 0 } }} />
             <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-6 flex-grow">

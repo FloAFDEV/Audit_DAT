@@ -83,7 +83,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                 <div className="flex items-center gap-4">
                     <button
                         onClick={onBack}
-                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-slate-700 transition-colors"
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-400 dark:hover:bg-neutral-700 transition-colors"
                         aria-label="Retour"
                     >
                         <ArrowLeft className="w-6 h-6" />
@@ -110,7 +110,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                             key={module.id}
                             onClick={() => onSelectModule(module.id)}
                             disabled={isDisabled}
-                            className="module-card bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm transition-shadow duration-200 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed dark:ring-1 dark:ring-slate-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900"
+                            className="module-card bg-white dark:bg-neutral-800 p-4 rounded-xl shadow-sm transition-shadow duration-200 w-full text-left group disabled:opacity-50 disabled:cursor-not-allowed dark:ring-1 dark:ring-teal-700/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-900"
                         >
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4 flex-1 min-w-0">
@@ -124,7 +124,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                                 <FormattedCorrespondence text={module.name} />
                                             </div>
                                             {module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE ? (
-                                                <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-neutral-700 px-1.5 py-0.5 rounded">
                                                     {(module.data as ModeData).stations?.[0]?.code}
                                                 </span>
                                             ) : null}
@@ -146,7 +146,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                         </span>
                                         <span className="text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(percentage)}%</span>
                                     </div>
-                                    <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
+                                    <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-2">
                                         <div className={`${progressBarColor} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>
                                     </div>
                                 </div>
