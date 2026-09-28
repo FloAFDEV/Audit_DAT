@@ -10,8 +10,8 @@
 // distribuée avec le build — sa correction se fait dans le code source,
 // jamais depuis l'application (aucune administration locale).
 // =================================================================
-import React, { useMemo } from 'react';
-import { ArrowLeft, Ruler, Link2, Flag, Radar } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { ArrowLeft, Ruler, Link2, Flag, Radar, ChevronDown } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex, ReferenceUsage } from '../../utils/cockpit/patrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
@@ -98,6 +98,21 @@ const sameLabel = (a: string, b: string): boolean => {
  * qu'elle soit dite une fois, pas à chaque station.
  */
 const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
+    // Repliée par défaut : une référence à scope large (ex. Plans de
+    // quartier, posés sur la quasi-totalité d'une ligne) peut lister des
+    // dizaines de stations par ligne — un mur de texte au premier coup
+    // d'œil, surtout sur mobile où tout est en une colonne. Chaque ligne
+    // s'ouvre indépendamment (pas d'exclusivité : rien n'empêche de
+    // comparer deux lignes à la fois).
+    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+    const toggleLine = (line: string) => {
+        setOpenLines(prev => {
+            const next = new Set(prev);
+            if (next.has(line)) next.delete(line); else next.add(line);
+            return next;
+        });
+    };
+
     const byLine = useMemo(() => {
         const lines = new Map<string, {
             line: string; installed: number;
@@ -146,10 +161,18 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
         // transport est un bloc autonome, jamais une cellule d'un tableau (d'où
         // disparaît aussi la colonne vide de l'ancienne mise en page).
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-            {byLine.map(({ line, installed, lieux }) => (
+            {byLine.map(({ line, installed, lieux }) => {
+                const isOpen = openLines.has(line);
+                return (
                 <section key={line}>
-                    <div className="flex items-baseline justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1.5">
+                    <button
+                        type="button"
+                        onClick={() => toggleLine(line)}
+                        aria-expanded={isOpen}
+                        className="flex w-full items-baseline justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1.5 text-left -mx-1 px-1 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    >
                         <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                            <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                             <LineBadge line={line} />
                             {line === 'P+R' ? 'Parcs relais' : `Ligne ${line}`}
                         </span>
@@ -159,7 +182,8 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
                                 exemplaire{installed > 1 ? 's' : ''}
                             </span>
                         </span>
-                    </div>
+                    </button>
+                    {isOpen && (
                     <ul className="mt-2 space-y-2">
                         {lieux.map(lieu => (
                             <li key={lieu.lieuName}>
@@ -183,8 +207,10 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
                             </li>
                         ))}
                     </ul>
+                    )}
                 </section>
-            ))}
+                );
+            })}
         </div>
     );
 };
