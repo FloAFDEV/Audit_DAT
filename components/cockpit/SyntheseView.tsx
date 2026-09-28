@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck } from 'lucide-react';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -185,6 +185,20 @@ const PlanQuartierOverview: React.FC<{
     lineConfigs: Record<string, any>;
     onOpenReference: (referenceId: string) => void;
 }> = ({ patrimoineIndex, references, lineConfigs, onOpenReference }) => {
+    // Repliée par défaut : un plan de quartier posé sur la quasi-totalité
+    // d'une ligne peut lister ~90 stations au total, toutes empilées en une
+    // colonne sur mobile — un scroll interminable. Chaque ligne s'ouvre
+    // indépendamment (pas d'exclusivité : comparer deux lignes reste
+    // possible), même pattern que le reste de l'app.
+    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+    const toggleLine = (line: string) => {
+        setOpenLines(prev => {
+            const next = new Set(prev);
+            if (next.has(line)) next.delete(line); else next.add(line);
+            return next;
+        });
+    };
+
     const models = useMemo(() => {
         const pdq = references.filter(r => r.auditType === 'PDQ' && !r.isDisabled);
         return [...pdq].sort((a, b) => PDQ_MODEL_ORDER.indexOf(a.id) - PDQ_MODEL_ORDER.indexOf(b.id));
@@ -351,15 +365,23 @@ const PlanQuartierOverview: React.FC<{
 
             {/* Bande 3 — par ligne puis station. Vue « terrain » : où aller. */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
-                {byLine.map(({ line, cfg, label, installed, stations }) => (
+                {byLine.map(({ line, cfg, label, installed, stations }) => {
+                    const isOpen = openLines.has(line);
+                    return (
                     <div key={line}>
-                        <div className="flex items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1">
+                        <button
+                            type="button"
+                            onClick={() => toggleLine(line)}
+                            aria-expanded={isOpen}
+                            className="flex w-full items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1 text-left -mx-1 px-1 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                        >
                             <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
+                                <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                                 {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
                                 {label}
                             </span>
                             <span className="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
-                        </div>
+                        </button>
                         {/* Une carte par station plutôt qu'une ligne : au-delà
                             de deux références, une chaîne jointe par « · »
                             devient illisible (dimensions, emplacements et
@@ -367,6 +389,7 @@ const PlanQuartierOverview: React.FC<{
                             (teal, comme les autres totaux de l'app) en
                             en-tête, puis une ligne par (modèle, emplacement)
                             avec sa quantité en pastille bien distincte. */}
+                        {isOpen && (
                         <ul className="mt-2 space-y-2.5">
                             {stations.map(st => (
                                 <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
@@ -414,8 +437,10 @@ const PlanQuartierOverview: React.FC<{
                                 </li>
                             ))}
                         </ul>
+                        )}
                     </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
