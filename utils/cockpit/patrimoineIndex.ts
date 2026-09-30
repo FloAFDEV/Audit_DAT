@@ -140,6 +140,7 @@ import {
     SignageReference, SignageSupport, PlanQuartierData,
 } from '../../types';
 import { isModuleInAuditScope } from '../moduleScope';
+import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, EcaValidationZone } from '../../data/adhesives';
 
 // -----------------------------------------------------------------
 // Types du contrat (stables : les vues dépendent d'eux, pas de l'arbre)
@@ -166,6 +167,11 @@ export interface ImplantationRef {
      *  texte libre — c'est ce qui permet aux vues de compter « combien sur
      *  caisse auto ? » sans relire l'arbre d'audit (règle 1). */
     implantationContext?: string;
+    /** Zone de validation (ZH/ZB) quand la référence est zonée sur cet
+     *  équipement (eca-1 sur un ECA d'entrée) : chaque zone est un exemplaire
+     *  physique distinct, donc une implantation distincte. Absent ailleurs. */
+    zone?: EcaValidationZone;
+    zoneLabel?: string;
     /** Statut constaté ; clé absente de la map = NotChecked (R10). */
     status: AdhesiveStatus;
 }
@@ -332,14 +338,38 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     for (const eca of (module.data as EcaData).ecas ?? []) {
                         if (eca.isNotApplicable) continue;
                         const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
-                        pushImplantations(refs, eca.adhesives ?? {}, {
+                        const base = {
                             lieuId: lieu.id, lieuName: lieu.name,
                             line: module.line || '?',
                             moduleId: module.id, moduleName: module.name,
                             context: eca.accessPoint,
                             equipmentLabel: eca.name,
                             equipmentType: eca.type,
-                        });
+                        };
+                        // Occurrences physiques — même règle que le formulaire
+                        // terrain et maintenanceGenerator (getEcaAdhesiveOccurrences /
+                        // readEcaAdhesiveStatus) : eca-1 = ZH sur un ECA d'entrée
+                        // standard, ZH + ZB sur un ECA PMR d'entrée, chaque zone
+                        // avec son propre statut ; toute autre référence reste à
+                        // un exemplaire, clé = id.
+                        const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                        const ecaForStatus = { ...eca, adhesives: eca.adhesives ?? {} };
+                        for (const ref of refs) {
+                            const refOccurrences = occurrences.filter(o => o.id === ref.id);
+                            // Addition hors catalogue historique : un exemplaire, clé = id.
+                            if (refOccurrences.length === 0) {
+                                pushImplantations([ref], ecaForStatus.adhesives, base);
+                                continue;
+                            }
+                            for (const occ of refOccurrences) {
+                                const status = readEcaAdhesiveStatus(ecaForStatus, occ);
+                                if (status === AdhesiveStatus.NotApplicable) continue;
+                                implantations.push({
+                                    ...base, referenceId: ref.id, status,
+                                    ...(occ.zone ? { zone: occ.zone, zoneLabel: occ.zoneLabel } : {}),
+                                });
+                            }
+                        }
                     }
                     break;
                 }

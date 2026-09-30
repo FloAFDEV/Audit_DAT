@@ -22,13 +22,14 @@
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Search, LucideIcon } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Search, ChevronDown, CheckCircle2, X, LucideIcon } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
+import { buildImplantationTree, filterImplantationsBySupports, orderLines } from '../../utils/cockpit/implantationTree';
 
 /* ================= Références : liste filtrable ================= */
 
@@ -174,17 +175,64 @@ interface ImplantationsExplorerProps {
     onOpenReference: (id: string) => void;
 }
 
+const lineLabel = (l: string) => (l === 'P+R' ? 'P+R' : `Ligne ${l}`);
+
+/** En-tête repliable d'un niveau de l'arbre (ligne, station, accès). */
+const TreeToggle: React.FC<{
+    isOpen: boolean;
+    onToggle: () => void;
+    installed: number;
+    defects: number;
+    className?: string;
+    children: React.ReactNode;
+}> = ({ isOpen, onToggle, installed, defects, className = '', children }) => (
+    <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        className={`flex w-full items-center justify-between gap-3 text-left rounded px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${className}`}
+    >
+        <span className="flex items-center gap-2 min-w-0">
+            <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            {children}
+        </span>
+        <span className="flex-shrink-0 flex items-baseline gap-2">
+            {defects > 0 && <span className="text-xs font-semibold text-red-600 dark:text-red-400">{defects} défaut{defects > 1 ? 's' : ''}</span>}
+            <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
+        </span>
+    </button>
+);
+
 const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ references, index, onOpenReference }) => {
     const [line, setLine] = useState<string>('ALL');
     const [status, setStatus] = useState<string>('ALL');
     const [query, setQuery] = useState('');
+    // Matières sélectionnées (cards) — vide = toutes les matières.
+    const [supports, setSupports] = useState<Set<SignageSupport>>(new Set());
+    // Niveaux dépliés (ligne / station / accès) — tout replié par défaut.
+    const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
 
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
-    const lines = useMemo(() => Array.from(index.byLine.keys()).sort(), [index]);
+    const lines = useMemo(() => orderLines(index.byLine.keys()), [index]);
+
+    const toggleSupport = (support: SignageSupport) => {
+        setSupports(prev => {
+            const next = new Set(prev);
+            if (next.has(support)) next.delete(support); else next.add(support);
+            return next;
+        });
+    };
+    const toggleOpen = (key: string) => {
+        setOpenKeys(prev => {
+            const next = new Set(prev);
+            if (next.has(key)) next.delete(key); else next.add(key);
+            return next;
+        });
+    };
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return index.implantations.filter(imp => {
+        return filterImplantationsBySupports(index.implantations, refById, supports).filter(imp => {
             if (line !== 'ALL' && imp.line !== line) return false;
             if (status === 'DEFECT') {
                 if (imp.status !== AdhesiveStatus.Absent && imp.status !== AdhesiveStatus.ToBeReplaced) return false;
@@ -196,23 +244,57 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
             }
             return true;
         });
-    }, [index, line, status, query, refById]);
+    }, [index, line, status, query, refById, supports]);
 
-    // Regroupements par support et par ligne — directement depuis l'index.
+    const tree = useMemo(() => buildImplantationTree(filtered), [filtered]);
+    const stationCount = useMemo(() => new Set(filtered.map(i => i.lieuId)).size, [filtered]);
+
+    // Recherche active : résultats déjà ciblés, tout est déplié d'office.
+    const forceOpen = query.trim().length > 0;
+    const isOpen = (key: string) => forceOpen || openKeys.has(key);
+
+    // Regroupements par support — directement depuis l'index.
     const supportEntries = useMemo(() => Array.from(index.bySupport.entries()), [index]);
 
     return (
         <div className="space-y-4">
-            {/* « Combien de Dibond ? de PVC ?... » — servi par l'index */}
+            {/* « Combien de Dibond ? de PVC ?... » — servi par l'index ; un
+                clic filtre les implantations (sélection multiple). */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {supportEntries.map(([support, counts]) => (
-                    <div key={support} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-center">
-                        <div className="text-xl font-bold text-slate-800 dark:text-slate-100">{counts.installed}</div>
-                        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-0.5">{SUPPORT_LABELS[support]}</div>
-                        {counts.defects > 0 && <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">{counts.defects} défaut{counts.defects > 1 ? 's' : ''}</div>}
-                    </div>
-                ))}
+                {supportEntries.map(([support, counts]) => {
+                    const selected = supports.has(support);
+                    return (
+                        <button
+                            key={support}
+                            type="button"
+                            onClick={() => toggleSupport(support)}
+                            aria-pressed={selected}
+                            className={`relative p-3 rounded-lg border text-center transition-colors ${
+                                selected
+                                    ? 'border-teal-600 ring-2 ring-teal-600 bg-teal-50 dark:bg-teal-900/30 dark:border-teal-400 dark:ring-teal-400'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-500'
+                            }`}
+                        >
+                            {selected && <CheckCircle2 className="absolute top-1.5 right-1.5 w-4 h-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />}
+                            <div className="text-xl font-bold text-slate-800 dark:text-slate-100">{counts.installed}</div>
+                            <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-0.5">{SUPPORT_LABELS[support]}</div>
+                            {counts.defects > 0 && <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">{counts.defects} défaut{counts.defects > 1 ? 's' : ''}</div>}
+                        </button>
+                    );
+                })}
             </div>
+            {supports.size > 0 && (
+                <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                    <span>Matière{supports.size > 1 ? 's' : ''} : {Array.from(supports).map(s => SUPPORT_LABELS[s]).join(' + ')}</span>
+                    <button
+                        type="button"
+                        onClick={() => setSupports(new Set())}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 font-semibold"
+                    >
+                        <X className="w-3 h-3" aria-hidden="true" /> Toutes matières
+                    </button>
+                </div>
+            )}
 
             {/* Filtres */}
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-wrap">
@@ -234,7 +316,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                     className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
                 >
                     <option value="ALL">Toutes lignes</option>
-                    {lines.map(l => <option key={l} value={l}>{l === 'P+R' ? 'P+R' : `Ligne ${l}`}</option>)}
+                    {lines.map(l => <option key={l} value={l}>{lineLabel(l)}</option>)}
                 </select>
                 <select
                     value={status}
@@ -248,58 +330,98 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                 </select>
             </div>
 
-            {/* Table des implantations */}
-            <div className="overflow-auto max-h-[32rem] border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
-                <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
-                        <tr>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Lieu</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Contexte</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Équipement</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Statut</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filtered.slice(0, 500).map((imp, i) => {
-                            const ref = refById.get(imp.referenceId);
-                            return (
-                                <tr key={`${imp.moduleId}-${imp.equipmentLabel}-${imp.referenceId}-${i}`} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
-                                    <td className="p-3 whitespace-nowrap font-medium text-slate-800 dark:text-slate-100">
-                                        {imp.lieuName}
-                                        <span className="block text-[11px] text-slate-400">{imp.line === 'P+R' ? 'P+R' : `Ligne ${imp.line}`}</span>
-                                    </td>
-                                    <td className="p-3 text-slate-600 dark:text-slate-300 hidden sm:table-cell">{imp.context}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{imp.equipmentLabel}</td>
-                                    <td className="p-3">
-                                        <button
-                                            onClick={() => onOpenReference(imp.referenceId)}
-                                            className="text-teal-700 dark:text-teal-300 hover:underline text-left"
+            {/* Arbre des implantations : Ligne → Station → Accès / liaison →
+                Équipement → Référence (→ Zone). Aucune implantation masquée :
+                chaque niveau replié reste dépliable. */}
+            <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-900">
+                {tree.map(lineNode => (
+                    <div key={lineNode.key} className="p-1">
+                        <TreeToggle
+                            isOpen={isOpen(lineNode.key)}
+                            onToggle={() => toggleOpen(lineNode.key)}
+                            installed={lineNode.installed}
+                            defects={lineNode.defects}
+                        >
+                            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{lineLabel(lineNode.line)}</span>
+                            <span className="text-xs text-slate-400 dark:text-slate-500">{lineNode.stations.length} lieu{lineNode.stations.length > 1 ? 'x' : ''}</span>
+                        </TreeToggle>
+                        {isOpen(lineNode.key) && (
+                            <div className="pl-3 sm:pl-5 space-y-1 pb-1">
+                                {lineNode.stations.map(sta => (
+                                    <div key={sta.key} className="border-l border-slate-200 dark:border-slate-700 pl-1">
+                                        <TreeToggle
+                                            isOpen={isOpen(sta.key)}
+                                            onToggle={() => toggleOpen(sta.key)}
+                                            installed={sta.installed}
+                                            defects={sta.defects}
                                         >
-                                            {ref?.name ?? imp.referenceId}
-                                        </button>
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
-                                            {STATUS_LABELS[imp.status] ?? imp.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        {filtered.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
-                                    Aucune implantation ne correspond aux filtres.
-                                </td>
-                            </tr>
+                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{sta.lieuName}</span>
+                                        </TreeToggle>
+                                        {isOpen(sta.key) && (
+                                            <div className="pl-3 sm:pl-5 space-y-1 pb-1">
+                                                {sta.accesses.map(acc => (
+                                                    <div key={acc.key} className="border-l border-slate-200 dark:border-slate-700 pl-1">
+                                                        <TreeToggle
+                                                            isOpen={isOpen(acc.key)}
+                                                            onToggle={() => toggleOpen(acc.key)}
+                                                            installed={acc.installed}
+                                                            defects={acc.defects}
+                                                        >
+                                                            <span className="min-w-0">
+                                                                <span className="block text-sm text-slate-700 dark:text-slate-200 truncate">{acc.context}</span>
+                                                                <span className="block text-[11px] text-slate-400 dark:text-slate-500 truncate">{acc.moduleName}</span>
+                                                            </span>
+                                                        </TreeToggle>
+                                                        {isOpen(acc.key) && (
+                                                            <ul className="pl-3 sm:pl-5 pr-1 pb-2 space-y-2">
+                                                                {acc.equipments.map(eq => (
+                                                                    <li key={eq.key} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2">
+                                                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200 pb-1 mb-1 border-b border-dashed border-slate-200 dark:border-slate-700">{eq.label}</div>
+                                                                        <ul className="space-y-1">
+                                                                            {eq.items.map((imp, i) => {
+                                                                                const ref = refById.get(imp.referenceId);
+                                                                                return (
+                                                                                    <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-center justify-between gap-2">
+                                                                                        <span className="flex items-center gap-1.5 min-w-0">
+                                                                                            <button
+                                                                                                onClick={() => onOpenReference(imp.referenceId)}
+                                                                                                className="text-xs text-teal-700 dark:text-teal-300 hover:underline text-left truncate"
+                                                                                            >
+                                                                                                {ref?.name ?? imp.referenceId}
+                                                                                            </button>
+                                                                                            {imp.zone && (
+                                                                                                <span title={imp.zoneLabel} className="flex-shrink-0 inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{imp.zone}</span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
+                                                                                            {STATUS_LABELS[imp.status] ?? imp.status}
+                                                                                        </span>
+                                                                                    </li>
+                                                                                );
+                                                                            })}
+                                                                        </ul>
+                                                                    </li>
+                                                                ))}
+                                                            </ul>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         )}
-                    </tbody>
-                </table>
+                    </div>
+                ))}
+                {filtered.length === 0 && (
+                    <p className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                        Aucune implantation ne correspond aux filtres.
+                    </p>
+                )}
             </div>
             <p className="text-xs text-slate-400 dark:text-slate-500">
-                {filtered.length} implantation{filtered.length > 1 ? 's' : ''}
-                {filtered.length > 500 ? ' (500 premières affichées — affinez les filtres)' : ''} · source : moteur d'index du patrimoine.
+                {filtered.length} implantation{filtered.length > 1 ? 's' : ''} · {stationCount} lieu{stationCount > 1 ? 'x' : ''} · source : moteur d'index du patrimoine.
             </p>
         </div>
     );
