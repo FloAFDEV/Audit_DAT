@@ -27,6 +27,7 @@
 import { Adhesive, PrAdhesive, SignageReference, EquipmentType, EcaEquipmentType } from '../types';
 import {
     ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives as getLegacyEquipmentAdhesives,
+    getEcaAdhesiveOccurrences, EcaAdhesiveOccurrence,
 } from '../data/adhesives';
 import { resolveReferencesForEquipment } from './cockpit/patrimoineIndex';
 
@@ -146,6 +147,27 @@ export const getEffectiveEcaAdhesives = (references: SignageReference[], type: E
     const additions = resolveReferencesForEquipment(references, 'ECA', type)
         .filter(ref => !historicalIds.has(ref.id))
         .map(additionToAdhesive);
+    return [...historical, ...additions];
+};
+
+/** ECA — comme getEffectiveEcaAdhesives, mais avec le détail par occurrence
+ *  (zone de validation ZH/ZB pour eca-1 sur un ECA d'entrée) plutôt que par
+ *  simple id catalogue. Le contenu (nom/description/isDisabled) reste
+ *  résolu depuis Dexie exactement comme les autres occurrences historiques ;
+ *  seules les clés de statut (statusKey) et le libellé de zone diffèrent. */
+export const getEffectiveEcaAdhesiveOccurrences = (
+    references: SignageReference[], type: EcaEquipmentType,
+): EcaAdhesiveOccurrence[] => {
+    const byId = new Map(references.map(r => [r.id, r]));
+    const legacyById = new Map(getEcaAdhesives(type).map(a => [a.id, a]));
+    const historical = getEcaAdhesiveOccurrences(type).map(occ => ({
+        ...occ,
+        ...toAdhesive(legacyById.get(occ.id)!, resolve(byId.get(occ.id), occ.id)),
+    }));
+    const historicalIds = new Set(legacyById.keys());
+    const additions = resolveReferencesForEquipment(references, 'ECA', type)
+        .filter(ref => !historicalIds.has(ref.id))
+        .map((ref): EcaAdhesiveOccurrence => ({ ...additionToAdhesive(ref), statusKey: ref.id }));
     return [...historical, ...additions];
 };
 

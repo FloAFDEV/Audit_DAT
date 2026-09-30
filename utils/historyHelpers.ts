@@ -1,6 +1,6 @@
 
 import { AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
-import { getPrAdhesives, getEcaAdhesives, getEquipmentAdhesives } from '../data/adhesives';
+import { getPrAdhesives, getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getEquipmentAdhesives } from '../data/adhesives';
 
 /**
  * Deeply clones an object and removes photo data to save space.
@@ -71,9 +71,9 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
                 const ecas = (module.data as EcaData).ecas;
                 ecas.forEach(eca => {
                     if (eca.isNotApplicable) return; // Skip N/A ECAs
-                    const defs = getEcaAdhesives(eca.type);
-                    defs.forEach(def => {
-                        const status = eca.adhesives[def.id] || AdhesiveStatus.NotChecked;
+                    const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                    occurrences.forEach(occ => {
+                        const status = readEcaAdhesiveStatus(eca, occ);
                         if(status !== AdhesiveStatus.NotApplicable && status !== AdhesiveStatus.NotChecked) {
                              totalApplicable++;
                              if (status === AdhesiveStatus.OK) totalOk++;

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
-import { ECA, AdhesiveStatus, AuditModule, Adhesive, SignageReference } from '../types';
-import { getEffectiveEcaAdhesives } from '../utils/effectiveAdhesives';
+import { ECA, AdhesiveStatus, AuditModule, SignageReference } from '../types';
+import { EcaAdhesiveOccurrence, readEcaAdhesiveStatus } from '../data/adhesives';
+import { getEffectiveEcaAdhesiveOccurrences } from '../utils/effectiveAdhesives';
 import { CheckCircle2, XCircle, AlertTriangle, Ban, MapPin, Accessibility, Fence } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import { getEcaProgress } from '../utils/progressCalculators';
@@ -19,7 +20,7 @@ interface EcaAdhesiveAuditFormProps {
 }
 
 const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca, stationName, signageReferences, onStatusChange, onBack, onCommentChange, onReset }) => {
-  const adhesives = useMemo(() => getEffectiveEcaAdhesives(signageReferences, eca.type), [signageReferences, eca.type]);
+  const occurrences = useMemo(() => getEffectiveEcaAdhesiveOccurrences(signageReferences, eca.type), [signageReferences, eca.type]);
 
   // Progression : conserve délibérément le calcul historique (catalogue
   // statique, utils/progressCalculators.ts), identique à EcaSelector — une
@@ -38,48 +39,53 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
   }, [eca.type]);
 
   const { groups, ungrouped } = useMemo(() => {
-    const grouped: Record<string, { groupName?: string; adhesives: Adhesive[] }> = {};
-    const individual: Adhesive[] = [];
-    
-    adhesives.forEach(ad => {
-        if (ad.groupId) {
-            if (!grouped[ad.groupId]) {
-                grouped[ad.groupId] = { groupName: ad.groupName, adhesives: [] };
+    const grouped: Record<string, { groupName?: string; occurrences: EcaAdhesiveOccurrence[] }> = {};
+    const individual: EcaAdhesiveOccurrence[] = [];
+
+    occurrences.forEach(occ => {
+        if (occ.groupId) {
+            if (!grouped[occ.groupId]) {
+                grouped[occ.groupId] = { groupName: occ.groupName, occurrences: [] };
             }
-            grouped[ad.groupId].adhesives.push(ad);
+            grouped[occ.groupId].occurrences.push(occ);
         } else {
-            individual.push(ad);
+            individual.push(occ);
         }
     });
-    
-    return { groups: grouped, ungrouped: individual };
-  }, [adhesives]);
 
-  const renderAdhesiveItem = (adhesive: Adhesive) => {
-    const currentStatus = eca.adhesives[adhesive.id];
-    const isPmrPictogram = adhesive.groupId === 'pmr-pictogram';
+    return { groups: grouped, ungrouped: individual };
+  }, [occurrences]);
+
+  const renderAdhesiveItem = (occurrence: EcaAdhesiveOccurrence) => {
+    const currentStatus = readEcaAdhesiveStatus(eca, occurrence);
+    const isPmrPictogram = occurrence.groupId === 'pmr-pictogram';
 
     const [dimensions, location] = useMemo(() => {
-        if (!adhesive.description) return [null, null];
-        const parts = adhesive.description.split('|');
+        if (!occurrence.description) return [null, null];
+        const parts = occurrence.description.split('|');
         if (parts.length > 1) {
             return [parts[0].trim(), parts.slice(1).join('|').trim()];
         }
         // Fallback for descriptions without a separator
-        return [null, adhesive.description];
-    }, [adhesive.description]);
+        return [null, occurrence.description];
+    }, [occurrence.description]);
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
             <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
-                    {adhesive.name}
+                    {occurrence.name}
                     {dimensions && (
                         <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
                             // <span className="font-bold text-gray-600 dark:text-slate-400">{dimensions}</span>
                         </span>
                     )}
                 </h3>
+                {occurrence.zoneLabel && (
+                    <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-1">
+                        {occurrence.zoneLabel}
+                    </p>
+                )}
                 {location && (
                     <div className="flex items-start text-sm text-gray-500 dark:text-slate-400 mt-2">
                         <MapPin className="w-4 h-4 mr-2 mt-0.5 text-gray-400 flex-shrink-0" />
@@ -89,7 +95,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex sm:flex-wrap sm:gap-3">
             <button
-              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
+              onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.OK
                   ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
@@ -100,7 +106,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
               OK
             </button>
             <button
-              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
+              onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.Absent
                   ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
@@ -111,7 +117,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
               Absent
             </button>
             <button
-              onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
+              onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
               className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                 currentStatus === AdhesiveStatus.ToBeReplaced
                   ? 'bg-amber-500 text-white shadow-sm'
@@ -123,7 +129,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </button>
             {isPmrPictogram && (
               <button
-                onClick={() => onStatusChange(adhesive.id, currentStatus === AdhesiveStatus.NotApplicable ? AdhesiveStatus.NotChecked : AdhesiveStatus.NotApplicable)}
+                onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.NotApplicable ? AdhesiveStatus.NotChecked : AdhesiveStatus.NotApplicable)}
                 className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                   currentStatus === AdhesiveStatus.NotApplicable
                     ? 'bg-slate-500 text-white shadow-sm dark:bg-slate-600'
@@ -158,9 +164,9 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
       onCommentChange={onCommentChange}
     >
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
-        {ungrouped.map(adhesive => (
-            <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                {renderAdhesiveItem(adhesive)}
+        {ungrouped.map(occurrence => (
+            <li key={occurrence.statusKey} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                {renderAdhesiveItem(occurrence)}
             </li>
         ))}
         {Object.keys(groups).map((groupId) => {
@@ -172,9 +178,9 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                     <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Un ou plusieurs pictogrammes peuvent être présents. Marquez comme 'Non applicable' ceux qui ne sont pas nécessaires pour cet équipement.</p>
                 </div>
                 <div className="space-y-6">
-                    {groupData.adhesives.map(adhesive => (
-                        <div key={adhesive.id}>
-                            {renderAdhesiveItem(adhesive)}
+                    {groupData.occurrences.map(occurrence => (
+                        <div key={occurrence.statusKey}>
+                            {renderAdhesiveItem(occurrence)}
                         </div>
                     ))}
                 </div>

@@ -14,7 +14,7 @@ import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInAuditScope } from '../utils/moduleScope';
-import { getEffectiveAdhesives, getEffectiveEcaAdhesives, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
+import { getEffectiveAdhesives, getEffectiveEcaAdhesiveOccurrences, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
@@ -404,7 +404,11 @@ export const computeAdhesiveInventory = (
 
                 if (module.type === AuditModuleType.ECA && referencesReady) {
                     for (const eca of (module.data as EcaData).ecas || []) {
-                        getEffectiveEcaAdhesives(references, eca.type).forEach(ad => addQty(ad.id, 1));
+                        // Occurrences plutôt que simples ids : un ECA PMR d'entrée
+                        // ajoute eca-1 deux fois (zones ZH + ZB), un ECA d'entrée
+                        // standard une fois (ZH) — addQty regroupe naturellement
+                        // les deux occurrences sous la même référence catalogue.
+                        getEffectiveEcaAdhesiveOccurrences(references, eca.type).forEach(occ => addQty(occ.id, 1));
                     }
                 }
 

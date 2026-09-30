@@ -7,7 +7,7 @@ import {
 import { db } from './db';
 import { generateInitialLieuxDataAsync } from './data/builder';
 import { getInitialSignaletiqueData } from './data/signaletique_config';
-import { ADHESIVES, getEcaAdhesives, getEquipmentAdhesives } from './data/adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -1166,7 +1166,9 @@ const useAuditStore = create<AppState>((set, get) => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             const eca = module.data.ecas.find(e => e.id === selectedEcaId);
             if (eca) {
-                eca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(eca.type));
+                eca.adhesives = createInitialAdhesiveStatus(
+                    getEcaAdhesiveOccurrences(eca.type).map(occ => ({ id: occ.statusKey }))
+                );
                 eca.comment = '';
                 delete eca.completionDate;
             }
@@ -1200,7 +1202,9 @@ const useAuditStore = create<AppState>((set, get) => {
                 const newEca: ECA = {
                     ...ecaData,
                     id: uuidv4(),
-                    adhesives: createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type)),
+                    adhesives: createInitialAdhesiveStatus(
+                        getEcaAdhesiveOccurrences(ecaData.type).map(occ => ({ id: occ.statusKey }))
+                    ),
                     comment: '',
                 };
                 module.data.ecas.push(newEca);
@@ -1226,7 +1230,9 @@ const useAuditStore = create<AppState>((set, get) => {
                 const originalEca = module.data.ecas[ecaIndex];
                 const updatedEca = { ...originalEca, ...ecaData };
                 if (ecaData.type && ecaData.type !== originalEca.type) {
-                    updatedEca.adhesives = createInitialAdhesiveStatus(getEcaAdhesives(ecaData.type));
+                    updatedEca.adhesives = createInitialAdhesiveStatus(
+                        getEcaAdhesiveOccurrences(ecaData.type).map(occ => ({ id: occ.statusKey }))
+                    );
                     delete updatedEca.completionDate;
                 }
                 if (!canEcaBeNotApplicable(updatedEca.type)) delete updatedEca.isNotApplicable;
