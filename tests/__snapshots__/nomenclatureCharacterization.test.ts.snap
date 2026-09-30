@@ -494,7 +494,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-8",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR à bras).",
     "name": "Adhesif valideurPMR-metro-Bagages",
-    "quantity": 6,
+    "quantity": 4,
     "repere": "8",
   },
   {
@@ -503,7 +503,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-9",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
     "name": "Adhesif valideurPMR-metro-Poussette",
-    "quantity": 46,
+    "quantity": 43,
     "repere": "9",
   },
   {
@@ -512,7 +512,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-10",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
     "name": "Adhesif valideurPMR-metro-UFR",
-    "quantity": 46,
+    "quantity": 42,
     "repere": "10",
   },
   {

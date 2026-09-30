@@ -5,6 +5,7 @@ import {
     SignageReference, PlanQuartierData, AdhesiveStatus,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
+import { readEcaAdhesiveStatus } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
@@ -378,10 +379,22 @@ export const computeAdhesiveInventory = (
             for (const module of lieu.modules) {
                 if (!isModuleInAuditScope(module)) continue;
 
+                // DAT / P+R / ECA : un emplacement déclaré NotApplicable (non
+                // installé à cet endroit, cf. patrimoineIndex) n'est pas compté.
+                // Une référence simplement désactivée, elle, garde son comptage
+                // historique (cf. REFERENCES_MIGRATED_TO_PLAN_QUARTIER).
                 if (module.type === AuditModuleType.DAT && referencesReady) {
-                    const datsCount = (module.data as ModeData).stations?.reduce((sum, s) =>
-                        sum + (s.directions?.reduce((dSum, d) => dSum + (d.dats?.length || 0), 0) || 0), 0) || 0;
-                    getEffectiveAdhesives(references).forEach(ad => addQty(ad.id, datsCount));
+                    const datAdhesives = getEffectiveAdhesives(references);
+                    for (const station of (module.data as ModeData).stations ?? []) {
+                        for (const direction of station.directions ?? []) {
+                            for (const dat of direction.dats ?? []) {
+                                datAdhesives.forEach(ad => {
+                                    if (dat.adhesives?.[ad.id] === AdhesiveStatus.NotApplicable) return;
+                                    addQty(ad.id, 1);
+                                });
+                            }
+                        }
+                    }
                 }
 
                 if (module.type === AuditModuleType.PR && referencesReady) {
@@ -396,6 +409,7 @@ export const computeAdhesiveInventory = (
                                 // rien au comptage historique (cf. la distinction
                                 // dans data/signage_seed.ts).
                                 if (REFERENCES_MIGRATED_TO_PLAN_QUARTIER.has(ad.id)) return;
+                                if (equip.adhesives?.[ad.id] === AdhesiveStatus.NotApplicable) return;
                                 addQty(ad.id, 1);
                             });
                         }
@@ -408,7 +422,13 @@ export const computeAdhesiveInventory = (
                         // ajoute eca-1 deux fois (zones ZH + ZB), un ECA d'entrée
                         // standard une fois (ZH) — addQty regroupe naturellement
                         // les deux occurrences sous la même référence catalogue.
-                        getEffectiveEcaAdhesiveOccurrences(references, eca.type).forEach(occ => addQty(occ.id, 1));
+                        // Statut lu par occurrence (ZH/ZB, repli sur l'ancienne clé)
+                        // avec la même fonction que le formulaire terrain.
+                        const ecaForStatus = { ...eca, adhesives: eca.adhesives ?? {} };
+                        getEffectiveEcaAdhesiveOccurrences(references, eca.type).forEach(occ => {
+                            if (readEcaAdhesiveStatus(ecaForStatus, occ) === AdhesiveStatus.NotApplicable) return;
+                            addQty(occ.id, 1);
+                        });
                     }
                 }
 
