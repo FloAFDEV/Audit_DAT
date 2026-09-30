@@ -16,7 +16,7 @@ import { SignageReference } from '../../types';
 import { PatrimoineIndex, ReferenceUsage } from '../../utils/cockpit/patrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
-import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, compareLines } from './labels';
 
 /** Ligne de transport → config visuelle (mêmes couleurs que partout
  *  ailleurs dans l'app, cf. AUDIT_CATEGORIES). 'P+R' n'a pas de config
@@ -26,10 +26,10 @@ import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, form
 const LINE_CATEGORY_KEY: Record<string, string> = {
     A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE',
 };
-const LineBadge: React.FC<{ line: string }> = ({ line }) => {
+export const LineBadge: React.FC<{ line: string; size?: 'xs' | 'sm' }> = ({ line, size = 'sm' }) => {
     if (line === 'P+R') return <span className="text-xs font-bold text-slate-600 dark:text-slate-300">P+R</span>;
     const config = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line]);
-    return config ? <CategoryIcon categoryConfig={config} size="sm" /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
+    return config ? <CategoryIcon categoryConfig={config} size={size} /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
 };
 
 /* ---------- briques locales de la fiche ---------- */
@@ -151,7 +151,7 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
                 ...l,
                 lieux: [...l.lieux.values()].sort((a, b) => b.installed - a.installed || a.lieuName.localeCompare(b.lieuName)),
             }))
-            .sort((a, b) => b.installed - a.installed || a.line.localeCompare(b.line));
+            .sort((a, b) => compareLines(a.line, b.line));
     }, [usage]);
 
     if (byLine.length === 0) return null;

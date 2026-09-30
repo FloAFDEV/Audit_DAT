@@ -28,6 +28,7 @@
 // =================================================================
 import { v4 as uuidv4 } from 'uuid';
 import { ImplantationRef, PatrimoineIndex } from './patrimoineIndex';
+import { SignageReference, SignageSupport } from '../../types';
 
 export type SelectionSource = 'reference' | 'implantation' | 'line' | 'site';
 
@@ -58,6 +59,17 @@ export const createSelection = (
 export const selectionFromReference = (index: PatrimoineIndex, referenceId: string, label: string): Selection =>
     createSelection('reference', label, index.implantations.filter(i => i.referenceId === referenceId));
 
+/** Toutes les implantations d'un ENSEMBLE de références — source:
+ *  'reference', même contrat que selectionFromReference. Alimente la
+ *  sélection multiple de Référentiel → Implantations : la sélection
+ *  porte sur les identifiants réels (referenceId), jamais sur un
+ *  libellé affiché. Un id inconnu du patrimoine (aucune implantation)
+ *  ne lève pas — il contribue simplement 0 implantation. */
+export const selectionFromReferences = (index: PatrimoineIndex, referenceIds: string[], label: string): Selection => {
+    const ids = new Set(referenceIds);
+    return createSelection('reference', label, index.implantations.filter(i => ids.has(i.referenceId)));
+};
+
 /** Toutes les implantations d'un lieu — source: 'site'. */
 export const selectionFromSite = (index: PatrimoineIndex, lieuId: string, label: string): Selection =>
     createSelection('site', label, index.implantations.filter(i => i.lieuId === lieuId));
@@ -70,3 +82,18 @@ export const selectionFromLine = (index: PatrimoineIndex, line: string, label: s
  *  résultat de recherche) — source: 'implantation'. */
 export const selectionFromImplantations = (items: ImplantationRef[], label: string): Selection =>
     createSelection('implantation', label, items);
+
+/** Filtre matière (cards du Référentiel) : implantations dont la référence
+ *  porte l'un des supports demandés — même source que index.bySupport.
+ *  Sélection vide = toutes les matières (tableau d'entrée rendu tel quel). */
+export const filterImplantationsBySupports = (
+    implantations: ImplantationRef[],
+    refById: Map<string, SignageReference>,
+    supports: ReadonlySet<SignageSupport>,
+): ImplantationRef[] => {
+    if (supports.size === 0) return implantations;
+    return implantations.filter(imp => {
+        const support = refById.get(imp.referenceId)?.support;
+        return !!support && supports.has(support);
+    });
+};

@@ -167,13 +167,14 @@ export interface ImplantationRef {
      *  texte libre — c'est ce qui permet aux vues de compter « combien sur
      *  caisse auto ? » sans relire l'arbre d'audit (règle 1). */
     implantationContext?: string;
-    /** Zone de validation (ZH/ZB) quand la référence est zonée sur cet
-     *  équipement (eca-1 sur un ECA d'entrée) : chaque zone est un exemplaire
-     *  physique distinct, donc une implantation distincte. Absent ailleurs. */
-    zone?: EcaValidationZone;
-    zoneLabel?: string;
     /** Statut constaté ; clé absente de la map = NotChecked (R10). */
     status: AdhesiveStatus;
+    /** Zone de validation ECA (ZH/ZB) — présent uniquement pour un adhésif
+     *  ECA porté en plusieurs exemplaires physiques sur un même équipement
+     *  (eca-1 sur un ECA d'entrée, cf. data/adhesives.ts::getEcaAdhesiveOccurrences).
+     *  Absent pour toute autre implantation (DAT, PR, PDQ, autres adhésifs ECA). */
+    zone?: EcaValidationZone;
+    zoneLabel?: string;
 }
 
 /**
@@ -338,6 +339,13 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     for (const eca of (module.data as EcaData).ecas ?? []) {
                         if (eca.isNotApplicable) continue;
                         const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
+                        // Occurrences plutôt que simple présence d'id : un ECA
+                        // d'entrée PMR porte eca-1 en 2 exemplaires physiques (ZH
+                        // + ZB), un ECA d'entrée standard en 1 (ZH) — cf.
+                        // data/adhesives.ts::getEcaAdhesiveOccurrences, même
+                        // moteur que la prise d'audit et la Nomenclature (R1 :
+                        // aucun second calcul de cette règle).
+                        const occurrences = getEcaAdhesiveOccurrences(eca.type);
                         const base = {
                             lieuId: lieu.id, lieuName: lieu.name,
                             line: module.line || '?',
@@ -346,27 +354,26 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                             equipmentLabel: eca.name,
                             equipmentType: eca.type,
                         };
-                        // Occurrences physiques — même règle que le formulaire
-                        // terrain et maintenanceGenerator (getEcaAdhesiveOccurrences /
-                        // readEcaAdhesiveStatus) : eca-1 = ZH sur un ECA d'entrée
-                        // standard, ZH + ZB sur un ECA PMR d'entrée, chaque zone
-                        // avec son propre statut ; toute autre référence reste à
-                        // un exemplaire, clé = id.
-                        const occurrences = getEcaAdhesiveOccurrences(eca.type);
-                        const ecaForStatus = { ...eca, adhesives: eca.adhesives ?? {} };
+
                         for (const ref of refs) {
                             const refOccurrences = occurrences.filter(o => o.id === ref.id);
-                            // Addition hors catalogue historique : un exemplaire, clé = id.
                             if (refOccurrences.length === 0) {
-                                pushImplantations([ref], ecaForStatus.adhesives, base);
+                                // Référence hors catalogue historique (ajout Admin,
+                                // scope-matchée mais absente du catalogue statique) :
+                                // comportement inchangé, une implantation, lecture
+                                // directe de la clé brute.
+                                const status = (eca.adhesives ?? {})[ref.id] ?? AdhesiveStatus.NotChecked;
+                                if (status !== AdhesiveStatus.NotApplicable) {
+                                    implantations.push({ ...base, referenceId: ref.id, status });
+                                }
                                 continue;
                             }
                             for (const occ of refOccurrences) {
-                                const status = readEcaAdhesiveStatus(ecaForStatus, occ);
+                                const status = readEcaAdhesiveStatus(eca, occ);
                                 if (status === AdhesiveStatus.NotApplicable) continue;
                                 implantations.push({
                                     ...base, referenceId: ref.id, status,
-                                    ...(occ.zone ? { zone: occ.zone, zoneLabel: occ.zoneLabel } : {}),
+                                    zone: occ.zone, zoneLabel: occ.zoneLabel,
                                 });
                             }
                         }

@@ -149,8 +149,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                     moduleName: imp.moduleName,
                     elementName: imp.equipmentLabel,
                     context: imp.context,
-                    // Zone ZH/ZB suffixée comme dans maintenanceGenerator.
-                    adhesiveName: imp.zoneLabel ? `${ref?.name ?? imp.referenceId} — ${imp.zoneLabel}` : (ref?.name ?? imp.referenceId),
+                    adhesiveName: ref?.name ?? imp.referenceId,
                     status: imp.status,
                     category: LINE_TO_CATEGORY[imp.line],
                     auditType: ref?.auditType as AuditModuleType | undefined,

@@ -14,6 +14,7 @@ import {
     buildPatrimoineIndex, resolveReferencesForEquipment,
 } from '../utils/cockpit/patrimoineIndex';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
+import { generateInitialLieuxDataAsync } from '../data/builder';
 import {
     Lieu, AuditModuleType, AdhesiveStatus, EquipmentType, EcaEquipmentType,
     TransportMode,
@@ -82,7 +83,7 @@ const ecaLieu = (): Lieu => ({
                 // PMR à vantaux : eca-8 (Bagages) est HORS scope ; eca-9 préréglé
                 // NotApplicable par la config station → non installé.
                 { id: 'e2', name: 'PMR 1', accessPoint: 'Accès Nord', type: EcaEquipmentType.PMRVantaux, number: 2,
-                  adhesives: { 'eca-9': AdhesiveStatus.NotApplicable, 'eca-1@ZH': AdhesiveStatus.OK }, comment: '' },
+                  adhesives: { 'eca-9': AdhesiveStatus.NotApplicable, 'eca-1': AdhesiveStatus.OK }, comment: '' },
                 // ECA entier non applicable → ignoré.
                 { id: 'e3', name: 'Tripode NA', accessPoint: 'Accès Sud', type: EcaEquipmentType.TripodeSortie, number: 3,
                   isNotApplicable: true, adhesives: {}, comment: '' },
@@ -185,53 +186,51 @@ describe('buildPatrimoineIndex', () => {
         const pmrIds = pmr.map(i => i.referenceId);
         expect(pmrIds).not.toContain('eca-9');  // NotApplicable → non installé ici
         expect(pmrIds).not.toContain('eca-8');  // hors scope PMRVantaux
-        expect(pmrIds).toContain('eca-1');       // OK constaté
+        // eca-1 sur un ECA PMR d'entrée : 2 implantations (ZH + ZB), jamais
+        // fusionnées — cf. bloc dédié ci-dessous pour le détail des zones.
+        expect(pmr.filter(i => i.referenceId === 'eca-1')).toHaveLength(2);
 
         // L'ECA entier isNotApplicable ne produit aucune implantation.
         expect(index.implantations.some(i => i.equipmentLabel === 'Tripode NA')).toBe(false);
     });
 
-    it('ECA eca-1 : occurrences ZH/ZB distinctes, statut lu par occurrence', () => {
-        const zonedLieu: Lieu = {
-            id: 'lieu-zones', name: 'Station Zones',
+    it("ECA PMR : eca-1 produit 2 implantations zonées (ZH + ZB), jamais fabriquées depuis l'ancienne clé bare (ambiguë)", () => {
+        const index = buildPatrimoineIndex([ecaLieu()], REFERENCES);
+        const pmrEca1 = index.implantations.filter(i => i.equipmentLabel === 'PMR 1' && i.referenceId === 'eca-1');
+
+        expect(pmrEca1).toHaveLength(2);
+        expect(pmrEca1.map(i => i.zone).sort()).toEqual(['ZB', 'ZH']);
+        pmrEca1.forEach(imp => expect(imp.zoneLabel).toMatch(/^Zone de validation/));
+        // Le fixture n'écrit que l'ancienne clé bare 'eca-1' (avant les zones) :
+        // ambigu pour un PMR → aucun statut n'est fabriqué, les deux occurrences
+        // restent Non contrôlé (cf. data/adhesives.ts::readEcaAdhesiveStatus).
+        pmrEca1.forEach(imp => expect(imp.status).toBe(AdhesiveStatus.NotChecked));
+    });
+
+    it("ECA standard d'entrée : eca-1 produit 1 implantation zonée (ZH), et relit l'ancienne clé bare sans ambiguïté", () => {
+        const lieu: Lieu = {
+            id: 'lieu-eca-std', name: 'Station Std',
             modules: [{
-                id: 'module-eca-zones', type: AuditModuleType.ECA, name: 'ECA (Valideurs)', line: 'A',
+                id: 'module-eca-std', type: AuditModuleType.ECA, name: 'ECA (Valideurs)', line: 'A',
                 data: {
-                    id: 'eca-data-zones', stationName: 'Station Zones', stationCode: 'TSZ',
-                    ecas: [
-                        // Entrée standard : 1 occurrence (ZH), relue depuis la clé historique.
-                        { id: 'z1', name: 'Tripode E1', accessPoint: 'Accès', type: EcaEquipmentType.TripodeEntree, number: 1,
-                          adhesives: { 'eca-1': AdhesiveStatus.ToBeReplaced }, comment: '' },
-                        // PMR d'entrée : 2 occurrences (ZH + ZB), statuts indépendants.
-                        { id: 'z2', name: 'PMR 2', accessPoint: 'Accès', type: EcaEquipmentType.PMRVantaux, number: 2,
-                          adhesives: { 'eca-1@ZH': AdhesiveStatus.OK, 'eca-1@ZB': AdhesiveStatus.Absent }, comment: '' },
-                        // PMR audité sous l'ancienne clé unique : ambigu → jamais deviné.
-                        { id: 'z3', name: 'PMR 3', accessPoint: 'Accès', type: EcaEquipmentType.PMRBras, number: 3,
-                          adhesives: { 'eca-1': AdhesiveStatus.OK }, comment: '' },
-                        // Sortie : aucune occurrence eca-1.
-                        { id: 'z4', name: 'Tripode S4', accessPoint: 'Accès', type: EcaEquipmentType.TripodeSortie, number: 4,
-                          adhesives: {}, comment: '' },
-                    ],
+                    id: 'eca-data-std', stationName: 'Station Std', stationCode: 'STD',
+                    ecas: [{
+                        id: 'e-std', name: 'Valideur 1', accessPoint: 'Accès Principal',
+                        type: EcaEquipmentType.VantauxEntree, number: 1,
+                        adhesives: { 'eca-1': AdhesiveStatus.OK }, comment: '',
+                    }],
                 },
             }],
         };
-        const index = buildPatrimoineIndex([zonedLieu], REFERENCES);
-        const eca1 = (label: string) => index.implantations
-            .filter(i => i.referenceId === 'eca-1' && i.equipmentLabel === label)
-            .map(i => [i.zone, i.status]);
+        const index = buildPatrimoineIndex([lieu], REFERENCES);
+        const eca1 = index.implantations.filter(i => i.referenceId === 'eca-1');
 
-        expect(eca1('Tripode E1')).toEqual([['ZH', AdhesiveStatus.ToBeReplaced]]);
-        expect(eca1('PMR 2')).toEqual([['ZH', AdhesiveStatus.OK], ['ZB', AdhesiveStatus.Absent]]);
-        expect(eca1('PMR 3')).toEqual([['ZH', AdhesiveStatus.NotChecked], ['ZB', AdhesiveStatus.NotChecked]]);
-        expect(eca1('Tripode S4')).toEqual([]);
-
-        const usage = index.byReference.get('eca-1')!;
-        expect(usage.installedCount).toBe(5);
-        expect(usage.okCount).toBe(1);
-        expect(usage.absentCount).toBe(1);
-        expect(usage.toReplaceCount).toBe(1);
-        // Les autres références ECA restent à un exemplaire, sans zone.
-        expect(index.implantations.filter(i => i.referenceId !== 'eca-1').every(i => i.zone === undefined)).toBe(true);
+        expect(eca1).toHaveLength(1);
+        expect(eca1[0].zone).toBe('ZH');
+        expect(eca1[0].zoneLabel).toMatch(/^Zone de validation haute/);
+        // Une seule zone a toujours existé pour ce type : l'ancienne clé bare
+        // est relue sans ambiguïté.
+        expect(eca1[0].status).toBe(AdhesiveStatus.OK);
     });
 
     it('module isFuture (hors B/C/AEROPORT) ignoré', () => {
@@ -322,5 +321,28 @@ describe('buildPatrimoineIndex', () => {
         let sum = 0;
         index.byLine.forEach(c => { sum += c.installed; });
         expect(sum).toBe(index.totals.implantationCount);
+    });
+});
+
+// ------------------------------------------------------------------
+// Régression réseau réel : le moteur d'index (Posés/Implantations, la
+// source consultée par ReferentielView) doit refléter le même total
+// eca-1 que la Nomenclature (hooks/useStats.ts, déjà vérifiée à 251
+// dans tests/nomenclatureCharacterization.test.ts) — un seul compte
+// juste ne suffit pas si l'autre moteur reste sur l'ancien modèle.
+// ------------------------------------------------------------------
+describe('buildPatrimoineIndex — régression réseau réel (Posés = Nomenclature)', () => {
+    it("eca-1 = 251 implantations sur le réseau réel, comme la Nomenclature", async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+        expect(index.byReference.get('eca-1')?.installedCount).toBe(251);
+    });
+
+    it("une référence non concernée par la correction ZH/ZB garde son compte inchangé (eca-11 : un par ECA, aucune zone)", async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+        const eca11 = index.byReference.get('eca-11')!;
+        expect(eca11.installedCount).toBe(303);
+        expect(index.implantations.filter(i => i.referenceId === 'eca-11').every(i => i.zone === undefined)).toBe(true);
     });
 });

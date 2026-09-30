@@ -22,14 +22,18 @@
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Search, ChevronDown, CheckCircle2, X, LucideIcon } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Search, LucideIcon, ChevronDown, Download, ArrowLeft, CheckCircle2, X } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
-import ReferenceSheet from './ReferenceSheet';
+import ReferenceSheet, { LineBadge } from './ReferenceSheet';
 import { useCockpitNav } from './cockpitNav';
-import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions } from './labels';
-import { buildImplantationTree, filterImplantationsBySupports, orderLines } from '../../utils/cockpit/implantationTree';
+import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions, compareLines, displayReferenceName } from './labels';
+import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
+import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
+import { downloadImplantationsWorkbook, ImplantationExportRow, SyntheseExportRow } from '../../utils/cockpit/implantationsExporter';
+import { PatrimoineIndex, ImplantationRef } from '../../utils/cockpit/patrimoineIndex';
+import toast from 'react-hot-toast';
 
 /* ================= Références : liste filtrable ================= */
 
@@ -37,9 +41,15 @@ interface ReferencesListProps {
     references: SignageReference[];
     usageOf: (id: string) => { installedCount: number; lieuCount: number; lines: string[] } | undefined;
     onOpen: (id: string) => void;
+    selectedIds: Set<string>;
+    onToggleSelect: (id: string) => void;
+    onSetSelection: (ids: string[]) => void;
+    onViewSelectedImplantations: () => void;
 }
 
-const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, onOpen }) => {
+const ReferencesList: React.FC<ReferencesListProps> = ({
+    references, usageOf, onOpen, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
+}) => {
     const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
     const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
     const [query, setQuery] = useState('');
@@ -58,6 +68,22 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
             return true;
         });
     }, [references, family, support, query]);
+
+    // Sélection portée par l'id réel (référence.id), jamais par le libellé
+    // affiché — cf. contrat de sélection (utils/cockpit/selection.ts).
+    const visibleIds = useMemo(() => filtered.map(r => r.id), [filtered]);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+    const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
+    const toggleSelectAllVisible = () => {
+        if (allVisibleSelected) {
+            // Ne retire que les lignes actuellement visibles — une sélection
+            // faite avant un changement de filtre reste intacte pour le reste.
+            const remaining = [...selectedIds].filter(id => !visibleIds.includes(id));
+            onSetSelection(remaining);
+        } else {
+            onSetSelection([...new Set([...selectedIds, ...visibleIds])]);
+        }
+    };
 
     return (
         <div className="space-y-4">
@@ -102,11 +128,40 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                 </select>
             </div>
 
+            {/* Barre de sélection — n'apparaît que si au moins une référence est
+                cochée, pour ne pas alourdir la vue par défaut. */}
+            <div className="flex items-center justify-between gap-3 flex-wrap min-h-[2.25rem]">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                    {selectedIds.size > 0
+                        ? `${selectedIds.size} référence${selectedIds.size > 1 ? 's' : ''} sélectionnée${selectedIds.size > 1 ? 's' : ''}`
+                        : ''}
+                </span>
+                <button
+                    type="button"
+                    onClick={onViewSelectedImplantations}
+                    disabled={selectedIds.size === 0}
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-600 text-white hover:bg-teal-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
+                >
+                    <MapPinned className="w-4 h-4" />
+                    Voir les implantations {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                </button>
+            </div>
+
             {/* Liste */}
             <div className="overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
                 <table className="min-w-full text-sm">
                     <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
+                            <th className="p-3 w-8">
+                                <input
+                                    type="checkbox"
+                                    checked={allVisibleSelected}
+                                    ref={el => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected; }}
+                                    onChange={toggleSelectAllVisible}
+                                    aria-label="Sélectionner toutes les références visibles"
+                                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                />
+                            </th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
@@ -119,12 +174,22 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filtered.map((ref, idx) => {
                             const usage = usageOf(ref.id);
+                            const isSelected = selectedIds.has(ref.id);
                             return (
                                 <tr
                                     key={ref.id}
                                     onClick={() => onOpen(ref.id)}
-                                    className={`cursor-pointer hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}
+                                    className={`cursor-pointer hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-teal-50/70 dark:bg-teal-900/20' : idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}
                                 >
+                                    <td className="p-3" onClick={e => e.stopPropagation()}>
+                                        <input
+                                            type="checkbox"
+                                            checked={isSelected}
+                                            onChange={() => onToggleSelect(ref.id)}
+                                            aria-label={`Sélectionner ${ref.name}`}
+                                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                        />
+                                    </td>
                                     <td className="p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
@@ -145,7 +210,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({ references, usageOf, on
                         })}
                         {filtered.length === 0 && (
                             <tr>
-                                <td colSpan={7} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                                <td colSpan={8} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                                     Aucune référence ne correspond aux filtres.
                                 </td>
                             </tr>
@@ -175,46 +240,12 @@ interface ImplantationsExplorerProps {
     onOpenReference: (id: string) => void;
 }
 
-const lineLabel = (l: string) => (l === 'P+R' ? 'P+R' : `Ligne ${l}`);
-
-/** En-tête repliable d'un niveau de l'arbre (ligne, station, accès). */
-const TreeToggle: React.FC<{
-    isOpen: boolean;
-    onToggle: () => void;
-    installed: number;
-    defects: number;
-    className?: string;
-    children: React.ReactNode;
-}> = ({ isOpen, onToggle, installed, defects, className = '', children }) => (
-    <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={isOpen}
-        className={`flex w-full items-center justify-between gap-3 text-left rounded px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors ${className}`}
-    >
-        <span className="flex items-center gap-2 min-w-0">
-            <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-            {children}
-        </span>
-        <span className="flex-shrink-0 flex items-baseline gap-2">
-            {defects > 0 && <span className="text-xs font-semibold text-red-600 dark:text-red-400">{defects} défaut{defects > 1 ? 's' : ''}</span>}
-            <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
-        </span>
-    </button>
-);
-
 const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ references, index, onOpenReference }) => {
     const [line, setLine] = useState<string>('ALL');
     const [status, setStatus] = useState<string>('ALL');
     const [query, setQuery] = useState('');
     // Matières sélectionnées (cards) — vide = toutes les matières.
     const [supports, setSupports] = useState<Set<SignageSupport>>(new Set());
-    // Niveaux dépliés (ligne / station / accès) — tout replié par défaut.
-    const [openKeys, setOpenKeys] = useState<Set<string>>(new Set());
-
-    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
-    const lines = useMemo(() => orderLines(index.byLine.keys()), [index]);
-
     const toggleSupport = (support: SignageSupport) => {
         setSupports(prev => {
             const next = new Set(prev);
@@ -222,13 +253,9 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
             return next;
         });
     };
-    const toggleOpen = (key: string) => {
-        setOpenKeys(prev => {
-            const next = new Set(prev);
-            if (next.has(key)) next.delete(key); else next.add(key);
-            return next;
-        });
-    };
+
+    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
+    const lines = useMemo(() => Array.from(index.byLine.keys()).sort(compareLines), [index]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -246,14 +273,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
         });
     }, [index, line, status, query, refById, supports]);
 
-    const tree = useMemo(() => buildImplantationTree(filtered), [filtered]);
-    const stationCount = useMemo(() => new Set(filtered.map(i => i.lieuId)).size, [filtered]);
-
-    // Recherche active : résultats déjà ciblés, tout est déplié d'office.
-    const forceOpen = query.trim().length > 0;
-    const isOpen = (key: string) => forceOpen || openKeys.has(key);
-
-    // Regroupements par support — directement depuis l'index.
+    // Regroupements par support et par ligne — directement depuis l'index.
     const supportEntries = useMemo(() => Array.from(index.bySupport.entries()), [index]);
 
     return (
@@ -316,7 +336,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                     className="rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-1.5 px-3 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-teal-600"
                 >
                     <option value="ALL">Toutes lignes</option>
-                    {lines.map(l => <option key={l} value={l}>{lineLabel(l)}</option>)}
+                    {lines.map(l => <option key={l} value={l}>{l === 'P+R' ? 'P+R' : `Ligne ${l}`}</option>)}
                 </select>
                 <select
                     value={status}
@@ -330,99 +350,252 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                 </select>
             </div>
 
-            {/* Arbre des implantations : Ligne → Station → Accès / liaison →
-                Équipement → Référence (→ Zone). Aucune implantation masquée :
-                chaque niveau replié reste dépliable. */}
-            <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-200 dark:divide-slate-700 bg-white dark:bg-slate-900">
-                {tree.map(lineNode => (
-                    <div key={lineNode.key} className="p-1">
-                        <TreeToggle
-                            isOpen={isOpen(lineNode.key)}
-                            onToggle={() => toggleOpen(lineNode.key)}
-                            installed={lineNode.installed}
-                            defects={lineNode.defects}
+            {/* Arbre des implantations — même rendu que « Implantations
+                sélectionnées », aucune implantation tronquée. */}
+            <ImplantationsTree items={filtered} refById={refById} onOpenReference={onOpenReference} />
+            {filtered.length === 0 && (
+                <p className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                    Aucune implantation ne correspond aux filtres.
+                </p>
+            )}
+            <p className="text-xs text-slate-400 dark:text-slate-500">
+                {filtered.length} implantation{filtered.length > 1 ? 's' : ''} · source : moteur d'index du patrimoine.
+            </p>
+        </div>
+    );
+};
+
+/* ================= Arbre des implantations (rendu partagé) ================= */
+// Ligne → Station → Accès/liaison → Équipement → Référence → Zone.
+// Même rendu pour « Implantations sélectionnées » et l'onglet Implantations :
+// lignes et stations repliables, aucune implantation tronquée.
+
+interface ImplantationsTreeProps {
+    items: ImplantationRef[];
+    refById: Map<string, SignageReference>;
+    onOpenReference: (id: string) => void;
+}
+
+const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, refById, onOpenReference }) => {
+    const groupedLines = useMemo(
+        () => groupImplantationsByLocation(items).sort((a, b) => compareLines(a.line, b.line)),
+        [items]
+    );
+
+    // Repliées par défaut, même principe que PlanQuartierOverview /
+    // ReferenceSheet : une sélection large peut couvrir des dizaines de
+    // stations, illisible empilé sur mobile. Ouverture indépendante par
+    // ligne et par station (comparer deux lignes/stations reste possible).
+    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+    const [openStations, setOpenStations] = useState<Set<string>>(new Set());
+    const toggleSet = (set: Set<string>, setSet: (s: Set<string>) => void, key: string) => {
+        const next = new Set(set);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        setSet(next);
+    };
+
+    return (
+        <div className="space-y-3">
+            {groupedLines.map(({ line, stations, total: lineTotal }) => {
+                const isLineOpen = openLines.has(line);
+                return (
+                    <div key={line} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => toggleSet(openLines, setOpenLines, line)}
+                            aria-expanded={isLineOpen}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
                         >
-                            <span className="text-sm font-bold text-slate-800 dark:text-slate-100">{lineLabel(lineNode.line)}</span>
-                            <span className="text-xs text-slate-400 dark:text-slate-500">{lineNode.stations.length} lieu{lineNode.stations.length > 1 ? 'x' : ''}</span>
-                        </TreeToggle>
-                        {isOpen(lineNode.key) && (
-                            <div className="pl-3 sm:pl-5 space-y-1 pb-1">
-                                {lineNode.stations.map(sta => (
-                                    <div key={sta.key} className="border-l border-slate-200 dark:border-slate-700 pl-1">
-                                        <TreeToggle
-                                            isOpen={isOpen(sta.key)}
-                                            onToggle={() => toggleOpen(sta.key)}
-                                            installed={sta.installed}
-                                            defects={sta.defects}
-                                        >
-                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{sta.lieuName}</span>
-                                        </TreeToggle>
-                                        {isOpen(sta.key) && (
-                                            <div className="pl-3 sm:pl-5 space-y-1 pb-1">
-                                                {sta.accesses.map(acc => (
-                                                    <div key={acc.key} className="border-l border-slate-200 dark:border-slate-700 pl-1">
-                                                        <TreeToggle
-                                                            isOpen={isOpen(acc.key)}
-                                                            onToggle={() => toggleOpen(acc.key)}
-                                                            installed={acc.installed}
-                                                            defects={acc.defects}
-                                                        >
-                                                            <span className="min-w-0">
-                                                                <span className="block text-sm text-slate-700 dark:text-slate-200 truncate">{acc.context}</span>
-                                                                <span className="block text-[11px] text-slate-400 dark:text-slate-500 truncate">{acc.moduleName}</span>
-                                                            </span>
-                                                        </TreeToggle>
-                                                        {isOpen(acc.key) && (
-                                                            <ul className="pl-3 sm:pl-5 pr-1 pb-2 space-y-2">
-                                                                {acc.equipments.map(eq => (
-                                                                    <li key={eq.key} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2">
-                                                                        <div className="text-xs font-bold text-slate-700 dark:text-slate-200 pb-1 mb-1 border-b border-dashed border-slate-200 dark:border-slate-700">{eq.label}</div>
-                                                                        <ul className="space-y-1">
-                                                                            {eq.items.map((imp, i) => {
+                            <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isLineOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                {line !== 'P+R' && <LineBadge line={line} />}
+                                {line === 'P+R' ? 'P+R' : `Ligne ${line}`}
+                            </span>
+                            <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lineTotal}</span>
+                        </button>
+                        {isLineOpen && (
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {stations.map(station => {
+                                    const stationKey = `${line}__${station.stationName}`;
+                                    const isStationOpen = openStations.has(stationKey);
+                                    return (
+                                        <div key={stationKey}>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSet(openStations, setOpenStations, stationKey)}
+                                                aria-expanded={isStationOpen}
+                                                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
+                                                    <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isStationOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                                    {line !== 'P+R' && <LineBadge line={line} size="xs" />}
+                                                    <span className="truncate">{station.stationName}</span>
+                                                </span>
+                                                <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums flex-shrink-0">{station.total}</span>
+                                            </button>
+                                            {isStationOpen && (
+                                                <div className="px-4 pb-3 space-y-2.5">
+                                                    {station.contexts.map(ctx => (
+                                                        <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
+                                                            <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
+                                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{ctx.context}</span>
+                                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {ctx.equipments.map(equip => (
+                                                                    <div key={equip.equipmentLabel}>
+                                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{equip.equipmentLabel}</p>
+                                                                        <ul className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-700">
+                                                                            {equip.items.map((imp, i) => {
                                                                                 const ref = refById.get(imp.referenceId);
                                                                                 return (
-                                                                                    <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-center justify-between gap-2">
-                                                                                        <span className="flex items-center gap-1.5 min-w-0">
+                                                                                    <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-baseline justify-between gap-3">
+                                                                                        <span className="min-w-0 overflow-hidden">
                                                                                             <button
                                                                                                 onClick={() => onOpenReference(imp.referenceId)}
-                                                                                                className="text-xs text-teal-700 dark:text-teal-300 hover:underline text-left truncate"
+                                                                                                className="block text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline text-left truncate max-w-full"
                                                                                             >
-                                                                                                {ref?.name ?? imp.referenceId}
+                                                                                                {ref ? displayReferenceName(ref) : imp.referenceId}
                                                                                             </button>
-                                                                                            {imp.zone && (
-                                                                                                <span title={imp.zoneLabel} className="flex-shrink-0 inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">{imp.zone}</span>
+                                                                                            {imp.zoneLabel && (
+                                                                                                <span className="block text-xs text-slate-500 dark:text-slate-400">{imp.zoneLabel}</span>
                                                                                             )}
                                                                                         </span>
-                                                                                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
+                                                                                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
                                                                                             {STATUS_LABELS[imp.status] ?? imp.status}
                                                                                         </span>
                                                                                     </li>
                                                                                 );
                                                                             })}
                                                                         </ul>
-                                                                    </li>
+                                                                    </div>
                                                                 ))}
-                                                            </ul>
-                                                        )}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
-                ))}
-                {filtered.length === 0 && (
-                    <p className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
-                        Aucune implantation ne correspond aux filtres.
+                );
+            })}
+        </div>
+    );
+};
+
+/* ================= Implantations d'une sélection de références ================= */
+// Vue de CONSULTATION/EXTRACTION : ne fait que regrouper pour l'affichage
+// (utils/cockpit/implantationsGrouping.ts) des implantations déjà calculées
+// par le moteur d'index — aucun second calcul, aucune notion de campagne/
+// commande/intervention créée ou persistée ici.
+
+interface SelectedImplantationsViewProps {
+    selection: Selection;
+    index: PatrimoineIndex;
+    references: SignageReference[];
+    onBack: () => void;
+    onOpenReference: (id: string) => void;
+}
+
+const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
+    selection, index, references, onBack, onOpenReference,
+}) => {
+    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
+
+    const [isExporting, setIsExporting] = useState(false);
+    const handleExport = async () => {
+        setIsExporting(true);
+        try {
+            const syntheseRows: SyntheseExportRow[] = [];
+            const referenceIds = [...new Set(selection.items.map(i => i.referenceId))];
+            for (const refId of referenceIds) {
+                const usage = index.byReference.get(refId);
+                const ref = refById.get(refId);
+                if (!usage || !ref) continue;
+                for (const lineEntry of usage.byLine) {
+                    syntheseRows.push({
+                        reference: refId,
+                        designation: displayReferenceName(ref),
+                        line: lineEntry.line,
+                        count: lineEntry.installed,
+                    });
+                }
+            }
+            syntheseRows.sort((a, b) => a.reference.localeCompare(b.reference) || compareLines(a.line, b.line));
+
+            const lines = [...new Set(selection.items.map(i => i.line))].sort(compareLines);
+            const ligneSheets = lines.map(line => ({
+                line,
+                sheetName: line === 'P+R' ? 'P+R' : `Ligne ${line}`,
+                rows: selection.items
+                    .filter(i => i.line === line)
+                    .map((imp): ImplantationExportRow => {
+                        const ref = refById.get(imp.referenceId);
+                        return {
+                            station: imp.lieuName,
+                            context: imp.context,
+                            equipment: imp.equipmentLabel,
+                            reference: imp.referenceId,
+                            designation: ref ? displayReferenceName(ref) : imp.referenceId,
+                            zoneLabel: imp.zoneLabel ?? '',
+                            dimensions: ref ? formatDimensions(ref.dimensions) : '',
+                            quantity: 1,
+                        };
+                    }),
+            }));
+
+            const fileName = `implantations-${new Date().toISOString().slice(0, 10)}.xlsx`;
+            const result = await downloadImplantationsWorkbook(syntheseRows, ligneSheets, fileName);
+            if (result.success) toast.success('Export Excel téléchargé !');
+            else toast.error(result.error ?? "Erreur lors de l'export.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const total = selection.items.length;
+
+    return (
+        <div className="space-y-5">
+            <div className="flex items-start gap-3">
+                <button
+                    onClick={onBack}
+                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                    aria-label="Retour aux références"
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="min-w-0 flex-1">
+                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
+                    <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
+                        <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
+                        <span className="text-slate-600 dark:text-slate-300">implantation{total > 1 ? 's' : ''}</span>
+                        <span className="text-slate-300 dark:text-slate-600">·</span>
+                        <span className="text-slate-600 dark:text-slate-300">{selection.label}</span>
                     </p>
-                )}
+                </div>
+                <button
+                    type="button"
+                    onClick={handleExport}
+                    disabled={isExporting || total === 0}
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors bg-teal-600 text-white hover:bg-teal-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 flex-shrink-0"
+                >
+                    <Download className="w-4 h-4" />
+                    {isExporting ? 'Export…' : 'Exporter .xlsx'}
+                </button>
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
-                {filtered.length} implantation{filtered.length > 1 ? 's' : ''} · {stationCount} lieu{stationCount > 1 ? 'x' : ''} · source : moteur d'index du patrimoine.
-            </p>
+
+            {total === 0 && (
+                <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                    Aucune implantation connue pour cette sélection (références désactivées, hors scope, ou partout non applicable).
+                </p>
+            )}
+
+            <ImplantationsTree items={selection.items} refById={refById} onOpenReference={onOpenReference} />
         </div>
     );
 };
@@ -449,6 +622,25 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<ReferentielSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
+    // Sélection multiple (Référentiel → Implantations) : ids réels, jamais
+    // les libellés affichés — cf. utils/cockpit/selection.ts.
+    const [selectedReferenceIds, setSelectedReferenceIds] = useState<Set<string>>(new Set());
+    const [activeSelection, setActiveSelection] = useState<Selection | null>(null);
+
+    const toggleSelectReference = (id: string) => {
+        setSelectedReferenceIds(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+        });
+    };
+
+    const handleViewSelectedImplantations = () => {
+        const ids = [...selectedReferenceIds];
+        const single = ids.length === 1 ? references.find(r => r.id === ids[0]) : undefined;
+        const label = single ? displayReferenceName(single) : `${ids.length} références sélectionnées`;
+        setActiveSelection(selectionFromReferences(index, ids, label));
+    };
 
     // Navigation transverse : une autre section peut demander l'ouverture
     // d'un sous-onglet précis (ex. « Implantations → ») ou d'une fiche
@@ -493,6 +685,20 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         }
     }
 
+    // Vue Implantations sélectionnées — même priorité que la fiche de vie
+    // (au-dessus des sous-sections), tant qu'une sélection est active.
+    if (activeSelection) {
+        return (
+            <SelectedImplantationsView
+                selection={activeSelection}
+                index={index}
+                references={references}
+                onBack={() => setActiveSelection(null)}
+                onOpenReference={setOpenReferenceId}
+            />
+        );
+    }
+
     return (
         <div className="space-y-5">
             {/* Sous-navigation (registre) */}
@@ -518,6 +724,10 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     references={references}
                     usageOf={(id) => index.byReference.get(id)}
                     onOpen={setOpenReferenceId}
+                    selectedIds={selectedReferenceIds}
+                    onToggleSelect={toggleSelectReference}
+                    onSetSelection={(ids) => setSelectedReferenceIds(new Set(ids))}
+                    onViewSelectedImplantations={handleViewSelectedImplantations}
                 />
             )}
             {subSection === 'implantations' && (
