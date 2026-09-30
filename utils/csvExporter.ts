@@ -5,7 +5,7 @@ import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
     PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem
 } from '../types';
-import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
@@ -556,19 +556,29 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                 });
                                 continue;
                             }
-                            const adhesives = getEcaAdhesives(eca.type);
-                            for (const [adhesiveId, status] of Object.entries(eca.adhesives)) {
-                                const adhesive = adhesives.find(a => a.id === adhesiveId);
-                                const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
+                            // Recherche par statusKey (id, ou id@ZH/id@ZB pour eca-1
+                            // sur un ECA d'entrée), avec repli sur legacyStatusKey pour
+                            // relire un audit réalisé avant l'introduction des zones
+                            // (bare 'eca-1' sur un ECA d'entrée standard — jamais pour
+                            // un type PMR, ambigu : cf. getEcaAdhesiveOccurrences).
+                            // Une clé qui ne correspond plus à rien est ignorée, comme
+                            // dans maintenanceGenerator.ts.
+                            const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                            for (const [statusKey, status] of Object.entries(eca.adhesives)) {
+                                const occurrence = occurrences.find(
+                                    occ => occ.statusKey === statusKey || occ.legacyStatusKey === statusKey
+                                );
+                                if (!occurrence) continue;
+                                const { repere, name: parsedAdhesiveName } = parseAdhesiveName(occurrence.name);
 
                                 let description = '';
                                 let location = '';
-                                if (adhesive?.description) {
-                                    const parts = adhesive.description.split('|');
+                                if (occurrence?.description) {
+                                    const parts = occurrence.description.split('|');
                                     description = parts[0].trim();
                                     location = parts.slice(1).join('|').trim();
                                 }
-                                
+
                                 rows.push({
                                     ...baseRow,
                                     'Date de Réalisation': formatCompletionDate(eca.completionDate),
@@ -576,7 +586,9 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                     'Élément': eca.name,
                                     'Statut': statusTranslations[status as string] || status,
                                     'Repère': repere,
-                                    'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
+                                    'Description Adhésif': occurrence?.zoneLabel
+                                        ? `${parsedAdhesiveName} (${occurrence.zoneLabel}) | ${description}`
+                                        : `${parsedAdhesiveName} | ${description}`,
                                     'Localisation Adhésif': location,
                                     'Commentaire': eca.comment,
                                 });

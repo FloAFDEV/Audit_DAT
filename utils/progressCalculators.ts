@@ -1,7 +1,7 @@
 // utils/progressCalculators.ts
 
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone, PlanQuartierData } from '../types';
-import { getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
+import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 
 export enum ProgressStatus {
@@ -88,17 +88,20 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
         return { percentage: 100, label: 'N/A (sans adhésifs)', isComplete: true };
     }
 
-    const adhesiveDefinitions = getEcaAdhesives(eca.type);
-    
-    if (adhesiveDefinitions.length === 0) {
+    // Occurrences plutôt que simples ids : un ECA PMR d'entrée compte pour 2
+    // (zones ZH + ZB) sur l'adhésif cible eca-1, un ECA d'entrée standard
+    // pour 1 (ZH) — cf. data/adhesives.ts::getEcaAdhesiveOccurrences.
+    const occurrences = getEcaAdhesiveOccurrences(eca.type);
+
+    if (occurrences.length === 0) {
         return { percentage: 100, label: 'Terminé', isComplete: true };
     }
 
     let applicableAdhesivesCount = 0;
     let checkedAdhesivesCount = 0;
 
-    for (const ad of adhesiveDefinitions) {
-        const status = eca.adhesives[ad.id] || AdhesiveStatus.NotChecked;
+    for (const occ of occurrences) {
+        const status = readEcaAdhesiveStatus(eca, occ);
         if (status !== AdhesiveStatus.NotApplicable) {
             applicableAdhesivesCount++;
             if (status !== AdhesiveStatus.NotChecked) {
@@ -191,12 +194,12 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             if (ecas.length > 0) hasAuditableContent = true;
             for (const eca of ecas) {
                 if (eca.isNotApplicable) continue;
-                const adhesiveDefinitions = getEcaAdhesives(eca.type);
-                for (const adDef of adhesiveDefinitions) {
-                    const status = eca.adhesives[adDef.id];
+                const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                for (const occ of occurrences) {
+                    const status = readEcaAdhesiveStatus(eca, occ);
                     if (status !== AdhesiveStatus.NotApplicable) {
                         totalApplicableItems++;
-                        if (status && status !== AdhesiveStatus.NotChecked) {
+                        if (status !== AdhesiveStatus.NotChecked) {
                             totalCheckedItems++;
                         }
                     }

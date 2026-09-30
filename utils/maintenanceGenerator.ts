@@ -1,6 +1,6 @@
 
 import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
-import { ADHESIVES, getEcaAdhesives, getPrAdhesives } from '../data/adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getEcaProgress } from './progressCalculators';
 
 /** Description courte des 4 modèles figés (data/signage_seed.ts) — même
@@ -89,16 +89,24 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     break;
                 case AuditModuleType.ECA:
                     ((module.data as EcaData).ecas || []).forEach(eca => {
-                        const allEcaAdhesives = getEcaAdhesives(eca.type);
-                        Object.entries(eca.adhesives || {}).forEach(([adhesiveId, status]) => {
-                            const adhesive = allEcaAdhesives.find(a => a.id === adhesiveId);
-                            if (!adhesive) return;
+                        // Recherche par statusKey (id, ou id@ZH/id@ZB pour eca-1 sur
+                        // un ECA d'entrée), avec repli sur legacyStatusKey pour relire
+                        // un audit réalisé avant l'introduction des zones (bare
+                        // 'eca-1' sur un ECA d'entrée standard — jamais pour un type
+                        // PMR, ambigu : cf. getEcaAdhesiveOccurrences /
+                        // readEcaAdhesiveStatus pour la même règle côté formulaire).
+                        const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                        Object.entries(eca.adhesives || {}).forEach(([statusKey, status]) => {
+                            const occurrence = occurrences.find(
+                                occ => occ.statusKey === statusKey || occ.legacyStatusKey === statusKey
+                            );
+                            if (!occurrence) return;
 
                             const item: MaintenanceItem = {
                                 ...baseItem,
                                 elementName: eca.name,
                                 context: eca.accessPoint,
-                                adhesiveName: adhesive.name,
+                                adhesiveName: occurrence.zoneLabel ? `${occurrence.name} — ${occurrence.zoneLabel}` : occurrence.name,
                                 status: status as string,
                             };
 

@@ -431,7 +431,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-1",
     "material": "Sur le support de validation. A la pose laisser la diode visible pour diagnostic.",
     "name": "Adhesif valideur-billetique-metro-cible",
-    "quantity": 203,
+    "quantity": 251,
     "repere": "1",
   },
   {
@@ -440,7 +440,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-2",
     "material": "Autour du support de validation, format carré.",
     "name": "Adhesif gris valideur-billetique-metro-pastel",
-    "quantity": 203,
+    "quantity": 205,
     "repere": "2",
   },
   {
@@ -449,7 +449,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-3",
     "material": "Sous la vitre en tête haute de l’ECA, vitrophanie.",
     "name": "Adhesif valideur-openpayment-metro",
-    "quantity": 203,
+    "quantity": 205,
     "repere": "3",
   },
   {
@@ -467,7 +467,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-5",
     "material": "Sur platine jaune, autour du support de validation (spécifique PMR à vantaux).",
     "name": "Adhésif valideur-PMRVantaux",
-    "quantity": 38,
+    "quantity": 40,
     "repere": "5",
   },
   {
@@ -485,7 +485,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-7",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR à vantaux).",
     "name": "Adhésif valideur-portillon-PMR-vantaux",
-    "quantity": 38,
+    "quantity": 40,
     "repere": "7",
   },
   {
@@ -503,7 +503,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-9",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
     "name": "Adhesif valideurPMR-metro-Poussette",
-    "quantity": 44,
+    "quantity": 46,
     "repere": "9",
   },
   {
@@ -512,7 +512,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-10",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
     "name": "Adhesif valideurPMR-metro-UFR",
-    "quantity": 44,
+    "quantity": 46,
     "repere": "10",
   },
   {

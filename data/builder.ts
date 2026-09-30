@@ -4,7 +4,7 @@ import {
     Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone, PlanQuartierData
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { ADHESIVES, getEcaAdhesives, getPrAdhesives, getEquipmentAdhesives } from './adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives, getEquipmentAdhesives } from './adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS, AEROPORT_EXPRESS_STATIONS } from './stations';
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
@@ -243,7 +243,12 @@ const createEcaModule = (
     ecaTemplates: Omit<ECA, 'id' | 'adhesives' | 'comment'>[]
 ): AuditModule => {
     const ecas: ECA[] = isFuture ? [] : ecaTemplates.map((template, index) => {
-        const initialAdhesives = createInitialAdhesiveStatus(getEcaAdhesives(template.type));
+        // Clés d'occurrence (id, ou id@ZH/id@ZB pour eca-1 sur un ECA d'entrée)
+        // plutôt que simples ids catalogue, pour que le statut initial couvre
+        // bien les deux zones d'un ECA PMR d'entrée dès la création.
+        const initialAdhesives = createInitialAdhesiveStatus(
+            getEcaAdhesiveOccurrences(template.type).map(occ => ({ id: occ.statusKey }))
+        );
 
         // Apply pre-configuration for PMR pictograms
         if (isPmrEcaType(template.type) && stationCode && PMR_PICTOGRAM_CONFIG[stationCode]) {

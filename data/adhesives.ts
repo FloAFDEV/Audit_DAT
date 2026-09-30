@@ -1,5 +1,5 @@
 
-import { Adhesive, PrAdhesive, EcaEquipmentType, EquipmentType } from '../types';
+import { Adhesive, PrAdhesive, EcaEquipmentType, EquipmentType, ECA, AdhesiveStatus } from '../types';
 
 // =================================================================
 // ADHÉSIFS DAT (Distributeur Automatique de Titres)
@@ -140,6 +140,10 @@ export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
         case EcaEquipmentType.PMRBras:
             return ECA_ADHESIVES_PMR_BRAS;
         case EcaEquipmentType.PMRVantaux:
+        // PMR à vantaux réversible (Jean-Jaurès) : mêmes zones de validation
+        // qu'un PMR à vantaux classique — la réversibilité ne change que le
+        // sens de circulation, pas la présence des deux zones physiques.
+        case EcaEquipmentType.PMRVantauxReversible:
             return ECA_ADHESIVES_PMR_VANTAUX;
         case EcaEquipmentType.TripodeEntree:
         case EcaEquipmentType.VantauxEntree:
@@ -152,4 +156,90 @@ export const getEcaAdhesives = (type: EcaEquipmentType): Adhesive[] => {
         default:
             return [ECA_IDENTIFIANT_ADHESIVE];
     }
+};
+
+// -----------------------------------------------------------------
+// Zones de validation ECA — un ECA PMR d'entrée porte deux exemplaires
+// physiques de l'adhésif cible (eca-1) : un sur la zone de validation
+// standard (haute), un sur la zone de validation PMR (basse). Un ECA
+// d'entrée standard n'en porte qu'un seul (haute). Un ECA de sortie n'en
+// porte aucun. Une seule référence catalogue (eca-1) dans les deux cas —
+// la quantité est portée par le nombre d'occurrences zonées ci-dessous,
+// jamais par une deuxième entrée dans ECA_ADHESIVES_* ci-dessus.
+// -----------------------------------------------------------------
+export type EcaValidationZone = 'ZH' | 'ZB';
+
+export const ECA_VALIDATION_ZONE_LABELS: Record<EcaValidationZone, string> = {
+    ZH: 'Zone de validation haute (ZH)',
+    ZB: 'Zone de validation basse (ZB)',
+};
+
+/** Types dont la zone de validation basse (PMR) existe physiquement, en plus
+ *  de la zone haute — cf. règle métier validée : ECA PMR d'entrée = eca-1 × 2. */
+const ECA_TYPES_WITH_VALIDATION_ZB = new Set<EcaEquipmentType>([
+    EcaEquipmentType.PMRBras,
+    EcaEquipmentType.PMRVantaux,
+    EcaEquipmentType.PMRVantauxReversible,
+]);
+
+/** Seul cet id porte une notion de zone (adhésif cible billetique/monétique,
+ *  posé sur le support de validation lui-même) — tous les autres adhésifs
+ *  ECA restent inchangés, à un seul exemplaire, comme avant. */
+const ZONED_ADHESIVE_ID = 'eca-1';
+
+export interface EcaAdhesiveOccurrence extends Adhesive {
+    /** Clé à utiliser dans ECA.adhesives pour cette occurrence précise —
+     *  distincte de `id` uniquement pour eca-1 sur un ECA d'entrée (suffixe
+     *  de zone), afin qu'un même id catalogue puisse porter 1 ou 2 statuts
+     *  indépendants sur un même ECA. */
+    statusKey: string;
+    zone?: EcaValidationZone;
+    zoneLabel?: string;
+    /** Ancienne clé (avant zonage), à consulter UNIQUEMENT en lecture et
+     *  UNIQUEMENT quand elle ne peut désigner qu'une seule zone possible
+     *  (ECA d'entrée standard : une seule zone a toujours existé). Absente
+     *  pour les occurrences ECA PMR : impossible de savoir rétroactivement
+     *  si un ancien statut `eca-1` concernait la zone haute ou basse — on
+     *  ne le devine pas (cf. readEcaAdhesiveStatus). */
+    legacyStatusKey?: string;
+}
+
+/** Dérive, pour un type d'ECA donné, la liste des occurrences auditables —
+ *  un ECA d'entrée standard porte 1 occurrence de eca-1 (ZH), un ECA PMR
+ *  d'entrée en porte 2 (ZH + ZB), un ECA de sortie n'en porte aucune (eca-1
+ *  n'est simplement pas dans sa liste catalogue). Tous les autres adhésifs
+ *  ECA ressortent inchangés, à un seul exemplaire, statusKey = id. */
+export const getEcaAdhesiveOccurrences = (type: EcaEquipmentType): EcaAdhesiveOccurrence[] => {
+    return getEcaAdhesives(type).flatMap((ad): EcaAdhesiveOccurrence[] => {
+        if (ad.id !== ZONED_ADHESIVE_ID) {
+            return [{ ...ad, statusKey: ad.id }];
+        }
+        if (ECA_TYPES_WITH_VALIDATION_ZB.has(type)) {
+            return [
+                { ...ad, statusKey: `${ad.id}@ZH`, zone: 'ZH', zoneLabel: ECA_VALIDATION_ZONE_LABELS.ZH },
+                { ...ad, statusKey: `${ad.id}@ZB`, zone: 'ZB', zoneLabel: ECA_VALIDATION_ZONE_LABELS.ZB },
+            ];
+        }
+        return [{
+            ...ad, statusKey: `${ad.id}@ZH`, zone: 'ZH', zoneLabel: ECA_VALIDATION_ZONE_LABELS.ZH,
+            legacyStatusKey: ad.id,
+        }];
+    });
+};
+
+/** Lit le statut d'une occurrence en tenant compte des audits déjà réalisés
+ *  avant l'introduction des zones : si la clé zonée n'a jamais été écrite
+ *  mais que l'ancienne clé (bare id) existe, on la relit — UNIQUEMENT quand
+ *  `legacyStatusKey` est présent (jamais ambigu, cf. getEcaAdhesiveOccurrences).
+ *  Ne fabrique jamais de statut pour une occurrence ambiguë (ZH/ZB d'un ECA
+ *  PMR déjà audité sous l'ancienne clé unique) : elle reste NotChecked tant
+ *  que l'auditeur ne l'a pas vérifiée avec la nouvelle grille. */
+export const readEcaAdhesiveStatus = (eca: ECA, occurrence: EcaAdhesiveOccurrence): AdhesiveStatus => {
+    const direct = eca.adhesives[occurrence.statusKey];
+    if (direct !== undefined) return direct;
+    if (occurrence.legacyStatusKey !== undefined) {
+        const legacy = eca.adhesives[occurrence.legacyStatusKey];
+        if (legacy !== undefined) return legacy;
+    }
+    return AdhesiveStatus.NotChecked;
 };
