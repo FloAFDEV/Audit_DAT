@@ -11,6 +11,8 @@ import { describe, it, expect } from 'vitest';
 import Dexie from 'dexie';
 import { createAuditDb } from '../db';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
+import { buildPatrimoineIndex } from '../utils/cockpit/patrimoineIndex';
+import { EcaEquipmentType, SignageReference } from '../types';
 
 let dbCounter = 0;
 const uniqueDbName = () => `TisseoAuditDB-test-${Date.now()}-${dbCounter++}`;
@@ -503,5 +505,180 @@ describe('Migration V20 (plan de quartier des caisses automatiques : un seul pat
         expect(reloaded).toEqual(lieu);
 
         upgraded.close();
+    });
+});
+
+describe('Migration V21 → V22 (PMR à vantaux réversible dans le périmètre des références ECA)', () => {
+    const REVERSIBLE = EcaEquipmentType.PMRVantauxReversible;
+    const TARGET_IDS = ['eca-1', 'eca-2', 'eca-3', 'eca-5', 'eca-7', 'eca-9', 'eca-10'];
+    const V21_STORES = {
+        lieux: 'id, name',
+        history: '++id, date, type, categoryKey',
+        signageReferences: 'id, auditType',
+        events: '++id, date, type, entityType',
+    };
+
+    /** Référentiel tel que persisté avant #121 : le seed courant, sans
+     *  PMR à vantaux réversible dans le périmètre des références ciblées. */
+    const staleReferences = (): SignageReference[] => buildSignageReferencesSeed().map(ref => {
+        if (!TARGET_IDS.includes(ref.id) || ref.scope.auditType !== 'ECA') return ref;
+        return { ...ref, scope: { ...ref.scope, equipmentTypes: ref.scope.equipmentTypes!.filter(t => t !== REVERSIBLE) } };
+    });
+
+    /** Jean-Jaurès, Ligne B : les deux ECA PMR réversibles (statuts ZH/ZB
+     *  distincts, pour vérifier qu'ils traversent la migration intacts). */
+    const jeanJauresLieu = () => ({
+        id: 'lieu-jean-jaures', name: 'Jean-Jaurès', modules: [
+            {
+                id: 'module-eca-jja-ab', type: 'ECA', name: 'ECA Liaison A→B', line: 'B',
+                data: { id: 'eca-ab', stationName: 'Jean-Jaurès', stationCode: 'JJA', ecas: [{
+                    id: 'pmr17', name: 'Liaison A→B - PMR 17', accessPoint: 'Liaison A→B', type: REVERSIBLE, number: 17,
+                    adhesives: { 'eca-1@ZH': 'OK', 'eca-1@ZB': 'Absent', 'eca-11': 'NotChecked', 'eca-10': 'NotApplicable' }, comment: 'témoin',
+                }] },
+            },
+            {
+                id: 'module-eca-jjb-ba', type: 'ECA', name: 'ECA Liaison B→A', line: 'B',
+                data: { id: 'eca-ba', stationName: 'Jean-Jaurès', stationCode: 'JJB', ecas: [{
+                    id: 'pmr8', name: 'Liaison B→A - PMR 8', accessPoint: 'Liaison B→A', type: REVERSIBLE, number: 8,
+                    adhesives: { 'eca-1@ZH': 'NotChecked', 'eca-1@ZB': 'ToBeReplaced', 'eca-11': 'NotChecked' }, comment: '',
+                }] },
+            },
+        ],
+    });
+
+    const seedV21 = async (name: string, references: SignageReference[], lieux: any[] = []) => {
+        const v21 = new Dexie(name);
+        v21.version(21).stores(V21_STORES);
+        await v21.open();
+        if (references.length) await v21.table('signageReferences').bulkAdd(references);
+        if (lieux.length) await v21.table('lieux').bulkAdd(lieux);
+        v21.close();
+    };
+
+    it('complète le périmètre des 7 références sans toucher aux autres champs ni aux lieux', async () => {
+        const name = uniqueDbName();
+        const before = staleReferences();
+        const lieu = jeanJauresLieu();
+        await seedV21(name, before, [lieu]);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const after = await upgraded.table('signageReferences').toArray() as SignageReference[];
+
+        expect(after).toHaveLength(before.length);
+        for (const ref of after) {
+            const old = before.find(r => r.id === ref.id)!;
+            if (!TARGET_IDS.includes(ref.id)) {
+                expect(ref).toEqual(old);
+                continue;
+            }
+            const oldTypes = (old.scope as { equipmentTypes: EcaEquipmentType[] }).equipmentTypes;
+            expect(ref.scope).toEqual({ ...old.scope, equipmentTypes: [...oldTypes, REVERSIBLE] });
+            expect({ ...ref, scope: undefined }).toEqual({ ...old, scope: undefined });
+        }
+        expect(await upgraded.table('lieux').get('lieu-jean-jaures')).toEqual(lieu);
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('est idempotente : une réouverture ne rajoute jamais le type', async () => {
+        const name = uniqueDbName();
+        await seedV21(name, staleReferences());
+
+        const first = createAuditDb(name);
+        await first.open();
+        const afterFirst = await first.table('signageReferences').toArray();
+        first.close();
+
+        const second = createAuditDb(name);
+        await second.open();
+        const afterSecond = await second.table('signageReferences').toArray() as SignageReference[];
+        expect(afterSecond).toEqual(afterFirst);
+        for (const id of TARGET_IDS) {
+            const types = (afterSecond.find(r => r.id === id)!.scope as { equipmentTypes: EcaEquipmentType[] }).equipmentTypes;
+            expect(types.filter(t => t === REVERSIBLE)).toHaveLength(1);
+        }
+
+        second.close();
+        await Dexie.delete(name);
+    });
+
+    it('ne modifie rien sur un référentiel déjà à jour', async () => {
+        const name = uniqueDbName();
+        const upToDate = buildSignageReferencesSeed();
+        await seedV21(name, upToDate);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const after = await upgraded.table('signageReferences').toArray() as SignageReference[];
+        expect([...after].sort((a, b) => a.id.localeCompare(b.id)))
+            .toEqual([...upToDate].sort((a, b) => a.id.localeCompare(b.id)));
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it("n'écrit rien sur une table jamais seedée", async () => {
+        const name = uniqueDbName();
+        await seedV21(name, []);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect(await upgraded.table('signageReferences').count()).toBe(0);
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('conserve un périmètre enrichi localement et ajoute seulement le type manquant', async () => {
+        const name = uniqueDbName();
+        const references = staleReferences().map(ref => ref.id === 'eca-5' && ref.scope.auditType === 'ECA'
+            ? { ...ref, scope: { ...ref.scope, equipmentTypes: [...ref.scope.equipmentTypes!, EcaEquipmentType.PMRBras] } }
+            : ref);
+        await seedV21(name, references);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const eca5 = await upgraded.table('signageReferences').get('eca-5') as SignageReference;
+        expect(eca5.scope).toEqual({
+            auditType: 'ECA',
+            equipmentTypes: [EcaEquipmentType.PMRVantaux, EcaEquipmentType.PMRBras, REVERSIBLE],
+        });
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('index ECA : les deux ECA réversibles de Jean-Jaurès retrouvent eca-1 en ZH + ZB, statuts intacts', async () => {
+        const name = uniqueDbName();
+        const lieu = jeanJauresLieu();
+        const stale = staleReferences();
+        await seedV21(name, stale, [lieu]);
+
+        const eca1Of = (refs: SignageReference[], lieux: any[]) => buildPatrimoineIndex(lieux, refs).implantations
+            .filter(i => i.referenceId === 'eca-1')
+            .map(i => [i.line, i.lieuName, i.context, i.equipmentLabel, i.zone, i.status]);
+
+        // Avant : le périmètre persistant exclut ces ECA — aucune occurrence.
+        expect(eca1Of(stale, [lieu])).toEqual([]);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const refs = await upgraded.table('signageReferences').toArray() as SignageReference[];
+        const lieux = await upgraded.table('lieux').toArray();
+        expect(lieux).toEqual([lieu]);
+
+        expect(eca1Of(refs, lieux)).toEqual([
+            ['B', 'Jean-Jaurès', 'Liaison A→B', 'Liaison A→B - PMR 17', 'ZH', 'OK'],
+            ['B', 'Jean-Jaurès', 'Liaison A→B', 'Liaison A→B - PMR 17', 'ZB', 'Absent'],
+            ['B', 'Jean-Jaurès', 'Liaison B→A', 'Liaison B→A - PMR 8', 'ZH', 'NotChecked'],
+            ['B', 'Jean-Jaurès', 'Liaison B→A', 'Liaison B→A - PMR 8', 'ZB', 'ToBeReplaced'],
+        ]);
+        // Même résultat que le référentiel d'une base neuve.
+        expect(eca1Of(refs, lieux)).toEqual(eca1Of(buildSignageReferencesSeed(), lieux));
+
+        upgraded.close();
+        await Dexie.delete(name);
     });
 });
