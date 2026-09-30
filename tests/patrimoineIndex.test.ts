@@ -14,6 +14,7 @@ import {
     buildPatrimoineIndex, resolveReferencesForEquipment,
 } from '../utils/cockpit/patrimoineIndex';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
+import { generateInitialLieuxDataAsync } from '../data/builder';
 import {
     Lieu, AuditModuleType, AdhesiveStatus, EquipmentType, EcaEquipmentType,
     TransportMode,
@@ -185,10 +186,51 @@ describe('buildPatrimoineIndex', () => {
         const pmrIds = pmr.map(i => i.referenceId);
         expect(pmrIds).not.toContain('eca-9');  // NotApplicable → non installé ici
         expect(pmrIds).not.toContain('eca-8');  // hors scope PMRVantaux
-        expect(pmrIds).toContain('eca-1');       // OK constaté
+        // eca-1 sur un ECA PMR d'entrée : 2 implantations (ZH + ZB), jamais
+        // fusionnées — cf. bloc dédié ci-dessous pour le détail des zones.
+        expect(pmr.filter(i => i.referenceId === 'eca-1')).toHaveLength(2);
 
         // L'ECA entier isNotApplicable ne produit aucune implantation.
         expect(index.implantations.some(i => i.equipmentLabel === 'Tripode NA')).toBe(false);
+    });
+
+    it("ECA PMR : eca-1 produit 2 implantations zonées (ZH + ZB), jamais fabriquées depuis l'ancienne clé bare (ambiguë)", () => {
+        const index = buildPatrimoineIndex([ecaLieu()], REFERENCES);
+        const pmrEca1 = index.implantations.filter(i => i.equipmentLabel === 'PMR 1' && i.referenceId === 'eca-1');
+
+        expect(pmrEca1).toHaveLength(2);
+        expect(pmrEca1.map(i => i.zone).sort()).toEqual(['ZB', 'ZH']);
+        pmrEca1.forEach(imp => expect(imp.zoneLabel).toMatch(/^Zone de validation/));
+        // Le fixture n'écrit que l'ancienne clé bare 'eca-1' (avant les zones) :
+        // ambigu pour un PMR → aucun statut n'est fabriqué, les deux occurrences
+        // restent Non contrôlé (cf. data/adhesives.ts::readEcaAdhesiveStatus).
+        pmrEca1.forEach(imp => expect(imp.status).toBe(AdhesiveStatus.NotChecked));
+    });
+
+    it("ECA standard d'entrée : eca-1 produit 1 implantation zonée (ZH), et relit l'ancienne clé bare sans ambiguïté", () => {
+        const lieu: Lieu = {
+            id: 'lieu-eca-std', name: 'Station Std',
+            modules: [{
+                id: 'module-eca-std', type: AuditModuleType.ECA, name: 'ECA (Valideurs)', line: 'A',
+                data: {
+                    id: 'eca-data-std', stationName: 'Station Std', stationCode: 'STD',
+                    ecas: [{
+                        id: 'e-std', name: 'Valideur 1', accessPoint: 'Accès Principal',
+                        type: EcaEquipmentType.VantauxEntree, number: 1,
+                        adhesives: { 'eca-1': AdhesiveStatus.OK }, comment: '',
+                    }],
+                },
+            }],
+        };
+        const index = buildPatrimoineIndex([lieu], REFERENCES);
+        const eca1 = index.implantations.filter(i => i.referenceId === 'eca-1');
+
+        expect(eca1).toHaveLength(1);
+        expect(eca1[0].zone).toBe('ZH');
+        expect(eca1[0].zoneLabel).toMatch(/^Zone de validation haute/);
+        // Une seule zone a toujours existé pour ce type : l'ancienne clé bare
+        // est relue sans ambiguïté.
+        expect(eca1[0].status).toBe(AdhesiveStatus.OK);
     });
 
     it('module isFuture (hors B/C/AEROPORT) ignoré', () => {
@@ -279,5 +321,28 @@ describe('buildPatrimoineIndex', () => {
         let sum = 0;
         index.byLine.forEach(c => { sum += c.installed; });
         expect(sum).toBe(index.totals.implantationCount);
+    });
+});
+
+// ------------------------------------------------------------------
+// Régression réseau réel : le moteur d'index (Posés/Implantations, la
+// source consultée par ReferentielView) doit refléter le même total
+// eca-1 que la Nomenclature (hooks/useStats.ts, déjà vérifiée à 251
+// dans tests/nomenclatureCharacterization.test.ts) — un seul compte
+// juste ne suffit pas si l'autre moteur reste sur l'ancien modèle.
+// ------------------------------------------------------------------
+describe('buildPatrimoineIndex — régression réseau réel (Posés = Nomenclature)', () => {
+    it("eca-1 = 251 implantations sur le réseau réel, comme la Nomenclature", async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+        expect(index.byReference.get('eca-1')?.installedCount).toBe(251);
+    });
+
+    it("une référence non concernée par la correction ZH/ZB garde son compte inchangé (eca-11 : un par ECA, aucune zone)", async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const index = buildPatrimoineIndex(lieux, REFERENCES);
+        const eca11 = index.byReference.get('eca-11')!;
+        expect(eca11.installedCount).toBe(303);
+        expect(index.implantations.filter(i => i.referenceId === 'eca-11').every(i => i.zone === undefined)).toBe(true);
     });
 });

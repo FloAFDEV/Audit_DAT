@@ -5,7 +5,8 @@
 // ligne), sans dépendre d'un module en particulier.
 import { describe, it, expect } from 'vitest';
 import {
-    createSelection, selectionFromReference, selectionFromSite, selectionFromLine, selectionFromImplantations,
+    createSelection, selectionFromReference, selectionFromReferences, selectionFromSite, selectionFromLine,
+    selectionFromImplantations,
 } from '../utils/cockpit/selection';
 import { buildPatrimoineIndex } from '../utils/cockpit/patrimoineIndex';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
@@ -68,6 +69,19 @@ describe('Producteurs de Selection — même contrat quelle que soit la vue d\'o
         expect(sel.items).toHaveLength(3);
         expect(sel.items.every(i => i.referenceId === 'ad3')).toBe(true);
         expect(sel.items.filter(i => i.status === AdhesiveStatus.ToBeReplaced)).toHaveLength(1);
+    });
+
+    it('selectionFromReferences : source "reference", items = union des implantations de PLUSIEURS références (id réel, jamais le libellé)', () => {
+        const sel = selectionFromReferences(index, ['ad3', 'ad4'], '2 références sélectionnées');
+        expect(sel.source).toBe('reference');
+        expect(sel.items.every(i => i.referenceId === 'ad3' || i.referenceId === 'ad4')).toBe(true);
+        expect(sel.items.filter(i => i.referenceId === 'ad3')).toHaveLength(3);
+        expect(sel.items.filter(i => i.referenceId === 'ad4')).toHaveLength(3);
+    });
+
+    it("selectionFromReferences : un id sans implantation ne lève pas, contribue simplement 0", () => {
+        const sel = selectionFromReferences(index, ['ad3', 'id-inexistant'], 'Test');
+        expect(sel.items.every(i => i.referenceId === 'ad3')).toBe(true);
     });
 
     it('selectionFromSite : source "site", items = toutes les implantations de ce lieu', () => {

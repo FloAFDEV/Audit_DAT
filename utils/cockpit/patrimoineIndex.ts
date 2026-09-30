@@ -140,6 +140,7 @@ import {
     SignageReference, SignageSupport, PlanQuartierData,
 } from '../../types';
 import { isModuleInAuditScope } from '../moduleScope';
+import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, EcaValidationZone } from '../../data/adhesives';
 
 // -----------------------------------------------------------------
 // Types du contrat (stables : les vues dépendent d'eux, pas de l'arbre)
@@ -168,6 +169,12 @@ export interface ImplantationRef {
     implantationContext?: string;
     /** Statut constaté ; clé absente de la map = NotChecked (R10). */
     status: AdhesiveStatus;
+    /** Zone de validation ECA (ZH/ZB) — présent uniquement pour un adhésif
+     *  ECA porté en plusieurs exemplaires physiques sur un même équipement
+     *  (eca-1 sur un ECA d'entrée, cf. data/adhesives.ts::getEcaAdhesiveOccurrences).
+     *  Absent pour toute autre implantation (DAT, PR, PDQ, autres adhésifs ECA). */
+    zone?: EcaValidationZone;
+    zoneLabel?: string;
 }
 
 /**
@@ -332,14 +339,44 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                     for (const eca of (module.data as EcaData).ecas ?? []) {
                         if (eca.isNotApplicable) continue;
                         const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
-                        pushImplantations(refs, eca.adhesives ?? {}, {
+                        // Occurrences plutôt que simple présence d'id : un ECA
+                        // d'entrée PMR porte eca-1 en 2 exemplaires physiques (ZH
+                        // + ZB), un ECA d'entrée standard en 1 (ZH) — cf.
+                        // data/adhesives.ts::getEcaAdhesiveOccurrences, même
+                        // moteur que la prise d'audit et la Nomenclature (R1 :
+                        // aucun second calcul de cette règle).
+                        const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                        const base = {
                             lieuId: lieu.id, lieuName: lieu.name,
                             line: module.line || '?',
                             moduleId: module.id, moduleName: module.name,
                             context: eca.accessPoint,
                             equipmentLabel: eca.name,
                             equipmentType: eca.type,
-                        });
+                        };
+
+                        for (const ref of refs) {
+                            const refOccurrences = occurrences.filter(o => o.id === ref.id);
+                            if (refOccurrences.length === 0) {
+                                // Référence hors catalogue historique (ajout Admin,
+                                // scope-matchée mais absente du catalogue statique) :
+                                // comportement inchangé, une implantation, lecture
+                                // directe de la clé brute.
+                                const status = (eca.adhesives ?? {})[ref.id] ?? AdhesiveStatus.NotChecked;
+                                if (status !== AdhesiveStatus.NotApplicable) {
+                                    implantations.push({ ...base, referenceId: ref.id, status });
+                                }
+                                continue;
+                            }
+                            for (const occ of refOccurrences) {
+                                const status = readEcaAdhesiveStatus(eca, occ);
+                                if (status === AdhesiveStatus.NotApplicable) continue;
+                                implantations.push({
+                                    ...base, referenceId: ref.id, status,
+                                    zone: occ.zone, zoneLabel: occ.zoneLabel,
+                                });
+                            }
+                        }
                     }
                     break;
                 }

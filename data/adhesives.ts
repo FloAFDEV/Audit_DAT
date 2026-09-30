@@ -171,7 +171,7 @@ export type EcaValidationZone = 'ZH' | 'ZB';
 
 export const ECA_VALIDATION_ZONE_LABELS: Record<EcaValidationZone, string> = {
     ZH: 'Zone de validation haute (ZH)',
-    ZB: 'Zone de validation basse (ZB)',
+    ZB: 'Zone de validation basse (ZB) — PMR',
 };
 
 /** Types dont la zone de validation basse (PMR) existe physiquement, en plus
