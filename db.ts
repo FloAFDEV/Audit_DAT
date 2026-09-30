@@ -1,7 +1,7 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry, SignageReference, AppEvent } from './types';
+import { Lieu, HistoryEntry, SignageReference, AppEvent, EcaEquipmentType } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
 
 export type AuditDb = Dexie & {
@@ -527,6 +527,39 @@ export const createAuditDb = (name: string): AuditDb => {
     if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
     const fresh = buildSignageReferencesSeed().find(r => r.id === 'pdq-78x120-dibond');
     if (fresh) await table.put(fresh);
+});
+
+// V22 — la PR #121 a ajouté PMR à vantaux réversible au catalogue ECA
+// (data/adhesives.ts::getEcaAdhesives) : le seed en dérive, mais le périmètre
+// des références déjà persistées sur un appareil n'a jamais suivi. Sans lui,
+// les deux ECA PMR réversibles de Jean-Jaurès (Liaison A→B - PMR 17,
+// Liaison B→A - PMR 8) ne portaient aucune de ces 7 références dans l'index.
+// Écriture CHIRURGICALE, même principe que V20 : seul ce type est ajouté en
+// fin de scope.equipmentTypes (types existants conservés, y compris un
+// enrichissement local), aucun autre champ touché, et seulement quand le seed
+// courant le prévoit pour la référence. Idempotente : un type déjà présent
+// n'est jamais rajouté. Strictement limitée à signageReferences — aucune
+// donnée terrain touchée.
+    instance.version(22).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
+    const added = EcaEquipmentType.PMRVantauxReversible;
+    const freshById = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+    for (const id of ['eca-1', 'eca-2', 'eca-3', 'eca-5', 'eca-7', 'eca-9', 'eca-10']) {
+        const existing = await table.get(id);
+        const fresh = freshById.get(id);
+        if (!existing || existing.scope.auditType !== 'ECA') continue;
+        // Scope sans equipmentTypes = toute la famille : rien à compléter.
+        const types = existing.scope.equipmentTypes;
+        if (!types || types.includes(added)) continue;
+        if (fresh?.scope.auditType !== 'ECA' || !fresh.scope.equipmentTypes?.includes(added)) continue;
+        await table.update(id, { scope: { ...existing.scope, equipmentTypes: [...types, added] } });
+    }
 });
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
