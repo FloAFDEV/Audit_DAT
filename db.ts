@@ -562,6 +562,43 @@ export const createAuditDb = (name: string): AuditDb => {
     }
 });
 
+// V23 — un import JSON v2 remplace signageReferences par celui de la
+// sauvegarde (utils/signageSerializer.ts::applyImportPayload), APRÈS que les
+// migrations ont tourné : une sauvegarde antérieure à V19/V20/V21 annule donc
+// ces corrections, et Dexie ne les rejoue jamais. V23 les réapplique à
+// l'identique, une fois, sans rien changer à leur règle :
+//   - V19 : les 4 fiches PDQ / PEM 3D réécrites depuis le seed (put, même
+//     justification qu'en V19 : fiches non éditables dans l'app) ;
+//   - V20 : adca12 désactivée, écriture chirurgicale du seul drapeau ;
+//   - V21 : pdq-78x120-dibond ajoutée depuis le seed, uniquement si absente.
+// V22 (scope ECA) n'est pas concernée ici. Idempotente : chaque écriture
+// ramène à un état fixe, jamais de doublon (clé primaire = id). Strictement
+// limitée à signageReferences — aucune donnée terrain touchée.
+    instance.version(23).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return; // jamais sur une table jamais seedée
+    const freshById = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+
+    // V19
+    for (const id of ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80']) {
+        const fresh = freshById.get(id);
+        if (fresh) await table.put(fresh);
+    }
+
+    // V20
+    const adca12 = await table.get('adca12');
+    if (adca12 && adca12.isDisabled !== true) await table.update('adca12', { isDisabled: true });
+
+    // V21
+    const dibond = freshById.get('pdq-78x120-dibond');
+    if (dibond && !(await table.get(dibond.id))) await table.add(dibond);
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {

@@ -682,3 +682,143 @@ describe('Migration V21 → V22 (PMR à vantaux réversible dans le périmètre 
         await Dexie.delete(name);
     });
 });
+
+describe('Migration V22 → V23 (réparation d\'un référentiel écrasé par un ancien import : V19/V20/V21)', () => {
+    const V22_STORES = {
+        lieux: 'id, name',
+        history: '++id, date, type, categoryKey',
+        signageReferences: 'id, auditType',
+        events: '++id, date, type, entityType',
+    };
+    const PDQ_IDS = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pem3d-120x80'];
+    const byId = (refs: SignageReference[]) => [...refs].sort((a, b) => a.id.localeCompare(b.id));
+
+    /** Référentiel tel que restauré par une sauvegarde antérieure à V19 :
+     *  fiches PDQ/PEM 3D d'origine, adca12 active (avec une modification
+     *  locale témoin), pas de pdq-78x120-dibond. */
+    const oldReferences = (): SignageReference[] => buildSignageReferencesSeed()
+        .filter(r => r.id !== 'pdq-78x120-dibond')
+        .map(ref => {
+            switch (ref.id) {
+                case 'pdq-78x100': return { ...ref, legacyDescription: '78 x 100 cm | Métro A/B/C, Tram T1, Téléo — sans header ni footer. Jamais en version adhésive.' };
+                case 'pdq-78x120': return { ...ref, legacyDescription: '78 x 120 cm | Métro A/B/C, Tram T1, Téléo — avec header et footer.' };
+                case 'pdq-adhesif': {
+                    const { dimensions: _d, ...rest } = ref;
+                    return { ...rest, name: 'Plan de quartier (adhésif)', legacyDescription: "Version adhésive d'un Plan de quartier — jamais au format 78×100. Dimension précise non encore confirmée." };
+                }
+                case 'pem3d-120x80': return { ...ref, name: 'PEM 3D 120×80', legacyDescription: "120 x 80 cm | Pôles d'échange multimodaux — support Dibond exclusivement." };
+                case 'adca12': {
+                    const { isDisabled: _i, ...rest } = ref;
+                    return { ...rest, material: 'Modification locale antérieure' };
+                }
+                default: return ref;
+            }
+        });
+
+    /** Lieu témoin portant des occurrences des modèles réparés. */
+    const terrainLieu = () => ({
+        id: 'lieu-borderouge', name: 'Borderouge', modules: [{
+            id: 'module-pdq-bor', type: 'PLAN_QUARTIER', name: 'Plans de quartier', line: 'B',
+            data: { id: 'pdq-bor', stationName: 'Borderouge', stationCode: 'BOR', comment: '', occurrences: [
+                { id: 'occ-dibond', modelId: 'pdq-78x120-dibond', location: 'P+R 2 — fixation sur grillage', status: 'ToBeReplaced', comment: 'témoin', constatedAt: '2026-09-01T00:00:00.000Z', discoveredAt: '2026-09-01T00:00:00.000Z' },
+                { id: 'occ-adhesif', modelId: 'pdq-adhesif', location: 'Caisse auto CA01', status: 'OK', constatedAt: '2026-09-01T00:00:00.000Z', discoveredAt: '2026-09-01T00:00:00.000Z' },
+            ] },
+        }],
+    });
+
+    const seedV22 = async (name: string, references: SignageReference[], lieux: any[] = []) => {
+        const v22 = new Dexie(name);
+        v22.version(22).stores(V22_STORES);
+        await v22.open();
+        if (references.length) await v22.table('signageReferences').bulkAdd(references);
+        if (lieux.length) await v22.table('lieux').bulkAdd(lieux);
+        v22.close();
+    };
+
+    it('ancien référentiel : fiches PDQ/PEM 3D du seed, adca12 désactivée, pdq-78x120-dibond ajoutée, rien d\'autre modifié', async () => {
+        const name = uniqueDbName();
+        const before = oldReferences();
+        await seedV22(name, before);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const after = await upgraded.table('signageReferences').toArray() as SignageReference[];
+        const seed = new Map(buildSignageReferencesSeed().map(r => [r.id, r]));
+
+        for (const id of PDQ_IDS) expect(after.find(r => r.id === id)).toEqual(seed.get(id));
+        const adca12 = after.find(r => r.id === 'adca12')!;
+        expect(adca12.isDisabled).toBe(true);
+        expect(adca12.material).toBe('Modification locale antérieure'); // seul le drapeau change
+        expect(after.filter(r => r.id === 'pdq-78x120-dibond')).toEqual([seed.get('pdq-78x120-dibond')]);
+
+        const touched = new Set([...PDQ_IDS, 'adca12', 'pdq-78x120-dibond']);
+        for (const ref of after.filter(r => !touched.has(r.id))) {
+            expect(ref).toEqual(before.find(r => r.id === ref.id));
+        }
+        expect(after).toHaveLength(before.length + 1);
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('idempotente : une réouverture ne duplique ni ne modifie plus rien', async () => {
+        const name = uniqueDbName();
+        await seedV22(name, oldReferences());
+
+        const first = createAuditDb(name);
+        await first.open();
+        const afterFirst = byId(await first.table('signageReferences').toArray());
+        first.close();
+
+        const second = createAuditDb(name);
+        await second.open();
+        expect(byId(await second.table('signageReferences').toArray())).toEqual(afterFirst);
+        expect(await second.table('signageReferences').where('id').equals('pdq-78x120-dibond').count()).toBe(1);
+
+        second.close();
+        await Dexie.delete(name);
+    });
+
+    it('ne dégrade pas un référentiel déjà conforme', async () => {
+        const name = uniqueDbName();
+        const upToDate = buildSignageReferencesSeed();
+        await seedV22(name, upToDate);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect(byId(await upgraded.table('signageReferences').toArray())).toEqual(byId(upToDate));
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('table vide : aucune erreur, aucun référentiel reconstruit', async () => {
+        const name = uniqueDbName();
+        await seedV22(name, [], [terrainLieu()]);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect(await upgraded.table('signageReferences').count()).toBe(0);
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+
+    it('données terrain : lieux et occurrences strictement inchangés, désormais rattachés au référentiel', async () => {
+        const name = uniqueDbName();
+        const lieu = terrainLieu();
+        await seedV22(name, oldReferences(), [lieu]);
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect(await upgraded.table('lieux').toArray()).toEqual([lieu]);
+
+        const refs = await upgraded.table('signageReferences').toArray() as SignageReference[];
+        const index = buildPatrimoineIndex([lieu] as any, refs);
+        expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(1);
+        expect(index.bySupport.get('dibond')?.installed).toBe(1);
+
+        upgraded.close();
+        await Dexie.delete(name);
+    });
+});
