@@ -22,17 +22,17 @@
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Search, LucideIcon, ChevronDown, Download, ArrowLeft } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Search, LucideIcon, ChevronDown, Download, ArrowLeft, CheckCircle2, X } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
-import ReferenceSheet from './ReferenceSheet';
+import ReferenceSheet, { LineBadge } from './ReferenceSheet';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions, compareLines, displayReferenceName } from './labels';
-import { Selection, selectionFromReferences } from '../../utils/cockpit/selection';
+import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
 import { downloadImplantationsWorkbook, ImplantationExportRow, SyntheseExportRow } from '../../utils/cockpit/implantationsExporter';
-import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
+import { PatrimoineIndex, ImplantationRef } from '../../utils/cockpit/patrimoineIndex';
 import toast from 'react-hot-toast';
 
 /* ================= Références : liste filtrable ================= */
@@ -244,13 +244,22 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
     const [line, setLine] = useState<string>('ALL');
     const [status, setStatus] = useState<string>('ALL');
     const [query, setQuery] = useState('');
+    // Matières sélectionnées (cards) — vide = toutes les matières.
+    const [supports, setSupports] = useState<Set<SignageSupport>>(new Set());
+    const toggleSupport = (support: SignageSupport) => {
+        setSupports(prev => {
+            const next = new Set(prev);
+            if (next.has(support)) next.delete(support); else next.add(support);
+            return next;
+        });
+    };
 
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
     const lines = useMemo(() => Array.from(index.byLine.keys()).sort(compareLines), [index]);
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return index.implantations.filter(imp => {
+        return filterImplantationsBySupports(index.implantations, refById, supports).filter(imp => {
             if (line !== 'ALL' && imp.line !== line) return false;
             if (status === 'DEFECT') {
                 if (imp.status !== AdhesiveStatus.Absent && imp.status !== AdhesiveStatus.ToBeReplaced) return false;
@@ -262,23 +271,50 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
             }
             return true;
         });
-    }, [index, line, status, query, refById]);
+    }, [index, line, status, query, refById, supports]);
 
     // Regroupements par support et par ligne — directement depuis l'index.
     const supportEntries = useMemo(() => Array.from(index.bySupport.entries()), [index]);
 
     return (
         <div className="space-y-4">
-            {/* « Combien de Dibond ? de PVC ?... » — servi par l'index */}
+            {/* « Combien de Dibond ? de PVC ?... » — servi par l'index ; un
+                clic filtre les implantations (sélection multiple). */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                {supportEntries.map(([support, counts]) => (
-                    <div key={support} className="p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-center">
-                        <div className="text-xl font-bold text-slate-800 dark:text-slate-100">{counts.installed}</div>
-                        <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-0.5">{SUPPORT_LABELS[support]}</div>
-                        {counts.defects > 0 && <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">{counts.defects} défaut{counts.defects > 1 ? 's' : ''}</div>}
-                    </div>
-                ))}
+                {supportEntries.map(([support, counts]) => {
+                    const selected = supports.has(support);
+                    return (
+                        <button
+                            key={support}
+                            type="button"
+                            onClick={() => toggleSupport(support)}
+                            aria-pressed={selected}
+                            className={`relative p-3 rounded-lg border text-center transition-colors ${
+                                selected
+                                    ? 'border-teal-600 ring-2 ring-teal-600 bg-teal-50 dark:bg-teal-900/30 dark:border-teal-400 dark:ring-teal-400'
+                                    : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-teal-400 dark:hover:border-teal-500'
+                            }`}
+                        >
+                            {selected && <CheckCircle2 className="absolute top-1.5 right-1.5 w-4 h-4 text-teal-600 dark:text-teal-400" aria-hidden="true" />}
+                            <div className="text-xl font-bold text-slate-800 dark:text-slate-100">{counts.installed}</div>
+                            <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400 mt-0.5">{SUPPORT_LABELS[support]}</div>
+                            {counts.defects > 0 && <div className="text-[11px] font-semibold text-red-600 dark:text-red-400 mt-0.5">{counts.defects} défaut{counts.defects > 1 ? 's' : ''}</div>}
+                        </button>
+                    );
+                })}
             </div>
+            {supports.size > 0 && (
+                <div className="flex items-center gap-2 flex-wrap text-xs text-slate-500 dark:text-slate-400">
+                    <span>Matière{supports.size > 1 ? 's' : ''} : {Array.from(supports).map(s => SUPPORT_LABELS[s]).join(' + ')}</span>
+                    <button
+                        type="button"
+                        onClick={() => setSupports(new Set())}
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 font-semibold"
+                    >
+                        <X className="w-3 h-3" aria-hidden="true" /> Toutes matières
+                    </button>
+                </div>
+            )}
 
             {/* Filtres */}
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-wrap">
@@ -314,59 +350,139 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                 </select>
             </div>
 
-            {/* Table des implantations */}
-            <div className="overflow-auto max-h-[32rem] border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
-                <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
-                        <tr>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Lieu</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Contexte</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Équipement</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Statut</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filtered.slice(0, 500).map((imp, i) => {
-                            const ref = refById.get(imp.referenceId);
-                            return (
-                                <tr key={`${imp.moduleId}-${imp.equipmentLabel}-${imp.referenceId}-${i}`} className={`${i % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
-                                    <td className="p-3 whitespace-nowrap font-medium text-slate-800 dark:text-slate-100">
-                                        {imp.lieuName}
-                                        <span className="block text-[11px] text-slate-400">{imp.line === 'P+R' ? 'P+R' : `Ligne ${imp.line}`}</span>
-                                    </td>
-                                    <td className="p-3 text-slate-600 dark:text-slate-300 hidden sm:table-cell">{imp.context}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{imp.equipmentLabel}</td>
-                                    <td className="p-3">
-                                        <button
-                                            onClick={() => onOpenReference(imp.referenceId)}
-                                            className="text-teal-700 dark:text-teal-300 hover:underline text-left"
-                                        >
-                                            {ref?.name ?? imp.referenceId}
-                                        </button>
-                                    </td>
-                                    <td className="p-3 text-center">
-                                        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
-                                            {STATUS_LABELS[imp.status] ?? imp.status}
-                                        </span>
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                        {filtered.length === 0 && (
-                            <tr>
-                                <td colSpan={5} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
-                                    Aucune implantation ne correspond aux filtres.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+            {/* Arbre des implantations — même rendu que « Implantations
+                sélectionnées », aucune implantation tronquée. */}
+            <ImplantationsTree items={filtered} refById={refById} onOpenReference={onOpenReference} />
+            {filtered.length === 0 && (
+                <p className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
+                    Aucune implantation ne correspond aux filtres.
+                </p>
+            )}
             <p className="text-xs text-slate-400 dark:text-slate-500">
-                {filtered.length} implantation{filtered.length > 1 ? 's' : ''}
-                {filtered.length > 500 ? ' (500 premières affichées — affinez les filtres)' : ''} · source : moteur d'index du patrimoine.
+                {filtered.length} implantation{filtered.length > 1 ? 's' : ''} · source : moteur d'index du patrimoine.
             </p>
+        </div>
+    );
+};
+
+/* ================= Arbre des implantations (rendu partagé) ================= */
+// Ligne → Station → Accès/liaison → Équipement → Référence → Zone.
+// Même rendu pour « Implantations sélectionnées » et l'onglet Implantations :
+// lignes et stations repliables, aucune implantation tronquée.
+
+interface ImplantationsTreeProps {
+    items: ImplantationRef[];
+    refById: Map<string, SignageReference>;
+    onOpenReference: (id: string) => void;
+}
+
+const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, refById, onOpenReference }) => {
+    const groupedLines = useMemo(
+        () => groupImplantationsByLocation(items).sort((a, b) => compareLines(a.line, b.line)),
+        [items]
+    );
+
+    // Repliées par défaut, même principe que PlanQuartierOverview /
+    // ReferenceSheet : une sélection large peut couvrir des dizaines de
+    // stations, illisible empilé sur mobile. Ouverture indépendante par
+    // ligne et par station (comparer deux lignes/stations reste possible).
+    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
+    const [openStations, setOpenStations] = useState<Set<string>>(new Set());
+    const toggleSet = (set: Set<string>, setSet: (s: Set<string>) => void, key: string) => {
+        const next = new Set(set);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        setSet(next);
+    };
+
+    return (
+        <div className="space-y-3">
+            {groupedLines.map(({ line, stations, total: lineTotal }) => {
+                const isLineOpen = openLines.has(line);
+                return (
+                    <div key={line} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                        <button
+                            type="button"
+                            onClick={() => toggleSet(openLines, setOpenLines, line)}
+                            aria-expanded={isLineOpen}
+                            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
+                        >
+                            <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
+                                <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isLineOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                {line !== 'P+R' && <LineBadge line={line} />}
+                                {line === 'P+R' ? 'P+R' : `Ligne ${line}`}
+                            </span>
+                            <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lineTotal}</span>
+                        </button>
+                        {isLineOpen && (
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+                                {stations.map(station => {
+                                    const stationKey = `${line}__${station.stationName}`;
+                                    const isStationOpen = openStations.has(stationKey);
+                                    return (
+                                        <div key={stationKey}>
+                                            <button
+                                                type="button"
+                                                onClick={() => toggleSet(openStations, setOpenStations, stationKey)}
+                                                aria-expanded={isStationOpen}
+                                                className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
+                                                    <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isStationOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                                    {line !== 'P+R' && <LineBadge line={line} size="xs" />}
+                                                    <span className="truncate">{station.stationName}</span>
+                                                </span>
+                                                <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums flex-shrink-0">{station.total}</span>
+                                            </button>
+                                            {isStationOpen && (
+                                                <div className="px-4 pb-3 space-y-2.5">
+                                                    {station.contexts.map(ctx => (
+                                                        <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
+                                                            <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
+                                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{ctx.context}</span>
+                                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                {ctx.equipments.map(equip => (
+                                                                    <div key={equip.equipmentLabel}>
+                                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{equip.equipmentLabel}</p>
+                                                                        <ul className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-700">
+                                                                            {equip.items.map((imp, i) => {
+                                                                                const ref = refById.get(imp.referenceId);
+                                                                                return (
+                                                                                    <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-baseline justify-between gap-3">
+                                                                                        <span className="min-w-0 overflow-hidden">
+                                                                                            <button
+                                                                                                onClick={() => onOpenReference(imp.referenceId)}
+                                                                                                className="block text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline text-left truncate max-w-full"
+                                                                                            >
+                                                                                                {ref ? displayReferenceName(ref) : imp.referenceId}
+                                                                                            </button>
+                                                                                            {imp.zoneLabel && (
+                                                                                                <span className="block text-xs text-slate-500 dark:text-slate-400">{imp.zoneLabel}</span>
+                                                                                            )}
+                                                                                        </span>
+                                                                                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
+                                                                                            {STATUS_LABELS[imp.status] ?? imp.status}
+                                                                                        </span>
+                                                                                    </li>
+                                                                                );
+                                                                            })}
+                                                                        </ul>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                );
+            })}
         </div>
     );
 };
@@ -389,23 +505,6 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
     selection, index, references, onBack, onOpenReference,
 }) => {
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
-
-    const groupedLines = useMemo(
-        () => groupImplantationsByLocation(selection.items).sort((a, b) => compareLines(a.line, b.line)),
-        [selection]
-    );
-
-    // Repliées par défaut, même principe que PlanQuartierOverview /
-    // ReferenceSheet : une sélection large peut couvrir des dizaines de
-    // stations, illisible empilé sur mobile. Ouverture indépendante par
-    // ligne et par station (comparer deux lignes/stations reste possible).
-    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
-    const [openStations, setOpenStations] = useState<Set<string>>(new Set());
-    const toggleSet = (set: Set<string>, setSet: (s: Set<string>) => void, key: string) => {
-        const next = new Set(set);
-        if (next.has(key)) next.delete(key); else next.add(key);
-        setSet(next);
-    };
 
     const [isExporting, setIsExporting] = useState(false);
     const handleExport = async () => {
@@ -490,99 +589,13 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                 </button>
             </div>
 
-            {groupedLines.length === 0 && (
+            {total === 0 && (
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                     Aucune implantation connue pour cette sélection (références désactivées, hors scope, ou partout non applicable).
                 </p>
             )}
 
-            <div className="space-y-3">
-                {groupedLines.map(({ line, stations, total: lineTotal }) => {
-                    const isLineOpen = openLines.has(line);
-                    return (
-                        <div key={line} className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                            <button
-                                type="button"
-                                onClick={() => toggleSet(openLines, setOpenLines, line)}
-                                aria-expanded={isLineOpen}
-                                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left bg-slate-50 dark:bg-slate-800/60 hover:bg-slate-100 dark:hover:bg-slate-700/60 transition-colors"
-                            >
-                                <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
-                                    <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isLineOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                    {line === 'P+R' ? 'P+R' : `Ligne ${line}`}
-                                </span>
-                                <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lineTotal}</span>
-                            </button>
-                            {isLineOpen && (
-                                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                                    {stations.map(station => {
-                                        const stationKey = `${line}__${station.stationName}`;
-                                        const isStationOpen = openStations.has(stationKey);
-                                        return (
-                                            <div key={stationKey}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => toggleSet(openStations, setOpenStations, stationKey)}
-                                                    aria-expanded={isStationOpen}
-                                                    className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                                                >
-                                                    <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
-                                                        <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isStationOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                                        {station.stationName}
-                                                    </span>
-                                                    <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums flex-shrink-0">{station.total}</span>
-                                                </button>
-                                                {isStationOpen && (
-                                                    <div className="px-4 pb-3 space-y-2.5">
-                                                        {station.contexts.map(ctx => (
-                                                            <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
-                                                                <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
-                                                                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{ctx.context}</span>
-                                                                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
-                                                                </div>
-                                                                <div className="space-y-2">
-                                                                    {ctx.equipments.map(equip => (
-                                                                        <div key={equip.equipmentLabel}>
-                                                                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{equip.equipmentLabel}</p>
-                                                                            <ul className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-700">
-                                                                                {equip.items.map((imp, i) => {
-                                                                                    const ref = refById.get(imp.referenceId);
-                                                                                    return (
-                                                                                        <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-baseline justify-between gap-3">
-                                                                                            <span className="min-w-0">
-                                                                                                <button
-                                                                                                    onClick={() => onOpenReference(imp.referenceId)}
-                                                                                                    className="block text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline text-left truncate"
-                                                                                                >
-                                                                                                    {ref ? displayReferenceName(ref) : imp.referenceId}
-                                                                                                </button>
-                                                                                                {imp.zoneLabel && (
-                                                                                                    <span className="block text-xs text-slate-500 dark:text-slate-400">{imp.zoneLabel}</span>
-                                                                                                )}
-                                                                                            </span>
-                                                                                            <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
-                                                                                                {STATUS_LABELS[imp.status] ?? imp.status}
-                                                                                            </span>
-                                                                                        </li>
-                                                                                    );
-                                                                                })}
-                                                                            </ul>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
+            <ImplantationsTree items={selection.items} refById={refById} onOpenReference={onOpenReference} />
         </div>
     );
 };

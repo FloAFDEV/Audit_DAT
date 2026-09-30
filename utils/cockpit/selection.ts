@@ -28,6 +28,7 @@
 // =================================================================
 import { v4 as uuidv4 } from 'uuid';
 import { ImplantationRef, PatrimoineIndex } from './patrimoineIndex';
+import { SignageReference, SignageSupport } from '../../types';
 
 export type SelectionSource = 'reference' | 'implantation' | 'line' | 'site';
 
@@ -81,3 +82,18 @@ export const selectionFromLine = (index: PatrimoineIndex, line: string, label: s
  *  résultat de recherche) — source: 'implantation'. */
 export const selectionFromImplantations = (items: ImplantationRef[], label: string): Selection =>
     createSelection('implantation', label, items);
+
+/** Filtre matière (cards du Référentiel) : implantations dont la référence
+ *  porte l'un des supports demandés — même source que index.bySupport.
+ *  Sélection vide = toutes les matières (tableau d'entrée rendu tel quel). */
+export const filterImplantationsBySupports = (
+    implantations: ImplantationRef[],
+    refById: Map<string, SignageReference>,
+    supports: ReadonlySet<SignageSupport>,
+): ImplantationRef[] => {
+    if (supports.size === 0) return implantations;
+    return implantations.filter(imp => {
+        const support = refById.get(imp.referenceId)?.support;
+        return !!support && supports.has(support);
+    });
+};
