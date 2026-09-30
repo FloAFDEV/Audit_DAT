@@ -16,7 +16,7 @@ import { SignageReference } from '../../types';
 import { PatrimoineIndex, ReferenceUsage } from '../../utils/cockpit/patrimoineIndex';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
-import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, compareLines } from './labels';
 
 /** Ligne de transport → config visuelle (mêmes couleurs que partout
  *  ailleurs dans l'app, cf. AUDIT_CATEGORIES). 'P+R' n'a pas de config
@@ -151,7 +151,7 @@ const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
                 ...l,
                 lieux: [...l.lieux.values()].sort((a, b) => b.installed - a.installed || a.lieuName.localeCompare(b.lieuName)),
             }))
-            .sort((a, b) => b.installed - a.installed || a.line.localeCompare(b.line));
+            .sort((a, b) => compareLines(a.line, b.line));
     }, [usage]);
 
     if (byLine.length === 0) return null;

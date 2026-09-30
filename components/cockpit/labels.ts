@@ -2,6 +2,17 @@
 // Libellés partagés du cockpit — un seul vocabulaire pour toutes les sections.
 import { AdhesiveStatus, ArbitrageStatus, SignageDimensions, SignageScope, SignageSupport } from '../../types';
 
+/** Ordre de lecture métier des lignes — Ligne A, puis B, puis C, puis les
+ *  autres familles (P+R, TRAM, TELEO, AEROPORT) par ordre alphabétique.
+ *  Remplace un tri par volume (ligne la plus fournie en premier), peu
+ *  prévisible pour l'utilisateur et incohérent d'une référence à l'autre. */
+const LINE_ORDER: Record<string, number> = { A: 0, B: 1, C: 2 };
+export const compareLines = (a: string, b: string): number => {
+    const orderA = LINE_ORDER[a] ?? 99;
+    const orderB = LINE_ORDER[b] ?? 99;
+    return orderA !== orderB ? orderA - orderB : a.localeCompare(b);
+};
+
 export const SUPPORT_LABELS: Record<SignageSupport, string> = {
     adhesif: 'Adhésif',
     dibond: 'Dibond',
@@ -38,6 +49,17 @@ export const formatDimensions = (d?: SignageDimensions): string => {
     const h = d.height !== undefined ? String(d.height).replace('.', ',') : '?';
     return `${w} × ${h} ${d.unit}`;
 };
+
+/** Correction de PRÉSENTATION uniquement, jamais dans le catalogue lui-même
+ *  (data/adhesives.ts reste inchangé, aucune deuxième référence créée) —
+ *  désignation demandée à l'identique dans la vue Implantations et son
+ *  export .xlsx, pour eca-1 à ce jour. Toute autre référence garde son
+ *  nom catalogue tel quel. */
+const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
+    'eca-1': 'Repère 1 — Adhésif valideur-billetterie-métro-cible',
+};
+export const displayReferenceName = (ref: { id: string; name: string }): string =>
+    DISPLAY_NAME_OVERRIDES[ref.id] ?? ref.name;
 
 /** Décrit le scope d'implantation en clair pour la fiche et les listes. */
 export const formatScope = (scope: SignageScope): string => {

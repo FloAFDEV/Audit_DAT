@@ -58,6 +58,17 @@ export const createSelection = (
 export const selectionFromReference = (index: PatrimoineIndex, referenceId: string, label: string): Selection =>
     createSelection('reference', label, index.implantations.filter(i => i.referenceId === referenceId));
 
+/** Toutes les implantations d'un ENSEMBLE de références — source:
+ *  'reference', même contrat que selectionFromReference. Alimente la
+ *  sélection multiple de Référentiel → Implantations : la sélection
+ *  porte sur les identifiants réels (referenceId), jamais sur un
+ *  libellé affiché. Un id inconnu du patrimoine (aucune implantation)
+ *  ne lève pas — il contribue simplement 0 implantation. */
+export const selectionFromReferences = (index: PatrimoineIndex, referenceIds: string[], label: string): Selection => {
+    const ids = new Set(referenceIds);
+    return createSelection('reference', label, index.implantations.filter(i => ids.has(i.referenceId)));
+};
+
 /** Toutes les implantations d'un lieu — source: 'site'. */
 export const selectionFromSite = (index: PatrimoineIndex, lieuId: string, label: string): Selection =>
     createSelection('site', label, index.implantations.filter(i => i.lieuId === lieuId));

@@ -82,8 +82,9 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                     )}
                 </h3>
                 {occurrence.zoneLabel && (
-                    <p className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 mt-1">
-                        {occurrence.zoneLabel}
+                    <p className="text-sm mt-1">
+                        <span className="font-medium text-gray-500 dark:text-slate-400">Emplacement : </span>
+                        <span className="font-semibold text-indigo-600 dark:text-indigo-400">{occurrence.zoneLabel}</span>
                     </p>
                 )}
                 {location && (
