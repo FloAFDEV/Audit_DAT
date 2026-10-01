@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown } from 'lucide-react';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -20,6 +20,7 @@ import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
 import { formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
+import { BACHE_LINES, getBacheTotal, isLineRecensee } from '../../utils/cockpit/baches';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -892,6 +893,31 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
                     onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
                 />
+            </StatCard>
+
+            {/* Bâches de stations — recensement patrimonial indépendant de
+                l'audit (data/stationBaches.ts) : réseau complet, non filtré
+                par lieu. Détail dans Référentiel → Bâches de stations. */}
+            <StatCard title="Bâches de stations" icon={<Flag className="w-6 h-6" />}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {BACHE_LINES.map(line => (
+                        isLineRecensee(line) ? (
+                            <IndicatorTile
+                                key={line}
+                                value={getBacheTotal(line)}
+                                label={`Ligne ${line}`}
+                                hint="bâches physiques"
+                                tone="teal"
+                                onClick={() => nav.navigate({ section: 'referentiel', subSection: 'baches' })}
+                            />
+                        ) : (
+                            <div key={line} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
+                                <div className="font-semibold text-slate-700 dark:text-slate-200">Ligne {line}</div>
+                                <div className="italic">Non recensée</div>
+                            </div>
+                        )
+                    ))}
+                </div>
             </StatCard>
 
             {/* Stations avec Audit Spécifique — StatCard comme les autres
