@@ -20,6 +20,7 @@ import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
 import { formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
+import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, isLineRecensee } from '../../utils/cockpit/baches';
 
 /* =====================
@@ -902,17 +903,21 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     {BACHE_LINES.map(line => (
                         isLineRecensee(line) ? (
-                            <IndicatorTile
-                                key={line}
-                                value={getBacheTotal(line)}
-                                label={`Ligne ${line}`}
-                                hint="bâches physiques"
-                                tone="teal"
-                                onClick={() => nav.navigate({ section: 'referentiel', subSection: 'baches' })}
-                            />
+                            // Badge de ligne en surimpression (frère du bouton :
+                            // CategoryIcon est lui-même un bouton).
+                            <div key={line} className="relative">
+                                <IndicatorTile
+                                    value={getBacheTotal(line)}
+                                    label={`Ligne ${line}`}
+                                    hint="bâches physiques"
+                                    tone="teal"
+                                    onClick={() => nav.navigate({ section: 'referentiel', subSection: 'baches' })}
+                                />
+                                <div className="absolute top-2 left-2"><LineBadge line={line} /></div>
+                            </div>
                         ) : (
                             <div key={line} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-                                <div className="font-semibold text-slate-700 dark:text-slate-200">Ligne {line}</div>
+                                <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200"><LineBadge line={line} />Ligne {line}</div>
                                 <div className="italic">Non recensée</div>
                             </div>
                         )
