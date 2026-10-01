@@ -7,8 +7,8 @@ import { getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpi
 import { ALL_STATION_DEFS, REGISTRY_LINE_A, REGISTRY_LINE_B } from '../data/stationRegistry';
 
 describe('recensement des bâches de stations', () => {
-    it('totaux : ligne A = 23, ligne B = 56 (26 sens Ramonville + 30 sens Borderouge), ligne C non recensée', () => {
-        expect(getBacheTotal('A')).toBe(23);
+    it('totaux : ligne A = 43 (20 sens Balma-Gramont + 21 sens Basso Cambo + 2 doubles-sens), ligne B = 56 (26 sens Ramonville + 30 sens Borderouge), ligne C non recensée', () => {
+        expect(getBacheTotal('A')).toBe(43);
         expect(getBacheTotal('B')).toBe(56);
         expect(isLineRecensee('C')).toBe(false);
         expect(getBacheTotal('C')).toBe(0);
@@ -41,6 +41,7 @@ describe('recensement des bâches de stations', () => {
         const b = getBachesForLine('B').filter(r => r.stationCode === 'JJB');
         expect(a.map(r => [r.stationId, r.type, r.direction, r.count])).toEqual([
             ['sta-a-13', 'standard', 'Balma-Gramont', 0], // 0 relevé explicitement
+            ['sta-a-13', 'standard', 'Basso Cambo', 0],
             ['sta-a-13', 'double-sens', undefined, 1],
         ]);
         expect(b.map(r => [r.stationId, r.type, r.direction, r.count])).toEqual([
@@ -57,6 +58,14 @@ describe('recensement des bâches de stations', () => {
             ['standard', 'Basso Cambo', 1],
             ['double-sens', undefined, 1],
         ]);
+    });
+
+    it('ligne A sens retour (Basso Cambo) : 18 stations, 21 bâches, relevé du fichier', () => {
+        const ret = getBachesForLine('A').filter(b => b.direction === 'Basso Cambo');
+        expect(ret).toHaveLength(18);
+        expect(ret.reduce((n, b) => n + b.count, 0)).toBe(21);
+        const byCode = Object.fromEntries(ret.map(b => [b.stationCode, b.count]));
+        expect(byCode).toMatchObject({ BGR: 1, JOL: 1, JJA: 0, CAP: 2, ESQ: 4, MBC: 1 });
     });
 
     it('ligne B sens retour (Borderouge) : 20 stations, 30 bâches, relevé du fichier', () => {
