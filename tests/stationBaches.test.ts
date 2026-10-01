@@ -7,9 +7,9 @@ import { getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpi
 import { ALL_STATION_DEFS, REGISTRY_LINE_A, REGISTRY_LINE_B } from '../data/stationRegistry';
 
 describe('recensement des bâches de stations', () => {
-    it('totaux : ligne A = 23, ligne B = 26, ligne C non recensée', () => {
+    it('totaux : ligne A = 23, ligne B = 56 (26 sens Ramonville + 30 sens Borderouge), ligne C non recensée', () => {
         expect(getBacheTotal('A')).toBe(23);
-        expect(getBacheTotal('B')).toBe(26);
+        expect(getBacheTotal('B')).toBe(56);
         expect(isLineRecensee('C')).toBe(false);
         expect(getBacheTotal('C')).toBe(0);
         expect(getBachesForLine('C')).toEqual([]);
@@ -45,7 +45,8 @@ describe('recensement des bâches de stations', () => {
         ]);
         expect(b.map(r => [r.stationId, r.type, r.direction, r.count])).toEqual([
             ['sta-b-9', 'standard', 'Ramonville', 1],
-            ['sta-b-9', 'double-sens', undefined, 1],
+            ['sta-b-9', 'standard', 'Borderouge', 1],
+            ['sta-b-9', 'double-sens', undefined, 1], // une seule fois malgré les deux sens du relevé
         ]);
     });
 
@@ -56,6 +57,14 @@ describe('recensement des bâches de stations', () => {
             ['standard', 'Basso Cambo', 1],
             ['double-sens', undefined, 1],
         ]);
+    });
+
+    it('ligne B sens retour (Borderouge) : 20 stations, 30 bâches, relevé du fichier', () => {
+        const ret = getBachesForLine('B').filter(b => b.direction === 'Borderouge');
+        expect(ret).toHaveLength(20);
+        expect(ret.reduce((n, b) => n + b.count, 0)).toBe(30);
+        const byCode = Object.fromEntries(ret.map(b => [b.stationCode, b.count]));
+        expect(byCode).toMatchObject({ RAM: 2, FVE: 2, JAR: 4, CCA: 4, LVA: 2, TCO: 2, JJB: 1, BOR: 1 });
     });
 
     it('ordre physique du registre', () => {

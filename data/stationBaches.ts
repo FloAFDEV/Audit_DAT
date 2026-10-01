@@ -8,7 +8,8 @@
 // Donnée statique distribuée avec le build (comme stationRegistry) :
 // aucune table Dexie, aucune migration, aucun import/export.
 //
-// Source : tableaux métier du recensement (lignes A et B). Les stations
+// Source : tableaux métier du recensement (lignes A et B, ligne B dans
+// les deux sens). Les stations
 // absentes du recensement (ex. Parc du Canal, Labège Madron sur la ligne B,
 // toute la ligne C) n'ont simplement aucune entrée — jamais un 0 inventé.
 // Un count à 0 n'existe que lorsqu'il a été explicitement relevé.
@@ -83,6 +84,28 @@ export const STATION_BACHES: readonly StationBache[] = [
     std('B', 'sta-b-19', 'UPS', 'Ramonville', 'RAM', 1),
     std('B', 'sta-b-20', 'RAM', 'Ramonville', 'RAM', 1),
     ds('B', 'sta-b-9', 'JJB'),
+    // Sens retour (direction Borderouge). La double-sens de Jean Jaurès,
+    // listée dans les deux sens du relevé, n'est comptée qu'une fois (ci-dessus).
+    std('B', 'sta-b-20', 'RAM', 'Borderouge', 'BOR', 2),
+    std('B', 'sta-b-19', 'UPS', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-18', 'PHA', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-17', 'RAN', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-16', 'SAO', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-15', 'SAG', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-14', 'EMP', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-13', 'SMI', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-12', 'PDJ', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-11', 'CAR', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-10', 'FVE', 'Borderouge', 'BOR', 2),
+    std('B', 'sta-b-9', 'JJB', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-8', 'JAR', 'Borderouge', 'BOR', 4),
+    std('B', 'sta-b-7', 'CCA', 'Borderouge', 'BOR', 4),
+    std('B', 'sta-b-6', 'CAN', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-5', 'MIN', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-4', 'BPA', 'Borderouge', 'BOR', 1),
+    std('B', 'sta-b-3', 'LVA', 'Borderouge', 'BOR', 2),
+    std('B', 'sta-b-2', 'TCO', 'Borderouge', 'BOR', 2),
+    std('B', 'sta-b-1', 'BOR', 'Borderouge', 'BOR', 1),
 
     // ----- Ligne C : aucune donnée de recensement à ce jour -----
 ];
