@@ -177,6 +177,40 @@ interface AppState {
 export const DATA_VERSION = 'v13.2';
 
 /**
+ * Renommages de station : met à jour les noms déjà enregistrés sur
+ * l'appareil (le registre ne s'applique qu'à une base neuve). Seuls les
+ * libellés égaux à l'ancien nom changent — identifiants (lieu, modules,
+ * stations) et toute autre donnée restent intacts. Idempotente : appelée
+ * à chaque démarrage, sans effet une fois les noms corrigés.
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+const STATION_RENAMES: ReadonlyArray<{ from: string; to: string }> = [
+    { from: 'Parc du Canal', to: 'Parc Technologique du Canal' }, // PTC, sta-b-21
+];
+
+export const migrateStationRenames = (lieux: Lieu[]): boolean => {
+    let changed = false;
+    for (const { from, to } of STATION_RENAMES) {
+        const rename = <T extends object>(obj: T | undefined, key: keyof T) => {
+            if (obj && obj[key] === from) { (obj as any)[key] = to; changed = true; }
+        };
+        for (const lieu of lieux) {
+            rename(lieu, 'name');
+            for (const module of lieu.modules) {
+                const data = module.data as any;
+                rename(data, 'name');
+                rename(data, 'stationName');
+                for (const station of data?.stations ?? []) {
+                    rename(station, 'name');
+                    rename(station, 'lieuName');
+                }
+            }
+        }
+    }
+    return changed;
+};
+
+/**
  * Réconcilie le premier recensement connu des Plans de quartier
  * (data/planQuartierInitialInventory.ts) avec les modules PLAN_QUARTIER.
  * Occurrences RÉELLES (cataloguées, modelId renseigné) : l'inventaire
@@ -766,6 +800,10 @@ const useAuditStore = create<AppState>((set, get) => {
                         }
                     });
                 });
+
+                // Stations renommées (ex. Parc du Canal → Parc Technologique du Canal) —
+                // avant la réconciliation PDQ, qui rapproche les lieux par nom.
+                if (migrateStationRenames(data)) dataChanged = true;
 
                 // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et
                 // sème/enrichit l'inventaire initial connu, à chaque démarrage
