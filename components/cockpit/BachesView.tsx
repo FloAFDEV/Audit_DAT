@@ -31,8 +31,17 @@ const BachesView: React.FC = () => (
                         <p className="text-sm text-slate-500 dark:text-slate-400 italic">Ligne non recensée — aucune donnée de bâche à ce jour.</p>
                     ) : (
                         <div className="overflow-auto border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
-                            <table className="min-w-full text-sm">
-                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200">
+                            {/* Largeurs fixes : colonnes alignées d'un tableau de ligne à l'autre
+                                (sinon chaque tableau se dimensionne sur son propre contenu). */}
+                            <table className="w-full min-w-[720px] table-fixed text-sm">
+                                <colgroup>
+                                    <col className="w-[32%]" />
+                                    <col className="w-[11%]" />
+                                    <col className="w-[24%]" />
+                                    <col className="w-[18%]" />
+                                    <col className="w-[15%]" />
+                                </colgroup>
+                                <thead className="bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 whitespace-nowrap">
                                     <tr>
                                         <th className="p-3 font-bold text-xs uppercase tracking-wider">Station</th>
                                         <th className="p-3 font-bold text-xs uppercase tracking-wider">Code</th>
