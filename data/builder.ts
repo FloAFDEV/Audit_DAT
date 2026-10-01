@@ -360,6 +360,12 @@ const createPlanQuartierModule = (station: Partial<Station>, line: MetroLine | '
     };
 };
 
+/** Lieux renommés : l'identifiant reste celui dérivé de l'ancien nom, pour
+ *  qu'une base neuve et une base existante désignent le même lieu. */
+const STABLE_LIEU_IDS: Record<string, string> = {
+    'Parc Technologique du Canal': 'lieu-parc-du-canal',
+};
+
 export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
     return new Promise(resolve => {
         const modules: AuditModule[] = [
@@ -481,7 +487,7 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
             const lieuName = getLieuName(module);
             if (!lieuxMap.has(lieuName)) {
                 lieuxMap.set(lieuName, {
-                    id: `lieu-${lieuName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+                    id: STABLE_LIEU_IDS[lieuName] ?? `lieu-${lieuName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
                     name: lieuName,
                     modules: [],
                 });

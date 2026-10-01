@@ -185,7 +185,7 @@ export const createAuditDb = (name: string): AuditDb => {
     });
 });
 
-// V10: supprimer isFuture sur les stations B ext. (Parc du Canal sta-b-21, Labège Madron sta-b-22)
+// V10: supprimer isFuture sur les stations B ext. (Parc du Canal — aujourd'hui Parc Technologique du Canal — sta-b-21, Labège Madron sta-b-22)
 //      → DAT, ECA, PMR et Picto. Cognitifs ouverts, identiques aux autres stations Ligne B.
 //      Pour les DAT : initialise les directions (Borderouge / Ramonville) avec 4 DATs et adhésifs.
     instance.version(10).stores({
