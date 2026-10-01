@@ -203,3 +203,50 @@ describe('Nomenclature — NotApplicable exclu, désactivation conservée, migra
         expect(outOfScope(computeAdhesiveInventory(mutated, references))).toEqual(before);
     });
 });
+
+describe('Nomenclature — ECA de sortie déclaré sans adhésifs (isNotApplicable)', () => {
+    const references = buildSignageReferencesSeed();
+    const sortie = (isNotApplicable?: boolean) => ({
+        id: 's1', name: 'Tripode S1', accessPoint: 'Accès', type: EcaEquipmentType.TripodeSortie, number: 1,
+        comment: '', adhesives: { 'eca-11': AdhesiveStatus.NotChecked },
+        ...(isNotApplicable === undefined ? {} : { isNotApplicable }),
+    });
+    const entree = (isNotApplicable?: boolean) => ({
+        id: 'e1', name: 'Tripode E1', accessPoint: 'Accès', type: EcaEquipmentType.TripodeEntree, number: 2,
+        comment: '', adhesives: {},
+        ...(isNotApplicable === undefined ? {} : { isNotApplicable }),
+    });
+
+    it('ECA de sortie isNotApplicable : aucun eca-11, comme dans l\'index', () => {
+        const lieux = [ecaLieu([sortie(true)])];
+        expect(qty(computeAdhesiveInventory(lieux, references), 'eca-11')).toBe(0);
+        expect(buildPatrimoineIndex(lieux, references).byReference.has('eca-11')).toBe(false);
+    });
+
+    it('même ECA de sortie sans isNotApplicable (absent ou false) : eca-11 compté', () => {
+        expect(qty(computeAdhesiveInventory([ecaLieu([sortie()])], references), 'eca-11')).toBe(1);
+        expect(qty(computeAdhesiveInventory([ecaLieu([sortie(false)])], references), 'eca-11')).toBe(1);
+    });
+
+    it('ECA d\'entrée (isNotApplicable absent ou false) : comportement inchangé', () => {
+        for (const eca of [entree(), entree(false)]) {
+            const lieux = [ecaLieu([eca])];
+            const inventory = computeAdhesiveInventory(lieux, references);
+            const index = buildPatrimoineIndex(lieux, references);
+            expect(qty(inventory, 'eca-1')).toBe(1); // ZH
+            expect(qty(inventory, 'eca-11')).toBe(1);
+            for (const id of ['eca-1', 'eca-2', 'eca-11']) {
+                expect(qty(inventory, id)).toBe(index.byReference.get(id)?.installedCount ?? 0);
+            }
+        }
+    });
+
+    it('isFuture reste la seule règle des modules futurs : un module ECA futur hors périmètre n\'est pas compté', () => {
+        const lieu = ecaLieu([sortie()]);
+        (lieu.modules[0] as any).isFuture = true;
+        lieu.modules[0].line = 'A';
+        expect(qty(computeAdhesiveInventory([lieu], references), 'eca-11')).toBe(0);
+        lieu.modules[0].line = 'C'; // exception C : module futur auditable, compté
+        expect(qty(computeAdhesiveInventory([lieu], references), 'eca-11')).toBe(1);
+    });
+});
