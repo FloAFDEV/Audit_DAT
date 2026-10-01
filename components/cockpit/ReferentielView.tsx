@@ -22,11 +22,12 @@
 // unique (ReferenceSheet).
 // =================================================================
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpenCheck, MapPinned, Search, LucideIcon, ChevronDown, Download, ArrowLeft, CheckCircle2, X } from 'lucide-react';
+import { BookOpenCheck, MapPinned, Search, LucideIcon, ChevronDown, Download, ArrowLeft, CheckCircle2, X, Flag } from 'lucide-react';
 import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet, { LineBadge } from './ReferenceSheet';
+import BachesView from './BachesView';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions, compareLines, displayReferenceName, fieldDesignation, validatorTypeLabel, exportZoneLabel } from './labels';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
@@ -607,15 +608,16 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
 
 /* ================= Conteneur de section ================= */
 
-type ReferentielSubKey = 'references' | 'implantations';
+type ReferentielSubKey = 'references' | 'implantations' | 'baches';
 
 const SUB_SECTIONS: { key: ReferentielSubKey; label: string; Icon: LucideIcon }[] = [
     { key: 'references',    label: 'Références',     Icon: BookOpenCheck },
     { key: 'implantations', label: 'Implantations',   Icon: MapPinned },
+    { key: 'baches',        label: 'Bâches de stations', Icon: Flag },
 ];
 
 const isReferentielSubKey = (v: string): v is ReferentielSubKey =>
-    v === 'references' || v === 'implantations';
+    v === 'references' || v === 'implantations' || v === 'baches';
 
 interface ReferentielViewProps {
     lieux: Lieu[];
@@ -742,6 +744,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     onOpenReference={setOpenReferenceId}
                 />
             )}
+            {subSection === 'baches' && <BachesView />}
         </div>
     );
 };
