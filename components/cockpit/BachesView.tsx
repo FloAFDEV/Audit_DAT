@@ -4,6 +4,7 @@
 import React from 'react';
 import { BACHE_LINES, getBachesForLine, getBacheTotal, isLineRecensee } from '../../utils/cockpit/baches';
 import { BacheType } from '../../data/stationBaches';
+import { LineBadge } from './ReferenceSheet';
 
 const BACHE_TYPE_LABELS: Record<BacheType, string> = {
     standard: 'Standard',
@@ -18,8 +19,8 @@ const BachesView: React.FC = () => (
             const total = getBacheTotal(line);
             return (
                 <section key={line} className="space-y-2">
-                    <div className="flex items-baseline justify-between gap-3">
-                        <h3 className="text-base font-bold text-slate-800 dark:text-slate-100">Bâches — Ligne {line}</h3>
+                    <div className="flex items-center justify-between gap-3">
+                        <h3 className="flex items-center gap-2 text-base font-bold text-slate-800 dark:text-slate-100"><LineBadge line={line} />Bâches — Ligne {line}</h3>
                         {recensee && (
                             <span className="text-sm text-slate-600 dark:text-slate-300">
                                 <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{total}</span> bâche{total > 1 ? 's' : ''}
