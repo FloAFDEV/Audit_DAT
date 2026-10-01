@@ -418,6 +418,10 @@ export const computeAdhesiveInventory = (
 
                 if (module.type === AuditModuleType.ECA && referencesReady) {
                     for (const eca of (module.data as EcaData).ecas || []) {
+                        // ECA de sortie déclaré « sans adhésifs » (isNotApplicable,
+                        // cf. canEcaBeNotApplicable) : aucun exemplaire, comme dans
+                        // patrimoineIndex. Sans rapport avec isFuture.
+                        if (eca.isNotApplicable) continue;
                         // Occurrences plutôt que simples ids : un ECA PMR d'entrée
                         // ajoute eca-1 deux fois (zones ZH + ZB), un ECA d'entrée
                         // standard une fois (ZH) — addQty regroupe naturellement
