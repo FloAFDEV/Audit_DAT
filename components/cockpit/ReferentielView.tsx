@@ -28,7 +28,8 @@ import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet, { LineBadge } from './ReferenceSheet';
 import { useCockpitNav } from './cockpitNav';
-import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions, compareLines, displayReferenceName } from './labels';
+import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, STATUS_LABELS, formatDimensions, compareLines, displayReferenceName, fieldDesignation, validatorTypeLabel, exportZoneLabel } from './labels';
+import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
 import { downloadImplantationsWorkbook, ImplantationExportRow, SyntheseExportRow } from '../../utils/cockpit/implantationsExporter';
@@ -519,7 +520,9 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                 for (const lineEntry of usage.byLine) {
                     syntheseRows.push({
                         reference: refId,
-                        designation: displayReferenceName(ref),
+                        designation: fieldDesignation(ref),
+                        catalogDesignation: displayReferenceName(ref),
+                        dimensions: formatDimensions(ref.dimensions),
                         line: lineEntry.line,
                         count: lineEntry.installed,
                     });
@@ -531,17 +534,19 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
             const ligneSheets = lines.map(line => ({
                 line,
                 sheetName: line === 'P+R' ? 'P+R' : `Ligne ${line}`,
-                rows: selection.items
-                    .filter(i => i.line === line)
+                // Stations dans leur ordre physique sur la ligne (export uniquement).
+                rows: sortByPhysicalStationOrder(line, selection.items.filter(i => i.line === line), i => i.lieuName)
                     .map((imp): ImplantationExportRow => {
                         const ref = refById.get(imp.referenceId);
                         return {
                             station: imp.lieuName,
                             context: imp.context,
                             equipment: imp.equipmentLabel,
+                            validatorType: validatorTypeLabel(imp.equipmentType),
                             reference: imp.referenceId,
-                            designation: ref ? displayReferenceName(ref) : imp.referenceId,
-                            zoneLabel: imp.zoneLabel ?? '',
+                            designation: ref ? fieldDesignation(ref) : imp.referenceId,
+                            catalogDesignation: ref ? displayReferenceName(ref) : imp.referenceId,
+                            zoneLabel: exportZoneLabel(imp.equipmentType, imp.zone),
                             dimensions: ref ? formatDimensions(ref.dimensions) : '',
                             quantity: 1,
                         };

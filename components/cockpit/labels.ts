@@ -1,6 +1,7 @@
 // components/cockpit/labels.ts
 // Libellés partagés du cockpit — un seul vocabulaire pour toutes les sections.
-import { AdhesiveStatus, ArbitrageStatus, SignageDimensions, SignageScope, SignageSupport } from '../../types';
+import { AdhesiveStatus, ArbitrageStatus, EcaEquipmentType, SignageDimensions, SignageScope, SignageSupport } from '../../types';
+import { isPmrEcaType } from '../../data/eca_data';
 
 /** Ordre de lecture métier des lignes — Ligne A, puis B, puis C, puis les
  *  autres familles (P+R, TRAM, TELEO, AEROPORT) par ordre alphabétique.
@@ -60,6 +61,49 @@ const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
 };
 export const displayReferenceName = (ref: { id: string; name: string }): string =>
     DISPLAY_NAME_OVERRIDES[ref.id] ?? ref.name;
+
+// -----------------------------------------------------------------
+// Export Excel des implantations — présentation terrain uniquement.
+// Ni le catalogue ni les références ne changent : la référence exacte et
+// le nom catalogue restent exportés dans leurs propres colonnes.
+// -----------------------------------------------------------------
+
+/** Désignations terrain validées (ECA uniquement à ce jour). Toute autre
+ *  référence garde son nom catalogue dans l'export. */
+const FIELD_DESIGNATIONS: Record<string, string> = {
+    'eca-1': 'Cible sur zone validation',
+    'eca-2': 'Cadre gris autour du valideur',
+    'eca-3': 'OpenPayment sous vitre',
+    'eca-4': 'Cible sur zone validation PMR à bras',
+    'eca-5': 'Cible sur zone validation PMR à vantaux',
+    'eca-6': 'Pictogramme portillon PMR (bras)',
+    'eca-7': 'Pictogramme portillon PMR (vantaux)',
+    'eca-8': 'Pictogramme Bagages',
+    'eca-9': 'Pictogramme Poussette',
+    'eca-10': 'Pictogramme fauteuil roulant (UFR)',
+    'eca-11': 'Numéro du valideur',
+};
+export const fieldDesignation = (ref: { id: string; name: string }): string =>
+    FIELD_DESIGNATIONS[ref.id] ?? displayReferenceName(ref);
+
+const EXIT_ECA_TYPES: ReadonlySet<string> = new Set([EcaEquipmentType.TripodeSortie, EcaEquipmentType.VantauxSortie]);
+const ECA_TYPES: ReadonlySet<string> = new Set(Object.values(EcaEquipmentType));
+
+/** Type de valideur pour une implantation ECA ; vide pour les autres familles. */
+export const validatorTypeLabel = (equipmentType?: string): string => {
+    if (!equipmentType || !ECA_TYPES.has(equipmentType)) return '';
+    if (isPmrEcaType(equipmentType as EcaEquipmentType)) return 'Valideur PMR';
+    if (EXIT_ECA_TYPES.has(equipmentType)) return 'Valideur de sortie';
+    return 'Valideur standard';
+};
+
+/** Zone affichée dans l'export : uniquement sur un valideur PMR (seul cas
+ *  où deux zones coexistent). Un valideur standard n'affiche rien, même si
+ *  son occurrence interne est eca-1@ZH. */
+export const exportZoneLabel = (equipmentType: string | undefined, zone: 'ZH' | 'ZB' | undefined): string => {
+    if (!zone || !equipmentType || !isPmrEcaType(equipmentType as EcaEquipmentType)) return '';
+    return zone === 'ZH' ? 'ZH — Zone de validation haute' : 'ZB — Zone de validation basse (PMR)';
+};
 
 /** Décrit le scope d'implantation en clair pour la fiche et les listes. */
 export const formatScope = (scope: SignageScope): string => {

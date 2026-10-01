@@ -19,11 +19,15 @@ export interface ImplantationExportRow {
     station: string;
     context: string; // Accès / liaison
     equipment: string;
+    /** « Valideur standard / PMR / de sortie » pour un ECA, vide sinon. */
+    validatorType: string;
     reference: string;
+    /** Désignation terrain (lecture par les équipes de pose). */
     designation: string;
-    /** Libellé complet de zone (ex. « Zone de validation haute (ZH) ») —
-     *  chaîne vide quand l'implantation n'a pas de zone (tout ce qui n'est
-     *  pas eca-1 sur un ECA d'entrée). Jamais ZH/ZB seuls. */
+    /** Nom catalogue, conservé pour les commandes et la traçabilité. */
+    catalogDesignation: string;
+    /** Zone de validation, renseignée seulement quand elle est utile
+     *  (valideur PMR : ZH ou ZB) — vide sinon. */
     zoneLabel: string;
     dimensions: string;
     /** Toujours 1 : une ligne = une occurrence physique, jamais fusionnée. */
@@ -32,10 +36,19 @@ export interface ImplantationExportRow {
 
 export interface SyntheseExportRow {
     reference: string;
+    /** Désignation terrain. */
     designation: string;
+    /** Nom catalogue. */
+    catalogDesignation: string;
+    dimensions: string;
     line: string;
     count: number;
 }
+
+/** Emplacement prévu pour coller manuellement une petite image dans Excel
+ *  (colonne laissée vide : aucun visuel n'est stocké ni généré). */
+const VISUEL_COLUMN_WIDTH = 14;
+const VISUEL_ROW_HEIGHT = 48;
 
 const HEADER_FILL = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FF0F766E' } };
 const HEADER_FONT = { bold: true, color: { argb: 'FFFFFFFF' } };
@@ -58,9 +71,11 @@ const LIGNE_COLUMNS: Array<{ header: string; key: keyof ImplantationExportRow; m
     { header: 'Station', key: 'station', min: 14, max: 40 },
     { header: 'Accès / liaison', key: 'context', min: 14, max: 34 },
     { header: 'Équipement', key: 'equipment', min: 10, max: 30 },
+    { header: 'Type de valideur', key: 'validatorType', min: 12, max: 20 },
     { header: 'Référence', key: 'reference', min: 10, max: 14 },
-    { header: 'Désignation', key: 'designation', min: 30, max: 60 },
-    { header: 'Zone / emplacement', key: 'zoneLabel', min: 14, max: 40 },
+    { header: 'Désignation terrain', key: 'designation', min: 24, max: 45 },
+    { header: 'Désignation catalogue', key: 'catalogDesignation', min: 30, max: 60 },
+    { header: 'Zone', key: 'zoneLabel', min: 8, max: 40 },
     { header: 'Dimensions', key: 'dimensions', min: 12, max: 20 },
     { header: 'Quantité', key: 'quantity', min: 10, max: 12 },
 ];
@@ -95,17 +110,24 @@ export const buildImplantationsWorkbook = async (
 
     const syntheseSheet = workbook.addWorksheet('Synthèse', { views: [{ state: 'frozen', ySplit: 1 }] });
     syntheseSheet.columns = [
+        { header: 'Visuel', key: 'visuel', width: VISUEL_COLUMN_WIDTH },
         { header: 'Référence', key: 'reference', width: autoWidth('Référence', syntheseRows.map(r => r.reference), 10, 16) },
-        { header: 'Désignation', key: 'designation', width: autoWidth('Désignation', syntheseRows.map(r => r.designation), 30, 60) },
+        { header: 'Désignation terrain', key: 'designation', width: autoWidth('Désignation terrain', syntheseRows.map(r => r.designation), 24, 45) },
+        { header: 'Désignation catalogue', key: 'catalogDesignation', width: autoWidth('Désignation catalogue', syntheseRows.map(r => r.catalogDesignation), 30, 60) },
+        { header: 'Dimensions', key: 'dimensions', width: autoWidth('Dimensions', syntheseRows.map(r => r.dimensions), 12, 20) },
         { header: 'Ligne', key: 'line', width: 14 },
-        { header: "Nombre d'implantations", key: 'count', width: 24 },
+        { header: 'Quantité', key: 'count', width: 12 },
     ];
-    syntheseRows.forEach(r => syntheseSheet.addRow(r));
+    syntheseRows.forEach(r => {
+        const row = syntheseSheet.addRow(r); // Visuel laissé vide
+        row.height = VISUEL_ROW_HEIGHT;
+        row.alignment = { vertical: 'middle' };
+    });
     const totalGeneral = syntheseRows.reduce((sum, r) => sum + r.count, 0);
-    const totalRow = syntheseSheet.addRow({ reference: '', designation: '', line: 'TOTAL GÉNÉRAL', count: totalGeneral });
+    const totalRow = syntheseSheet.addRow({ line: 'TOTAL GÉNÉRAL', count: totalGeneral });
     totalRow.eachCell(cell => { cell.font = { bold: true }; });
     styleHeaderRow(syntheseSheet.getRow(1));
-    syntheseSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 4 } };
+    syntheseSheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: 7 } };
     syntheseSheet.getColumn('count').alignment = { horizontal: 'center' };
 
     ligneSheets.forEach(({ sheetName, rows }) => addLigneSheet(workbook, sheetName, rows));
