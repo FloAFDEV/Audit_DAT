@@ -6,13 +6,12 @@
 // Une bâche est un support physique ; seul compte :
 //   station + sens + type + nombre de bâches.
 // Donnée statique distribuée avec le build (comme stationRegistry) :
-// aucune table Dexie, aucune migration, aucun import/export.
+// aucune table Dexie, aucune migration, aucun import (export CSV seul).
 //
 // Source : tableaux métier du recensement (lignes A et B, dans les deux
-// sens). Les stations
-// absentes du recensement (ex. Parc du Canal, Labège Madron sur la ligne B,
-// toute la ligne C) n'ont simplement aucune entrée — jamais un 0 inventé.
-// Un count à 0 n'existe que lorsqu'il a été explicitement relevé.
+// sens). Les stations pas encore relevées (prolongement ligne B, ligne C)
+// ont une entrée par sens à 0 marquée `pending` ; sans `pending`, un 0 a
+// été explicitement relevé.
 // =================================================================
 
 export type BacheType = 'standard' | 'double-sens';
@@ -27,16 +26,37 @@ export interface StationBache {
     direction?: string;
     type: BacheType;
     count: number;
+    /** Quantité pas encore relevée : count vaut 0 en attendant le relevé
+     *  (≠ un 0 relevé explicitement, ex. Jean Jaurès ligne A). */
+    pending?: true;
+    /** Trigramme à afficher quand le registre n'en porte pas pour cette
+     *  ligne (Labège Madron ligne B). */
+    stationCode?: string;
 }
 
 const std = (line: BacheLine, stationId: string, code: string, direction: string, dirCode: string, count: number): StationBache => ({
     id: `bache-${line.toLowerCase()}-${code.toLowerCase()}-${dirCode.toLowerCase()}`,
     line, stationId, direction, type: 'standard', count,
 });
+/** Station sans relevé à ce jour : une entrée par sens, quantité 0 à relever. */
+const todo = (line: BacheLine, stationId: string, code: string, direction: string, dirCode: string, stationCode?: string): StationBache => ({
+    ...std(line, stationId, code, direction, dirCode, 0),
+    pending: true,
+    ...(stationCode ? { stationCode } : {}),
+});
+const todoBothWays = (line: BacheLine, stationId: string, code: string, ends: [string, string, string, string], stationCode?: string) => [
+    todo(line, stationId, code, ends[0], ends[1], stationCode),
+    todo(line, stationId, code, ends[2], ends[3], stationCode),
+];
+
 const ds = (line: BacheLine, stationId: string, code: string): StationBache => ({
     id: `bache-${line.toLowerCase()}-${code.toLowerCase()}-ds`,
     line, stationId, type: 'double-sens', count: 1,
 });
+
+/** Terminus des sens pour les stations sans relevé. */
+const B_EXT_ENDS: [string, string, string, string] = ['Labège Madron', 'LMA', 'Borderouge', 'BOR'];
+const C_ENDS: [string, string, string, string] = ['Labège Gare', 'LAG', 'Colomiers Gare', 'COG'];
 
 export const STATION_BACHES: readonly StationBache[] = [
     // ----- Ligne A -----
@@ -125,6 +145,30 @@ export const STATION_BACHES: readonly StationBache[] = [
     std('B', 'sta-b-3', 'LVA', 'Borderouge', 'BOR', 2),
     std('B', 'sta-b-2', 'TCO', 'Borderouge', 'BOR', 2),
     std('B', 'sta-b-1', 'BOR', 'Borderouge', 'BOR', 1),
+    // Prolongement (ouverture prochaine) : quantités à relever.
+    ...todoBothWays('B', 'sta-b-21', 'PTC', B_EXT_ENDS),
+    ...todoBothWays('B', 'sta-b-22', 'LMA', B_EXT_ENDS, 'LMA'),
 
-    // ----- Ligne C : aucune donnée de recensement à ce jour -----
+    // ----- Ligne C : stations connues, quantités à relever -----
+    ...todoBothWays('C', 'sta-c-1', 'COG', C_ENDS),
+    ...todoBothWays('C', 'sta-c-3', 'FLU', C_ENDS),
+    ...todoBothWays('C', 'sta-c-4', 'SMA', C_ENDS),
+    ...todoBothWays('C', 'sta-hub-bla', 'BLA', C_ENDS),
+    ...todoBothWays('C', 'sta-c-6', 'SDN', C_ENDS),
+    ...todoBothWays('C', 'sta-c-7', 'PJU', C_ENDS),
+    ...todoBothWays('C', 'sta-c-8', 'FON', C_ENDS),
+    ...todoBothWays('C', 'sta-c-9', 'LVH', C_ENDS),
+    ...todoBothWays('C', 'sta-c-10', 'TLA', C_ENDS),
+    ...todoBothWays('C', 'sta-c-11', 'RAI', C_ENDS),
+    ...todoBothWays('C', 'sta-c-12', 'BON', C_ENDS),
+    ...todoBothWays('C', 'sta-c-13', 'MAT', C_ENDS),
+    ...todoBothWays('C', 'sta-c-14', 'FVD', C_ENDS),
+    ...todoBothWays('C', 'sta-c-15', 'CPA', C_ENDS),
+    ...todoBothWays('C', 'sta-c-16', 'LIM', C_ENDS),
+    ...todoBothWays('C', 'sta-c-17', 'ORM', C_ENDS),
+    ...todoBothWays('C', 'sta-c-18', 'MOG', C_ENDS),
+    ...todoBothWays('C', 'sta-c-19', 'AEC', C_ENDS),
+    ...todoBothWays('C', 'sta-c-20', 'LMA', C_ENDS),
+    ...todoBothWays('C', 'sta-c-21', 'DIA', C_ENDS),
+    ...todoBothWays('C', 'sta-c-22', 'LAG', C_ENDS),
 ];

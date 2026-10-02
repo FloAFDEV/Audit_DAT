@@ -34,7 +34,7 @@ export const slugify = (text: string): string => {
 
 
 // Helper to create a download link for a file
-const downloadFile = (content: string, fileName: string, mimeType: string) => {
+export const downloadFile = (content: string, fileName: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);

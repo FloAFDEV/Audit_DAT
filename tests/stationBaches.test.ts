@@ -3,16 +3,15 @@
 // ligne non recensée — référentiel indépendant de l'audit.
 import { describe, it, expect } from 'vitest';
 import { STATION_BACHES } from '../data/stationBaches';
-import { getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpit/baches';
-import { ALL_STATION_DEFS, REGISTRY_LINE_A, REGISTRY_LINE_B } from '../data/stationRegistry';
+import { buildBachesCsv, filterBacheRows, getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpit/baches';
+import { ALL_STATION_DEFS, REGISTRY_LINE_A, REGISTRY_LINE_B, REGISTRY_LINE_C } from '../data/stationRegistry';
 
 describe('recensement des bâches de stations', () => {
     it('totaux : ligne A = 43 (20 sens Balma-Gramont + 21 sens Basso Cambo + 2 doubles-sens), ligne B = 56 (26 sens Ramonville + 30 sens Borderouge), ligne C non recensée', () => {
         expect(getBacheTotal('A')).toBe(43);
         expect(getBacheTotal('B')).toBe(56);
-        expect(isLineRecensee('C')).toBe(false);
+        expect(isLineRecensee('C')).toBe(false); // uniquement des quantités à relever
         expect(getBacheTotal('C')).toBe(0);
-        expect(getBachesForLine('C')).toEqual([]);
     });
 
     it('chaque bâche référence une station existante de sa ligne, ids uniques', () => {
@@ -21,7 +20,7 @@ describe('recensement des bâches de stations', () => {
         for (const b of STATION_BACHES) {
             const station = ALL_STATION_DEFS.find(s => s.id === b.stationId);
             expect(station, b.id).toBeDefined();
-            expect(station!.id.startsWith(`sta-${b.line.toLowerCase()}-`)).toBe(true);
+            expect(station!.lines).toContain(b.line);
         }
     });
 
@@ -69,7 +68,7 @@ describe('recensement des bâches de stations', () => {
     });
 
     it('ligne B sens retour (Borderouge) : 20 stations, 30 bâches, relevé du fichier', () => {
-        const ret = getBachesForLine('B').filter(b => b.direction === 'Borderouge');
+        const ret = getBachesForLine('B').filter(b => b.direction === 'Borderouge' && !b.pending);
         expect(ret).toHaveLength(20);
         expect(ret.reduce((n, b) => n + b.count, 0)).toBe(30);
         const byCode = Object.fromEntries(ret.map(b => [b.stationCode, b.count]));
@@ -86,7 +85,51 @@ describe('recensement des bâches de stations', () => {
         order('B', REGISTRY_LINE_B);
     });
 
-    it('stations hors recensement (Parc du Canal, Labège Madron) : aucune entrée, jamais un 0 inventé', () => {
-        expect(STATION_BACHES.some(b => b.stationId === 'sta-b-21' || b.stationId === 'sta-b-22')).toBe(false);
+    it('prolongement ligne B (PTC, LMA) : un sens chacun vers Labège Madron et Borderouge, 0 à relever', () => {
+        const ext = getBachesForLine('B').filter(b => b.stationId === 'sta-b-21' || b.stationId === 'sta-b-22');
+        expect(ext.map(r => [r.stationCode, r.direction, r.count, r.pending])).toEqual([
+            ['PTC', 'Labège Madron', 0, true],
+            ['PTC', 'Borderouge', 0, true],
+            ['LMA', 'Labège Madron', 0, true],
+            ['LMA', 'Borderouge', 0, true],
+        ]);
+    });
+
+    it('ligne C : 21 stations (Blagnac inclus) × 2 sens, 0 à relever, ordre de la ligne', () => {
+        const rows = getBachesForLine('C');
+        expect(rows).toHaveLength(42);
+        expect(rows.every(r => r.pending && r.count === 0 && r.type === 'standard')).toBe(true);
+        const codes = [...new Set(rows.map(r => r.stationCode))];
+        expect(codes).toHaveLength(21);
+        expect(codes.slice(0, 5)).toEqual(['COG', 'FLU', 'SMA', 'BLA', 'SDN']);
+        expect(codes[codes.length - 1]).toBe('LAG');
+        expect(codes.filter(c => c !== 'BLA')).toEqual(REGISTRY_LINE_C.map(s => s.code));
+        expect(new Set(rows.map(r => r.direction))).toEqual(new Set(['Labège Gare', 'Colomiers Gare']));
+    });
+
+    it('un 0 relevé (Jean Jaurès A) reste distinct d\'un 0 à relever', () => {
+        const jja = STATION_BACHES.filter(b => b.stationId === 'sta-a-13' && b.type === 'standard');
+        expect(jja.every(b => b.count === 0 && !b.pending)).toBe(true);
+        expect(isLineRecensee('A')).toBe(true);
+        expect(isLineRecensee('B')).toBe(true);
+    });
+
+    it('filtre par station : nom ou trigramme, sans accents ni casse', () => {
+        const all = getBachesForLine('B');
+        expect(new Set(filterBacheRows(all, 'jeanne d').map(r => r.stationCode))).toEqual(new Set(['JAR']));
+        expect(new Set(filterBacheRows(all, 'ptc').map(r => r.stationCode))).toEqual(new Set(['PTC']));
+        expect(filterBacheRows(getBachesForLine('C'), 'labege').map(r => r.stationCode)).toEqual(['LMA', 'LMA', 'LAG', 'LAG']);
+        expect(filterBacheRows(all, '  ')).toBe(all);
+    });
+
+    it('export CSV : en-tête, séparateur « ; », statut relevé / à relever', () => {
+        const rows = filterBacheRows(getBachesForLine('B'), 'madron');
+        const csv = buildBachesCsv(rows);
+        expect(csv.startsWith('\uFEFF')).toBe(true);
+        const lines = csv.slice(1).split('\r\n');
+        expect(lines[0]).toBe('Ligne;Station;Code;Direction;Type;Nb bâches;Statut');
+        expect(lines[1]).toBe('B;Labège Madron;LMA;Labège Madron;Standard;0;À relever');
+        expect(lines).toHaveLength(3);
+        expect(buildBachesCsv(filterBacheRows(getBachesForLine('A'), 'ESQ')).split('\r\n')[1]).toBe('A;Esquirol;ESQ;Balma-Gramont;Standard;2;Relevé');
     });
 });
