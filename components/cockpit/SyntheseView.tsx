@@ -21,7 +21,8 @@ import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitiv
 import { formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
 import { LineBadge } from './ReferenceSheet';
-import { BACHE_LINES, getBacheTotal, isLineRecensee } from '../../utils/cockpit/baches';
+import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
+import { isModuleInCurrentScope } from '../../utils/moduleScope';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -482,14 +483,33 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     const selectedLieuObject = useMemo(() => (lieux || []).find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
 
+    // Vue mono-lieu : un bloc n'est affiché que si le lieu porte ce type de
+    // module dans l'exploitation actuelle — un 0 ne doit jamais laisser croire
+    // à un équipement audité et vide là où il n'existe pas (Tram sans ECA,
+    // station sans P+R...). Vue réseau : tout reste affiché.
+    const lieuHas = (type: AuditModuleType): boolean =>
+        !selectedLieuObject || selectedLieuObject.modules.some(m => m.type === type && isModuleInCurrentScope(m));
+    const showDat = lieuHas(AuditModuleType.DAT);
+    const showPr = lieuHas(AuditModuleType.PR);
+    const showEca = lieuHas(AuditModuleType.ECA);
+    const showPmrFloor = lieuHas(AuditModuleType.PMR_FLOOR_ADHESIVE);
+    const showCogPicto = lieuHas(AuditModuleType.COGNITIVE_PICTOGRAMS);
+    const showSignaletique = lieuHas(AuditModuleType.SIGNALETIQUE);
+    const lieuBaches = useMemo(
+        () => (selectedLieuObject ? getBachesForLieu(selectedLieuObject.name) : []),
+        [selectedLieuObject],
+    );
+
     // Filtrer la liste des options du dropdown
     const filterOptions = useMemo(() => {
         if (!lieux) return [];
         if (!filterQuery) return lieux;
-        const lowerQuery = filterQuery.toLowerCase();
+        // Insensible à la casse et aux accents (« aeroconstellation » trouve Aéroconstellation).
+        const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        const query = normalize(filterQuery);
         return lieux.filter(l =>
-            l.name.toLowerCase().includes(lowerQuery) ||
-            (l.modules || []).some(m => m.type === AuditModuleType.DAT && (m.data as ModeData).stations?.[0]?.code?.toLowerCase().includes(lowerQuery))
+            normalize(l.name).includes(query) ||
+            (l.modules || []).some(m => m.type === AuditModuleType.DAT && normalize((m.data as ModeData).stations?.[0]?.code ?? '').includes(query))
         );
     }, [lieux, filterQuery]);
 
@@ -530,7 +550,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
-    const filteredInventory = (adhesiveInventory || []).filter(item =>
+    const filteredInventory = (adhesiveInventory || []).filter(item => !selectedLieuId || item.quantity > 0).filter(item =>
         (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.auditType || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.repere || '').toLowerCase().includes(searchTerm.toLowerCase())
@@ -782,9 +802,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 {/* Rangée 1 — DAT et P+R : deux familles de volume comparable,
                     répondant à la même question (combien de points, par
                     ligne ou par zone). */}
+                {(showDat || showPr) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
 
                     {/* DAT */}
+                    {showDat && (
                     <div>
                     <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
                     <div className="space-y-3 mt-2">
@@ -804,10 +826,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         )}
                     </div>
                     </div>
+                    )}
 
                     {/* Parkings Relais — même hiérarchie visuelle que DAT et
                         ECA : plus de titre de regroupement, le bloc est
                         introduit par son propre libellé principal. */}
+                    {showPr && (
                     <div>
                     {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
                     {/* Espacement intermédiaire : ces lignes sont des équipements
@@ -820,15 +844,18 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
                     </div>
                     </div>
+                    )}
                 </div>
+                )}
 
-                <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+                {(showDat || showPr) && showEca && <hr className="border-dashed border-slate-200 dark:border-slate-700" />}
 
                 {/* Rangée 2 — ECA sur toute la largeur. C'est le bloc le plus
                     dense de la carte (4 lignes × jusqu'à 8 types) : lui donner
                     la pleine largeur permet de disposer les lignes CÔTE À CÔTE
                     plutôt qu'empilées. On compare enfin les lignes entre elles
                     type par type, au lieu de faire défiler. */}
+                {showEca && (
                 <div>
                 {selectedLieuId ? (
                     <>
@@ -878,6 +905,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </>
                 )}
                 </div>
+                )}
+
+                {!showDat && !showPr && !showEca && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+                        Aucun DAT, P+R ni ECA en exploitation sur ce lieu.
+                    </p>
+                )}
 
                 </div>
             </StatCard>
@@ -887,6 +921,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 premier niveau : l'en-tête ad-hoc (icône + texte en dur) qui
                 doublait la grammaire visuelle du titre de carte a été
                 retirée au profit du titre/icône de la carte elle-même. */}
+            {lieuHas(AuditModuleType.PLAN_QUARTIER) && (
             <StatCard title="Plans de quartier" icon={<MapIcon className="w-6 h-6" />}>
                 <PlanQuartierOverview
                     patrimoineIndex={patrimoineIndex}
@@ -895,19 +930,26 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
                 />
             </StatCard>
+            )}
 
             {/* Bâches de stations — recensement patrimonial indépendant de
-                l'audit (data/stationBaches.ts) : réseau complet, non filtré
-                par lieu. Détail dans Référentiel → Bâches de stations. */}
+                l'audit (data/stationBaches.ts). Vue réseau : totaux par ligne.
+                Vue mono-lieu : uniquement les bâches de ce lieu (clé registre),
+                carte masquée s'il n'en a aucune (Tram, Téléo, P+R...).
+                Détail dans Référentiel → Bâches de stations. */}
+            {(!selectedLieuId || lieuBaches.length > 0) && (
             <StatCard title="Bâches de stations" icon={<Flag className="w-6 h-6" />}>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {BACHE_LINES.map(line => (
-                        isLineRecensee(line) ? (
+                    {BACHE_LINES.filter(line => !selectedLieuId || lieuBaches.some(b => b.line === line)).map(line => {
+                        const rows = selectedLieuId ? lieuBaches.filter(b => b.line === line) : null;
+                        const recensee = rows ? rows.some(b => !b.pending) : isLineRecensee(line);
+                        const total = rows ? rows.reduce((sum, b) => sum + b.count, 0) : getBacheTotal(line);
+                        return recensee ? (
                             // Badge de ligne en surimpression (frère du bouton :
                             // CategoryIcon est lui-même un bouton).
                             <div key={line} className="relative">
                                 <IndicatorTile
-                                    value={getBacheTotal(line)}
+                                    value={total}
                                     label={`Ligne ${line}`}
                                     hint="bâches physiques"
                                     tone="teal"
@@ -918,12 +960,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         ) : (
                             <div key={line} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
                                 <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200"><LineBadge line={line} />Ligne {line}</div>
-                                <div className="italic">Non recensée</div>
+                                <div className="italic">{rows ? 'Quantités à relever' : 'Non recensée'}</div>
                             </div>
-                        )
-                    ))}
+                        );
+                    })}
                 </div>
             </StatCard>
+            )}
 
             {/* Stations avec Audit Spécifique — StatCard comme les autres
                 sections de premier niveau (même grammaire visuelle que
@@ -931,8 +974,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 porte son total en N1, comme DAT, P+R et ECA : ce sont des
                 totaux de même niveau métier, ils ne peuvent pas se lire
                 comme un détail en pastille grise. */}
+            {(showPmrFloor || showCogPicto || showSignaletique) && (
             <StatCard title="Stations avec Audit Spécifique" icon={<ClipboardCheck className="w-6 h-6" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
+                {showPmrFloor && (
                 <div>
                 <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
                 {selectedLieuId ? null : (
@@ -944,6 +989,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                 )}
                 </div>
+                )}
+                {showCogPicto && (
                 <div>
                 <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} highlight="primary" />
                 {selectedLieuId ? null : (
@@ -955,6 +1002,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                 )}
                 </div>
+                )}
+                {showSignaletique && (
                 <div>
                 <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
                 {selectedLieuId ? null : (
@@ -964,8 +1013,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                 )}
                 </div>
+                )}
             </div>
             </StatCard>
+            )}
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
@@ -984,7 +1035,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             en donne le volume, pas l'état d'avancement d'un
                             contrôle (qui vit dans Analyse des anomalies). */}
                         <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
-                            <IndicatorTile value={activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
+                            <IndicatorTile value={selectedLieuId ? patrimoineIndex.totals.referencesInstalledCount : activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
                             <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
                         </div>
                         <div className="flex flex-wrap gap-3 pt-1">
@@ -1031,7 +1082,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du Produit</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions (cm)</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden lg:table-cell">Matière / Usage</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">Qté réseau</th>
+                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">{selectedLieuId ? 'Qté' : 'Qté réseau'}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -1050,7 +1101,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                         {(!filteredInventory || filteredInventory.length === 0) && (
                         <tr>
-                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">Aucun adhésif trouvé correspondant à la recherche "{searchTerm}"</td>
+                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">{searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} »` : 'Aucun adhésif sur ce lieu.'}</td>
                         </tr>
                         )}
                     </tbody>
@@ -1078,14 +1129,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                 <div className="text-lg font-bold text-teal-700 dark:text-teal-400">
                                     {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
                                 </div>
-                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">réseau</div>
+                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">{selectedLieuId ? 'qté' : 'réseau'}</div>
                             </div>
                         </div>
                     ))}
 
                     {(!filteredInventory || filteredInventory.length === 0) && (
                         <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                            Aucun adhésif trouvé correspondant à la recherche « {searchTerm} ».
+                            {searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} ».` : 'Aucun adhésif sur ce lieu.'}
                         </p>
                     )}
                 </div>
