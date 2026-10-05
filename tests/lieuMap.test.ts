@@ -34,8 +34,9 @@ describe('localisation d\'un lieu', async () => {
 
     it('lieu à plusieurs stations : la station en service d\'abord (La Vache : B en service, C future)', () => {
         expect(lieuCoordinates(byName('La Vache'))!.source).toBe('gtfs');
-        // Labège Madron : la station B n'a pas de coordonnées propres, celles de la C servent.
-        expect(lieuCoordinates(byName('Labège Madron'))).toEqual({ lat: 43.5539, lng: 1.5036, source: 'chantier' });
+        // Labège Madron : pôle d'échange B/C, mêmes coordonnées pour les deux stations.
+        expect(STATION_COORDINATES['sta-b-22']).toEqual(STATION_COORDINATES['sta-c-20']);
+        expect(lieuCoordinates(byName('Labège Madron'))).toEqual({ lat: 43.5436, lng: 1.5034, source: 'chantier' });
     });
 
     it('sans coordonnées connues : recherche par mode et nom', () => {

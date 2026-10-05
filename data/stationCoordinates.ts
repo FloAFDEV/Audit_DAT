@@ -87,6 +87,7 @@ export const STATION_COORDINATES: Readonly<Record<string, StationCoordinates>> =
     'sta-tel-2': { lat: 43.558294, lng: 1.452852, source: 'gtfs' }, // Hôpital Rangueil-Louis Lareng
     'sta-tel-3': { lat: 43.560645, lng: 1.463553, source: 'gtfs' }, // Université Paul-Sabatier
     'sta-b-21': { lat: 43.55166, lng: 1.48600, source: 'chantier' }, // Parc Technologique du Canal (Place du Canal / Rue Hermès, Ramonville-Saint-Agne)
+    'sta-b-22': { lat: 43.5436, lng: 1.5034, source: 'chantier' }, // Labège Madron, terminus ligne B — pôle d'échange B/C, mêmes coordonnées que la C
     'sta-c-1': { lat: 43.6044, lng: 1.3353, source: 'chantier' }, // Colomiers Gare
     'sta-c-3': { lat: 43.6086, lng: 1.3542, source: 'chantier' }, // Fontaine Lumineuse
     'sta-c-4': { lat: 43.6103, lng: 1.3717, source: 'chantier' }, // Saint-Martin-du-Touch (fourni : Saint-Martin du Touch)
@@ -105,7 +106,7 @@ export const STATION_COORDINATES: Readonly<Record<string, StationCoordinates>> =
     'sta-c-15': { lat: 43.5950, lng: 1.4628, source: 'chantier' }, // Côte Pavée (nom d'étude : Jean Rieux)
     'sta-c-16': { lat: 43.5911, lng: 1.4744, source: 'chantier' }, // Limayrac – Cité de l'Espace (nom d'étude : Côte Pavée - Limayrac)
     'sta-c-19': { lat: 43.5658, lng: 1.4886, source: 'chantier' }, // Aerospace Campus (nom d'étude : Montaudran Innovation Campus)
-    'sta-c-20': { lat: 43.5539, lng: 1.5036, source: 'chantier' }, // Labège Madron (nom d'étude : Institut Polytechnique de Toulouse)
+    'sta-c-20': { lat: 43.5436, lng: 1.5034, source: 'chantier' }, // Labège Madron, ligne C — pôle d'échange B/C (zone commerciale Labège 2)
     'sta-c-21': { lat: 43.5436, lng: 1.5094, source: 'chantier' }, // Diagora (nom d'étude : Labège Enova)
     'sta-c-22': { lat: 43.5358, lng: 1.5175, source: 'chantier' }, // Labège Gare
     'sta-aero-nad': { lat: 43.6247, lng: 1.3831, source: 'chantier' }, // Nadot
