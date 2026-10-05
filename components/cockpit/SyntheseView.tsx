@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag } from 'lucide-react';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -23,6 +23,7 @@ import { useCockpitNav } from './cockpitNav';
 import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
+import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -915,6 +916,33 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                 </div>
             </StatCard>
+
+            {/* Localisation — uniquement quand un lieu est sélectionné, pour se
+                projeter sur le terrain. Carte non interactive : un clic ouvre
+                Google Maps (site ou application) dans un nouvel onglet. */}
+            {selectedLieuObject && (
+                <StatCard title="Localisation" icon={<MapPin className="w-6 h-6" />}>
+                    <a
+                        href={lieuMapOpenUrl(selectedLieuObject)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="group relative block overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+                        aria-label={`Ouvrir ${selectedLieuObject.name} dans Google Maps`}
+                    >
+                        <iframe
+                            key={selectedLieuObject.id}
+                            src={lieuMapEmbedUrl(selectedLieuObject)}
+                            title={`Carte — ${lieuMapQuery(selectedLieuObject)}`}
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                            className="pointer-events-none block w-full h-48 sm:h-56 border-0"
+                        />
+                        <span className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-800/95 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 shadow group-hover:bg-white dark:group-hover:bg-slate-800">
+                            Ouvrir dans Google Maps <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
+                        </span>
+                    </a>
+                </StatCard>
+            )}
 
             {/* Plans de quartier (+ PEM 3D) — combien au total, de quel
                 format, puis où. StatCard comme les autres sections de
