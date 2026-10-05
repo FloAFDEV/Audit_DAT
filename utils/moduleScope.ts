@@ -1,18 +1,30 @@
 // utils/moduleScope.ts
 // =================================================================
-// PÉRIMÈTRE D'AUDIT — règle de portée partagée par tous les moteurs de
-// calcul dérivé (useStats, patrimoineIndex, signaletiqueStationIndex).
+// PÉRIMÈTRES D'UN MODULE — deux questions distinctes, une seule source.
 // -----------------------------------------------------------------
-// Un module marqué "futur" (isFuture) est exclu du périmètre audité
-// aujourd'hui — SAUF pour les lignes C et AEROPORT, auditables par
-// anticipation avant leur mise en service. C'est une décision métier,
-// pas un détail technique : elle était auparavant recopiée à l'identique
-// (et sous des formulations différentes) dans six emplacements distincts
-// à travers trois fichiers, avec le risque qu'une évolution du périmètre
-// (ex. une nouvelle ligne future rendue auditable) ne soit corrigée que
-// dans certains d'entre eux. Centralisée ici une fois pour toutes.
+// 1. Exploitation actuelle (isModuleInCurrentScope) : le module compte-t-il
+//    dans les calculs de l'exploitation d'aujourd'hui — statistiques,
+//    progression, conformité, nomenclature, patrimoine, anomalies, totaux ?
+//    Uniquement s'il n'est pas futur, quelle que soit la ligne.
+//
+// 2. Saisie / préparation (isModuleEditable) : peut-on ouvrir et renseigner
+//    le module à l'avance ? Oui s'il est en service ; pour une station
+//    future, uniquement sur les lignes C et AEROPORT (« Audit prévisionnel »).
+//    Une donnée saisie sur un module futur est une donnée de PRÉPARATION :
+//    conservée et modifiable, mais jamais comptée dans l'exploitation.
+//
+// Le statut futur d'un module vient du registre des stations (via
+// data/builder.ts) : aucune liste de stations ici.
 // =================================================================
 import { AuditModule } from '../types';
 
-export const isModuleInAuditScope = (module: Pick<AuditModule, 'isFuture' | 'line'>): boolean =>
-    !module.isFuture || module.line === 'B' || module.line === 'C' || module.line === 'AEROPORT';
+/** Lignes dont les stations futures peuvent être préparées avant ouverture. */
+const PREPARABLE_FUTURE_LINES: ReadonlySet<string> = new Set(['C', 'AEROPORT']);
+
+/** Exploitation actuelle : tout module en service, aucun module futur. */
+export const isModuleInCurrentScope = (module: Pick<AuditModule, 'isFuture'>): boolean =>
+    !module.isFuture;
+
+/** Saisie / préparation : en service, ou futur sur une ligne préparable. */
+export const isModuleEditable = (module: Pick<AuditModule, 'isFuture' | 'line'>): boolean =>
+    isModuleInCurrentScope(module) || PREPARABLE_FUTURE_LINES.has(module.line ?? '');

@@ -14,7 +14,7 @@ import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
-import { isModuleInAuditScope } from '../utils/moduleScope';
+import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { getEffectiveAdhesives, getEffectiveEcaAdhesiveOccurrences, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
 
@@ -59,7 +59,9 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
 
         const stationCountA = LINE_A_STATIONS.filter(s => !s.isFuture).length;
         const stationCountB = LINE_B_STATIONS.filter(s => !s.isFuture).length;
-        const stationCountC = LINE_C_STATIONS.length; // Count all for C as it's future but we audit it
+        // Stations en service uniquement : une station future (ligne C) reste
+        // dans le registre et les listes, mais n'est pas une station exploitée.
+        const stationCountC = LINE_C_STATIONS.filter(s => !s.isFuture).length;
         const stationCountAero = (TRAM_STATIONS.filter(s => s.lines.includes('AEROPORT')).length || 0);
         const stationCountTram = TRAM_STATIONS.filter(s => !s.isFuture).length;
         const stationCountTeleo = TELEO_STATIONS.filter(s => !s.isFuture).length;
@@ -67,7 +69,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (!isModuleInAuditScope(module)) continue;
+                if (!isModuleInCurrentScope(module)) continue;
 
                 switch (module.type) {
                     case AuditModuleType.DAT:
@@ -178,7 +180,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
 
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (module.type === AuditModuleType.ECA && isModuleInAuditScope(module)) {
+                if (module.type === AuditModuleType.ECA && isModuleInCurrentScope(module)) {
                     const data = module.data as EcaData;
                     const ecas = data.ecas || [];
 
@@ -207,11 +209,11 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
     }, [lieux]);
 
     const maintenanceSummary = useMemo(() => {
-        // Filter out future modules before passing to generator for live stats,
-        // but keep auditable future modules (Line C and AEROPORT).
+        // Exploitation actuelle uniquement : les données de préparation des
+        // modules futurs (C, AEROPORT) ne génèrent pas de maintenance.
         const activeLieux = lieux.map(lieu => ({
             ...lieu,
-            modules: lieu.modules.filter(isModuleInAuditScope)
+            modules: lieu.modules.filter(isModuleInCurrentScope)
         }));
         return generateMaintenanceSummary(activeLieux);
     }, [lieux]);
@@ -377,7 +379,7 @@ export const computeAdhesiveInventory = (
         // --- Compute quantities from lieux ---
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
-                if (!isModuleInAuditScope(module)) continue;
+                if (!isModuleInCurrentScope(module)) continue;
 
                 // DAT / P+R / ECA : un emplacement déclaré NotApplicable (non
                 // installé à cet endroit, cf. patrimoineIndex) n'est pas compté.

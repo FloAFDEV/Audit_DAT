@@ -1,6 +1,7 @@
 
 import { AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus } from '../types';
 import { getPrAdhesives, getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getEquipmentAdhesives } from '../data/adhesives';
+import { isModuleInCurrentScope } from './moduleScope';
 
 /**
  * Deeply clones an object and removes photo data to save space.
@@ -37,7 +38,7 @@ export const calculateComplianceScore = (data: any, type: 'SINGLE_AUDIT' | 'GLOB
     let totalOk = 0;
 
     const processModule = (module: AuditModule) => {
-        if (module.isFuture) return;
+        if (!isModuleInCurrentScope(module)) return;
 
         switch (module.type) {
             case AuditModuleType.DAT:

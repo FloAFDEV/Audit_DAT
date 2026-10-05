@@ -139,7 +139,7 @@ import {
     Lieu, AuditModuleType, ModeData, Pr, EcaData, AdhesiveStatus,
     SignageReference, SignageSupport, PlanQuartierData,
 } from '../../types';
-import { isModuleInAuditScope } from '../moduleScope';
+import { isModuleInCurrentScope } from '../moduleScope';
 import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, EcaValidationZone } from '../../data/adhesives';
 
 // -----------------------------------------------------------------
@@ -160,6 +160,8 @@ export interface ImplantationRef {
     /** "DAT 02", "BS01", "Valideur 3"... */
     equipmentLabel: string;
     equipmentType?: string;
+    /** Numéro de l'équipement quand la famille en porte un (ECA.number). */
+    equipmentNumber?: number;
     /** Nature du support d'implantation, quand la famille la porte (Plans de
      *  quartier : caisse automatique de P+R, AbriTram...). Absent = le cas
      *  courant de la famille. Classification métier reprise telle quelle de
@@ -296,10 +298,10 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
 
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
-            // Convention d'inclusion partagée avec les autres moteurs de calcul
-            // (useStats, signaletiqueStationIndex) : les modules "futurs" C et
-            // AEROPORT restent auditables donc comptés — cf. utils/moduleScope.ts.
-            if (!isModuleInAuditScope(module)) continue;
+            // Patrimoine d'exploitation actuelle (cf. utils/moduleScope.ts) : les
+            // données de préparation d'un module futur sont conservées mais
+            // n'entrent pas dans le patrimoine.
+            if (!isModuleInCurrentScope(module)) continue;
 
             switch (module.type) {
                 case AuditModuleType.DAT: {
@@ -353,6 +355,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                             context: eca.accessPoint,
                             equipmentLabel: eca.name,
                             equipmentType: eca.type,
+                            equipmentNumber: eca.number,
                         };
 
                         for (const ref of refs) {
