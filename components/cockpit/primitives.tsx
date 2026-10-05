@@ -46,13 +46,16 @@ export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title,
 );
 
 // StatCard optimisé pour l'esthétique
-export const StatCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, icon, children, className = '' }) => (
+/** `titleAside` (optionnel) : élément affiché à droite du titre, ex. les
+ *  badges de ligne du lieu filtré. */
+export const StatCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string; titleAside?: React.ReactNode }> = ({ title, icon, children, className = '', titleAside }) => (
   <section className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-teal-500/10 dark:border-slate-700/50 ${className}`}>
     <div className="flex items-center gap-4 mb-5">
-      <div className="w-12 h-12 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
+      <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
         {icon}
       </div>
       <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
+      {titleAside && <div className="flex-shrink-0">{titleAside}</div>}
     </div>
     <div className="space-y-6">{children}</div>
   </section>

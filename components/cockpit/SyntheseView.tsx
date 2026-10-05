@@ -773,6 +773,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 suit la densité réelle du bloc. */}
             <StatCard
                 title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"}
+                titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}
                 icon={<Building className="w-6 h-6" />}
             >
                 <div className="space-y-8">
@@ -921,7 +922,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 projeter sur le terrain. Carte non interactive : un clic ouvre
                 Google Maps (site ou application) dans un nouvel onglet. */}
             {selectedLieuObject && (
-                <StatCard title="Localisation" icon={<MapPin className="w-6 h-6" />}>
+                <StatCard title="Localisation" icon={<MapPin className="w-6 h-6" />} titleAside={<LieuBadges lieu={selectedLieuObject} />}>
                     <a
                         href={lieuMapOpenUrl(selectedLieuObject)}
                         target="_blank"
@@ -1052,6 +1053,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 transverse). */}
             <StatCard
                 title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
+                titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}
                 icon={<BookOpenCheck className="w-6 h-6" />}
             >
                 {refsLoading ? (
@@ -1085,7 +1087,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             </StatCard>
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
-            <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />}>
+            <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />} titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}>
                 <div>
                 <div className="relative mb-4">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
