@@ -37,7 +37,7 @@ export const useLieuList = ({ lieux, searchQuery, activeFilter, isOrderReversed,
             for (const module of lieu.modules) {
                 // Inclut les modules non-futurs, ou tous les modules quand on parcourt
                 // l'onglet Ligne C / Aéroport Express (exemption volontairement plus
-                // large que isModuleInAuditScope : elle s'applique à TOUS les modules
+                // large que isModuleEditable : elle s'applique à TOUS les modules
                 // du lieu dans cet onglet, pas seulement à ceux de cette ligne précise
                 // — un lieu de la catégorie peut contenir d'autres modules co-localisés).
                 // Le cas AEROPORT était absent ici sans conséquence observable : chaque

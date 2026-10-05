@@ -10,27 +10,16 @@
 // distribuée avec le build — sa correction se fait dans le code source,
 // jamais depuis l'application (aucune administration locale).
 // =================================================================
-import React, { useMemo, useState } from 'react';
-import { ArrowLeft, Ruler, Link2, Flag, Radar, ChevronDown } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { ArrowLeft, Ruler, Link2, Flag, Radar } from 'lucide-react';
 import { SignageReference } from '../../types';
-import { PatrimoineIndex, ReferenceUsage } from '../../utils/cockpit/patrimoineIndex';
-import { AUDIT_CATEGORIES } from '../../data/config';
-import { CategoryIcon } from '../CategoryIcon';
-import { SUPPORT_LABELS, STATUS_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, compareLines } from './labels';
+import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
+import { ImplantationsTree, ImplantationsExportButton } from './ImplantationsTree';
+import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
 
-/** Ligne de transport → config visuelle (mêmes couleurs que partout
- *  ailleurs dans l'app, cf. AUDIT_CATEGORIES). 'P+R' n'a pas de config
- *  de ligne (ce n'est pas une ligne) : CategoryIcon affiche alors le
- *  badge générique "Tout le réseau" — jamais utilisé ici pour du P+R
- *  puisqu'on retombe sur le label texte dans ce cas (cf. LineBadge). */
-const LINE_CATEGORY_KEY: Record<string, string> = {
-    A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE',
-};
-export const LineBadge: React.FC<{ line: string; size?: 'xs' | 'sm' }> = ({ line, size = 'sm' }) => {
-    if (line === 'P+R') return <span className="text-xs font-bold text-slate-600 dark:text-slate-300">P+R</span>;
-    const config = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line]);
-    return config ? <CategoryIcon categoryConfig={config} size={size} /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
-};
+// LineBadge vit avec l'arbre des implantations ; ré-exporté ici pour les
+// vues qui l'importaient déjà depuis la fiche.
+export { LineBadge } from './ImplantationsTree';
 
 /* ---------- briques locales de la fiche ---------- */
 
@@ -74,149 +63,17 @@ const Pill: React.FC<{ children: React.ReactNode; tone?: 'amber' | 'red' | 'slat
     return <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 };
 
-/** Deux libellés désignent-ils la même chose ? Insensible à la casse, aux
- *  accents et à la ponctuation de liaison : le registre orthographie certains
- *  pôles différemment selon la ligne qui les dessert. */
-const sameLabel = (a: string, b: string): boolean => {
-    const normalize = (s: string) => s
-        .normalize('NFD').replace(/[̀-ͯ]/g, '')
-        .toLowerCase().replace(/[^a-z0-9]/g, '');
-    return normalize(a) === normalize(b);
-};
-
 /* ---------- sections de la fiche ---------- */
 
-/**
- * Répartition d'une référence : UNE seule lecture, du général au précis —
- * ligne, puis station, puis implantation. La fiche présentait auparavant
- * « Par ligne » et « Par lieu » côte à côte : deux tableaux qui redisaient la
- * même chose, avec la ligne répétée sur chaque station et l'emplacement
- * répété sous son propre intitulé.
- *
- * Aucune donnée nouvelle : tout vient de usage.byLieu, dont chaque groupe
- * porte déjà sa ligne (cf. ImplantationGroup) — on la remonte d'un cran pour
- * qu'elle soit dite une fois, pas à chaque station.
- */
-const UsageBreakdown: React.FC<{ usage: ReferenceUsage }> = ({ usage }) => {
-    // Repliée par défaut : une référence à scope large (ex. Plans de
-    // quartier, posés sur la quasi-totalité d'une ligne) peut lister des
-    // dizaines de stations par ligne — un mur de texte au premier coup
-    // d'œil, surtout sur mobile où tout est en une colonne. Chaque ligne
-    // s'ouvre indépendamment (pas d'exclusivité : rien n'empêche de
-    // comparer deux lignes à la fois).
-    const [openLines, setOpenLines] = useState<Set<string>>(new Set());
-    const toggleLine = (line: string) => {
-        setOpenLines(prev => {
-            const next = new Set(prev);
-            if (next.has(line)) next.delete(line); else next.add(line);
-            return next;
-        });
-    };
-
-    const byLine = useMemo(() => {
-        const lines = new Map<string, {
-            line: string; installed: number;
-            lieux: Map<string, { lieuName: string; installed: number; implantations: Map<string, number> }>;
-        }>();
-        for (const lieu of usage.byLieu) {
-            for (const group of lieu.groups) {
-                const entry = lines.get(group.line) ?? { line: group.line, installed: 0, lieux: new Map() };
-                entry.installed += group.installed;
-                const lieuEntry = entry.lieux.get(lieu.lieuId)
-                    ?? { lieuName: lieu.lieuName, installed: 0, implantations: new Map<string, number>() };
-                lieuEntry.installed += group.installed;
-                // L'implantation n'est dite que si elle apprend quelque chose :
-                // quand elle reprend le nom de la station (aucun emplacement
-                // précis connu), la répéter sous le titre du groupe n'ajoute
-                // rien et allonge la lecture. Comparaison tolérante, car un
-                // même lieu s'écrit parfois différemment selon la ligne qui le
-                // dessert (« Université Paul Sabatier » côté métro,
-                // « Université Paul-Sabatier » côté Téléo).
-                if (group.context && !sameLabel(group.context, lieu.lieuName)) {
-                    // Un même emplacement portant plusieurs exemplaires est dit
-                    // une fois, avec sa quantité — le répéter à l'identique
-                    // allonge la fiche sans rien apprendre (un DAT peut avoir
-                    // quatre exemplaires « Salle des billets »).
-                    lieuEntry.implantations.set(
-                        group.context,
-                        (lieuEntry.implantations.get(group.context) ?? 0) + group.installed,
-                    );
-                }
-                entry.lieux.set(lieu.lieuId, lieuEntry);
-                lines.set(group.line, entry);
-            }
-        }
-        return [...lines.values()]
-            .map(l => ({
-                ...l,
-                lieux: [...l.lieux.values()].sort((a, b) => b.installed - a.installed || a.lieuName.localeCompare(b.lieuName)),
-            }))
-            .sort((a, b) => compareLines(a.line, b.line));
-    }, [usage]);
-
-    if (byLine.length === 0) return null;
-
-    return (
-        // Deux colonnes dès le desktop, empilées en dessous : chaque ligne de
-        // transport est un bloc autonome, jamais une cellule d'un tableau (d'où
-        // disparaît aussi la colonne vide de l'ancienne mise en page).
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-5">
-            {byLine.map(({ line, installed, lieux }) => {
-                const isOpen = openLines.has(line);
-                return (
-                <section key={line}>
-                    <button
-                        type="button"
-                        onClick={() => toggleLine(line)}
-                        aria-expanded={isOpen}
-                        className="flex w-full items-baseline justify-between gap-3 border-b border-slate-200 dark:border-slate-700 pb-1.5 text-left -mx-1 px-1 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                        <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
-                            <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                            <LineBadge line={line} />
-                            {line === 'P+R' ? 'Parcs relais' : `Ligne ${line}`}
-                        </span>
-                        <span className="flex items-baseline gap-1.5 flex-shrink-0">
-                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{installed}</span>
-                            <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                                exemplaire{installed > 1 ? 's' : ''}
-                            </span>
-                        </span>
-                    </button>
-                    {isOpen && (
-                    <ul className="mt-2 space-y-2">
-                        {lieux.map(lieu => (
-                            <li key={lieu.lieuName}>
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">{lieu.lieuName}</span>
-                                    <span className="flex-shrink-0 text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lieu.installed}</span>
-                                </div>
-                                {lieu.implantations.size > 0 && (
-                                    <ul className="mt-0.5 space-y-0.5">
-                                        {[...lieu.implantations.entries()].map(([label, count]) => (
-                                            <li
-                                                key={label}
-                                                className="text-xs text-slate-500 dark:text-slate-400 break-words pl-3 border-l border-slate-200 dark:border-slate-700"
-                                            >
-                                                {label}
-                                                {count > 1 && <span className="font-semibold text-slate-600 dark:text-slate-300"> ×{count}</span>}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                    )}
-                </section>
-                );
-            })}
-        </div>
-    );
-};
-
-const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineIndex }> = ({ reference, index }) => {
+const UsageSection: React.FC<{
+    reference: SignageReference;
+    references: SignageReference[];
+    index: PatrimoineIndex;
+    onOpenReference: (referenceId: string) => void;
+}> = ({ reference, references, index, onOpenReference }) => {
     const usage = index.byReference.get(reference.id);
+    const items = useMemo(() => index.implantations.filter(i => i.referenceId === reference.id), [index, reference.id]);
+    const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
     if (!usage) {
         return (
             <SheetSection title="Implantations sur le réseau" icon={<Radar className="w-4 h-4" />}>
@@ -240,7 +97,11 @@ const UsageSection: React.FC<{ reference: SignageReference; index: PatrimoineInd
                     <Field label="Types d'équipements" value={usage.equipmentTypes.join(', ')} />
                 </div>
             )}
-            <UsageBreakdown usage={usage} />
+            <div className="flex justify-end mb-3">
+                <ImplantationsExportButton items={items} index={index} refById={refById} />
+            </div>
+            {/* Même arbre que « Implantations sélectionnées » (rendu unique). */}
+            <ImplantationsTree items={items} refById={refById} onOpenReference={onOpenReference} />
         </SheetSection>
     );
 };
@@ -313,7 +174,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             </SheetSection>
 
             {/* Implantations (moteur d'index) */}
-            <UsageSection reference={reference} index={index} />
+            <UsageSection reference={reference} references={references} index={index} onOpenReference={onOpenReference} />
 
             {/* Relations */}
             {(reference.sameAs?.length || reference.pairedWith) && (

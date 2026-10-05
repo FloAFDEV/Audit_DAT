@@ -241,12 +241,12 @@ describe('Nomenclature — ECA de sortie déclaré sans adhésifs (isNotApplicab
         }
     });
 
-    it('isFuture reste la seule règle des modules futurs : un module ECA futur hors périmètre n\'est pas compté', () => {
+    it('module ECA futur : jamais compté en nomenclature, quelle que soit la ligne (préparation C incluse)', () => {
         const lieu = ecaLieu([sortie()]);
         (lieu.modules[0] as any).isFuture = true;
-        lieu.modules[0].line = 'A';
-        expect(qty(computeAdhesiveInventory([lieu], references), 'eca-11')).toBe(0);
-        lieu.modules[0].line = 'C'; // exception C : module futur auditable, compté
-        expect(qty(computeAdhesiveInventory([lieu], references), 'eca-11')).toBe(1);
+        for (const line of ['A', 'B', 'C', 'AEROPORT'] as const) {
+            lieu.modules[0].line = line;
+            expect(qty(computeAdhesiveInventory([lieu], references), 'eca-11')).toBe(0);
+        }
     });
 });

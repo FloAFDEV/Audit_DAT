@@ -118,19 +118,17 @@ describe('buildSignaletiqueStationIndex', () => {
         );
     });
 
-    it('module isFuture sur une ligne normale (hors B/C/AEROPORT) ignoré', () => {
+    it('module isFuture sur une ligne normale ignoré', () => {
         const index = buildSignaletiqueStationIndex([futureLieu()]);
         expect(index.items).toHaveLength(0);
         expect(index.totals.implantationCount).toBe(0);
     });
 
-    it("Lot 0 : module isFuture sur la Ligne B reste dans le périmètre (extension de l'exception C/AEROPORT)", () => {
-        const futureLieuB: Lieu = {
-            ...futureLieu(),
-            modules: [{ ...futureLieu().modules[0], line: 'B' }],
-        };
-        const index = buildSignaletiqueStationIndex([futureLieuB]);
-        expect(index.items.length).toBeGreaterThan(0);
+    it('module isFuture sur les Lignes B, C ou AEROPORT : hors exploitation, aucune anomalie (préparation non comptée)', () => {
+        for (const line of ['B', 'C', 'AEROPORT'] as const) {
+            const lieu: Lieu = { ...futureLieu(), modules: [{ ...futureLieu().modules[0], line }] };
+            expect(buildSignaletiqueStationIndex([lieu]).items).toHaveLength(0);
+        }
     });
 
     it('réseau vide -> index vide cohérent', () => {

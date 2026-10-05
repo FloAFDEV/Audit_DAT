@@ -3,6 +3,7 @@
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone, PlanQuartierData } from '../types';
 import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
+import { isModuleInCurrentScope } from './moduleScope';
 
 export enum ProgressStatus {
     NotStarted = 'NotStarted',
@@ -151,7 +152,7 @@ export const getPrZoneProgress = (zone: PrZone): number => {
  * This ensures all progress calculations are consistent.
  */
 const getModuleProgressCounts = (module: AuditModule): { applicable: number; checked: number; hasContent: boolean } => {
-    if (module.isFuture) return { applicable: 0, checked: 0, hasContent: false };
+    if (!isModuleInCurrentScope(module)) return { applicable: 0, checked: 0, hasContent: false };
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
@@ -311,7 +312,7 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
  * REFACTORED: Now uses the centralized getModuleProgressCounts.
  */
 export function getModuleProgress(module: AuditModule) {
-    if (module.isFuture) {
+    if (!isModuleInCurrentScope(module)) {
         return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
 
@@ -363,7 +364,7 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
     let hasAnyContent = false;
 
     for (const module of modulesToConsider) {
-        if (module.isFuture) continue;
+        if (!isModuleInCurrentScope(module)) continue;
         hasAnyNonFutureModule = true;
 
         const counts = getModuleProgressCounts(module);
@@ -403,7 +404,7 @@ export const getCategoryProgress = (
             : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
 
         for (const module of modulesToProcess) {
-            if (module.isFuture) continue;
+            if (!isModuleInCurrentScope(module)) continue;
             
             const counts = getModuleProgressCounts(module);
             totalApplicableItems += counts.applicable;

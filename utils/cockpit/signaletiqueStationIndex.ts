@@ -28,7 +28,7 @@
 //                      remplacer)
 // =================================================================
 import { Lieu, AuditModuleType, ModeData, EquipmentStatusType, MaintenanceItem, AuditCategory } from '../../types';
-import { isModuleInAuditScope } from '../moduleScope';
+import { isModuleInCurrentScope } from '../moduleScope';
 
 // Ligne -> catégorie : même correspondance que getCategoryForModule
 // (utils/maintenanceGenerator.ts, signature différente — opère sur un
@@ -111,10 +111,9 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
 
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
-            // Même convention d'inclusion que patrimoineIndex/useStats : les
-            // modules "futurs" C et AEROPORT restent auditables donc comptés
-            // (cf. utils/moduleScope.ts).
-            if (!isModuleInAuditScope(module)) continue;
+            // Exploitation actuelle uniquement (cf. utils/moduleScope.ts) : un
+            // module futur, même préparé, ne génère pas d'anomalie.
+            if (!isModuleInCurrentScope(module)) continue;
             if (module.type !== AuditModuleType.SIGNALETIQUE) continue;
 
             const base = {

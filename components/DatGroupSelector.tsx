@@ -7,7 +7,7 @@ import { LineIcon } from './LineIcon';
 import { getDirectionProgress } from '../utils/progressCalculators';
 import { CategoryIcon } from './CategoryIcon';
 import { AUDIT_CATEGORIES } from '../data/config';
-import { isModuleInAuditScope } from '../utils/moduleScope';
+import { isModuleEditable } from '../utils/moduleScope';
 
 interface DatGroupSelectorProps {
   module: AuditModule;
@@ -141,10 +141,9 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
             </div>
             <div className="space-y-4">
                 {stations.map(s => {
-                    // Règle métier canonique (utils/moduleScope.ts), partagée avec les
-                    // moteurs de calcul du Cockpit : une station future reste dans le
-                    // périmètre auditable uniquement pour les lignes C et AEROPORT.
-                    const outOfScope = !isModuleInAuditScope({ isFuture: s.isFuture, line: module.line });
+                    // Règle de saisie/préparation (utils/moduleScope.ts) : une station
+                    // future n'est préparable que sur les lignes C et AEROPORT.
+                    const outOfScope = !isModuleEditable({ isFuture: s.isFuture, line: module.line });
                     return (
                      <button
                         key={s.id}

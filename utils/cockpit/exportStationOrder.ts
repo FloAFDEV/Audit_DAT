@@ -1,8 +1,7 @@
 // utils/cockpit/exportStationOrder.ts
 // =================================================================
-// Ordre PHYSIQUE des stations dans les feuilles de l'export Excel des
-// implantations — uniquement pour l'export, l'ordre de l'application est
-// inchangé. Source canonique : les listes ordonnées de data/stations.ts
+// Ordre PHYSIQUE (réseau) des stations : feuilles de l'export Excel des
+// implantations et arbre des implantations (ImplantationsTree). Source canonique : les listes ordonnées de data/stations.ts
 // (déjà utilisées par hooks/useLieuList et utils/csvExporter), clé
 // lieuName || name ; P+R : l'ordre de data/pr_data.ts.
 // =================================================================

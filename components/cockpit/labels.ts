@@ -105,6 +105,19 @@ export const exportZoneLabel = (equipmentType: string | undefined, zone: 'ZH' | 
     return zone === 'ZH' ? 'ZH — Zone de validation haute' : 'ZB — Zone de validation basse (PMR)';
 };
 
+/** Équipement d'une implantation tel qu'affiché : un ECA est désigné par son
+ *  numéro et son type (« ECA n°08 · PMR à vantaux »), les autres familles
+ *  gardent leur libellé (« DAT 02 », « BS01 »...). */
+export const implantationEquipmentLabel = (imp: { equipmentLabel: string; equipmentType?: string; equipmentNumber?: number }): string =>
+    imp.equipmentType && ECA_TYPES.has(imp.equipmentType) && imp.equipmentNumber !== undefined
+        ? `ECA n°${String(imp.equipmentNumber).padStart(2, '0')} · ${imp.equipmentType}`
+        : imp.equipmentLabel;
+
+/** Zone de validation affichée sous une implantation : « ZH », « ZB (PMR) » ;
+ *  vide quand l'implantation n'a pas de zone. */
+export const implantationZoneLabel = (zone?: 'ZH' | 'ZB'): string =>
+    zone === 'ZB' ? 'ZB (PMR)' : zone ?? '';
+
 /** Décrit le scope d'implantation en clair pour la fiche et les listes. */
 export const formatScope = (scope: SignageScope): string => {
     if (scope.auditType === 'DAT') return 'Tous les DAT';

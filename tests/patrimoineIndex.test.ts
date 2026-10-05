@@ -233,18 +233,16 @@ describe('buildPatrimoineIndex', () => {
         expect(eca1[0].status).toBe(AdhesiveStatus.OK);
     });
 
-    it('module isFuture (hors B/C/AEROPORT) ignoré', () => {
+    it('module isFuture ignoré', () => {
         const index = buildPatrimoineIndex([futureLieu()], REFERENCES);
         expect(index.totals.implantationCount).toBe(0);
     });
 
-    it('Lot 0 : module isFuture sur la Ligne B reste dans le périmètre (extension de l\'exception C/AEROPORT)', () => {
-        const futureLieuB: Lieu = {
-            ...futureLieu(),
-            modules: [{ ...futureLieu().modules[0], line: 'B' }],
-        };
-        const index = buildPatrimoineIndex([futureLieuB], REFERENCES);
-        expect(index.totals.implantationCount).toBeGreaterThan(0);
+    it('module isFuture sur les Lignes B, C ou AEROPORT : hors patrimoine d\'exploitation (préparation non comptée)', () => {
+        for (const line of ['B', 'C', 'AEROPORT'] as const) {
+            const lieu: Lieu = { ...futureLieu(), modules: [{ ...futureLieu().modules[0], line }] };
+            expect(buildPatrimoineIndex([lieu], REFERENCES).totals.implantationCount).toBe(0);
+        }
     });
 
     it("« où cette référence est-elle utilisée ? » : agrégats par référence", () => {
