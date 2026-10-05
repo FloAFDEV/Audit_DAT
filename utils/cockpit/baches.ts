@@ -43,6 +43,16 @@ export const getBachesForLine = (line: BacheLine, baches: readonly StationBache[
         .map(x => x.row);
 };
 
+/** Bâches d'un lieu, toutes lignes confondues : une station appartient au
+ *  lieu dont le nom est sa clé de regroupement du registre (lieuName || name,
+ *  la même clé que l'ordre réseau) — Jean-Jaurès réunit ainsi JJA et JJB.
+ *  Un lieu sans station de métro recensée (Tram, Téléo, P+R...) n'en a aucune. */
+export const getBachesForLieu = (lieuName: string, baches: readonly StationBache[] = STATION_BACHES): BacheRow[] =>
+    BACHE_LINES.flatMap(line => {
+        const keyById = new Map(REGISTRY_BY_LINE[line].map(s => [s.id, s.lieuName || s.name]));
+        return getBachesForLine(line, baches).filter(r => keyById.get(r.stationId) === lieuName);
+    });
+
 /** Nombre total de bâches physiques d'une ligne. */
 export const getBacheTotal = (line: BacheLine, baches: readonly StationBache[] = STATION_BACHES): number =>
     baches.filter(b => b.line === line).reduce((sum, b) => sum + b.count, 0);

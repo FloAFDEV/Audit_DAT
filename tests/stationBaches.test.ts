@@ -3,7 +3,8 @@
 // ligne non recensée — référentiel indépendant de l'audit.
 import { describe, it, expect } from 'vitest';
 import { STATION_BACHES } from '../data/stationBaches';
-import { buildBachesCsv, filterBacheRows, getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpit/baches';
+import { buildBachesCsv, filterBacheRows, getBachesForLieu, getBachesForLine, getBacheTotal, isLineRecensee } from '../utils/cockpit/baches';
+import { generateInitialLieuxDataAsync } from '../data/builder';
 import { ALL_STATION_DEFS, REGISTRY_LINE_A, REGISTRY_LINE_B, REGISTRY_LINE_C } from '../data/stationRegistry';
 
 describe('recensement des bâches de stations', () => {
@@ -131,5 +132,20 @@ describe('recensement des bâches de stations', () => {
         expect(lines[1]).toBe('B;Labège Madron;LMA;Labège Madron;Standard;0;À relever');
         expect(lines).toHaveLength(3);
         expect(buildBachesCsv(filterBacheRows(getBachesForLine('A'), 'ESQ')).split('\r\n')[1]).toBe('A;Esquirol;ESQ;Balma-Gramont;Standard;2;Relevé');
+    });
+
+    it('bâches d\'un lieu (Synthèse filtrée) : uniquement ses stations, toutes lignes, aucune hors métro', async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        // Capitole : Ligne A seulement, 2 (Balma-Gramont) + 2 (Basso Cambo).
+        const cap = getBachesForLieu('Capitole');
+        expect(cap.every(b => b.line === 'A' && b.stationCode === 'CAP')).toBe(true);
+        expect(cap.reduce((n, b) => n + b.count, 0)).toBe(4);
+        // Jean-Jaurès réunit JJA (Ligne A) et JJB (Ligne B).
+        expect(new Set(getBachesForLieu('Jean-Jaurès').map(b => b.line))).toEqual(new Set(['A', 'B']));
+        // Arrêt de tram : aucune bâche.
+        expect(getBachesForLieu('Aéroconstellation')).toEqual([]);
+        // Chaque bâche appartient à exactement un lieu existant.
+        const assigned = lieux.flatMap(l => getBachesForLieu(l.name)).length;
+        expect(assigned).toBe(STATION_BACHES.length);
     });
 });
