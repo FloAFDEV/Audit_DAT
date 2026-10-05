@@ -39,16 +39,15 @@ describe('localisation d\'un lieu', async () => {
     });
 
     it('sans coordonnées connues : recherche par mode et nom', () => {
-        const ptc = byName('Parc Technologique du Canal');
-        expect(lieuCoordinates(ptc)).toBeUndefined();
-        expect(lieuMapQuery(ptc)).toBe('Station de métro Parc Technologique du Canal, Toulouse');
-        expect(lieuMapEmbedUrl(ptc)).toContain(encodeURIComponent('Station de métro Parc Technologique du Canal, Toulouse'));
         const prOnly = { id: 'pr-x', name: 'Exemple', modules: [{ id: 'm', type: AuditModuleType.PR, name: 'P+R', data: {} as any }] };
         expect(lieuMapQuery(prOnly)).toBe('Parc relais Exemple, Toulouse');
+        expect(lieuCoordinates(prOnly)).toBeUndefined();
+        expect(lieuMapEmbedUrl(prOnly)).toContain(encodeURIComponent('Parc relais Exemple, Toulouse'));
     });
 
-    it('couverture : tous les lieux sont localisés sauf ceux sans coordonnées connues à ce jour', () => {
+    it('couverture : tous les lieux du réseau sont localisés', () => {
         const missing = lieux.filter(l => !lieuCoordinates(l)).map(l => l.name).sort();
-        expect(missing).toEqual(['Parc Technologique du Canal']);
+        expect(missing).toEqual([]);
+        expect(lieuCoordinates(byName('Parc Technologique du Canal'))).toEqual({ lat: 43.55166, lng: 1.486, source: 'chantier' });
     });
 });

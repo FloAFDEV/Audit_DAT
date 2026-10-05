@@ -6,8 +6,9 @@
 // Utilisées uniquement pour situer un lieu sur une carte (Synthèse).
 //   gtfs      : zone d'arrêt du GTFS Tisséo (stops.txt, export du 21/09/2026),
 //               stations en service (métro A/B, tram T1, Téléo).
-//   chantier  : coordonnées fournies pour les stations futures (ligne C,
-//               Aéroport Express) — emprises de chantier, précision ~10 m.
+//   chantier  : coordonnées fournies pour les stations sans entrée GTFS
+//               (ligne C, Aéroport Express, prolongement B) — emprises de
+//               chantier, précision ~10 m.
 // Une station absente n'a pas de coordonnées connues : la carte retombe
 // alors sur une recherche par nom (utils/cockpit/lieuMap.ts).
 // =================================================================
@@ -85,6 +86,7 @@ export const STATION_COORDINATES: Readonly<Record<string, StationCoordinates>> =
     'sta-tel-1': { lat: 43.554698, lng: 1.428278, source: 'gtfs' }, // Oncopole-Lise Enjalbert
     'sta-tel-2': { lat: 43.558294, lng: 1.452852, source: 'gtfs' }, // Hôpital Rangueil-Louis Lareng
     'sta-tel-3': { lat: 43.560645, lng: 1.463553, source: 'gtfs' }, // Université Paul-Sabatier
+    'sta-b-21': { lat: 43.55166, lng: 1.48600, source: 'chantier' }, // Parc Technologique du Canal (Place du Canal / Rue Hermès, Ramonville-Saint-Agne)
     'sta-c-1': { lat: 43.6044, lng: 1.3353, source: 'chantier' }, // Colomiers Gare
     'sta-c-3': { lat: 43.6086, lng: 1.3542, source: 'chantier' }, // Fontaine Lumineuse
     'sta-c-4': { lat: 43.6103, lng: 1.3717, source: 'chantier' }, // Saint-Martin-du-Touch (fourni : Saint-Martin du Touch)
