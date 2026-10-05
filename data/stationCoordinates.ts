@@ -100,6 +100,11 @@ export const STATION_COORDINATES: Readonly<Record<string, StationCoordinates>> =
     'sta-c-14': { lat: 43.6011, lng: 1.4514, source: 'chantier' }, // François-Verdier (fourni : François Verdier)
     'sta-c-17': { lat: 43.5828, lng: 1.4794, source: 'chantier' }, // Ormeau (fourni : L'Ormeau)
     'sta-c-18': { lat: 43.5739, lng: 1.4789, source: 'chantier' }, // Montaudran Gare (fourni : Montaudran Gare - Piste des Géants)
+    'sta-c-15': { lat: 43.5950, lng: 1.4628, source: 'chantier' }, // Côte Pavée (nom d'étude : Jean Rieux)
+    'sta-c-16': { lat: 43.5911, lng: 1.4744, source: 'chantier' }, // Limayrac – Cité de l'Espace (nom d'étude : Côte Pavée - Limayrac)
+    'sta-c-19': { lat: 43.5658, lng: 1.4886, source: 'chantier' }, // Aerospace Campus (nom d'étude : Montaudran Innovation Campus)
+    'sta-c-20': { lat: 43.5539, lng: 1.5036, source: 'chantier' }, // Labège Madron (nom d'étude : Institut Polytechnique de Toulouse)
+    'sta-c-21': { lat: 43.5436, lng: 1.5094, source: 'chantier' }, // Diagora (nom d'étude : Labège Enova)
     'sta-c-22': { lat: 43.5358, lng: 1.5175, source: 'chantier' }, // Labège Gare
     'sta-aero-nad': { lat: 43.6247, lng: 1.3831, source: 'chantier' }, // Nadot
     'sta-aero-dau': { lat: 43.6292, lng: 1.3736, source: 'chantier' }, // Daurat

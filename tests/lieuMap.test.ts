@@ -34,6 +34,8 @@ describe('localisation d\'un lieu', async () => {
 
     it('lieu à plusieurs stations : la station en service d\'abord (La Vache : B en service, C future)', () => {
         expect(lieuCoordinates(byName('La Vache'))!.source).toBe('gtfs');
+        // Labège Madron : la station B n'a pas de coordonnées propres, celles de la C servent.
+        expect(lieuCoordinates(byName('Labège Madron'))).toEqual({ lat: 43.5539, lng: 1.5036, source: 'chantier' });
     });
 
     it('sans coordonnées connues : recherche par mode et nom', () => {
@@ -47,9 +49,6 @@ describe('localisation d\'un lieu', async () => {
 
     it('couverture : tous les lieux sont localisés sauf ceux sans coordonnées connues à ce jour', () => {
         const missing = lieux.filter(l => !lieuCoordinates(l)).map(l => l.name).sort();
-        expect(missing).toEqual([
-            'Aerospace Campus', 'Côte Pavée', 'Diagora', 'Labège Madron',
-            "Limayrac – Cité de l'Espace", 'Parc Technologique du Canal',
-        ].sort());
+        expect(missing).toEqual(['Parc Technologique du Canal']);
     });
 });
