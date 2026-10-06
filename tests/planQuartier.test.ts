@@ -14,6 +14,7 @@ import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { buildPatrimoineIndex, resolveReferencesForEquipment } from '../utils/cockpit/patrimoineIndex';
 import { AuditModuleType, AdhesiveStatus, Lieu, PlanQuartierData } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
+import { PLAN_QUARTIER_INITIAL_INVENTORY } from '../data/planQuartierInitialInventory';
 import { buildFullExportPayload, parseImportPayload } from '../utils/signageSerializer';
 
 describe('data/builder.ts — createPlanQuartierModule', () => {
@@ -692,14 +693,14 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
 
         // Ventilation complète du patrimoine — le total ne masque jamais
         // d'où il vient, et les 10 plans de caisse auto n'y comptent qu'une
-        // fois (sinon 64 au lieu de 54).
-        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(14);
-        expect(index.byReference.get('pdq-78x120')?.installedCount).toBe(13);
+        // fois (sinon 67 au lieu de 57).
+        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(16);
+        expect(index.byReference.get('pdq-78x120')?.installedCount).toBe(14);
         expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(2);
         expect(index.byReference.get('pem3d-120x80')?.installedCount).toBe(10);
         const pdqTotal = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80']
             .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
-        expect(pdqTotal).toBe(54);
+        expect(pdqTotal).toBe(57);
     });
 
     it('le contexte d\'implantation survit à un export/import complet', async () => {
@@ -795,5 +796,23 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         // François Verdier : UN seul exemplaire, jamais trois.
         expect(occurrencesOf('François Verdier')).toHaveLength(1);
         expect(occurrencesOf('François Verdier')[0].location).toBe('Édicule (extérieur)');
+    });
+});
+
+describe('inventaire de départ — Saint-Michel - Marcel Langer (Ligne B)', () => {
+    it('2 × 78x100 en édicule extérieur et 1 × 78x120 en station, visibles dans le patrimoine', async () => {
+        const entries = PLAN_QUARTIER_INITIAL_INVENTORY.filter(e => e.stationName === 'Saint-Michel - Marcel Langer');
+        expect(entries.map(e => [e.line, e.modelId, e.quantity, e.location])).toEqual([
+            ['B', 'pdq-78x100', 2, 'Édicule (extérieur)'],
+            ['B', 'pdq-78x120', 1, 'Intérieur station'],
+        ]);
+        // Le module existe : l'inventaire sera semé au démarrage (base neuve
+        // comme base existante), puis repris par le patrimoine et la Synthèse.
+        const lieux = await generateInitialLieuxDataAsync();
+        const pdq = lieux.flatMap(l => l.modules).find(m =>
+            m.type === AuditModuleType.PLAN_QUARTIER && m.line === 'B'
+            && (m.data as PlanQuartierData).stationName === 'Saint-Michel - Marcel Langer');
+        expect(pdq).toBeDefined();
+        expect(buildSignageReferencesSeed().some(r => r.id === 'pdq-78x100')).toBe(true);
     });
 });
