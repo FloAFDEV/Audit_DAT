@@ -760,10 +760,11 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             {/* COCKPIT — sous xl : une colonne, ordre de lecture terrain
                 (anomalies → aperçu → localisation → annexes). À partir de xl :
                 pilotage à gauche (anomalies, équipements), contexte à droite
-                (localisation, annexes) ; Référentiel et Inventaire repassent
-                en pleine largeur sous la grille. */}
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8 items-start">
-            <div className="space-y-8 min-w-0">
+                (localisation, annexes) ; le Référentiel se place sous l'aperçu
+                (colonne droite sur deux rangées), sans changer l'ordre DOM ;
+                l'Inventaire repasse en pleine largeur sous la grille. */}
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-rows-[auto_1fr] gap-8 items-start">
+            <div className="space-y-8 min-w-0 xl:col-start-1 xl:row-start-1">
             {anomaliesSection}
 
             {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
@@ -926,7 +927,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             </StatCard>
             </div>
 
-            <div className="space-y-8 min-w-0">
+            <div className="space-y-8 min-w-0 xl:col-start-2 xl:row-start-1 xl:row-span-2">
             {/* Localisation — uniquement quand un lieu est sélectionné, pour se
                 projeter sur le terrain. Carte non interactive : un clic ouvre
                 Google Maps (site ou application) dans un nouvel onglet. */}
@@ -1056,7 +1057,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             </StatCard>
             )}
             </div>
-            </div>
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
@@ -1066,6 +1066,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
                 titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}
                 icon={<BookOpenCheck className="w-6 h-6" />}
+                className="min-w-0 xl:col-start-1 xl:row-start-2"
             >
                 {refsLoading ? (
                     <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
@@ -1096,6 +1097,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </>
                 )}
             </StatCard>
+            </div>
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
             <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />} titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}>
