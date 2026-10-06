@@ -325,7 +325,7 @@ const PlanQuartierOverview: React.FC<{
             </div>
 
             {/* Bande 2 — par format (N3). Vue « bureau » : préparer une commande. */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-3 gap-3">
                 {tiles.map(t => (
                     <IndicatorTile
                         key={t.id}
@@ -368,7 +368,7 @@ const PlanQuartierOverview: React.FC<{
             )}
 
             {/* Bande 3 — par ligne puis station. Vue « terrain » : où aller. */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-1 gap-x-8 gap-y-4">
                 {byLine.map(({ line, cfg, label, installed, stations }) => {
                     const isOpen = openLines.has(line);
                     return (
@@ -628,7 +628,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 sur une seconde rangée aux deux tiers vide. items-start évite
                 que les cartes compactes (0 anomalie) soient étirées à la
                 hauteur d'une carte voisine en anomalie. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2 gap-4 items-start">
                 <AnomalySummaryCard
                     icon={<BookOpenCheck className="w-4 h-4" />}
                     title="Signalétique IV"
@@ -757,6 +757,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 recalcule rien. Signalétique IV oriente vers Analyse des
                 anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
                 cognitifs ouvrent la liste existante faute de section dédiée. */}
+            {/* COCKPIT — sous xl : une colonne, ordre de lecture terrain
+                (anomalies → aperçu → localisation → annexes). À partir de xl :
+                pilotage à gauche (anomalies, équipements), contexte à droite
+                (localisation, annexes) ; Référentiel et Inventaire repassent
+                en pleine largeur sous la grille. */}
+            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-8 items-start">
+            <div className="space-y-8 min-w-0">
             {anomaliesSection}
 
             {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
@@ -917,7 +924,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                 </div>
             </StatCard>
+            </div>
 
+            <div className="space-y-8 min-w-0">
             {/* Localisation — uniquement quand un lieu est sélectionné, pour se
                 projeter sur le terrain. Carte non interactive : un clic ouvre
                 Google Maps (site ou application) dans un nouvel onglet. */}
@@ -1005,7 +1014,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 comme un détail en pastille grise. */}
             {(showPmrFloor || showCogPicto || showSignaletique) && (
             <StatCard title="Stations avec Audit Spécifique" icon={<ClipboardCheck className="w-6 h-6" />}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-x-8 gap-y-6">
                 {showPmrFloor && (
                 <div>
                 <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
@@ -1046,6 +1055,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             </div>
             </StatCard>
             )}
+            </div>
+            </div>
 
             {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
                 L'exploitation se fait dans les sections Référentiel / Analyse
