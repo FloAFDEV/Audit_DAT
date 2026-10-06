@@ -17,6 +17,16 @@ export const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: 
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
 };
 
+export const TRAM_DIRECTION_MEETT = 'Direction MEETT / Aéroport';
+export const TRAM_DIRECTION_PDJ = 'Direction Palais de Justice';
+
+/** Stations T1 (code registre) dont tous les DAT sont dans une seule direction. */
+export const TRAM_SINGLE_DIRECTION_DATS: Readonly<Record<string, string>> = {
+    ARE: TRAM_DIRECTION_MEETT,  // Arènes
+    GAS: TRAM_DIRECTION_PDJ,    // Aéroconstellation
+    MET: TRAM_DIRECTION_PDJ,    // MEETT
+};
+
 const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: MetroLine | 'TRAM' | 'TELEO' | 'AEROPORT'): Direction[] => {
     const stationId = station.id!;
     
@@ -86,15 +96,16 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     }
 
     if (line === 'TRAM') {
-        // Arènes T1 : les deux DAT sont du même côté (direction MEETT),
-        // aucun DAT direction Palais de Justice (constat terrain).
-        if (station.code === 'ARE') {
-            return [{ id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01'), createDat('02')] }];
+        // Stations T1 dont les deux DAT sont du même côté (constat terrain) :
+        // Arènes côté MEETT ; Aéroconstellation et MEETT côté Palais de Justice.
+        const singleDirection = TRAM_SINGLE_DIRECTION_DATS[station.code ?? ''];
+        if (singleDirection) {
+            return [{ id: `${stationId}-dir-${singleDirection === TRAM_DIRECTION_MEETT ? 1 : 2}`, name: singleDirection, dats: [createDat('01'), createDat('02')] }];
         }
         // Autres stations T1 : un DAT par direction.
         return [
-            { id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01')] },
-            { id: `${stationId}-dir-2`, name: 'Direction Palais de Justice', dats: [createDat('02')] }
+            { id: `${stationId}-dir-1`, name: TRAM_DIRECTION_MEETT, dats: [createDat('01')] },
+            { id: `${stationId}-dir-2`, name: TRAM_DIRECTION_PDJ, dats: [createDat('02')] }
         ];
     }
     
