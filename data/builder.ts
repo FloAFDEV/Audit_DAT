@@ -86,9 +86,12 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     }
 
     if (line === 'TRAM') {
-        // All T1 stations are intermediate or terminus — all have 2 directions.
-        // The former special case for 'Arènes' (1 direction) was removed in v8:
-        // since Hippodrome was added after it (v5), Arènes is fully intermediate.
+        // Arènes T1 : les deux DAT sont du même côté (direction MEETT),
+        // aucun DAT direction Palais de Justice (constat terrain).
+        if (station.code === 'ARE') {
+            return [{ id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01'), createDat('02')] }];
+        }
+        // Autres stations T1 : un DAT par direction.
         return [
             { id: `${stationId}-dir-1`, name: 'Direction MEETT / Aéroport', dats: [createDat('01')] },
             { id: `${stationId}-dir-2`, name: 'Direction Palais de Justice', dats: [createDat('02')] }

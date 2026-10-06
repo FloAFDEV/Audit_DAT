@@ -211,6 +211,34 @@ export const migrateStationRenames = (lieux: Lieu[]): boolean => {
 };
 
 /**
+ * Arènes T1 : les deux DAT sont du même côté (direction MEETT), aucun DAT
+ * direction Palais de Justice. Sur une base existante, les DAT rangés sous
+ * « Direction Palais de Justice » rejoignent la direction MEETT (mêmes
+ * objets : identifiants, statuts et commentaires conservés), puis la
+ * direction vide est retirée. Idempotente.
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+export const migrateArenesT1DatDirections = (lieux: Lieu[]): boolean => {
+    let changed = false;
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.DAT || module.line !== 'TRAM') continue;
+            for (const station of (module.data as ModeData).stations ?? []) {
+                if (station.code !== 'ARE') continue;
+                const directions = station.directions ?? [];
+                const meett = directions.find(d => d.name === 'Direction MEETT / Aéroport');
+                const pdj = directions.find(d => d.name === 'Direction Palais de Justice');
+                if (!meett || !pdj) continue;
+                meett.dats = [...meett.dats, ...pdj.dats];
+                station.directions = directions.filter(d => d !== pdj);
+                changed = true;
+            }
+        }
+    }
+    return changed;
+};
+
+/**
  * Réconcilie le premier recensement connu des Plans de quartier
  * (data/planQuartierInitialInventory.ts) avec les modules PLAN_QUARTIER.
  * Occurrences RÉELLES (cataloguées, modelId renseigné) : l'inventaire
@@ -804,6 +832,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 // Stations renommées (ex. Parc du Canal → Parc Technologique du Canal) —
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
                 if (migrateStationRenames(data)) dataChanged = true;
+                if (migrateArenesT1DatDirections(data)) dataChanged = true;
 
                 // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et
                 // sème/enrichit l'inventaire initial connu, à chaque démarrage
