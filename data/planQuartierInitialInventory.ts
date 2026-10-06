@@ -66,6 +66,8 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
     { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
+    { stationName: 'Saint-Michel - Marcel Langer', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)' },
+    { stationName: 'Saint-Michel - Marcel Langer', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée bus' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée square' },
     // Silos des P+R : un exemplaire sous cadre aluminium au rez-de-chaussée
