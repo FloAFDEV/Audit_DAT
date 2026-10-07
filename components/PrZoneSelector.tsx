@@ -3,6 +3,7 @@ import { AuditModule, Pr, PrZone, Lieu } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, Building, Navigation2, Users } from 'lucide-react';
 import { getPrZoneProgress } from '../utils/progressCalculators';
 import { LieuBadges } from './Icons';
+import { getPrZoneAddress } from '../data/pr_structures';
 
 interface PrZoneSelectorProps {
   lieu: Lieu;
@@ -103,6 +104,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
           const progress = getPrZoneProgress(zone);
           const isComplete = progress === 100;
           const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
+          const address = getPrZoneAddress(prData.id, zone.name);
 
           return (
             <button
@@ -113,7 +115,10 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {getZoneIcon(zone)}
-                  <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{zone.name}</p>
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900 dark:text-slate-100">{zone.name}</p>
+                    {address && <p className="text-sm text-gray-500 dark:text-slate-400">{address}</p>}
+                  </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors" />
               </div>
