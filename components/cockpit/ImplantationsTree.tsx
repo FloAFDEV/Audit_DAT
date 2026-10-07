@@ -22,13 +22,11 @@ import {
 } from './labels';
 
 /** Ligne de transport → config visuelle (mêmes couleurs que partout
- *  ailleurs dans l'app, cf. AUDIT_CATEGORIES). 'P+R' n'a pas de config
- *  de ligne (ce n'est pas une ligne) : on retombe sur le label texte. */
+ *  ailleurs dans l'app, cf. AUDIT_CATEGORIES), P+R compris (badge PR). */
 const LINE_CATEGORY_KEY: Record<string, string> = {
-    A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE',
+    A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE', 'P+R': 'PR',
 };
 export const LineBadge: React.FC<{ line: string; size?: 'xs' | 'sm' }> = ({ line, size = 'sm' }) => {
-    if (line === 'P+R') return <span className="text-xs font-bold text-slate-600 dark:text-slate-300">P+R</span>;
     const config = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line]);
     return config ? <CategoryIcon categoryConfig={config} size={size} /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
 };
@@ -87,8 +85,8 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                         >
                             <span className="flex items-center gap-2 text-sm font-bold text-slate-800 dark:text-slate-100">
                                 <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isLineOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                {line !== 'P+R' && <LineBadge line={line} />}
-                                {line === 'P+R' ? 'P+R' : `Ligne ${line}`}
+                                <LineBadge line={line} />
+                                {line !== 'P+R' && `Ligne ${line}`}
                             </span>
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{lineTotal}</span>
                         </button>
@@ -107,7 +105,7 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                                             >
                                                 <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
                                                     <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isStationOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                                    {line !== 'P+R' && <LineBadge line={line} size="xs" />}
+                                                    <LineBadge line={line} size="xs" />
                                                     <span className="truncate">{station.stationName}</span>
                                                 </span>
                                                 <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums flex-shrink-0">{station.total}</span>
