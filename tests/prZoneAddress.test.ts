@@ -3,7 +3,7 @@
 // data/pr_structures.ts — jamais copiée dans les données enregistrées.
 import { describe, it, expect } from 'vitest';
 import { PR_DATA } from '../data/pr_data';
-import { PR_STRUCTURES, getPrZoneAddress } from '../data/pr_structures';
+import { PR_STRUCTURES, getPrZoneAddress, getPrZoneAddressByName } from '../data/pr_structures';
 import { generateInitialLieuxDataAsync } from '../data/builder';
 import { AuditModuleType, Pr } from '../types';
 
@@ -14,6 +14,15 @@ describe('adresses des zones de P+R', () => {
                 expect(getPrZoneAddress(pr.id, zone.name), `${pr.name} / ${zone.name}`).toMatch(/\S/);
             }
         }
+    });
+
+    it('même adresse par nom de P+R (nom du lieu, cockpit Implantations)', () => {
+        for (const pr of PR_DATA) {
+            for (const zone of PR_STRUCTURES[pr.id].zones) {
+                expect(getPrZoneAddressByName(pr.name, zone.name)).toBe(getPrZoneAddress(pr.id, zone.name));
+            }
+        }
+        expect(getPrZoneAddressByName('Arènes', 'Direction MEETT / Aéroport')).toBeUndefined();
     });
 
     it('correspondances confirmées', () => {

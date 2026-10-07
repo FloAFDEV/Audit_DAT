@@ -237,3 +237,7 @@ export const PR_STRUCTURES: Record<string, PrStructureTemplate> = {
 /** Adresse d'une zone de P+R (par identifiant de P+R et nom de zone), ou undefined. */
 export const getPrZoneAddress = (prId: string, zoneName: string): string | undefined =>
     PR_STRUCTURES[prId]?.zones.find(z => z.name === zoneName)?.address;
+
+/** Même adresse, à partir du nom du P+R (= nom du lieu) et du nom de zone. */
+export const getPrZoneAddressByName = (prName: string, zoneName: string): string | undefined =>
+    Object.values(PR_STRUCTURES).find(p => p.name === prName)?.zones.find(z => z.name === zoneName)?.address;
