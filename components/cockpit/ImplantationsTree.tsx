@@ -11,6 +11,7 @@ import { ChevronDown, Download } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdhesiveStatus, SignageReference } from '../../types';
 import { AUDIT_CATEGORIES } from '../../data/config';
+import { getPrZoneAddressByName } from '../../data/pr_structures';
 import { CategoryIcon } from '../CategoryIcon';
 import { ImplantationRef, PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
@@ -112,10 +113,15 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                                             </button>
                                             {isStationOpen && (
                                                 <div className="px-4 pb-3 space-y-2.5">
-                                                    {station.contexts.map(ctx => (
+                                                    {station.contexts.map(ctx => {
+                                                        const prAddress = line === 'P+R' ? getPrZoneAddressByName(station.stationName, ctx.context) : undefined;
+                                                        return (
                                                         <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
                                                             <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
-                                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{ctx.context}</span>
+                                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                                                    {ctx.context}
+                                                                    {prAddress && <span className="block font-normal normal-case tracking-normal">{prAddress}</span>}
+                                                                </span>
                                                                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
                                                             </div>
                                                             <div className="space-y-2">
@@ -149,7 +155,8 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                                                                 ))}
                                                             </div>
                                                         </div>
-                                                    ))}
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
                                         </div>
