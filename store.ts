@@ -274,14 +274,14 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
     // décrivant des implantations distinctes (Ramonville : entrée bus /
     // entrée square ; Arènes : les trois PEM 3D). Le rapprochement se fait
     // donc par (ligne, station, modèle), pas entrée par entrée.
-    type OccurrenceSpec = Pick<PlanQuartierOccurrence, 'comment' | 'location' | 'measuredDimensions'>;
+    type OccurrenceSpec = Pick<PlanQuartierOccurrence, 'comment' | 'location' | 'measuredDimensions' | 'implantationContext'>;
     const groups = new Map<string, { line: string; stationName: string; modelId: string; specs: OccurrenceSpec[] }>();
     for (const entry of PLAN_QUARTIER_INITIAL_INVENTORY) {
         const key = `${entry.line}|${entry.stationName}|${entry.modelId}`;
         const group = groups.get(key)
             ?? { line: entry.line, stationName: entry.stationName, modelId: entry.modelId, specs: [] };
         for (let i = 0; i < entry.quantity; i++) {
-            group.specs.push({ comment: entry.comment, location: entry.location, measuredDimensions: entry.measuredDimensions });
+            group.specs.push({ comment: entry.comment, location: entry.location, measuredDimensions: entry.measuredDimensions, implantationContext: entry.implantationContext });
         }
         groups.set(key, group);
     }
@@ -304,6 +304,7 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
                     comment: spec.comment,
                     location: spec.location,
                     measuredDimensions: spec.measuredDimensions,
+                    ...(spec.implantationContext ? { implantationContext: spec.implantationContext } : {}),
                     constatedAt: now,
                     discoveredAt: now,
                 });
@@ -335,6 +336,7 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
                     comment: spec.comment,
                     location: spec.location,
                     measuredDimensions: spec.measuredDimensions,
+                    ...(spec.implantationContext ? { implantationContext: spec.implantationContext } : {}),
                     constatedAt: now,
                     discoveredAt: now,
                 });
@@ -346,6 +348,12 @@ const seedPlanQuartierInitialInventory = (lieux: Lieu[]): boolean => {
             // → « Édicule — sortie côté Fac ») doit atteindre les appareils
             // déjà provisionnés, pas seulement les installations neuves.
             if (occ.location !== spec.location) { occ.location = spec.location; changed = true; }
+            // Support (totem, ascenseur extérieur) : même règle que
+            // l'emplacement, jamais effacé quand l'inventaire n'en donne pas.
+            if (spec.implantationContext && occ.implantationContext !== spec.implantationContext) {
+                occ.implantationContext = spec.implantationContext;
+                changed = true;
+            }
             if (occ.measuredDimensions !== spec.measuredDimensions) {
                 occ.measuredDimensions = spec.measuredDimensions;
                 changed = true;
