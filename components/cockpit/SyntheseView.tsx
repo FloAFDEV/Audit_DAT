@@ -27,7 +27,8 @@ import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockp
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
-import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier } from '../../utils/cockpit/signaletiquePlansQuartier';
+import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../../utils/cockpit/signaletiquePlansQuartier';
+import { summarizePlanQuartierAudit } from '../../utils/cockpit/planQuartierAuditTotals';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -235,24 +236,18 @@ const PlanQuartierOverview: React.FC<{
         [models]
     );
 
-    // Plans de quartier audités dans Équipements Station : une tuile par
-    // (ligne, dimension) — aucune référence catalogue, donc non cliquable.
+    // Périmètre d'audit Plans de quartier : modèles PDQ du catalogue seuls.
+    const { installed: total, defects: totalDefects } = useMemo(
+        () => summarizePlanQuartierAudit(patrimoineIndex, models.map(m => m.id)),
+        [models, patrimoineIndex]
+    );
+
+    // Plans recensés dans Équipements Station (T1) : recensement séparé,
+    // hors total et hors « à traiter » Plans de quartier — l'audit reste
+    // dans Équipements Station.
     const signaletiqueLabel = (plan: SignaletiquePlanQuartier) =>
         `${lineConfigs[plan.line]?.shortLabel ?? plan.line} ${plan.dimensions.replace(/\s*x\s*/i, ' × ')}`;
-    const signaletiqueTiles = useMemo(() => {
-        const byFormat = new Map<string, { id: string; label: string; installed: number; defects: number }>();
-        for (const plan of signaletiquePlans) {
-            const id = `${plan.line}|${plan.dimensions}`;
-            const tile = byFormat.get(id) ?? { id, label: signaletiqueLabel(plan).replace(' ', ' · '), installed: 0, defects: 0 };
-            tile.installed += 1;
-            if (plan.isDefect) tile.defects += 1;
-            byFormat.set(id, tile);
-        }
-        return [...byFormat.values()];
-    }, [signaletiquePlans, lineConfigs]);
-
-    const total = [...tiles, ...signaletiqueTiles].reduce((sum, t) => sum + t.installed, 0);
-    const totalDefects = [...tiles, ...signaletiqueTiles].reduce((sum, t) => sum + t.defects, 0);
+    const census = useMemo(() => summarizeSignaletiqueCensus(signaletiquePlans), [signaletiquePlans]);
 
     // Combien de ces plans sont posés sur une caisse automatique de P+R ?
     // Lu sur le contexte porté par l'implantation, jamais deviné d'un libellé.
@@ -272,7 +267,7 @@ const PlanQuartierOverview: React.FC<{
     // Détail par ligne → station, dérivé des implantations déjà indexées.
     // Un lieu n'apparaît que s'il porte réellement un exemplaire : pas de
     // faux zéro, pas de station inventée.
-    const byLine = useMemo(() => {
+    const lineRows = useMemo(() => {
         const modelIds = new Set(models.map(m => m.id));
         // formats : une entrée structurée {label, detail, count} par (modèle,
         // emplacement) plutôt qu'une chaîne concaténée — la mise en forme
@@ -310,9 +305,11 @@ const PlanQuartierOverview: React.FC<{
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
         }
-        // Plans Équipements Station : un exemplaire par plan et par direction.
+        // Recensement Équipements Station : même structure, liste distincte —
+        // un exemplaire par plan et par direction.
+        const censusMap: typeof lineMap = new Map();
         for (const plan of signaletiquePlans) {
-            const stations = lineMap.get(plan.line) ?? new Map();
+            const stations = censusMap.get(plan.line) ?? new Map();
             const entry = stations.get(plan.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, { label: string; detail?: string; count: number }>() };
             entry.installed += 1;
             if (plan.isDefect) entry.defects += 1;
@@ -322,9 +319,9 @@ const PlanQuartierOverview: React.FC<{
             if (existing) existing.count += 1;
             else entry.formats.set(formatKey, { label, detail: plan.direction, count: 1 });
             stations.set(plan.lieuName, entry);
-            lineMap.set(plan.line, stations);
+            censusMap.set(plan.line, stations);
         }
-        return [...lineMap.entries()]
+        const toRows = (map: typeof lineMap) => [...map.entries()]
             .map(([line, stations]) => ({
                 line,
                 cfg: lineConfigs[line],
@@ -338,19 +335,92 @@ const PlanQuartierOverview: React.FC<{
             }))
             // Lignes dans l'ordre du réseau (A, B, C, Tram…), comme partout ailleurs.
             .sort((a, b) => compareLines(a.line, b.line));
+        return { byLine: toRows(lineMap), censusByLine: toRows(censusMap) };
     }, [models, patrimoineIndex, lineConfigs, signaletiquePlans]);
+    const { byLine, censusByLine } = lineRows;
 
-    if (total === 0) {
-        return (
-            <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                Aucun plan de quartier recensé pour l'instant — les totaux se rempliront au fil des passages terrain.
-            </p>
-        );
-    }
+    // Cartes station d'une ligne — même rendu pour le module Plans de
+    // quartier et pour le recensement Équipements Station.
+    const renderStations = (line: string, cfg: any, stations: typeof byLine[number]['stations']) => (
+        <ul className="mt-2 space-y-2.5">
+            {stations.map(st => (
+                <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                    <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
+                        {/* Badge de ligne répété à chaque station (en plus de celui
+                            du header de colonne juste au-dessus) : après plusieurs
+                            écrans de scroll sur ~90 stations, le header n'est plus
+                            visible — sans ce rappel, on perd le contexte de ligne.
+                            Même CategoryIcon, taille xs (plus discrète que le sm du
+                            header) : aucun nouveau badge, juste une taille de plus. */}
+                        <span className="flex items-center gap-1.5 min-w-0">
+                            {cfg && <CategoryIcon categoryConfig={cfg} size="xs" />}
+                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{st.name}</span>
+                        </span>
+                        <span className="flex-shrink-0 flex items-baseline gap-2">
+                            {st.defects > 0 && (
+                                <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
+                            )}
+                            <span className="text-base font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{st.installed}</span>
+                            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">équipements</span>
+                        </span>
+                    </div>
+                    <ul className="space-y-1">
+                        {[...st.formats.values()].map(fmt => (
+                            <li key={`${fmt.label}|${fmt.detail ?? ''}`} className="flex items-center justify-between gap-3">
+                                <span className="min-w-0">
+                                    <span
+                                        className="block text-xs font-semibold text-slate-700 dark:text-slate-200 truncate"
+                                        title={fmt.detail ? `${fmt.label} — ${fmt.detail}` : fmt.label}
+                                    >
+                                        {fmt.label}
+                                    </span>
+                                    {fmt.detail && (
+                                        <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 truncate" title={fmt.detail}>
+                                            {fmt.detail}
+                                        </span>
+                                    )}
+                                </span>
+                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
+                                    ×{fmt.count}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                    {/* Pictogrammes cognitifs de la station : simple
+                        lecture du module Pictogrammes cognitifs (seule
+                        source), jamais comptés dans les équipements. */}
+                    {(() => {
+                        const picto = cognitivePictograms.get(cognitiveSummaryKey(line, st.name));
+                        if (!picto) return null;
+                        return (
+                            <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">
+                                <CognitivePictogramVisual stationCode={picto.stationCode} stationName={st.name} size="sm" />
+                                <span>
+                                    Pictogrammes cognitifs · {picto.accessCount} accès
+                                    {picto.toReplaceCount > 0 && (
+                                        <span className="font-semibold text-red-600 dark:text-red-400"> · {picto.toReplaceCount} à remplacer</span>
+                                    )}
+                                </span>
+                            </div>
+                        );
+                    })()}
+                </li>
+            ))}
+        </ul>
+    );
+
+    const emptyPdq = (
+        <p className="text-sm text-slate-500 dark:text-slate-400 italic">
+            Aucun plan de quartier recensé pour l'instant — les totaux se rempliront au fil des passages terrain.
+        </p>
+    );
+
+    if (total === 0 && census.total === 0) return emptyPdq;
 
     return (
         <div className="space-y-6">
             {/* Bande 1 — total réseau (N1) + ce qui appelle une action (N5). */}
+            {total === 0 ? emptyPdq : (
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
                 <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
@@ -362,8 +432,10 @@ const PlanQuartierOverview: React.FC<{
                     </span>
                 )}
             </div>
+            )}
 
             {/* Bande 2 — par format (N3). Vue « bureau » : préparer une commande. */}
+            {total > 0 && (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-3 gap-3">
                 {tiles.map(t => (
                     <IndicatorTile
@@ -375,10 +447,8 @@ const PlanQuartierOverview: React.FC<{
                         onClick={() => onOpenReference(t.id)}
                     />
                 ))}
-                {signaletiqueTiles.map(t => (
-                    <IndicatorTile key={t.id} size="sm" value={t.installed} label={t.label} tone="slate" />
-                ))}
             </div>
+            )}
 
             {/* Caisse auto + dos gris : deux tuiles du même composant que la
                 bande précédente (jamais un bloc à la charte différente), pour
@@ -435,77 +505,46 @@ const PlanQuartierOverview: React.FC<{
                             (teal, comme les autres totaux de l'app) en
                             en-tête, puis une ligne par (modèle, emplacement)
                             avec sa quantité en pastille bien distincte. */}
-                        {isOpen && (
-                        <ul className="mt-2 space-y-2.5">
-                            {stations.map(st => (
-                                <li key={st.name} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
-                                    <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
-                                        {/* Badge de ligne répété à chaque station (en plus de celui
-                                            du header de colonne juste au-dessus) : après plusieurs
-                                            écrans de scroll sur ~90 stations, le header n'est plus
-                                            visible — sans ce rappel, on perd le contexte de ligne.
-                                            Même CategoryIcon, taille xs (plus discrète que le sm du
-                                            header) : aucun nouveau badge, juste une taille de plus. */}
-                                        <span className="flex items-center gap-1.5 min-w-0">
-                                            {cfg && <CategoryIcon categoryConfig={cfg} size="xs" />}
-                                            <span className="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate">{st.name}</span>
-                                        </span>
-                                        <span className="flex-shrink-0 flex items-baseline gap-2">
-                                            {st.defects > 0 && (
-                                                <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
-                                            )}
-                                            <span className="text-base font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{st.installed}</span>
-                                            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">équipements</span>
-                                        </span>
-                                    </div>
-                                    <ul className="space-y-1">
-                                        {[...st.formats.values()].map(fmt => (
-                                            <li key={`${fmt.label}|${fmt.detail ?? ''}`} className="flex items-center justify-between gap-3">
-                                                <span className="min-w-0">
-                                                    <span
-                                                        className="block text-xs font-semibold text-slate-700 dark:text-slate-200 truncate"
-                                                        title={fmt.detail ? `${fmt.label} — ${fmt.detail}` : fmt.label}
-                                                    >
-                                                        {fmt.label}
-                                                    </span>
-                                                    {fmt.detail && (
-                                                        <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 truncate" title={fmt.detail}>
-                                                            {fmt.detail}
-                                                        </span>
-                                                    )}
-                                                </span>
-                                                <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[2.25rem] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 tabular-nums">
-                                                    ×{fmt.count}
-                                                </span>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                    {/* Pictogrammes cognitifs de la station : simple
-                                        lecture du module Pictogrammes cognitifs (seule
-                                        source), jamais comptés dans les équipements. */}
-                                    {(() => {
-                                        const picto = cognitivePictograms.get(cognitiveSummaryKey(line, st.name));
-                                        if (!picto) return null;
-                                        return (
-                                            <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">
-                                                <CognitivePictogramVisual stationCode={picto.stationCode} stationName={st.name} size="sm" />
-                                                <span>
-                                                    Pictogrammes cognitifs · {picto.accessCount} accès
-                                                    {picto.toReplaceCount > 0 && (
-                                                        <span className="font-semibold text-red-600 dark:text-red-400"> · {picto.toReplaceCount} à remplacer</span>
-                                                    )}
-                                                </span>
-                                            </div>
-                                        );
-                                    })()}
-                                </li>
-                            ))}
-                        </ul>
-                        )}
+                        {isOpen && renderStations(line, cfg, stations)}
                     </div>
                     );
                 })}
             </div>
+
+            {/* Recensement Équipements Station (Tram T1…) : hors périmètre
+                d'audit Plans de quartier — total, défauts et localisation
+                propres, l'audit se fait dans Équipements Station. */}
+            {censusByLine.map(({ line, cfg, label, installed, stations }) => {
+                const key = `census:${line}`;
+                const isOpen = openLines.has(key);
+                const defects = stations.reduce((sum, st) => sum + st.defects, 0);
+                return (
+                    <div key={key} className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <button
+                            type="button"
+                            onClick={() => toggleLine(key)}
+                            aria-expanded={isOpen}
+                            className="flex w-full items-start justify-between gap-3 text-left -mx-1 px-1 py-1 rounded hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                        >
+                            <span className="flex items-start gap-2 min-w-0">
+                                <ChevronDown className={`w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
+                                <span className="min-w-0">
+                                    <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{label} — plans recensés dans Équipements Station</span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400">Audit dans Équipements Station · hors total Plans de quartier</span>
+                                    {defects > 0 && (
+                                        <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300">
+                                            {defects} à traiter · Équipements Station
+                                        </span>
+                                    )}
+                                </span>
+                            </span>
+                            <span className="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
+                        </button>
+                        {isOpen && renderStations(line, cfg, stations)}
+                    </div>
+                );
+            })}
         </div>
     );
 };
