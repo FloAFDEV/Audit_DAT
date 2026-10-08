@@ -1,9 +1,14 @@
 // tests/signaletiquePlansQuartier.test.ts
 // Plans de quartier audités dans Équipements Station (T1) : agrégés en
 // lecture pour le cockpit, sans copie ni modification des modules.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { db } from '../db';
+import useAuditStore from '../store';
 import { generateInitialLieuxDataAsync } from '../data/builder';
-import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
+import { buildSignageReferencesSeed } from '../data/signage_seed';
+import { buildPatrimoineIndex } from '../utils/cockpit/patrimoineIndex';
+import { summarizePlanQuartierAudit } from '../utils/cockpit/planQuartierAuditTotals';
+import { collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../utils/cockpit/signaletiquePlansQuartier';
 import { AuditModuleType, EquipmentStatusType, Lieu, ModeData } from '../types';
 
 const t1Sig = (lieux: Lieu[], lieuName: string) =>
@@ -76,5 +81,54 @@ describe('plans de quartier Équipements Station — lecture seule', () => {
         const lae = collectSignaletiquePlansQuartier(lieux).filter(p => p.line === 'AEROPORT');
         expect(lae).toHaveLength(6);
         expect(lae.every(p => p.dimensions === '78 x 100 cm')).toBe(true);
+    });
+});
+
+// Sémantique du cockpit : Plans de quartier = périmètre d'audit du module
+// (90 plans) ; Tram T1 = recensement séparé, audité dans Équipements Station.
+describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
+    beforeEach(async () => {
+        localStorage.clear();
+        await db.lieux.clear();
+        await db.signageReferences.clear();
+        useAuditStore.setState({
+            lieux: [], isLoading: true, isAuthenticated: false, initError: null,
+            selectedLieuId: null, selectedModuleId: null,
+        });
+        await db.lieux.bulkPut(await generateInitialLieuxDataAsync());
+        await db.signageReferences.bulkAdd(buildSignageReferencesSeed());
+        await useAuditStore.getState().init();
+    });
+
+    const pdqModelIds = async () => (await db.signageReferences.toArray())
+        .filter(r => r.auditType === 'PDQ' && !r.isDisabled).map(r => r.id);
+    const auditTotals = async (lieux: Lieu[]) =>
+        summarizePlanQuartierAudit(buildPatrimoineIndex(lieux, await db.signageReferences.toArray()), await pdqModelIds());
+
+    it('Plans de quartier = 90 ; T1 = 52 recensés à part, jamais dans le total PDQ', async () => {
+        const lieux = useAuditStore.getState().lieux;
+        expect(await auditTotals(lieux)).toEqual({ installed: 90, defects: 0 });
+
+        const plans = collectSignaletiquePlansQuartier(lieux);
+        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 0 });
+        expect(plans.every(p => p.line === 'TRAM')).toBe(true);
+        // Aucun plan Aéroport Express hors service introduit.
+        expect(plans.some(p => p.line === 'AEROPORT' || p.lieuName === 'Aéroport Toulouse Blagnac')).toBe(false);
+    });
+
+    it("un défaut T1 reste dans le recensement Équipements Station, jamais dans le « à traiter » PDQ", async () => {
+        const lieux = structuredClone(useAuditStore.getState().lieux);
+        const sig = t1Sig(lieux, 'MEETT');
+        sig.planQuartier.meett[0].status = EquipmentStatusType.ABSENT;
+
+        expect(await auditTotals(lieux)).toEqual({ installed: 90, defects: 0 });
+        const plans = collectSignaletiquePlansQuartier(lieux);
+        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 1 });
+
+        // Toujours localisables, directions réelles : MEETT 3 + 1.
+        const meett = plans.filter(p => p.lieuName === 'MEETT');
+        expect(meett.filter(p => p.direction === 'Direction MEETT / Aéroport')).toHaveLength(3);
+        expect(meett.filter(p => p.direction === 'Direction Palais de Justice')).toHaveLength(1);
+        expect(meett.filter(p => p.isDefect)).toHaveLength(1);
     });
 });
