@@ -183,9 +183,16 @@ const createDatModule = (station: Partial<Station>, type: TransportMode, line: M
 };
 
 const createSignaletiqueModule = (station: Partial<Station>, line: 'TRAM' | 'AEROPORT'): AuditModule => {
-    // Populate endpoint directions so SignaletiqueAuditForm can display meaningful labels
-    // (endpointLabel1/endpointLabel2). Only name/id are needed — strip DAT data.
-    const rawDirs = createDatDirectionsAndDatsForStation(station, line);
+    // Directions de l'ARRÊT (ses extrémités), pas la répartition des DAT : la
+    // signalétique couvre les deux sens même quand les DAT sont tous du même
+    // côté (Arènes, Aéroconstellation, MEETT — TRAM_SINGLE_DIRECTION_DATS).
+    // SignaletiqueAuditForm en tire les libellés d'extrémité et le sens de
+    // chaque équipement directionnel (BIV, plans, HAP). Tram : les deux sens de
+    // la ligne, à chaque arrêt ; Aéroport Express : directions de ses DAT
+    // (terminus à sens unique), inchangées.
+    const rawDirs = line === 'TRAM'
+        ? [{ id: `${station.id}-dir-1`, name: TRAM_DIRECTION_MEETT }, { id: `${station.id}-dir-2`, name: TRAM_DIRECTION_PDJ }]
+        : createDatDirectionsAndDatsForStation(station, line);
     const directions: Direction[] = rawDirs.map(d => ({ id: d.id, name: d.name, dats: [] }));
 
     const fullStation: Station = {
