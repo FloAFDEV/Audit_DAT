@@ -25,6 +25,8 @@ import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '..
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
+import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
+import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -189,7 +191,9 @@ const PlanQuartierOverview: React.FC<{
     references: any[];
     lineConfigs: Record<string, any>;
     onOpenReference: (referenceId: string) => void;
-}> = ({ patrimoineIndex, references, lineConfigs, onOpenReference }) => {
+    /** Pictogrammes cognitifs déjà audités, par (ligne, lieu) — lecture seule. */
+    cognitivePictograms: Map<string, CognitivePictogramSummary>;
+}> = ({ patrimoineIndex, references, lineConfigs, onOpenReference, cognitivePictograms }) => {
     // Repliée par défaut : un plan de quartier posé sur la quasi-totalité
     // d'une ligne peut lister ~90 stations au total, toutes empilées en une
     // colonne sur mobile — un scroll interminable. Chaque ligne s'ouvre
@@ -440,6 +444,24 @@ const PlanQuartierOverview: React.FC<{
                                             </li>
                                         ))}
                                     </ul>
+                                    {/* Pictogrammes cognitifs de la station : simple
+                                        lecture du module Pictogrammes cognitifs (seule
+                                        source), jamais comptés dans les équipements. */}
+                                    {(() => {
+                                        const picto = cognitivePictograms.get(cognitiveSummaryKey(line, st.name));
+                                        if (!picto) return null;
+                                        return (
+                                            <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">
+                                                <CognitivePictogramVisual stationCode={picto.stationCode} stationName={st.name} size="sm" />
+                                                <span>
+                                                    Pictogrammes cognitifs · {picto.accessCount} accès
+                                                    {picto.toReplaceCount > 0 && (
+                                                        <span className="font-semibold text-red-600 dark:text-red-400"> · {picto.toReplaceCount} à remplacer</span>
+                                                    )}
+                                                </span>
+                                            </div>
+                                        );
+                                    })()}
                                 </li>
                             ))}
                         </ul>
@@ -485,6 +507,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     }, [lieux, selectedLieuId]);
 
     const selectedLieuObject = useMemo(() => (lieux || []).find(l => l.id === selectedLieuId), [lieux, selectedLieuId]);
+
+    // Pictogrammes cognitifs présentés dans les cards (lecture seule du module).
+    const cognitivePictograms = useMemo(() => summarizeCognitivePictograms(filteredLieux), [filteredLieux]);
+    const selectedLieuPictoCode = useMemo(() => (
+        selectedLieuObject
+            ? [...cognitivePictograms.entries()].find(([key]) => key.endsWith(`|${selectedLieuObject.name}`))?.[1].stationCode
+            : undefined
+    ), [cognitivePictograms, selectedLieuObject]);
 
     // Vue mono-lieu : un bloc n'est affiché que si le lieu porte ce type de
     // module dans l'exploitation actuelle — un 0 ne doit jamais laisser croire
@@ -969,6 +999,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     references={references}
                     lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
                     onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
+                    cognitivePictograms={cognitivePictograms}
                 />
             </StatCard>
             )}
@@ -1033,7 +1064,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 )}
                 {showCogPicto && (
                 <div>
-                <StatRow icon={<ScanEye className="w-5 h-5" />} label="Audit Pictos Cognitifs" value={globalCounts.cogPictoCount} highlight="primary" />
+                <StatRow
+                    icon={<ScanEye className="w-5 h-5" />}
+                    label={selectedLieuPictoCode
+                        ? <span className="flex items-center gap-2"><CognitivePictogramVisual stationCode={selectedLieuPictoCode} stationName={selectedLieuObject?.name} size="sm" />Audit Pictos Cognitifs</span>
+                        : "Audit Pictos Cognitifs"}
+                    value={globalCounts.cogPictoCount}
+                    highlight="primary"
+                />
                 {selectedLieuId ? null : (
                     <div className="space-y-3 mt-2">
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />

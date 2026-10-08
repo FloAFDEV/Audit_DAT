@@ -5,6 +5,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import AuditFormLayout from './AuditFormLayout';
 import { LineIcon } from './LineIcon';
+import { CognitivePictogramVisual } from './CognitivePictogramVisual';
 
 interface CognitivePictogramAuditFormProps {
     module: AuditModule;
@@ -146,9 +147,12 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
             module={module}
             title={module.name}
             subtitle={
-                <p className="text-gray-600 dark:text-slate-400 text-sm">
-                    <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {cogData.stationName}
-                </p>
+                <div className="flex items-center gap-3">
+                    <CognitivePictogramVisual stationCode={cogData.stationCode} stationName={cogData.stationName} />
+                    <p className="text-gray-600 dark:text-slate-400 text-sm">
+                        <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {cogData.stationName}
+                    </p>
+                </div>
             }
             progress={progress}
             onBack={onBack}

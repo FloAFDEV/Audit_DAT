@@ -5,6 +5,7 @@ import { MaintenanceItem, AuditCategory, Station, AuditModuleType } from '../typ
 import { AUDIT_CATEGORIES } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import { ModuleIcon } from './ModuleIcon';
+import { CognitivePictogramVisual } from './CognitivePictogramVisual';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { exportMaintenanceListToCsv } from '../utils/csvExporter';
 import toast from 'react-hot-toast';
@@ -196,7 +197,10 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                                 {item.auditType && <ModuleIcon type={item.auditType} className="w-4 h-4 text-slate-500 dark:text-slate-300" />}
                                             </div>
                                             <div>
-                                                <div className="font-semibold text-gray-900 dark:text-slate-50">
+                                                <div className="font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
+                                                    {item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS && (
+                                                        <CognitivePictogramVisual stationCode={item.stationCode} stationName={item.lieuName} size="sm" />
+                                                    )}
                                                     {item.elementName}
                                                 </div>
                                                 <div className="text-sm text-gray-600 dark:text-slate-400 mt-1 flex items-center flex-wrap gap-2">
