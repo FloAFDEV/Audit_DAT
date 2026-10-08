@@ -23,6 +23,9 @@ const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: Adhesiv
     return adhesives.reduce((acc, ad) => ({ ...acc, [ad.id]: AdhesiveStatus.NotChecked }), {});
 };
 
+/** Emplacement Équipements Station visé explicitement par une action signalétique. */
+export interface SignaletiqueTarget { moduleId: string; stationId: string }
+
 interface AppState {
     // Data
     lieux: Lieu[];
@@ -153,15 +156,17 @@ interface AppState {
     handleRemoveCognitivePictogramAccessPoint: (pictogramId: string) => Promise<void>;
     handleUpdateCognitivePictogramAccessPointName: (pictogramId: string, newName: string) => Promise<void>;
     
-    // Signaletique Actions
-    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, status: EquipmentStatusType | 'NotChecked') => Promise<void>;
-    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, comment: string) => Promise<void>;
-    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, field: string, value: any) => Promise<void>;
-    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, photo_base64: string | null) => Promise<void>;
-    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, note: string) => Promise<void>;
-    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, rotation: number) => Promise<void>;
+    // Signaletique Actions — `target` désigne explicitement le module/la
+    // station Équipements Station (audit T1 ouvert depuis le module Plans de
+    // quartier) ; absent, c'est la sélection courante, comme avant.
+    handleSignaletiqueStatusChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, status: EquipmentStatusType | 'NotChecked', target?: SignaletiqueTarget) => Promise<void>;
+    handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, comment: string, target?: SignaletiqueTarget) => Promise<void>;
+    handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, field: string, value: any, target?: SignaletiqueTarget) => Promise<void>;
+    handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, photo_base64: string | null, target?: SignaletiqueTarget) => Promise<void>;
+    handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, note: string, target?: SignaletiqueTarget) => Promise<void>;
+    handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, rotation: number, target?: SignaletiqueTarget) => Promise<void>;
     handleResetSignaletique: () => Promise<void>;
-    handleSignaletiqueStationCommentChange: (comment: string) => Promise<void>;
+    handleSignaletiqueStationCommentChange: (comment: string, target?: SignaletiqueTarget) => Promise<void>;
     setIsSignaletiqueActive: (isActive: boolean) => void;
     
     // Reset actions
@@ -582,6 +587,10 @@ const useAuditStore = create<AppState>((set, get) => {
 
     /** Terrain : opère toujours sur la station actuellement sélectionnée. */
     const _updateLieu = (updateFn: (lieu: Lieu) => void) => _updateLieuById({ mode: 'selected' }, updateFn);
+
+    /** Module/station Équipements Station visés : cible explicite, sinon la sélection courante. */
+    const signaletiqueIds = (target?: SignaletiqueTarget) =>
+        target ? { selectedModuleId: target.moduleId, selectedStationId: target.stationId } : get();
 
 
     const applyTheme = (theme: 'light' | 'dark') => {
@@ -1722,8 +1731,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiqueStatusChange: async (equipmentType, direction, index, status) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiqueStatusChange: async (equipmentType, direction, index, status, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1737,8 +1746,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiqueCommentChange: async (equipmentType, direction, index, comment) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiqueCommentChange: async (equipmentType, direction, index, comment, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1752,8 +1761,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiqueFieldChange: async (equipmentType, direction, index, field, value) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiqueFieldChange: async (equipmentType, direction, index, field, value, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1767,8 +1776,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiquePhotoChange: async (equipmentType, direction, index, photo_base64) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiquePhotoChange: async (equipmentType, direction, index, photo_base64, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1790,8 +1799,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiquePhotoNoteChange: async (equipmentType, direction, index, note) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiquePhotoNoteChange: async (equipmentType, direction, index, note, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1805,8 +1814,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiquePhotoRotationChange: async (equipmentType, direction, index, rotation) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiquePhotoRotationChange: async (equipmentType, direction, index, rotation, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -1820,8 +1829,8 @@ const useAuditStore = create<AppState>((set, get) => {
         });
     },
 
-    handleSignaletiqueStationCommentChange: async (comment) => {
-        const { selectedModuleId, selectedStationId } = get();
+    handleSignaletiqueStationCommentChange: async (comment, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);

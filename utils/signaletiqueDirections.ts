@@ -9,3 +9,8 @@ export const dirKeyOf = (name: string): 'meett' | 'pdj' => {
   if (n.includes('meett') || n.includes('aéroport')) return 'meett';
   return 'pdj';
 };
+
+// Terminus T1 : le bandeau du plan de quartier y porte un texte « Terminus »
+// au lieu de la direction — partagé par Équipements Station et l'audit T1.
+export const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
+export const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
