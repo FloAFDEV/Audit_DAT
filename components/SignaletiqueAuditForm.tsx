@@ -24,6 +24,7 @@ import {
   Flag,
   Layers
 } from 'lucide-react';
+import { dirKeyOf } from '../utils/signaletiqueDirections';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
@@ -101,14 +102,10 @@ const CATEGORY_ICONS: Record<keyof SignaletiqueData, React.ReactNode> = {
   bandeauStation: <Layers className="w-5 h-5" />
 };
 
-// Même logique que primaryDirKey (ci-dessous) — factorisée pour être appliquée
-// aussi bien à la direction sélectionnée qu'aux 2 extrémités physiques de la
-// station, afin de savoir laquelle des deux correspond au contexte en cours.
-const dirKeyOf = (name: string): 'meett' | 'pdj' => {
-  const n = name.toLowerCase();
-  if (n.includes('meett') || n.includes('aéroport')) return 'meett';
-  return 'pdj';
-};
+// dirKeyOf (utils/signaletiqueDirections.ts) : appliquée aussi bien à la
+// direction sélectionnée qu'aux 2 extrémités physiques de la station, afin de
+// savoir laquelle des deux correspond au contexte en cours — même règle que
+// le cockpit.
 
 // Le nom stocké en base (station.directions[i].name) porte le préfixe
 // "Direction " car il sert aussi de libellé au sélecteur de direction
