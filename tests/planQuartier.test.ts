@@ -607,14 +607,15 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         expect(caisseAuto.every(o => !o.comment)).toBe(true);
     });
 
-    it('Borderouge restitue ses 4 plans : 1 PEM 3D + 1 Dibond (grillage) + 2 sur caisses automatiques', async () => {
+    it('Borderouge restitue ses 6 plans : 1 PEM 3D + 1 Dibond (grillage) + 2 sur caisses automatiques + 2 × 78×100 sur totem', async () => {
         await provisionLegacyDevice();
         await useAuditStore.getState().init();
 
         const borderouge = useAuditStore.getState().lieux.find(l => l.name === 'Borderouge');
         const occurrences = pdqOccurrences([borderouge!]);
 
-        expect(occurrences).toHaveLength(4);
+        expect(occurrences).toHaveLength(6);
+        expect(occurrences.filter(o => o.modelId === 'pdq-78x100' && o.implantationContext === 'totem')).toHaveLength(2);
         expect(occurrences.filter(o => o.modelId === 'pem3d-120x80')).toHaveLength(1);
         expect(occurrences.filter(o => o.modelId === 'pdq-78x120-dibond')).toHaveLength(1);
         const caisseAuto = occurrences.filter(o => o.implantationContext === 'pr-caisse-auto');
@@ -694,13 +695,13 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         // Ventilation complète du patrimoine — le total ne masque jamais
         // d'où il vient, et les 10 plans de caisse auto n'y comptent qu'une
         // fois (sinon 67 au lieu de 57).
-        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(16);
+        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(49);
         expect(index.byReference.get('pdq-78x120')?.installedCount).toBe(14);
         expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(2);
         expect(index.byReference.get('pem3d-120x80')?.installedCount).toBe(10);
         const pdqTotal = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80']
             .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
-        expect(pdqTotal).toBe(57);
+        expect(pdqTotal).toBe(90);
     });
 
     it('le contexte d\'implantation survit à un export/import complet', async () => {
@@ -746,7 +747,8 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         expect(cent).toHaveLength(2);
         expect(cent.map(o => o.id).sort()).toEqual(['o1', 'o2']);
         expect(cent.map(o => o.location).sort()).toEqual(
-            ['Édicule — sortie côté Fac', 'Édicule — sortie côté gare bus']);
+            ['Totem — sortie côté Fac', 'Totem — sortie côté gare bus']);
+        expect(cent.every(o => o.implantationContext === 'totem')).toBe(true);
 
         // Exemplaire manquant complété, sans dupliquer celui déjà connu.
         const vingt = occurrences.filter(o => o.modelId === 'pdq-78x120');
@@ -781,7 +783,7 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         expect(cent.find(o => o.id === 'o2')!.location).toBe('Édicule (totem)');
     });
 
-    it('les 78×100 extérieurs portent leur emplacement Édicule', async () => {
+    it('les 78×100 extérieurs portent leur support Totem', async () => {
         await provisionLegacyDevice();
         await useAuditStore.getState().init();
 
@@ -790,20 +792,28 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
             .filter(o => o.modelId === 'pdq-78x100');
 
         expect(occurrencesOf("Jeanne d'Arc")).toHaveLength(3);
-        expect(occurrencesOf("Jeanne d'Arc").every(o => o.location === 'Édicule (extérieur)')).toBe(true);
+        const onTotem = (o: { location?: string; implantationContext?: string }) => o.location === 'Totem' && o.implantationContext === 'totem';
+        expect(occurrencesOf("Jeanne d'Arc").every(onTotem)).toBe(true);
         expect(occurrencesOf('Saint-Cyprien - République')).toHaveLength(3);
-        expect(occurrencesOf('Saint-Cyprien - République').every(o => o.location === 'Édicule (extérieur)')).toBe(true);
+        expect(occurrencesOf('Saint-Cyprien - République').every(onTotem)).toBe(true);
         // François Verdier : UN seul exemplaire, jamais trois.
         expect(occurrencesOf('François Verdier')).toHaveLength(1);
-        expect(occurrencesOf('François Verdier')[0].location).toBe('Édicule (extérieur)');
+        expect(onTotem(occurrencesOf('François Verdier')[0])).toBe(true);
+
+        // Relevé totems / ascenseurs extérieurs : supports distincts, plans indépendants.
+        expect(occurrencesOf('Bagatelle').map(o => o.implantationContext).sort()).toEqual(['ascenseur-exterieur', 'totem', 'totem']);
+        expect(occurrencesOf('Jolimont').map(o => [o.location, o.implantationContext])).toEqual([['Ascenseur extérieur', 'ascenseur-exterieur']]);
+        expect(occurrencesOf('Minimes - Claude Nougaro')).toHaveLength(3);
+        // Ramonville : plans en station, aucun support extérieur attribué.
+        expect(occurrencesOf('Ramonville').every(o => !o.implantationContext)).toBe(true);
     });
 });
 
 describe('inventaire de départ — Saint-Michel - Marcel Langer (Ligne B)', () => {
-    it('2 × 78x100 en édicule extérieur et 1 × 78x120 en station, visibles dans le patrimoine', async () => {
+    it('2 × 78x100 sur totem et 1 × 78x120 en station, visibles dans le patrimoine', async () => {
         const entries = PLAN_QUARTIER_INITIAL_INVENTORY.filter(e => e.stationName === 'Saint-Michel - Marcel Langer');
         expect(entries.map(e => [e.line, e.modelId, e.quantity, e.location])).toEqual([
-            ['B', 'pdq-78x100', 2, 'Édicule (extérieur)'],
+            ['B', 'pdq-78x100', 2, 'Totem'],
             ['B', 'pdq-78x120', 1, 'Intérieur station'],
         ]);
         // Le module existe : l'inventaire sera semé au démarrage (base neuve

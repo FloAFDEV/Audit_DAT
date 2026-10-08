@@ -313,7 +313,10 @@ export interface PlanQuartierOccurrence {
      *  elle seule permet de répondre durablement à « combien de plans sur
      *  caisse automatique ? ». Absent = implantation en station (défaut
      *  rétrocompatible : tous les exemplaires antérieurs le sont). */
-    implantationContext?: 'pr-caisse-auto' | 'abritram';
+    // totem / ascenseur-exterieur : support extérieur d'un plan 78×100.
+    // Le support n'est qu'un contexte : le plan reste un exemplaire
+    // indépendant de tout autre élément posé sur le même support.
+    implantationContext?: 'pr-caisse-auto' | 'abritram' | 'totem' | 'ascenseur-exterieur';
     /** Références du catalogue qui composent le MÊME exemplaire physique,
      *  jamais un exemplaire de plus (1 plan physique = 1 occurrence).
      *  Cas connu : le dos gris opaque contre-collé au verso d'un plan posé

@@ -14,7 +14,7 @@
 // pas interprétés (millésime ou lot d'impression inconnu) : conservés
 // tels quels dans `comment`, jamais traduits en une donnée devinée.
 // =================================================================
-import { AdhesiveStatus } from '../types';
+import { AdhesiveStatus, PlanQuartierOccurrence } from '../types';
 
 export interface PlanQuartierInitialEntry {
     /** Doit correspondre exactement à Station.name (data/stationRegistry.ts). */
@@ -25,6 +25,9 @@ export interface PlanQuartierInitialEntry {
     comment?: string;
     location?: string;
     measuredDimensions?: { width: number; height: number; unit: 'cm' | 'mm' };
+    /** Support extérieur du plan (totem, ascenseur extérieur) — contexte
+     *  d'implantation, jamais un couplage avec un autre élément du support. */
+    implantationContext?: PlanQuartierOccurrence['implantationContext'];
 }
 
 export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
@@ -37,9 +40,9 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // par store.ts::migratePrCaisseAutoPlansDeQuartier. Les lister ici en
     // dur les dupliquerait, et figerait une quantité qui doit suivre le
     // parc réel de caisses automatiques.
-    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026b' },
+    { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem', comment: 'Réf. terrain : 2026b' },
     { stationName: 'Marengo-SNCF', line: 'A', modelId: 'pdq-adhesif', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 78x120 2026b' },
-    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
+    { stationName: 'Saint-Cyprien - République', line: 'A', modelId: 'pdq-78x100', quantity: 3, location: 'Totem', implantationContext: 'totem', comment: 'Réf. terrain : 2026' },
     // 78x120 sans emplacement plus précis connu que « en station » : le
     // catalogue (data/signage_seed.ts) décrit déjà ce modèle comme posé sous
     // cadre aluminium par défaut (hors agence commerciale, listée séparément
@@ -48,10 +51,10 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // 78x120 partout, jamais 78x119 (mesure terrain erronée, corrigée).
     { stationName: 'Empalot', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026b' },
     { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026' },
-    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
-    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)', comment: 'Réf. terrain : N2026' },
+    { stationName: 'François Verdier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem', comment: 'Réf. terrain : 2026' },
+    { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem', comment: 'Réf. terrain : N2026' },
     { stationName: 'Jean-Jaurès', line: 'A', modelId: 'pdq-78x120', quantity: 3, location: 'Mezzanine', comment: 'Réf. terrain : N2026' },
-    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Édicule (extérieur)', comment: 'Réf. terrain : 2026' },
+    { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Totem', implantationContext: 'totem', comment: 'Réf. terrain : 2026' },
     { stationName: 'Jeanne d\'Arc', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium', comment: 'Réf. terrain : 2026' },
     { stationName: 'Faculté de Pharmacie', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station', comment: 'Réf. terrain : 2026' },
     // Université Paul Sabatier : pôle Métro B / Téléo, deux Station.name
@@ -59,17 +62,44 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     // orthographie "Paul Sabatier", le Téléo "Paul-Sabatier" (registre).
     // Les deux 78x100 sont sur les édicules des deux sorties, distinguées par
     // la sortie qu'elles desservent (et non par un numéro d'exemplaire).
-    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule — sortie côté Fac' },
-    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Édicule — sortie côté gare bus' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem — sortie côté Fac', implantationContext: 'totem' },
+    { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem — sortie côté gare bus', implantationContext: 'totem' },
     // Deux 78x120 en station : l'emplacement précis du second reste à
     // confirmer au terrain — jamais recopié de celui du premier.
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
     { stationName: 'Université Paul Sabatier', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
     { stationName: 'Université Paul-Sabatier', line: 'TELEO', modelId: 'pdq-78x120', quantity: 1, location: 'Cadre aluminium' },
-    { stationName: 'Saint-Michel - Marcel Langer', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Édicule (extérieur)' },
+    { stationName: 'Saint-Michel - Marcel Langer', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Saint-Michel - Marcel Langer', line: 'B', modelId: 'pdq-78x120', quantity: 1, location: 'Intérieur station' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée bus' },
     { stationName: 'Ramonville', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Entrée square' },
+    // --- 78×100 extérieur : relevé totems / ascenseurs extérieurs (lignes A
+    // et B, oct. 2026, en cours) — complète les exemplaires ci-dessus. Le
+    // support (totem, ascenseur) n'est qu'un contexte d'implantation : tout
+    // autre élément posé dessus (pictogramme cognitif…) reste un inventaire
+    // séparé. Les 78×100 / 78×120 en station feront l'objet d'une autre passe.
+    { stationName: 'Bagatelle', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Bagatelle', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Ascenseur extérieur', implantationContext: 'ascenseur-exterieur' },
+    { stationName: 'Mermoz', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Mermoz', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Ascenseur extérieur', implantationContext: 'ascenseur-exterieur' },
+    { stationName: 'Patte d\'Oie', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Patte d\'Oie', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Ascenseur extérieur', implantationContext: 'ascenseur-exterieur' },
+    { stationName: 'Esquirol', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Capitole', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Jolimont', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Ascenseur extérieur', implantationContext: 'ascenseur-exterieur' },
+    { stationName: 'Roseraie', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Borderouge', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Trois Cocus', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Barrière de Paris', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Minimes - Claude Nougaro', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Canal du Midi', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Compans-Caffarelli', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Carmes', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Palais de Justice', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Saint-Agne - SNCF', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Saouzelong', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Rangueil', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+
     // Silos des P+R : un exemplaire sous cadre aluminium au rez-de-chaussée
     // de chaque silo (le 78x120 plastifié EST le modèle encadré).
     { stationName: 'Argoulets', line: 'A', modelId: 'pdq-78x120', quantity: 1, location: 'Silo P+R — RDC, cadre aluminium' },

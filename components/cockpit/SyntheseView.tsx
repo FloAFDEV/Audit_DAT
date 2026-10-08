@@ -18,12 +18,13 @@ import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
-import { formatDimensions, SUPPORT_LABELS } from './labels';
+import { compareLines, formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
 import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
+import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 
@@ -298,11 +299,12 @@ const PlanQuartierOverview: React.FC<{
                 // seule source du libellé) — jamais un deuxième « A → Métro A ».
                 label: lineConfigs[line]?.label ?? line,
                 installed: [...stations.values()].reduce((s, v) => s + v.installed, 0),
-                stations: [...stations.entries()]
-                    .map(([name, v]) => ({ name, ...v }))
-                    .sort((a, b) => b.installed - a.installed || a.name.localeCompare(b.name)),
+                // Ordre physique de la ligne (même source que l'arbre des
+                // implantations et l'export).
+                stations: sortByPhysicalStationOrder(line, [...stations.entries()].map(([name, v]) => ({ name, ...v })), s => s.name),
             }))
-            .sort((a, b) => b.installed - a.installed || a.label.localeCompare(b.label));
+            // Lignes dans l'ordre du réseau (A, B, C, Tram…), comme partout ailleurs.
+            .sort((a, b) => compareLines(a.line, b.line));
     }, [models, patrimoineIndex, lineConfigs]);
 
     if (total === 0) {
