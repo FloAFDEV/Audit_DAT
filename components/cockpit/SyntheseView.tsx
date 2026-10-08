@@ -18,7 +18,7 @@ import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
-import { formatDimensions, SUPPORT_LABELS } from './labels';
+import { compareLines, formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
 import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
@@ -299,7 +299,8 @@ const PlanQuartierOverview: React.FC<{
                 // implantations et l'export).
                 stations: sortByPhysicalStationOrder(line, [...stations.entries()].map(([name, v]) => ({ name, ...v })), s => s.name),
             }))
-            .sort((a, b) => b.installed - a.installed || a.label.localeCompare(b.label));
+            // Lignes dans l'ordre du réseau (A, B, C, Tram…), comme partout ailleurs.
+            .sort((a, b) => compareLines(a.line, b.line));
     }, [models, patrimoineIndex, lineConfigs]);
 
     if (total === 0) {
