@@ -24,10 +24,11 @@ import {
   Flag,
   Layers
 } from 'lucide-react';
-import { dirKeyOf } from '../utils/signaletiqueDirections';
+import { dirKeyOf, TERMINUS_STATIONS, TERMINUS_BANDEAU_TEXT } from '../utils/signaletiqueDirections';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import { resizeImage } from '../utils/resizeImage';
 
 type SignDir = 'meett' | 'pdj' | 'direction1' | 'direction2';
 
@@ -45,44 +46,6 @@ interface SignaletiqueAuditFormProps {
   onStationCommentChange: (comment: string) => void;
   onBack: () => void;
 }
-
-const resizeImage = (file: File, maxSize: number): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject(new Error('Impossible d\'obtenir le contexte du canvas.'));
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.onerror = reject;
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
 
 const CATEGORY_LABELS: Record<keyof SignaletiqueData, string> = {
   totem: 'Totem',
@@ -117,8 +80,6 @@ const CATEGORY_ICONS: Record<keyof SignaletiqueData, React.ReactNode> = {
 // jamais dans les données.
 const stripDirectionPrefix = (name: string) => name.replace(/^Direction\s+/i, '');
 
-const TERMINUS_STATIONS = ['Palais de Justice', 'MEETT'];
-const TERMINUS_BANDEAU_TEXT = 'Terminus (avec le picto ligne(s)) / Merci de ne pas monter à bord / Les départs se font depuis le quai opposé';
 const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 
 // Le Plan de Quartier mesure réellement 83 x 100 cm sur le réseau Tram et

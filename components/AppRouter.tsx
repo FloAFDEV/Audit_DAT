@@ -18,6 +18,7 @@ const EcaTripodeSortieDecision = lazy(() => import('./EcaTripodeSortieDecision')
 const PMRFloorAdhesiveAuditForm = lazy(() => import('./PMRFloorAdhesiveAuditForm'));
 const CognitivePictogramAuditForm = lazy(() => import('./CognitivePictogramAuditForm'));
 const PlanQuartierAuditForm = lazy(() => import('./PlanQuartierAuditForm'));
+const T1PlanQuartierAudit = lazy(() => import('./T1PlanQuartierAudit'));
 const StatsPage = lazy(() => import('./StatsPage'));
 
 
@@ -224,6 +225,29 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onUpdateAccessPointName={handlers.handleUpdateCognitivePictogramAccessPointName}
             onBack={() => handlers.selectModule(null)}
         />
+    }
+
+    // Plans de quartier T1 : référentiel propre (2 plans, 1 par sens), audité
+    // sur les emplacements Équipements Station de la station — jamais le
+    // catalogue générique ci-dessous.
+    if (selectedModule?.type === AuditModuleType.PLAN_QUARTIER && selectedModule.line === 'TRAM') {
+        const signaletiqueModule = selectedLieu?.modules.find(m => m.type === AuditModuleType.SIGNALETIQUE && m.line === 'TRAM');
+        const station = (signaletiqueModule?.data as ModeData | undefined)?.stations?.[0];
+        if (signaletiqueModule && station?.signaletique) {
+            return <T1PlanQuartierAudit
+                module={selectedModule}
+                signaletiqueModule={signaletiqueModule}
+                station={station}
+                onStatusChange={handlers.handleSignaletiqueStatusChange}
+                onFieldChange={handlers.onFieldChange}
+                onCommentChange={handlers.handleSignaletiqueCommentChange}
+                onPhotoChange={handlers.handleSignaletiquePhotoChange}
+                onPhotoNoteChange={handlers.onPhotoNoteChange}
+                onPhotoRotationChange={handlers.onPhotoRotationChange}
+                onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
+                onBack={() => handlers.selectModule(null)}
+            />;
+        }
     }
 
     // Plans de quartier (+ PEM 3D) Form
