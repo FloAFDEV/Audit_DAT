@@ -420,6 +420,9 @@ export interface MaintenanceItem {
    *  DAT/PR/ECA, qui ne capturent pas de photo). */
   photo_base64?: string | null;
   photo_rotation?: number;
+  /** Code station (Pictogrammes cognitifs) : affichage du visuel du
+   *  pictogramme dans la liste — information seule, aucun calcul. */
+  stationCode?: string;
 }
 
 // =================================================================

@@ -143,6 +143,7 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                             ...baseItem,
                             elementName: "Pictogramme cognitif",
                             context: p.accessPointName,
+                            stationCode: (module.data as CognitivePictogramData).stationCode,
                             adhesiveName: "Pictogramme",
                             status: p.status as string,
                         };
