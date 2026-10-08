@@ -193,7 +193,7 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
     return { items, totals };
 };
 
-const isDefect = (status: EquipmentStatusType | 'NotChecked') => (
+export const isDefect = (status: EquipmentStatusType | 'NotChecked') => (
     status === EquipmentStatusType.ABSENT
     || status === EquipmentStatusType.TO_REPLACE
     || status === EquipmentStatusType.DEGRADED

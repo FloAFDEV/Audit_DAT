@@ -27,6 +27,7 @@ import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockp
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier } from '../../utils/cockpit/signaletiquePlansQuartier';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -193,7 +194,9 @@ const PlanQuartierOverview: React.FC<{
     onOpenReference: (referenceId: string) => void;
     /** Pictogrammes cognitifs déjà audités, par (ligne, lieu) — lecture seule. */
     cognitivePictograms: Map<string, CognitivePictogramSummary>;
-}> = ({ patrimoineIndex, references, lineConfigs, onOpenReference, cognitivePictograms }) => {
+    /** Plans de quartier audités dans Équipements Station (T1…) — lecture seule. */
+    signaletiquePlans: SignaletiquePlanQuartier[];
+}> = ({ patrimoineIndex, references, lineConfigs, onOpenReference, cognitivePictograms, signaletiquePlans }) => {
     // Repliée par défaut : un plan de quartier posé sur la quasi-totalité
     // d'une ligne peut lister ~90 stations au total, toutes empilées en une
     // colonne sur mobile — un scroll interminable. Chaque ligne s'ouvre
@@ -232,8 +235,24 @@ const PlanQuartierOverview: React.FC<{
         [models]
     );
 
-    const total = tiles.reduce((sum, t) => sum + t.installed, 0);
-    const totalDefects = tiles.reduce((sum, t) => sum + t.defects, 0);
+    // Plans de quartier audités dans Équipements Station : une tuile par
+    // (ligne, dimension) — aucune référence catalogue, donc non cliquable.
+    const signaletiqueLabel = (plan: SignaletiquePlanQuartier) =>
+        `${lineConfigs[plan.line]?.shortLabel ?? plan.line} ${plan.dimensions.replace(/\s*x\s*/i, ' × ')}`;
+    const signaletiqueTiles = useMemo(() => {
+        const byFormat = new Map<string, { id: string; label: string; installed: number; defects: number }>();
+        for (const plan of signaletiquePlans) {
+            const id = `${plan.line}|${plan.dimensions}`;
+            const tile = byFormat.get(id) ?? { id, label: signaletiqueLabel(plan).replace(' ', ' · '), installed: 0, defects: 0 };
+            tile.installed += 1;
+            if (plan.isDefect) tile.defects += 1;
+            byFormat.set(id, tile);
+        }
+        return [...byFormat.values()];
+    }, [signaletiquePlans, lineConfigs]);
+
+    const total = [...tiles, ...signaletiqueTiles].reduce((sum, t) => sum + t.installed, 0);
+    const totalDefects = [...tiles, ...signaletiqueTiles].reduce((sum, t) => sum + t.defects, 0);
 
     // Combien de ces plans sont posés sur une caisse automatique de P+R ?
     // Lu sur le contexte porté par l'implantation, jamais deviné d'un libellé.
@@ -291,6 +310,20 @@ const PlanQuartierOverview: React.FC<{
             stations.set(imp.lieuName, entry);
             lineMap.set(imp.line, stations);
         }
+        // Plans Équipements Station : un exemplaire par plan et par direction.
+        for (const plan of signaletiquePlans) {
+            const stations = lineMap.get(plan.line) ?? new Map();
+            const entry = stations.get(plan.lieuName) ?? { installed: 0, defects: 0, formats: new Map<string, { label: string; detail?: string; count: number }>() };
+            entry.installed += 1;
+            if (plan.isDefect) entry.defects += 1;
+            const label = signaletiqueLabel(plan);
+            const formatKey = `${label}|${plan.direction ?? ''}`;
+            const existing = entry.formats.get(formatKey);
+            if (existing) existing.count += 1;
+            else entry.formats.set(formatKey, { label, detail: plan.direction, count: 1 });
+            stations.set(plan.lieuName, entry);
+            lineMap.set(plan.line, stations);
+        }
         return [...lineMap.entries()]
             .map(([line, stations]) => ({
                 line,
@@ -305,7 +338,7 @@ const PlanQuartierOverview: React.FC<{
             }))
             // Lignes dans l'ordre du réseau (A, B, C, Tram…), comme partout ailleurs.
             .sort((a, b) => compareLines(a.line, b.line));
-    }, [models, patrimoineIndex, lineConfigs]);
+    }, [models, patrimoineIndex, lineConfigs, signaletiquePlans]);
 
     if (total === 0) {
         return (
@@ -341,6 +374,9 @@ const PlanQuartierOverview: React.FC<{
                         tone="slate"
                         onClick={() => onOpenReference(t.id)}
                     />
+                ))}
+                {signaletiqueTiles.map(t => (
+                    <IndicatorTile key={t.id} size="sm" value={t.installed} label={t.label} tone="slate" />
                 ))}
             </div>
 
@@ -510,6 +546,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
     // Pictogrammes cognitifs présentés dans les cards (lecture seule du module).
     const cognitivePictograms = useMemo(() => summarizeCognitivePictograms(filteredLieux), [filteredLieux]);
+    // Plans de quartier T1 (Équipements Station), agrégés en lecture.
+    const signaletiquePlans = useMemo(() => collectSignaletiquePlansQuartier(filteredLieux), [filteredLieux]);
     const selectedLieuPictoCode = useMemo(() => (
         selectedLieuObject
             ? [...cognitivePictograms.entries()].find(([key]) => key.endsWith(`|${selectedLieuObject.name}`))?.[1].stationCode
@@ -1000,6 +1038,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
                     onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
                     cognitivePictograms={cognitivePictograms}
+                    signaletiquePlans={signaletiquePlans}
                 />
             </StatCard>
             )}
