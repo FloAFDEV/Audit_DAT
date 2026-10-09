@@ -9,7 +9,8 @@
 // sens ; les éventuels emplacements supplémentaires (MEETT) restent
 // intacts dans Équipements Station, hors de ce référentiel.
 // =================================================================
-import { EquipmentStatusType, PlanQuartierStatus, Station } from '../types';
+import { AuditModuleType, EquipmentStatusType, Lieu, ModeData, PlanQuartierStatus, Station } from '../types';
+import { isModuleInCurrentScope } from './moduleScope';
 import { dirKeyOf } from './signaletiqueDirections';
 import { isDefect } from './cockpit/signaletiqueStationIndex';
 
@@ -62,4 +63,19 @@ export const summarizeT1PlanQuartier = (occurrences: T1PlanQuartierOccurrence[])
         else if (isDefect(status)) summary.toTreat++;
     }
     return summary;
+};
+
+/** Progression T1 d'un lieu (filtre Plans de quartier → Tram T1) : 2 sens
+ *  attendus, contrôlé = état du plan autre que « Non contrôlé » (bandeau
+ *  exclu). Lecture des emplacements Équipements Station, rien de copié ;
+ *  null si le lieu n'a pas de station T1 en service. */
+export const getT1PlanQuartierProgressCounts = (lieu: Lieu): { applicable: number; checked: number } | null => {
+    const signaletique = lieu.modules.find(m => m.type === AuditModuleType.SIGNALETIQUE && m.line === 'TRAM');
+    const station = (signaletique?.data as ModeData | undefined)?.stations?.[0];
+    if (!signaletique || !station || !isModuleInCurrentScope(signaletique) || !isModuleInCurrentScope(station)) return null;
+    const occurrences = t1PlanQuartierOccurrences(station);
+    return {
+        applicable: T1_PLANS_PER_STATION,
+        checked: occurrences.filter(o => o.item && (o.item.status ?? 'NotChecked') !== 'NotChecked').length,
+    };
 };
