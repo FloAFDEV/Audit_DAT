@@ -4,6 +4,15 @@ import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType
 import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { isModuleInCurrentScope } from './moduleScope';
+import { getT1PlanQuartierProgressCounts } from './t1PlanQuartierAudit';
+
+/** Filtre « Plans de quartier → Tram T1 » : les plans de quartier se lisent
+ *  dans l'audit T1 (Équipements Station, 2 attendus par station), jamais dans
+ *  le module générique ni dans les plans de quartier des autres lignes du
+ *  lieu. Ne s'applique qu'avec le filtre Plans de quartier explicitement
+ *  actif sur la catégorie T1 — aucun autre filtre ni la vue « Tout ». */
+const isT1PlanQuartierContext = (category: AuditCategory | 'ALL' | undefined, activeFilters: AuditModuleType[], module: AuditModule) =>
+    category === 'TRAM' && activeFilters.includes(AuditModuleType.PLAN_QUARTIER) && module.type === AuditModuleType.PLAN_QUARTIER;
 
 export enum ProgressStatus {
     NotStarted = 'NotStarted',
@@ -351,7 +360,7 @@ export function getModuleProgress(module: AuditModule) {
 /**
  * REFACTORED: Now uses the centralized getModuleProgressCounts.
  */
-export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = []): number => {
+export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [], category?: AuditCategory | 'ALL'): number => {
     if (!lieu?.modules) return 0;
 
     const modulesToConsider = activeFilters.length > 0
@@ -365,6 +374,14 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
 
     for (const module of modulesToConsider) {
         if (!isModuleInCurrentScope(module)) continue;
+        if (isT1PlanQuartierContext(category, activeFilters, module)) {
+            const t1 = module.line === 'TRAM' ? getT1PlanQuartierProgressCounts(lieu) : null;
+            if (!t1) continue;
+            hasAnyNonFutureModule = true;
+            totalApplicableItems += t1.applicable;
+            totalCheckedItems += t1.checked;
+            continue;
+        }
         hasAnyNonFutureModule = true;
 
         const counts = getModuleProgressCounts(module);
@@ -405,6 +422,14 @@ export const getCategoryProgress = (
 
         for (const module of modulesToProcess) {
             if (!isModuleInCurrentScope(module)) continue;
+            if (isT1PlanQuartierContext(category, activeFilters, module)) {
+                const t1 = module.line === 'TRAM' ? getT1PlanQuartierProgressCounts(lieu) : null;
+                if (!t1) continue;
+                totalApplicableItems += t1.applicable;
+                totalCheckedItems += t1.checked;
+                hasAnyItems = true;
+                continue;
+            }
             
             const counts = getModuleProgressCounts(module);
             totalApplicableItems += counts.applicable;

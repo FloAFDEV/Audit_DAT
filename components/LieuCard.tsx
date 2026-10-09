@@ -18,7 +18,7 @@ interface LieuCardProps {
 
 export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter }) => {
     const { activeAuditFilters } = useAuditStore();
-    const progress = getLieuProgress(lieu, activeAuditFilters);
+    const progress = getLieuProgress(lieu, activeAuditFilters, activeFilter);
     const defectCount = getLieuDefectCount(lieu);
     const hasAnomaly = defectCount > 0;
     const isInProgress = progress > 0 && progress < 100;
