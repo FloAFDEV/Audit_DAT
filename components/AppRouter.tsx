@@ -403,7 +403,13 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
                 </div>
             );
         }
+        // Tram T1 : les plans de quartier s'auditent dans « Plans de
+        // quartier T1 » ; Équipements Station les affiche en lecture seule.
+        const t1PlanQuartierModule = selectedModule.line === 'TRAM'
+            ? selectedLieu?.modules.find(m => m.type === AuditModuleType.PLAN_QUARTIER && m.line === 'TRAM')
+            : undefined;
         return <SignaletiqueAuditForm
+            onOpenT1PlanQuartierAudit={t1PlanQuartierModule ? () => handlers.selectModule(t1PlanQuartierModule.id) : undefined}
             module={selectedModule}
             station={station}
             direction={selectedDirection}

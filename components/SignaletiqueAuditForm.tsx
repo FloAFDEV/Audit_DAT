@@ -22,7 +22,9 @@ import {
   MessageSquare,
   FileText,
   Flag,
-  Layers
+  Layers,
+  Lock,
+  ArrowRight
 } from 'lucide-react';
 import { dirKeyOf, TERMINUS_STATIONS, TERMINUS_BANDEAU_TEXT } from '../utils/signaletiqueDirections';
 import AuditFormLayout from './AuditFormLayout';
@@ -45,6 +47,9 @@ interface SignaletiqueAuditFormProps {
   onReset: () => void;
   onStationCommentChange: (comment: string) => void;
   onBack: () => void;
+  /** Tram T1 : ouvre l'audit « Plans de quartier T1 » de la station — seul
+   *  endroit d'édition des plans de quartier T1 (lecture seule ici). */
+  onOpenT1PlanQuartierAudit?: () => void;
 }
 
 const CATEGORY_LABELS: Record<keyof SignaletiqueData, string> = {
@@ -102,7 +107,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   onFieldChange,
   onReset,
   onStationCommentChange,
-  onBack
+  onBack,
+  onOpenT1PlanQuartierAudit
 }) => {
   const signaletique = station.signaletique;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -438,6 +444,11 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     // n'est jamais modifié, voir PLAN_QUARTIER_DISPLAY_DIMENSIONS.
     const displayedDimensions = category === 'planQuartier' ? PLAN_QUARTIER_DISPLAY_DIMENSIONS : item.dimensions;
 
+    // Plan de quartier T1 audité dans « Plans de quartier T1 » (1er
+    // emplacement de chaque sens, cf. utils/t1PlanQuartierAudit.ts) : même
+    // donnée, consultée ici en lecture seule — un seul endroit d'édition.
+    const isT1Audited = category === 'planQuartier' && module.line === 'TRAM' && index === 0 && !!onOpenT1PlanQuartierAudit;
+
     return (
       <div key={`${category}-${dir}-${index}`} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors border-b border-gray-100 dark:border-slate-700 last:border-0">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -452,17 +463,21 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             </div>
             <p className="text-sm text-gray-500 dark:text-slate-400">Vérification de l'état général</p>
           </div>
-          <div className="w-full sm:w-auto sm:flex-shrink-0">
+          <fieldset disabled={isT1Audited} className={`w-full sm:w-auto sm:flex-shrink-0 min-w-0 ${isT1Audited ? 'opacity-60 cursor-not-allowed' : ''}`}>
             {renderStatusButtons(item.status, (status: any) => onStatusChange(category, dir, index, status), options)}
-          </div>
+          </fieldset>
         </div>
 
         {/* Sous-champ Bandeau pour Plan de Quartier */}
-        {category === 'planQuartier' && renderSubField(
-          isTerminus ? 'Bandeau Terminus' : 'Bandeau Direction',
-          isTerminus ? TERMINUS_BANDEAU_TEXT : null,
-          item.bannerDirection,
-          (status) => onFieldChange('planQuartier', dir, index, 'bannerDirection', status)
+        {category === 'planQuartier' && (
+          <fieldset disabled={isT1Audited} className={`min-w-0 ${isT1Audited ? 'opacity-60 cursor-not-allowed' : ''}`}>
+            {renderSubField(
+              isTerminus ? 'Bandeau Terminus' : 'Bandeau Direction',
+              isTerminus ? TERMINUS_BANDEAU_TEXT : null,
+              item.bannerDirection,
+              (status) => onFieldChange('planQuartier', dir, index, 'bannerDirection', status)
+            )}
+          </fieldset>
         )}
 
         {/* Adhésifs IV sur le caisson pour BIV */}
@@ -474,7 +489,37 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           {MULTI_QUAI_STATIONS.includes(station.name) && renderSubField('Quai (multi-quais)', '6 × 2 cm', (item as any).quaiCaisson ?? 'NotChecked', (status) => onFieldChange('biv', dir, index, 'quaiCaisson', status))}
         </>}
 
-        {renderPhotoSection(category, dir, index, item)}
+        {isT1Audited ? (
+          <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col gap-3">
+            {item.photo_base64 && (
+              <img
+                src={item.photo_base64}
+                alt="Aperçu"
+                className="w-24 h-24 rounded-md object-cover shadow-sm"
+                style={{ transform: `rotate(${item.photo_rotation || 0}deg)` }}
+              />
+            )}
+            {item.comment && (
+              <p className="flex items-start gap-2 text-sm text-gray-600 dark:text-slate-300">
+                <MessageSquare className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
+                <span className="min-w-0 break-words">{item.comment}</span>
+              </p>
+            )}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-md bg-slate-100 dark:bg-slate-700/50">
+              <p className="flex items-center gap-2 text-xs text-gray-600 dark:text-slate-300">
+                <Lock className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                Audité dans Plans de quartier T1 — consultation seule ici
+              </p>
+              <button
+                type="button"
+                onClick={onOpenT1PlanQuartierAudit}
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 transition-all active:scale-95"
+              >
+                Ouvrir l'audit <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        ) : renderPhotoSection(category, dir, index, item)}
       </div>
     );
   };
