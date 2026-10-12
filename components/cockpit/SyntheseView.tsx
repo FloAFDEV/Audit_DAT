@@ -6,7 +6,7 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
+import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, X, Layout, BookOpenCheck, ChevronDown, Flag, ExternalLink, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -17,10 +17,9 @@ import { AUDIT_CATEGORIES } from '../../data/config';
 import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
-import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
+import { IndicatorTile } from './primitives';
 import { compareLines, formatDimensions, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
-import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
@@ -29,6 +28,8 @@ import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePicto
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../../utils/cockpit/signaletiquePlansQuartier';
 import { summarizePlanQuartierAudit } from '../../utils/cockpit/planQuartierAuditTotals';
+import { getCategoryProgress, getLieuProgress, getModuleProgress } from '../../utils/progressCalculators';
+import useAuditStore from '../../store';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -549,13 +550,100 @@ const PlanQuartierOverview: React.FC<{
     );
 };
 
+/* =====================
+   Mise en page de la Synthèse (présentation uniquement) — organisée en
+   trois questions : qu'est-ce qui nécessite mon attention (« À traiter »),
+   où en est le réseau (« Réseau par ligne »), où trouver le détail
+   (« Patrimoine & référentiel » + détails ouverts à la demande). Aucune
+   valeur n'est calculée par ces primitives : elles affichent ce que
+   fournissent les moteurs (useStats, patrimoineIndex, index Équipements
+   Station, Plans de quartier, bâches, progressions de l'accueil).
+   ===================== */
+
+const SynthesePanel: React.FC<{ title?: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }> = ({ title, aside, children, className = '' }) => (
+    <section className={`bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm ${className}`}>
+        {title && (
+            <header className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-5 pt-4 pb-2">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">{title}</h2>
+                {aside}
+            </header>
+        )}
+        {children}
+    </section>
+);
+
+const ProgressBar: React.FC<{ value: number; className?: string; label: string }> = ({ value, className = '', label }) => (
+    <div
+        className={`h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden ${className}`}
+        role="progressbar"
+        aria-label={label}
+        aria-valuenow={Math.round(value)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+    >
+        <div className="h-full rounded-full bg-teal-500" style={{ width: `${Math.min(100, value)}%` }} />
+    </div>
+);
+
+/** Détail ouvert à la demande depuis son point d'entrée (Patrimoine,
+ *  Réseau par ligne) — rien n'est affiché tant qu'il est fermé. */
+const SyntheseDetail: React.FC<{ id: string; title: string; summary: React.ReactNode; icon: React.ReactNode; open: boolean; onClose: () => void; children: React.ReactNode }> = ({ id, title, summary, icon, open, onClose, children }) => !open ? null : (
+    <section id={`synthese-detail-${id}`} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200/80 dark:border-slate-700 shadow-sm scroll-mt-4" aria-label={title}>
+        <header className="flex items-center gap-3 px-4 sm:px-5 py-3.5 border-b border-slate-100 dark:border-slate-700">
+            <span className="flex-shrink-0 w-8 h-8 rounded-lg bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 flex items-center justify-center">{icon}</span>
+            <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</span>
+                <span className="block text-xs text-slate-500 dark:text-slate-400">{summary}</span>
+            </span>
+            <button
+                type="button"
+                onClick={onClose}
+                className="flex-shrink-0 inline-flex items-center gap-1 h-9 px-2.5 rounded-lg text-xs font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+            >
+                <X className="w-4 h-4" aria-hidden="true" />Fermer
+            </button>
+        </header>
+        <div className="px-4 sm:px-5 pb-5 pt-4">{children}</div>
+    </section>
+);
+
+/** Valeur de tableau : « — » = non applicable à la ligne (jamais un 0
+ *  inventé), 0 atténué, sinon la valeur telle que fournie par le moteur. */
+const SyntheseNum: React.FC<{ v?: number | 'nr'; strong?: boolean }> = ({ v, strong }) => {
+    if (v === undefined) return <span className="text-slate-300 dark:text-slate-600" aria-label="non applicable">—</span>;
+    if (v === 'nr') return <span className="text-[11px] italic text-slate-400 whitespace-nowrap">non recensée</span>;
+    return <span className={`tabular-nums ${v === 0 ? 'text-slate-400 dark:text-slate-500' : strong ? 'font-bold text-slate-900 dark:text-slate-50' : 'font-semibold text-slate-700 dark:text-slate-200'}`}>{v}</span>;
+};
+
+interface SyntheseLineRow {
+    key: 'METRO_A' | 'METRO_B' | 'METRO_C' | 'TRAM' | 'LAE' | 'TELEO';
+    stations: number;
+    progress: number;
+    dat?: number;
+    eca?: number;
+    pmr?: number;
+    pictos?: number;
+    eqStation?: number;
+    pdq?: number;
+    pdqT1?: number;
+    baches?: number | 'nr';
+}
+
+const normalizeSearch = (text: string) => text.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
 interface SyntheseViewProps {
     lieux: Lieu[];
 }
 
 const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
-    // --- LOCATION FILTER LOGIC ---
+    // Ouverture d'un audit : mécanismes de sélection existants de l'application
+    // (selectLieu quitte le cockpit et ouvre le lieu, selectModule ouvre le
+    // module — exactement le parcours Accueil → lieu → module).
+    const selectLieuInApp = useAuditStore(s => s.selectLieu);
+    const selectModuleInApp = useAuditStore(s => s.selectModule);
+
+    // --- FILTRE PAR LIEU (recherche de station) ---
     const [selectedLieuId, setSelectedLieuId] = useState<string | null>(null);
     const [filterQuery, setFilterQuery] = useState('');
     const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
@@ -587,6 +675,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const cognitivePictograms = useMemo(() => summarizeCognitivePictograms(filteredLieux), [filteredLieux]);
     // Plans de quartier T1 (Équipements Station), agrégés en lecture.
     const signaletiquePlans = useMemo(() => collectSignaletiquePlansQuartier(filteredLieux), [filteredLieux]);
+    const t1Census = useMemo(() => summarizeSignaletiqueCensus(signaletiquePlans), [signaletiquePlans]);
     const selectedLieuPictoCode = useMemo(() => (
         selectedLieuObject
             ? [...cognitivePictograms.entries()].find(([key]) => key.endsWith(`|${selectedLieuObject.name}`))?.[1].stationCode
@@ -605,6 +694,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const showPmrFloor = lieuHas(AuditModuleType.PMR_FLOOR_ADHESIVE);
     const showCogPicto = lieuHas(AuditModuleType.COGNITIVE_PICTOGRAMS);
     const showSignaletique = lieuHas(AuditModuleType.SIGNALETIQUE);
+    const showPlanQuartier = lieuHas(AuditModuleType.PLAN_QUARTIER);
     const lieuBaches = useMemo(
         () => (selectedLieuObject ? getBachesForLieu(selectedLieuObject.name) : []),
         [selectedLieuObject],
@@ -615,11 +705,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
         if (!lieux) return [];
         if (!filterQuery) return lieux;
         // Insensible à la casse et aux accents (« aeroconstellation » trouve Aéroconstellation).
-        const normalize = (text: string) => text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-        const query = normalize(filterQuery);
+        const query = normalizeSearch(filterQuery);
         return lieux.filter(l =>
-            normalize(l.name).includes(query) ||
-            (l.modules || []).some(m => m.type === AuditModuleType.DAT && normalize((m.data as ModeData).stations?.[0]?.code ?? '').includes(query))
+            normalizeSearch(l.name).includes(query) ||
+            (l.modules || []).some(m => m.type === AuditModuleType.DAT && normalizeSearch((m.data as ModeData).stations?.[0]?.code ?? '').includes(query))
         );
     }, [lieux, filterQuery]);
 
@@ -632,11 +721,6 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     // Use filtered lieux for stats calculation
     const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
-
-    // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
-    // (règle 7 : une seule source de calcul, à l'intérieur de ce référentiel).
-    // Le détail (liste + export) vit désormais dans Analyse des anomalies,
-    // pas ici — Synthèse ne fait qu'orienter (nav.navigate).
 
     // PMR sol / Pictogrammes cognitifs : référentiels autonomes hors
     // patrimoineIndex (règle 7) — conservés temporairement via le moteur
@@ -678,23 +762,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const laeConfig = categoryMap['LAE'];
 
     // Lecture synthétique ECA (vue mono-station) : partition des 8 types
-    // techniques en catégories métier lisibles au premier coup d'œil, sans
-    // tournure « Dont » qui masquerait la nature exacte de l'équipement.
-    // Partition stricte (pas de recomptage) — Entrée + Sortie + PMR à bras +
-    // PMR à vantaux + PMR à vantaux réversible + Réversible = total ECA,
-    // toujours : chaque type technique n'alimente qu'une seule case.
-    //   - Entrée = Tripode d'entrée + Vantaux d'entrée
-    //   - Sortie = Tripode de sortie + Vantaux de sortie
-    //   - PMR à bras / PMR à vantaux / PMR à vantaux réversible : les 3
-    //     variantes PMR affichées séparément (jamais recomptées dans
-    //     Entrée/Sortie) — un agrégat "Dont PMR" resterait dispo via
-    //     globalCounts.ecaPmrCount si besoin ailleurs, mais n'est plus
-    //     affiché ici.
-    //   - Réversible = Vantaux réversible non-PMR — seul type ne rentrant
-    //     dans aucune des cases précédentes.
-    // Chaque case n'est affichée que si elle est non nulle (comme le
-    // tableau réseau existant, ECA_TYPE_ROWS) : la lecture reste courte sur
-    // la grande majorité des stations, qui n'ont pas toutes les variantes.
+    // techniques en catégories métier lisibles — Entrée + Sortie + PMR à bras
+    // + PMR à vantaux + PMR à vantaux réversible + Réversible = total ECA ;
+    // chaque case n'est affichée que si elle est non nulle.
     const ecaEntreeCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeEntree] ?? 0)
         + (ecaBreakdown.byType[EcaEquipmentType.VantauxEntree] ?? 0);
     const ecaSortieCount = (ecaBreakdown.byType[EcaEquipmentType.TripodeSortie] ?? 0)
@@ -705,10 +775,8 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const ecaReversibleCount = ecaBreakdown.byType[EcaEquipmentType.VantauxReversible] ?? 0;
 
     // DAT par direction (vue mono-station uniquement) : répartition déjà
-    // saisie dans le référentiel (Direction.name + dats.length), jamais
-    // calculée ni stockée ailleurs, juste regroupée par direction au lieu
-    // d'être sommée à plat. N'affiche rien si une seule direction (le
-    // détail serait redondant avec le total juste au-dessus).
+    // saisie dans le référentiel (Direction.name + dats.length), regroupée
+    // par direction. Rien si une seule direction (redondant avec le total).
     const datByDirection = useMemo(() => {
         if (!selectedLieuId || !selectedLieuObject) return [];
         const counts = new Map<string, number>();
@@ -723,565 +791,661 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
         return Array.from(counts.entries()).map(([name, count]) => ({ name, count }));
     }, [selectedLieuId, selectedLieuObject]);
 
-    // Bloc « État des anomalies » extrait en variable pour rester lisible
-    // séparément du reste du rendu (JSX ci-dessous, 2ᵉ section du cockpit).
-    // StatCard (et non plus une section nue) : même grammaire visuelle que
-    // les autres sections de premier niveau, pour une lecture uniforme
-    // terrain/bureau (cf. audit disposition — toutes les sections du
-    // cockpit sont désormais des cartes, jamais un bloc flottant sur le
-    // fond de page à côté d'un autre en carte).
-    const anomaliesSection = (
-        <StatCard title="État des anomalies" icon={<AlertTriangle className="w-6 h-6" />}>
-            {/* Une colonne par référentiel : la grille suit le nombre réel
-                de référentiels (4), sinon la dernière carte reste orpheline
-                sur une seconde rangée aux deux tiers vide. items-start évite
-                que les cartes compactes (0 anomalie) soient étirées à la
-                hauteur d'une carte voisine en anomalie. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2 gap-4 items-start">
-                <AnomalySummaryCard
-                    icon={<BookOpenCheck className="w-4 h-4" />}
-                    title="Signalétique IV"
-                    count={patrimoineIndex.totals.defectCount}
-                    subCounts={[
-                        { label: 'absents', value: patrimoineIndex.totals.absentCount, tone: 'red' },
-                        { label: 'à remplacer', value: patrimoineIndex.totals.toReplaceCount, tone: 'amber' },
-                    ]}
-                    detailLabel="Voir le détail"
-                    onDetail={() => nav.navigate({ section: 'audit' })}
-                />
-                <AnomalySummaryCard
-                    icon={<Footprints className="w-4 h-4" />}
-                    title="PMR sol"
-                    count={pmrSolDefectItems.length}
-                    detailLabel="Voir le détail"
-                    detailDisabled={pmrSolDefectItems.length === 0}
-                    onDetail={() => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems })}
-                />
-                <AnomalySummaryCard
-                    icon={<ScanEye className="w-4 h-4" />}
-                    title="Pictogrammes cognitifs"
-                    count={pictogrammesDefectItems.length}
-                    detailLabel="Voir le détail"
-                    detailDisabled={pictogrammesDefectItems.length === 0}
-                    onDetail={() => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems })}
-                />
-                <AnomalySummaryCard
-                    icon={<Layout className="w-4 h-4" />}
-                    title="Anomalies Équipements Station"
-                    count={signaletiqueStationIndex.totals.defectCount}
-                    subCounts={[
-                        { label: 'absents', value: signaletiqueStationIndex.totals.absentCount, tone: 'red' },
-                        { label: 'à remplacer', value: signaletiqueStationIndex.totals.toReplaceCount, tone: 'amber' },
-                        { label: 'HS', value: signaletiqueStationIndex.totals.hsCount, tone: 'red' },
-                    ]}
-                    detailLabel="Voir le détail"
-                    detailDisabled={signaletiqueStationDefectItems.length === 0}
-                    onDetail={() => setModalContent({ title: 'Anomalies Équipements Station', items: signaletiqueStationDefectItems })}
-                />
-            </div>
-        </StatCard>
+    // Plans de quartier du module (catalogue PDQ) : même périmètre et même
+    // regroupement par ligne que la carte Plans de quartier
+    // (PlanQuartierOverview) — implantations des modèles PDQ, par ligne.
+    const pdqModelIds = useMemo(
+        () => references.filter(r => r.auditType === 'PDQ' && !r.isDisabled).map(r => r.id),
+        [references]
     );
+    const pdqAudit = useMemo(() => summarizePlanQuartierAudit(patrimoineIndex, pdqModelIds), [patrimoineIndex, pdqModelIds]);
+    const pdqByLine = useMemo(() => {
+        const modelIds = new Set(pdqModelIds);
+        const byLine = new Map<string, number>();
+        for (const imp of patrimoineIndex.implantations) {
+            if (modelIds.has(imp.referenceId)) byLine.set(imp.line, (byLine.get(imp.line) ?? 0) + 1);
+        }
+        return byLine;
+    }, [patrimoineIndex, pdqModelIds]);
 
-    return (
-        <>
-            {/* --- BARRE DE FILTRE PAR LIEU --- */}
-            <div className="relative mb-6 z-20" ref={filterRef}>
-                <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <Filter className={`h-5 w-5 ${selectedLieuId ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400'}`} aria-hidden="true" />
-                    </div>
-                    <input
-                        type="text"
-                        placeholder={selectedLieuId ? selectedLieuObject?.name : "Filtrer les données par lieu (Tout le réseau)..."}
-                        value={filterQuery}
-                        onChange={(e) => {
-                            setFilterQuery(e.target.value);
-                            setIsFilterDropdownOpen(true);
-                        }}
-                        onFocus={() => setIsFilterDropdownOpen(true)}
-                        className={`block w-full rounded-lg border py-3 pl-10 pr-10 text-sm shadow-sm focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base transition-colors ${
-                            selectedLieuId
-                            ? 'border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:border-teal-500/50 dark:text-teal-100 placeholder:text-teal-700 dark:placeholder:text-teal-300 font-semibold'
-                            : 'border-gray-300 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-gray-400'
-                        }`}
-                    />
-                    {selectedLieuId && (
-                        <button
-                            onClick={() => {
-                                setSelectedLieuId(null);
-                                setFilterQuery('');
-                            }}
-                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-                    )}
-                </div>
+    // Avancement des audits : mêmes fonctions que les badges de l'accueil
+    // (getCategoryProgress / getLieuProgress), sans filtre d'audit.
+    const networkProgress = useMemo(() => getCategoryProgress(lieux, 'ALL', []), [lieux]);
+    const scopeProgress = selectedLieuObject ? getLieuProgress(selectedLieuObject) : networkProgress;
 
+    const bacheTotal = BACHE_LINES.filter(line => isLineRecensee(line)).reduce((sum, line) => sum + getBacheTotal(line), 0);
+    const lieuBacheTotal = lieuBaches.reduce((sum, b) => sum + b.count, 0);
+
+    const lineRows: SyntheseLineRow[] = useMemo(() => {
+        const bache = (line: 'A' | 'B' | 'C') => (isLineRecensee(line) ? getBacheTotal(line) : 'nr' as const);
+        // ECA : colonne présente seulement si la ligne porte des modules ECA
+        // (même critère que la matrice ECA, moduleCount) — sinon « — ».
+        const eca = (key: 'A' | 'B' | 'C' | 'AEROPORT') => {
+            const data = (ecaBreakdown.byLine as any)[key];
+            return data?.moduleCount > 0 ? data.total : undefined;
+        };
+        const g = globalCounts;
+        const rows: Omit<SyntheseLineRow, 'progress'>[] = [
+            { key: 'METRO_A', stations: g.stationCountA, dat: g.datCountA, eca: eca('A'), pmr: g.pmrFloorAdhesiveCountA, pictos: g.cogPictoCountA, pdq: pdqByLine.get('A') ?? 0, baches: bache('A') },
+            { key: 'METRO_B', stations: g.stationCountB, dat: g.datCountB, eca: eca('B'), pmr: g.pmrFloorAdhesiveCountB, pictos: g.cogPictoCountB, pdq: pdqByLine.get('B') ?? 0, baches: bache('B') },
+            { key: 'METRO_C', stations: g.stationCountC, dat: g.datCountC, eca: eca('C'), pmr: g.pmrFloorAdhesiveCountC, pictos: g.cogPictoCountC, pdq: pdqByLine.get('C') ?? 0, baches: bache('C') },
+            { key: 'TRAM', stations: g.stationCountTram, dat: g.datCountTram, eqStation: g.signaletiqueCountTram, pdqT1: t1Census.total },
+            { key: 'LAE', stations: g.stationCountAero, dat: g.datCountAero, eca: eca('AEROPORT'), pmr: g.pmrFloorAdhesiveCountAero, pictos: g.cogPictoCountAero, eqStation: g.signaletiqueCountAero, pdq: pdqByLine.get('AEROPORT') ?? 0 },
+            { key: 'TELEO', stations: g.stationCountTeleo, dat: g.datCountTeleo, pdq: pdqByLine.get('TELEO') ?? 0 },
+        ];
+        return rows.map(r => ({ ...r, progress: getCategoryProgress(lieux, r.key, []) }));
+    }, [globalCounts, ecaBreakdown, pdqByLine, t1Census, lieux]);
+
+    // Détails ouverts à la demande (un seul point d'entrée chacun).
+    const [openDetails, setOpenDetails] = useState<Set<string>>(new Set());
+    const [expandedLine, setExpandedLine] = useState<string | null>(null);
+    const closeDetail = (id: string) => setOpenDetails(prev => { const next = new Set(prev); next.delete(id); return next; });
+    const toggleDetail = (id: string) => {
+        if (openDetails.has(id)) { closeDetail(id); return; }
+        setOpenDetails(prev => new Set(prev).add(id));
+        setTimeout(() => document.getElementById(`synthese-detail-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    };
+
+    const selectLieu = (id: string | null) => {
+        setSelectedLieuId(id);
+        setFilterQuery('');
+        setIsFilterDropdownOpen(false);
+    };
+
+    const openAudit = (lieuId: string, moduleId: string) => {
+        selectLieuInApp(lieuId);
+        selectModuleInApp(moduleId);
+    };
+
+    const lineLabel = (line: string) => (line === 'AEROPORT' ? 'LAE' : line === 'TRAM' ? 'T1' : line === 'TELEO' ? 'Téléo' : line);
+
+    /* ---------- Recherche de station (filtre par lieu) ---------- */
+    const stationSearch = (
+        <div className="sticky top-0 z-20 -mx-2 px-2 py-2 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:py-0 sm:bg-transparent sm:dark:bg-transparent sm:backdrop-blur-none">
+            <div className="relative" ref={filterRef}>
+                <label htmlFor="synthese-station-search" className="sr-only">Rechercher une station</label>
+                <Search className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none ${selectedLieuId ? 'text-teal-600 dark:text-teal-400' : 'text-slate-400'}`} aria-hidden="true" />
+                <input
+                    id="synthese-station-search"
+                    type="search"
+                    role="combobox"
+                    aria-expanded={isFilterDropdownOpen}
+                    aria-controls="synthese-station-results"
+                    autoComplete="off"
+                    value={filterQuery}
+                    onChange={(e) => {
+                        setFilterQuery(e.target.value);
+                        setIsFilterDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsFilterDropdownOpen(true)}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && filterQuery && filterOptions[0]) selectLieu(filterOptions[0].id);
+                        if (e.key === 'Escape') setIsFilterDropdownOpen(false);
+                    }}
+                    placeholder={selectedLieuObject ? 'Changer de station…' : 'Rechercher une station (nom ou code)…'}
+                    className={`block w-full h-12 rounded-xl border pl-11 pr-11 text-base shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500 ${
+                        selectedLieuId
+                            ? 'border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:border-teal-500/50 dark:text-teal-100 placeholder:text-teal-700 dark:placeholder:text-teal-300'
+                            : 'border-slate-200 bg-white text-slate-900 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-50 placeholder:text-slate-400'
+                    }`}
+                />
+                {selectedLieuId && (
+                    <button
+                        type="button"
+                        onClick={() => selectLieu(null)}
+                        aria-label="Revenir à tout le réseau"
+                        className="absolute inset-y-0 right-0 flex items-center px-3.5 text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200"
+                    >
+                        <X className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                )}
                 {isFilterDropdownOpen && (
-                    <ul className="absolute z-30 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm">
-                        {/* Option "Tout le réseau" */}
-                        <li
-                            className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700 font-medium border-b border-gray-100 dark:border-slate-700"
-                            onClick={() => {
-                                setSelectedLieuId(null);
-                                setFilterQuery('');
-                                setIsFilterDropdownOpen(false);
-                            }}
-                        >
-                            <div className="flex items-center">
-                                <span className="truncate text-teal-600 dark:text-teal-400">Tout le réseau</span>
-                            </div>
+                    <ul id="synthese-station-results" role="listbox" className="absolute z-30 mt-1 w-full max-h-80 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-1 shadow-lg">
+                        <li role="option" aria-selected={!selectedLieuId}>
+                            <button type="button" onClick={() => selectLieu(null)} className="w-full text-left px-3 py-2.5 text-sm font-medium text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-slate-700 border-b border-slate-100 dark:border-slate-700">
+                                Tout le réseau
+                            </button>
                         </li>
-
                         {filterOptions.length === 0 ? (
-                            <li className="relative cursor-default select-none py-2 pl-3 pr-9 text-gray-500 dark:text-slate-400 italic">
-                                Aucun lieu trouvé
-                            </li>
-                        ) : (
-                            filterOptions.map((lieu) => (
-                                <li
-                                    key={lieu.id}
-                                    className="relative cursor-pointer select-none py-2 pl-3 pr-9 text-gray-900 dark:text-slate-100 hover:bg-teal-50 dark:hover:bg-slate-700"
-                                    onClick={() => {
-                                        setSelectedLieuId(lieu.id);
-                                        setFilterQuery('');
-                                        setIsFilterDropdownOpen(false);
-                                    }}
-                                >
-                                    <div className="flex items-center gap-2">
-                                        <LieuBadges lieu={lieu} />
-                                        <span className="truncate">{lieu.name}</span>
-                                    </div>
+                            <li className="px-3 py-2.5 text-sm italic text-slate-500 dark:text-slate-400">Aucun lieu trouvé</li>
+                        ) : filterOptions.map(lieu => {
+                            const code = (lieu.modules.find(m => m.type === AuditModuleType.DAT)?.data as ModeData | undefined)?.stations?.[0]?.code;
+                            const progress = getLieuProgress(lieu);
+                            return (
+                                <li key={lieu.id} role="option" aria-selected={lieu.id === selectedLieuId}>
+                                    <button type="button" onClick={() => selectLieu(lieu.id)} className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-teal-50 dark:hover:bg-slate-700">
+                                        <span className="flex-shrink-0"><LieuBadges lieu={lieu} /></span>
+                                        <span className="min-w-0 flex-1 text-sm font-medium text-slate-800 dark:text-slate-100 truncate" title={lieu.name}>
+                                            {lieu.name}{code && <span className="ml-2 font-mono text-[11px] text-slate-400">{code}</span>}
+                                        </span>
+                                        <span className="flex-shrink-0 text-xs font-semibold tabular-nums text-slate-500 dark:text-slate-400" aria-label={`${Math.round(progress)} % audité`}>{Math.round(progress)} %</span>
+                                    </button>
                                 </li>
-                            ))
-                        )}
+                            );
+                        })}
                     </ul>
                 )}
             </div>
+        </div>
+    );
 
-            {/* ÉTAT DES ANOMALIES — zone dédiée, une carte compacte par
-                référentiel autonome (règle 7 : jamais fusionnées). Chaque
-                carte restitue un compte déjà produit ailleurs, elle ne
-                recalcule rien. Signalétique IV oriente vers Analyse des
-                anomalies (son espace opérationnel) ; PMR sol / Pictogrammes
-                cognitifs ouvrent la liste existante faute de section dédiée. */}
-            {/* COCKPIT — sous xl : une colonne, ordre de lecture terrain
-                (anomalies → aperçu → localisation → annexes). À partir de xl :
-                pilotage à gauche (anomalies, équipements), contexte à droite
-                (localisation, annexes) ; le Référentiel se place sous l'aperçu
-                (colonne droite sur deux rangées), sans changer l'ordre DOM ;
-                l'Inventaire repasse en pleine largeur sous la grille. */}
-            <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] xl:grid-rows-[auto_1fr] gap-8 items-start">
-            <div className="space-y-8 min-w-0 xl:col-start-1 xl:row-start-1">
-            {anomaliesSection}
+    /* ---------- 1. À traiter ---------- */
+    const anomalyCards = [
+        {
+            key: 'iv', icon: <BookOpenCheck className="w-4 h-4" />, title: 'Signalétique IV', count: patrimoineIndex.totals.defectCount,
+            sub: `${patrimoineIndex.totals.absentCount} absents · ${patrimoineIndex.totals.toReplaceCount} à remplacer`,
+            // Toujours actif, comme « Voir le détail » aujourd'hui : mène à l'Analyse des anomalies.
+            disabled: false, onClick: () => nav.navigate({ section: 'audit' }),
+        },
+        {
+            key: 'pmr', icon: <Footprints className="w-4 h-4" />, title: 'PMR sol', count: pmrSolDefectItems.length, sub: 'à remplacer',
+            disabled: pmrSolDefectItems.length === 0, onClick: () => setModalContent({ title: 'Anomalies PMR sol', items: pmrSolDefectItems }),
+        },
+        {
+            key: 'picto', icon: <ScanEye className="w-4 h-4" />, title: 'Pictogrammes cognitifs', count: pictogrammesDefectItems.length, sub: 'à remplacer',
+            disabled: pictogrammesDefectItems.length === 0, onClick: () => setModalContent({ title: 'Anomalies Pictogrammes cognitifs', items: pictogrammesDefectItems }),
+        },
+        {
+            key: 'eq', icon: <Layout className="w-4 h-4" />, title: 'Équipements Station', count: signaletiqueStationIndex.totals.defectCount,
+            sub: `${signaletiqueStationIndex.totals.absentCount} absents · ${signaletiqueStationIndex.totals.toReplaceCount} à remplacer · ${signaletiqueStationIndex.totals.hsCount} HS`,
+            disabled: signaletiqueStationDefectItems.length === 0, onClick: () => setModalContent({ title: 'Anomalies Équipements Station', items: signaletiqueStationDefectItems }),
+        },
+    ];
+    const anomalyTotal = anomalyCards.reduce((sum, c) => sum + c.count, 0);
 
-            {/* Aperçu Global du Réseau — bloc de contexte volumétrique, sous
-                l'état des anomalies (ordre des sections : du plus global au
-                plus spécifique). Regroupe désormais Total Stations avec DAT,
-                P+R et ECA : ce sont toutes des familles de la même vision
-                d'ensemble du réseau, elles se lisent donc dans la même carte
-                plutôt qu'éclatées entre plusieurs blocs de niveaux visuels
-                différents. Synthèse reste une vue d'état : le traitement se
-                fait dans Analyse des anomalies (Signalétique IV) ou via la
-                liste PMR sol/Pictogrammes plus haut — jamais ici. Principe de
-                grille : UN SEUL NIVEAU HIÉRARCHIQUE PAR CELLULE (une famille
-                d'équipement, ou un axe de couverture) et la largeur accordée
-                suit la densité réelle du bloc. */}
-            <StatCard
-                title={selectedLieuId ? `Aperçu : ${selectedLieuObject?.name}` : "Aperçu Global du Réseau"}
-                titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}
-                icon={<Building className="w-6 h-6" />}
-            >
-                <div className="space-y-8">
-
-                {/* Rangée 0 — Total Stations, pleine largeur : la mesure la
-                    plus globale de toutes (taille du réseau couvert), donc en
-                    tête de la carte, avant le détail par famille
-                    d'équipement. Les six lignes du réseau se répartissent en
-                    colonnes plutôt que de s'empiler sous un total isolé. */}
-                {!selectedLieuId && (
-                    <>
+    const attention = (
+        <SynthesePanel className="overflow-hidden">
+            <div className="flex flex-col lg:flex-row">
+                <div className="lg:w-56 flex-shrink-0 px-4 sm:px-5 py-4 lg:border-r border-b lg:border-b-0 border-slate-100 dark:border-slate-700 flex lg:flex-col justify-between gap-3">
                     <div>
-                        <StatRow icon={<MapPin className="w-5 h-5" />} label="Total Stations" value={globalCounts.stationCountTotal} highlight="primary" />
-                        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-x-8 gap-y-3 mt-2">
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.stationCountA} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.stationCountB} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.stationCountC} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.stationCountAero} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.stationCountTram} isSubItem />
-                            <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.stationCountTeleo} isSubItem />
+                        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">À traiter</h2>
+                        <p className="mt-1 flex items-baseline gap-2">
+                            <span className={`text-3xl font-extrabold tabular-nums ${anomalyTotal ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-50'}`}>{anomalyTotal}</span>
+                            <span className="text-sm text-slate-500 dark:text-slate-400">anomalie{anomalyTotal > 1 ? 's' : ''}</span>
+                        </p>
+                        <button type="button" onClick={() => nav.navigate({ section: 'audit' })} className="mt-1 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline">
+                            Analyse des anomalies →
+                        </button>
+                    </div>
+                    <div className="min-w-[9rem] lg:min-w-0">
+                        <div className="flex items-baseline justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+                            <span>Audits réalisés</span>
+                            <span className="font-semibold text-slate-800 dark:text-slate-100 tabular-nums">{Math.round(scopeProgress)} %</span>
+                        </div>
+                        <ProgressBar value={scopeProgress} className="mt-1" label="Audits réalisés" />
+                    </div>
+                </div>
+                <ul className="grid grid-cols-2 lg:grid-cols-4 flex-1">
+                    {anomalyCards.map((c, i) => (
+                        <li key={c.key} className={`border-slate-100 dark:border-slate-700 ${i % 2 ? 'border-l' : ''} ${i > 1 ? 'border-t lg:border-t-0' : ''} ${i > 0 ? 'lg:border-l' : ''}`}>
+                            <button
+                                type="button"
+                                onClick={c.onClick}
+                                disabled={c.disabled}
+                                aria-label={`${c.title} : ${c.count ? `${c.count} anomalie${c.count > 1 ? 's' : ''}, voir le détail` : 'aucune anomalie'}`}
+                                className="group w-full h-full text-left px-4 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-700/40 disabled:hover:bg-transparent disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+                            >
+                                <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600 dark:text-slate-300">
+                                    <span className="text-slate-400 flex-shrink-0">{c.icon}</span><span className="min-w-0">{c.title}</span>
+                                </span>
+                                <span className="mt-1 flex items-center gap-1.5">
+                                    {c.count > 0 ? (
+                                        <>
+                                            <span className="text-2xl font-bold tabular-nums text-red-600 dark:text-red-400">{c.count}</span>
+                                            <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-teal-600 transition-colors" aria-hidden="true" />
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 className="w-4 h-4 text-teal-500" aria-hidden="true" />
+                                            <span className="text-sm font-medium text-slate-500 dark:text-slate-400">Aucune</span>
+                                        </>
+                                    )}
+                                </span>
+                                {c.count > 0 && <span className="block text-[11px] text-slate-500 dark:text-slate-400">{c.sub}</span>}
+                            </button>
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </SynthesePanel>
+    );
+
+    /* ---------- 2. Réseau par ligne ---------- */
+    const pdqT1Cell = (count: number) => (
+        <span title="Plans T1 recensés dans Équipements Station — hors total Plans de quartier" className="inline-flex items-baseline gap-1 text-sm font-semibold text-sky-700 dark:text-sky-300 tabular-nums">
+            {count}<span className="text-[11px] font-normal">T1*</span>
+        </span>
+    );
+    const t1Footnote = `* Plans T1 recensés dans Équipements Station, hors total Plans de quartier (${pdqAudit.installed} + ${t1Census.total} = ${pdqAudit.installed + t1Census.total} plans recensés).`;
+
+    const linesPanel = (
+        <SynthesePanel
+            title="Réseau par ligne"
+            aside={<span className="text-[11px] text-slate-400">équipements recensés · avancement des audits</span>}
+        >
+            {/* Ordinateur : un tableau comparatif unique. */}
+            <div className="hidden lg:block px-2 pb-3">
+                <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                    <caption className="sr-only">Équipements recensés et avancement des audits par ligne</caption>
+                    <thead>
+                        <tr className="text-[11px] uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                            <th scope="col" className="text-left font-semibold px-3 py-2">Ligne</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">Stations</th>
+                            <th scope="col" className="text-left font-semibold px-3 py-2 w-32">Avancement</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">DAT</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">ECA</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">PMR sol</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">Pictos</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">Éq. station</th>
+                            <th scope="col" className="text-right font-semibold px-2 py-2">Plans quartier</th>
+                            <th scope="col" className="text-right font-semibold px-3 py-2">Bâches</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60">
+                        {lineRows.map(r => {
+                            const future = r.stations === 0;
+                            const cfg = categoryMap[r.key];
+                            return (
+                                <tr key={r.key} data-line={r.key} className={future ? 'opacity-60' : ''}>
+                                    <th scope="row" className="px-3 py-2.5 text-left font-medium">
+                                        <span className="flex items-center gap-2 text-slate-800 dark:text-slate-100 whitespace-nowrap">
+                                            <CategoryIcon categoryConfig={cfg} size="sm" asDiv />{cfg.label}
+                                            {future && <span className="text-[10px] font-semibold uppercase text-slate-400">à venir</span>}
+                                        </span>
+                                    </th>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.stations} strong /></td>
+                                    <td className="px-3 py-2.5">
+                                        <span className="flex items-center gap-2">
+                                            <ProgressBar value={r.progress} label={`Avancement ${cfg.label}`} />
+                                            <span className="w-10 flex-shrink-0 text-right text-xs tabular-nums text-slate-500 dark:text-slate-400 whitespace-nowrap">{Math.round(r.progress)} %</span>
+                                        </span>
+                                    </td>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.dat} /></td>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.eca} /></td>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.pmr} /></td>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.pictos} /></td>
+                                    <td className="px-2 py-2.5 text-right"><SyntheseNum v={r.eqStation} /></td>
+                                    <td className="px-2 py-2.5 text-right">{r.pdqT1 !== undefined ? pdqT1Cell(r.pdqT1) : <SyntheseNum v={r.pdq} />}</td>
+                                    <td className="px-3 py-2.5 text-right"><SyntheseNum v={r.baches} /></td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                    <tfoot>
+                        <tr className="border-t-2 border-slate-200 dark:border-slate-600">
+                            <th scope="row" className="px-3 py-2.5 text-left font-semibold text-slate-900 dark:text-slate-50">Réseau</th>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.stationCountTotal} strong /></td>
+                            <td className="px-3 py-2.5">
+                                <span className="flex items-center gap-2">
+                                    <ProgressBar value={networkProgress} label="Avancement du réseau" />
+                                    <span className="w-10 flex-shrink-0 text-right text-xs font-semibold tabular-nums text-slate-800 dark:text-slate-100 whitespace-nowrap">{Math.round(networkProgress)} %</span>
+                                </span>
+                            </td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.datCount} strong /></td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.ecaCount} strong /></td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.pmrFloorAdhesiveCount} strong /></td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.cogPictoCount} strong /></td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={globalCounts.signaletiqueCount} strong /></td>
+                            <td className="px-2 py-2.5 text-right"><SyntheseNum v={pdqAudit.installed} strong /></td>
+                            <td className="px-3 py-2.5 text-right"><SyntheseNum v={bacheTotal} strong /></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                </div>
+                <div className="px-3 pt-2 flex items-center justify-between gap-3">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">{t1Footnote}</p>
+                    <button type="button" onClick={() => toggleDetail('eca')} aria-expanded={openDetails.has('eca')} className="flex-shrink-0 text-xs font-semibold text-teal-700 dark:text-teal-400 hover:underline">
+                        ECA par type →
+                    </button>
+                </div>
+            </div>
+
+            {/* Tablette / téléphone : une carte par ligne, l'essentiel visible, le reste au toucher. */}
+            <ul className="lg:hidden grid sm:grid-cols-2 gap-2 px-3 pb-3">
+                {lineRows.map(r => {
+                    const future = r.stations === 0;
+                    const cfg = categoryMap[r.key];
+                    const open = expandedLine === r.key;
+                    const extras: [string, number | 'nr' | undefined][] = [
+                        ['PMR sol', r.pmr], ['Pictos', r.pictos], ['Éq. station', r.eqStation],
+                        ['Plans quartier', r.pdqT1 !== undefined ? undefined : r.pdq], ['Bâches', r.baches],
+                    ];
+                    const visibleExtras = extras.filter(([, v]) => v !== undefined);
+                    return (
+                        <li key={r.key} data-line={r.key} className={`rounded-lg border border-slate-200 dark:border-slate-700 ${future ? 'opacity-60' : ''}`}>
+                            <button
+                                type="button"
+                                onClick={() => setExpandedLine(open ? null : r.key)}
+                                aria-expanded={open}
+                                aria-label={`${cfg.label} : ${visibleExtras.length ? 'afficher les autres indicateurs' : 'détail'}`}
+                                className="w-full text-left px-3 py-2.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <CategoryIcon categoryConfig={cfg} size="sm" asDiv />
+                                    <span className="flex-1 min-w-0 font-semibold text-slate-800 dark:text-slate-100 truncate">{cfg.label}</span>
+                                    {future
+                                        ? <span className="text-[10px] font-semibold uppercase text-slate-400">à venir</span>
+                                        : <span className="text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">{Math.round(r.progress)} %</span>}
+                                    <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+                                </span>
+                                <ProgressBar value={r.progress} className="mt-2" label={`Avancement ${cfg.label}`} />
+                                <span className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                                    <span><b className="text-slate-800 dark:text-slate-100 tabular-nums">{r.stations}</b> station{r.stations > 1 ? 's' : ''}</span>
+                                    {r.dat !== undefined && <span><b className="text-slate-800 dark:text-slate-100 tabular-nums">{r.dat}</b> DAT</span>}
+                                    {r.eca !== undefined && <span><b className="text-slate-800 dark:text-slate-100 tabular-nums">{r.eca}</b> ECA</span>}
+                                    {r.pdqT1 !== undefined && <span><b className="text-sky-700 dark:text-sky-300 tabular-nums">{r.pdqT1}</b> plans T1*</span>}
+                                </span>
+                            </button>
+                            {open && (
+                                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 px-3 pb-3 text-xs">
+                                    {visibleExtras.map(([label, v]) => (
+                                        <div key={label} className="flex justify-between gap-2">
+                                            <dt className="text-slate-500 dark:text-slate-400">{label}</dt>
+                                            <dd><SyntheseNum v={v} /></dd>
+                                        </div>
+                                    ))}
+                                </dl>
+                            )}
+                        </li>
+                    );
+                })}
+            </ul>
+            <div className="lg:hidden px-4 pb-3 -mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                Réseau : {globalCounts.stationCountTotal} stations · {globalCounts.datCount} DAT · {globalCounts.ecaCount} ECA · {globalCounts.pmrFloorAdhesiveCount} PMR sol · {globalCounts.cogPictoCount} pictos · {globalCounts.signaletiqueCount} éq. station · {pdqAudit.installed} plans de quartier · {bacheTotal} bâches · {Math.round(networkProgress)} % audité.
+                <span className="block mt-1">{t1Footnote}</span>
+                <button type="button" onClick={() => toggleDetail('eca')} aria-expanded={openDetails.has('eca')} className="block mt-1.5 text-xs font-semibold text-teal-700 dark:text-teal-400">
+                    ECA par type →
+                </button>
+            </div>
+        </SynthesePanel>
+    );
+
+    /* ---------- 3. Patrimoine & référentiel ---------- */
+    const patrimoineRow = (key: string, icon: React.ReactNode, title: string, value: React.ReactNode, hint: React.ReactNode, onClick: () => void, expanded?: boolean) => (
+        <li key={key}>
+            <button
+                type="button"
+                onClick={onClick}
+                aria-expanded={expanded}
+                className="group w-full flex items-center gap-3 px-4 sm:px-5 py-3 text-left hover:bg-slate-50 dark:hover:bg-slate-700/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-teal-500"
+            >
+                <span className="text-slate-400 flex-shrink-0" aria-hidden="true">{icon}</span>
+                <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">{title}</span>
+                    <span className="block text-[11px] text-slate-500 dark:text-slate-400">{hint}</span>
+                </span>
+                <span className="text-sm font-bold tabular-nums text-slate-900 dark:text-slate-50 text-right">{value}</span>
+                {expanded === undefined
+                    ? <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-teal-600 flex-shrink-0" aria-hidden="true" />
+                    : <ChevronDown className={`w-4 h-4 text-slate-400 group-hover:text-teal-600 flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden="true" />}
+            </button>
+        </li>
+    );
+
+    const patrimoinePanel = (
+        <SynthesePanel title={`Patrimoine & référentiel${selectedLieuObject ? ` — ${selectedLieuObject.name}` : ''}`}>
+            <ul className="divide-y divide-slate-100 dark:divide-slate-700 pb-1">
+                {patrimoineRow('referentiel', <BookOpenCheck className="w-5 h-5" />, 'Référentiel signalétique',
+                    refsLoading ? '…' : (selectedLieuId ? patrimoineIndex.totals.referencesInstalledCount : activeReferencesCount),
+                    refsLoading ? 'Chargement du référentiel…' : `références · ${patrimoineIndex.totals.implantationCount} exemplaires`,
+                    () => nav.navigate({ section: 'referentiel' }))}
+                {showPlanQuartier && patrimoineRow('pdq', <MapIcon className="w-5 h-5" />, 'Plans de quartier', pdqAudit.installed,
+                    <>
+                        {pdqAudit.defects > 0 && <span className="font-semibold text-red-600 dark:text-red-400">{pdqAudit.defects} à traiter · </span>}
+                        module Plans de quartier{t1Census.total > 0 && ` · + ${t1Census.total} plans T1 (Équipements Station)`}
+                    </>,
+                    () => toggleDetail('pdq'), openDetails.has('pdq'))}
+                {(!selectedLieuId || lieuBaches.length > 0) && patrimoineRow('baches', <Flag className="w-5 h-5" />, 'Bâches de stations',
+                    selectedLieuId ? lieuBacheTotal : bacheTotal,
+                    selectedLieuId
+                        ? (lieuBaches.some(b => !b.pending) ? 'bâches physiques du lieu' : 'quantités à relever')
+                        : BACHE_LINES.map(line => (isLineRecensee(line) ? `${line} ${getBacheTotal(line)}` : `${line} non recensée`)).join(' · '),
+                    () => nav.navigate({ section: 'referentiel', subSection: 'baches' }))}
+                {patrimoineRow('inventaire', <Search className="w-5 h-5" />, 'Inventaire détaillé', filteredInventory.length,
+                    selectedLieuId ? `articles du lieu` : 'articles · quantités réseau',
+                    () => toggleDetail('inventaire'), openDetails.has('inventaire'))}
+                {!selectedLieuId && showPr && patrimoineRow('pr', <Car className="w-5 h-5" />, 'Parkings relais', globalCounts.prCount,
+                    `${globalCounts.beCount} bornes entrée · ${globalCounts.bsCount} sortie · ${globalCounts.caCount} caisses auto`,
+                    () => toggleDetail('pr'), openDetails.has('pr'))}
+            </ul>
+        </SynthesePanel>
+    );
+
+    /* ---------- Vue station ---------- */
+    const stationPanel = selectedLieuObject && (() => {
+        const modules = selectedLieuObject.modules.filter(isModuleInCurrentScope);
+        const equipment: { key: string; label: React.ReactNode; value: number; icon: React.ReactNode; detail?: string }[] = [];
+        if (showDat) equipment.push({ key: 'dat', label: 'DAT', value: globalCounts.datCount, icon: <Euro className="w-4 h-4" />,
+            detail: datByDirection.length > 1 ? datByDirection.map(d => `${d.name} ${d.count}`).join(' · ') : undefined });
+        if (showEca) equipment.push({ key: 'eca', label: 'ECA (valideurs)', value: globalCounts.ecaCount, icon: <Fence className="w-4 h-4" />,
+            detail: [
+                ['Entrée', ecaEntreeCount], ['Sortie', ecaSortieCount], ['PMR à bras', ecaPmrBrasCount], ['PMR à vantaux', ecaPmrVantauxCount],
+                ['PMR à vantaux réversible', ecaPmrVantauxReversibleCount], ['Vantaux réversible', ecaReversibleCount],
+            ].filter(([label, n], i) => i < 2 || (n as number) > 0).map(([label, n]) => `${label} ${n}`).join(' · ') });
+        if (showPr) {
+            equipment.push({ key: 'be', label: 'Bornes entrée', value: globalCounts.beCount, icon: <Car className="w-4 h-4" /> });
+            equipment.push({ key: 'bs', label: 'Bornes sortie', value: globalCounts.bsCount, icon: <Car className="w-4 h-4" /> });
+            equipment.push({ key: 'ca', label: 'Caisses auto', value: globalCounts.caCount, icon: <Euro className="w-4 h-4" /> });
+        }
+        if (showPmrFloor) equipment.push({ key: 'pmr', label: 'Audit sol PMR', value: globalCounts.pmrFloorAdhesiveCount, icon: <Footprints className="w-4 h-4" /> });
+        if (showCogPicto) equipment.push({ key: 'picto', icon: <ScanEye className="w-4 h-4" />, value: globalCounts.cogPictoCount,
+            label: selectedLieuPictoCode
+                ? <span className="inline-flex items-center gap-1.5"><CognitivePictogramVisual stationCode={selectedLieuPictoCode} stationName={selectedLieuObject.name} size="sm" />Pictos cognitifs</span>
+                : 'Pictos cognitifs' });
+        if (showSignaletique) equipment.push({ key: 'sig', label: 'Équipements Station', value: globalCounts.signaletiqueCount, icon: <Layout className="w-4 h-4" /> });
+        if (showPlanQuartier) equipment.push({ key: 'pdq', label: 'Plans de quartier', value: pdqAudit.installed, icon: <MapIcon className="w-4 h-4" /> });
+        if (t1Census.total > 0) equipment.push({ key: 't1', label: 'Plans T1 (Éq. station)', value: t1Census.total, icon: <Layout className="w-4 h-4" /> });
+        if (lieuBaches.length > 0) equipment.push({ key: 'baches', label: 'Bâches', value: lieuBacheTotal, icon: <Flag className="w-4 h-4" /> });
+        const stationProgress = getLieuProgress(selectedLieuObject);
+
+        return (
+            <SynthesePanel>
+                <div className="px-4 sm:px-5 pt-4 pb-3 flex flex-col sm:flex-row sm:items-start gap-3">
+                    <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{selectedLieuObject.name}</h2>
+                            <LieuBadges lieu={selectedLieuObject} />
+                        </div>
+                        <div className="mt-2 flex items-center gap-2 max-w-sm">
+                            <ProgressBar value={stationProgress} label={`Avancement ${selectedLieuObject.name}`} />
+                            <span className="text-xs font-semibold tabular-nums text-slate-600 dark:text-slate-300 whitespace-nowrap">{Math.round(stationProgress)} % audité</span>
                         </div>
                     </div>
-
-                    <hr className="border-dashed border-slate-200 dark:border-slate-700" />
-                    </>
-                )}
-
-                {/* Rangée 1 — DAT et P+R : deux familles de volume comparable,
-                    répondant à la même question (combien de points, par
-                    ligne ou par zone). */}
-                {(showDat || showPr) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-
-                    {/* DAT */}
-                    {showDat && (
-                    <div>
-                    <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
-                    <div className="space-y-3 mt-2">
-                        {selectedLieuId ? (
-                            datByDirection.length > 1 && datByDirection.map(({ name, count }) => (
-                                <StatRow key={name} label={name} value={count} isSubItem />
-                            ))
-                        ) : (
-                            <>
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.datCountC} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.datCountAero} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
-                            </>
-                        )}
+                    <div className="flex gap-2 flex-shrink-0">
+                        <a
+                            href={lieuMapOpenUrl(selectedLieuObject)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg border border-slate-200 dark:border-slate-600 text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700"
+                        >
+                            <MapPin className="w-4 h-4" aria-hidden="true" />Plan<ExternalLink className="w-3.5 h-3.5 text-slate-400" aria-hidden="true" />
+                            <span className="sr-only">(ouvre Google Maps dans un nouvel onglet)</span>
+                        </a>
+                        <button
+                            type="button"
+                            onClick={() => selectLieu(null)}
+                            className="inline-flex items-center gap-1.5 h-10 px-3 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                        >
+                            <X className="w-4 h-4" aria-hidden="true" />Tout le réseau
+                        </button>
                     </div>
-                    </div>
-                    )}
-
-                    {/* Parkings Relais — même hiérarchie visuelle que DAT et
-                        ECA : plus de titre de regroupement, le bloc est
-                        introduit par son propre libellé principal. */}
-                    {showPr && (
-                    <div>
-                    {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
-                    {/* Espacement intermédiaire : ces lignes sont des équipements
-                        distincts (et non une ventilation du total au-dessus),
-                        elles gardent donc leur taille pleine, avec plus d'air
-                        que les sous-listes indentées de DAT ou des stations. */}
-                    <div className="space-y-2 mt-2">
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
-                        <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
-                    </div>
-                    </div>
-                    )}
                 </div>
-                )}
-
-                {(showDat || showPr) && showEca && <hr className="border-dashed border-slate-200 dark:border-slate-700" />}
-
-                {/* Rangée 2 — ECA sur toute la largeur. C'est le bloc le plus
-                    dense de la carte (4 lignes × jusqu'à 8 types) : lui donner
-                    la pleine largeur permet de disposer les lignes CÔTE À CÔTE
-                    plutôt qu'empilées. On compare enfin les lignes entre elles
-                    type par type, au lieu de faire défiler. */}
-                {showEca && (
-                <div>
-                {selectedLieuId ? (
-                    <>
-                    {/* Vue mono-lieu : pas de tableau multi-lignes en dessous,
-                        le total garde donc son affichage StatRow habituel,
-                        contraint à la largeur d'une colonne de la rangée 1
-                        pour que la valeur reste proche de son libellé. */}
-                    <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
-                        <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
-                    </div>
-                    <div className="space-y-3 mt-2">
-                        <StatRow label="Entrée" value={ecaEntreeCount} isSubItem />
-                        <StatRow label="Sortie" value={ecaSortieCount} isSubItem />
-                        {ecaPmrBrasCount > 0 && (
-                            <StatRow label="PMR à bras" value={ecaPmrBrasCount} isSubItem />
-                        )}
-                        {ecaPmrVantauxCount > 0 && (
-                            <StatRow label="PMR à vantaux" value={ecaPmrVantauxCount} isSubItem />
-                        )}
-                        {ecaPmrVantauxReversibleCount > 0 && (
-                            <StatRow label="PMR à vantaux réversible" value={ecaPmrVantauxReversibleCount} isSubItem />
-                        )}
-                        {ecaReversibleCount > 0 && (
-                            <StatRow label="Vantaux réversible" value={ecaReversibleCount} isSubItem />
-                        )}
-                    </div>
-                    </>
+                {/* Carte : aperçu à partir de sm, le bouton « Plan » suffit sur téléphone. */}
+                <a
+                    href={lieuMapOpenUrl(selectedLieuObject)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Ouvrir ${selectedLieuObject.name} dans Google Maps`}
+                    className="hidden sm:block mx-5 mb-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
+                >
+                    <iframe
+                        key={selectedLieuObject.id}
+                        src={lieuMapEmbedUrl(selectedLieuObject)}
+                        title={`Carte — ${lieuMapQuery(selectedLieuObject)}`}
+                        loading="lazy"
+                        referrerPolicy="no-referrer-when-downgrade"
+                        className="pointer-events-none block w-full h-40 border-0"
+                    />
+                </a>
+                <h3 className="px-4 sm:px-5 pb-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Audits de la station</h3>
+                {modules.length === 0 ? (
+                    <p className="px-4 sm:px-5 pb-3 text-sm italic text-slate-500 dark:text-slate-400">Aucun audit en exploitation sur ce lieu.</p>
                 ) : (
-                    <>
-                    {/* Vue réseau : le total rejoint la cellule d'angle du
-                        tableau (cf. EcaLineDetail) plutôt que d'être répété ici
-                        — un seul affichage du total, au même niveau visuel que
-                        les totaux par ligne. Ce libellé ne fait donc plus que
-                        nommer la section. Toutes les configs de ligne sont
-                        transmises : la matrice choisit elle-même ses colonnes
-                        selon les données ECA, et doit pouvoir en afficher une
-                        nouvelle sans changement ici.
-                        Pas d'icône ici : même niveau visuel que Total Stations /
-                        DAT (Distributeurs) / Nombre de P+R juste au-dessus, qui
-                        n'en affichent pas non plus à ce niveau (StatRow masque
-                        l'icône dès que highlight="primary" est posé — cf. le
-                        rendu mono-lieu de cette même ligne, StatRow ci-dessus). */}
-                    <div className="text-lg font-bold text-gray-800 dark:text-slate-100">
-                        ECA (Valideurs)
-                    </div>
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-700">
+                        {modules.map(m => {
+                            const progress = getModuleProgress(m);
+                            return (
+                                <li key={m.id} className="flex items-center gap-3 px-4 sm:px-5 py-2.5">
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block text-sm font-medium text-slate-800 dark:text-slate-100">
+                                            {m.name}{m.line && <span className="ml-1.5 text-[11px] font-normal text-slate-400">{lineLabel(m.line)}</span>}
+                                        </span>
+                                        <span className="mt-1 flex items-center gap-2 max-w-xs">
+                                            <ProgressBar value={progress.percentage} label={`Avancement ${m.name}`} />
+                                            <span className="text-[11px] tabular-nums text-slate-500 dark:text-slate-400 w-10 text-right whitespace-nowrap">{Math.round(progress.percentage)} %</span>
+                                        </span>
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => openAudit(selectedLieuObject.id, m.id)}
+                                        aria-label={`Ouvrir l'audit ${m.name}${m.line ? ` ${lineLabel(m.line)}` : ''}`}
+                                        className="flex-shrink-0 inline-flex items-center gap-1 h-10 px-3 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-800"
+                                    >
+                                        Ouvrir<ArrowRight className="w-4 h-4" aria-hidden="true" />
+                                    </button>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+                {equipment.length > 0 && (
+                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-slate-100 dark:bg-slate-700 border-t border-slate-100 dark:border-slate-700 rounded-b-xl overflow-hidden">
+                        {equipment.map((e, i) => (
+                            <div key={e.key} className={`bg-white dark:bg-slate-800 px-4 py-2.5 ${i === equipment.length - 1 && equipment.length % 2 ? 'col-span-2 sm:col-span-1' : ''}`}>
+                                <dt className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400"><span className="text-slate-400" aria-hidden="true">{e.icon}</span>{e.label}</dt>
+                                <dd className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-50">{e.value}</dd>
+                                {e.detail && <dd className="text-[11px] text-slate-500 dark:text-slate-400">{e.detail}</dd>}
+                            </div>
+                        ))}
+                    </dl>
+                )}
+            </SynthesePanel>
+        );
+    })();
+
+    /* ---------- Détails (ouverts à la demande) ---------- */
+    const details = (
+        <div className="space-y-3">
+            {showPlanQuartier && (
+                <SyntheseDetail
+                    id="pdq" title="Plans de quartier" icon={<MapIcon className="w-4 h-4" />}
+                    open={openDetails.has('pdq')} onClose={() => closeDetail('pdq')}
+                    summary={`${pdqAudit.installed} plans (module Plans de quartier) · ${t1Census.total} plans T1 recensés à part dans Équipements Station`}
+                >
+                    <PlanQuartierOverview
+                        patrimoineIndex={patrimoineIndex}
+                        references={references}
+                        lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
+                        onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
+                        cognitivePictograms={cognitivePictograms}
+                        signaletiquePlans={signaletiquePlans}
+                    />
+                </SyntheseDetail>
+            )}
+
+            {!selectedLieuId && showEca && (
+                <SyntheseDetail
+                    id="eca" title="ECA par type d'équipement" icon={<Fence className="w-4 h-4" />}
+                    open={openDetails.has('eca')} onClose={() => closeDetail('eca')}
+                    summary={`${globalCounts.ecaCount} valideurs · répartition par type et par ligne`}
+                >
                     <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} total={globalCounts.ecaCount} />
-                    </>
-                )}
-                </div>
-                )}
-
-                {!showDat && !showPr && !showEca && (
-                    <p className="text-sm text-slate-500 dark:text-slate-400 italic">
-                        Aucun DAT, P+R ni ECA en exploitation sur ce lieu.
-                    </p>
-                )}
-
-                </div>
-            </StatCard>
-            </div>
-
-            <div className="space-y-8 min-w-0 xl:col-start-2 xl:row-start-1 xl:row-span-2">
-            {/* Localisation — uniquement quand un lieu est sélectionné, pour se
-                projeter sur le terrain. Carte non interactive : un clic ouvre
-                Google Maps (site ou application) dans un nouvel onglet. */}
-            {selectedLieuObject && (
-                <StatCard title="Localisation" icon={<MapPin className="w-6 h-6" />} titleAside={<LieuBadges lieu={selectedLieuObject} />}>
-                    <a
-                        href={lieuMapOpenUrl(selectedLieuObject)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group relative block overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700"
-                        aria-label={`Ouvrir ${selectedLieuObject.name} dans Google Maps`}
-                    >
-                        <iframe
-                            key={selectedLieuObject.id}
-                            src={lieuMapEmbedUrl(selectedLieuObject)}
-                            title={`Carte — ${lieuMapQuery(selectedLieuObject)}`}
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            className="pointer-events-none block w-full h-48 sm:h-56 border-0"
-                        />
-                        <span className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 dark:bg-slate-800/95 px-3 py-1.5 text-xs font-semibold text-teal-700 dark:text-teal-300 shadow group-hover:bg-white dark:group-hover:bg-slate-800">
-                            Ouvrir dans Google Maps <ExternalLink className="w-3.5 h-3.5" aria-hidden="true" />
-                        </span>
-                    </a>
-                </StatCard>
+                </SyntheseDetail>
             )}
 
-            {/* Plans de quartier (+ PEM 3D) — combien au total, de quel
-                format, puis où. StatCard comme les autres sections de
-                premier niveau : l'en-tête ad-hoc (icône + texte en dur) qui
-                doublait la grammaire visuelle du titre de carte a été
-                retirée au profit du titre/icône de la carte elle-même. */}
-            {lieuHas(AuditModuleType.PLAN_QUARTIER) && (
-            <StatCard title="Plans de quartier" icon={<MapIcon className="w-6 h-6" />}>
-                <PlanQuartierOverview
-                    patrimoineIndex={patrimoineIndex}
-                    references={references}
-                    lineConfigs={{ A: metroAConfig, B: metroBConfig, C: lineCConfig, TRAM: tramConfig, TELEO: teleoConfig, AEROPORT: laeConfig }}
-                    onOpenReference={(referenceId) => nav.navigate({ section: 'referentiel', referenceId })}
-                    cognitivePictograms={cognitivePictograms}
-                    signaletiquePlans={signaletiquePlans}
-                />
-            </StatCard>
-            )}
-
-            {/* Bâches de stations — recensement patrimonial indépendant de
-                l'audit (data/stationBaches.ts). Vue réseau : totaux par ligne.
-                Vue mono-lieu : uniquement les bâches de ce lieu (clé registre),
-                carte masquée s'il n'en a aucune (Tram, Téléo, P+R...).
-                Détail dans Référentiel → Bâches de stations. */}
-            {(!selectedLieuId || lieuBaches.length > 0) && (
-            <StatCard title="Bâches de stations" icon={<Flag className="w-6 h-6" />}>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {BACHE_LINES.filter(line => !selectedLieuId || lieuBaches.some(b => b.line === line)).map(line => {
-                        const rows = selectedLieuId ? lieuBaches.filter(b => b.line === line) : null;
-                        const recensee = rows ? rows.some(b => !b.pending) : isLineRecensee(line);
-                        const total = rows ? rows.reduce((sum, b) => sum + b.count, 0) : getBacheTotal(line);
-                        return recensee ? (
-                            // Badge de ligne en surimpression (frère du bouton :
-                            // CategoryIcon est lui-même un bouton).
-                            <div key={line} className="relative">
-                                <IndicatorTile
-                                    value={total}
-                                    label={`Ligne ${line}`}
-                                    hint="bâches physiques"
-                                    tone="teal"
-                                    onClick={() => nav.navigate({ section: 'referentiel', subSection: 'baches' })}
-                                />
-                                <div className="absolute top-2 left-2"><LineBadge line={line} /></div>
+            {!selectedLieuId && showPr && (
+                <SyntheseDetail
+                    id="pr" title="Parkings relais" icon={<Car className="w-4 h-4" />}
+                    open={openDetails.has('pr')} onClose={() => closeDetail('pr')}
+                    summary={`${globalCounts.prCount} P+R · bornes et caisses automatiques`}
+                >
+                    <dl className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {([['Nombre de P+R', globalCounts.prCount], ['Bornes entrée', globalCounts.beCount], ['Bornes sortie', globalCounts.bsCount], ['Caisses auto', globalCounts.caCount]] as [string, number][]).map(([label, value]) => (
+                            <div key={label} className="rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
+                                <dt className="text-[11px] text-slate-500 dark:text-slate-400">{label}</dt>
+                                <dd className="text-lg font-bold tabular-nums text-slate-900 dark:text-slate-50">{value}</dd>
                             </div>
-                        ) : (
-                            <div key={line} className="p-4 rounded-lg border border-slate-200 dark:border-slate-700 text-sm text-slate-500 dark:text-slate-400">
-                                <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200"><LineBadge line={line} />Ligne {line}</div>
-                                <div className="italic">{rows ? 'Quantités à relever' : 'Non recensée'}</div>
-                            </div>
-                        );
-                    })}
-                </div>
-            </StatCard>
+                        ))}
+                    </dl>
+                </SyntheseDetail>
             )}
 
-            {/* Stations avec Audit Spécifique — StatCard comme les autres
-                sections de premier niveau (même grammaire visuelle que
-                Plans de quartier, Référentiel, Inventaire). Chaque famille
-                porte son total en N1, comme DAT, P+R et ECA : ce sont des
-                totaux de même niveau métier, ils ne peuvent pas se lire
-                comme un détail en pastille grise. */}
-            {(showPmrFloor || showCogPicto || showSignaletique) && (
-            <StatCard title="Stations avec Audit Spécifique" icon={<ClipboardCheck className="w-6 h-6" />}>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-x-8 gap-y-6">
-                {showPmrFloor && (
-                <div>
-                <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
-                {selectedLieuId ? null : (
-                    <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
-                    </div>
-                )}
-                </div>
-                )}
-                {showCogPicto && (
-                <div>
-                <StatRow
-                    icon={<ScanEye className="w-5 h-5" />}
-                    label={selectedLieuPictoCode
-                        ? <span className="flex items-center gap-2"><CognitivePictogramVisual stationCode={selectedLieuPictoCode} stationName={selectedLieuObject?.name} size="sm" />Audit Pictos Cognitifs</span>
-                        : "Audit Pictos Cognitifs"}
-                    value={globalCounts.cogPictoCount}
-                    highlight="primary"
-                />
-                {selectedLieuId ? null : (
-                    <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
-                    </div>
-                )}
-                </div>
-                )}
-                {showSignaletique && (
-                <div>
-                <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
-                {selectedLieuId ? null : (
-                    <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
-                    </div>
-                )}
-                </div>
-                )}
-            </div>
-            </StatCard>
-            )}
-            </div>
-
-            {/* CARTE D'ACCÈS AU RÉFÉRENTIEL — compteur de santé, pas zone de travail.
-                L'exploitation se fait dans les sections Référentiel / Analyse
-                des anomalies / SAE ; les tuiles et boutons y mènent (navigation
-                transverse). */}
-            <StatCard
-                title={`Référentiel Signalétique${selectedLieuId ? ` — ${selectedLieuObject?.name}` : ''}`}
-                titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}
-                icon={<BookOpenCheck className="w-6 h-6" />}
-                className="min-w-0 xl:col-start-1 xl:row-start-2"
+            <SyntheseDetail
+                id="inventaire" title={`Inventaire détaillé${selectedLieuObject ? ` — ${selectedLieuObject.name}` : ''}`} icon={<Search className="w-4 h-4" />}
+                open={openDetails.has('inventaire')} onClose={() => closeDetail('inventaire')}
+                summary={`${filteredInventory.length} articles${selectedLieuId ? '' : ' · quantités réseau'}`}
             >
-                {refsLoading ? (
-                    <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
-                ) : (
-                    <>
-                        {/* Deux nombres, pas six : le référentiel est acté dans
-                            le moteur et distribué avec l'application — Synthèse
-                            en donne le volume, pas l'état d'avancement d'un
-                            contrôle (qui vit dans Analyse des anomalies). */}
-                        <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:max-w-md">
-                            <IndicatorTile value={selectedLieuId ? patrimoineIndex.totals.referencesInstalledCount : activeReferencesCount} label="Références" tone="sky" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                            <IndicatorTile value={patrimoineIndex.totals.implantationCount} label="Exemplaires" tone="slate" onClick={() => nav.navigate({ section: 'referentiel' })} />
-                        </div>
-                        <div className="flex flex-wrap gap-3 pt-1">
-                            <button
-                                onClick={() => nav.navigate({ section: 'referentiel' })}
-                                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
-                            >
-                                Explorer le référentiel →
-                            </button>
-                            <button
-                                onClick={() => nav.navigate({ section: 'audit' })}
-                                className="px-4 py-2 rounded-lg bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-600 text-sm font-semibold transition-colors"
-                            >
-                                Voir les anomalies →
-                            </button>
-                        </div>
-                    </>
-                )}
-            </StatCard>
-            </div>
-
-            {/* Inventaire Adhésifs (Pleine largeur) */}
-            <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />} titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}>
-                <div>
                 <div className="relative mb-4">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                        <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
                     </div>
                     <input
-                    type="text"
-                    placeholder="Rechercher par nom, type ou repère..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        type="text"
+                        aria-label="Rechercher dans l'inventaire"
+                        placeholder="Rechercher par nom, type ou repère..."
+                        value={searchTerm}
+                        onChange={e => setSearchTerm(e.target.value)}
+                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
                     />
                 </div>
 
                 {/* Desktop/tablette : tableau complet. */}
-                <div className="hidden sm:block overflow-auto max-h-96 border border-slate-200 dark:border-slate-700 rounded-lg shadow-inner">
-                    <table className="min-w-full text-sm">
-                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
-                        <tr>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Type</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Rep.</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du Produit</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions (cm)</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden lg:table-cell">Matière / Usage</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">{selectedLieuId ? 'Qté' : 'Qté réseau'}</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {filteredInventory.map((item, idx) => (
-                        <tr key={item.id} className={`hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
-                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
-                            <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
-                            <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
-                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
-                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
-                            <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
-                                {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
-                            </td>
-                        </tr>
-                        ))}
-
-                        {(!filteredInventory || filteredInventory.length === 0) && (
-                        <tr>
-                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">{searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} »` : 'Aucun adhésif sur ce lieu.'}</td>
-                        </tr>
-                        )}
-                    </tbody>
+                <div className="hidden sm:block overflow-x-auto max-h-96 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                    <table className="w-full text-sm text-left">
+                        <thead className="sticky top-0 bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                            <tr>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Type</th>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Rep.</th>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du produit</th>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Dimensions (cm)</th>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden lg:table-cell">Matière / Usage</th>
+                                <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-right">{selectedLieuId ? 'Qté' : 'Qté réseau'}</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                            {filteredInventory.map(item => (
+                                <tr key={item.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/40">
+                                    <td className="p-3 text-slate-600 dark:text-slate-300">{item.auditType}</td>
+                                    <td className="p-3 text-slate-500 dark:text-slate-400">{item.repere}</td>
+                                    <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
+                                    <td className="p-3 text-slate-600 dark:text-slate-300">{item.dimensions}</td>
+                                    <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
+                                    <td className="p-3 text-right font-bold text-teal-700 dark:text-teal-400">
+                                        {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
+                                    </td>
+                                </tr>
+                            ))}
+                            {filteredInventory.length === 0 && (
+                                <tr>
+                                    <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">{searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} »` : 'Aucun adhésif sur ce lieu.'}</td>
+                                </tr>
+                            )}
+                        </tbody>
                     </table>
                 </div>
 
-                {/* Mobile : présentation carte, plus lisible qu'un tableau
-                    compressé sur petit écran (colonnes secondaires intégrées
-                    en ligne, pas masquées silencieusement). */}
+                {/* Mobile : présentation carte. */}
                 <div className="sm:hidden space-y-2 max-h-96 overflow-auto">
                     {filteredInventory.map(item => (
                         <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
                             <div className="min-w-0">
-                                <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400 truncate">
+                                <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400">
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
                                 </div>
-                                <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{item.name}</div>
+                                <div className="font-medium text-slate-800 dark:text-slate-100">{item.name}</div>
                                 {(item.dimensions || item.material) && (
-                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
+                                    <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                         {[item.dimensions, item.material].filter(Boolean).join(' · ')}
                                     </div>
                                 )}
@@ -1294,15 +1458,28 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             </div>
                         </div>
                     ))}
-
-                    {(!filteredInventory || filteredInventory.length === 0) && (
+                    {filteredInventory.length === 0 && (
                         <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
                             {searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} ».` : 'Aucun adhésif sur ce lieu.'}
                         </p>
                     )}
                 </div>
+            </SyntheseDetail>
+        </div>
+    );
+
+    return (
+        <div className="space-y-4 sm:space-y-5">
+            {stationSearch}
+            {stationPanel}
+            {attention}
+            {selectedLieuId ? patrimoinePanel : (
+                <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4 sm:gap-5 items-start">
+                    {linesPanel}
+                    {patrimoinePanel}
                 </div>
-            </StatCard>
+            )}
+            {details}
 
             <MaintenanceListModal
                 isOpen={!!modalContent}
@@ -1310,7 +1487,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 title={modalContent?.title || ''}
                 items={modalContent?.items || []}
             />
-        </>
+        </div>
     );
 };
 
