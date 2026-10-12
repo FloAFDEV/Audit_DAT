@@ -695,13 +695,13 @@ describe('store.ts — plans de quartier des caisses automatiques de P+R', () =>
         // Ventilation complète du patrimoine — le total ne masque jamais
         // d'où il vient, et les 10 plans de caisse auto n'y comptent qu'une
         // fois (sinon 67 au lieu de 57).
-        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(49);
+        expect(index.byReference.get('pdq-78x100')?.installedCount).toBe(50);
         expect(index.byReference.get('pdq-78x120')?.installedCount).toBe(14);
         expect(index.byReference.get('pdq-78x120-dibond')?.installedCount).toBe(2);
         expect(index.byReference.get('pem3d-120x80')?.installedCount).toBe(10);
         const pdqTotal = ['pdq-78x100', 'pdq-78x120', 'pdq-adhesif', 'pdq-78x120-dibond', 'pem3d-120x80']
             .reduce((sum, id) => sum + (index.byReference.get(id)?.installedCount ?? 0), 0);
-        expect(pdqTotal).toBe(90);
+        expect(pdqTotal).toBe(91);
     });
 
     it('le contexte d\'implantation survit à un export/import complet', async () => {

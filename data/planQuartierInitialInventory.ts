@@ -93,7 +93,7 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Barrière de Paris', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Minimes - Claude Nougaro', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Canal du Midi', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
-    { stationName: 'Compans-Caffarelli', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
+    { stationName: 'Compans-Caffarelli', line: 'B', modelId: 'pdq-78x100', quantity: 3, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Carmes', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Palais de Justice', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Saint-Agne - SNCF', line: 'B', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },

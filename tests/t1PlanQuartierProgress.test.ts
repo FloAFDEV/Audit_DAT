@@ -91,10 +91,10 @@ describe('progression « Plans de quartier → Tram T1 »', () => {
         t1Plans('Hippodrome').meett[0].status = EquipmentStatusType.OK;
 
         expect(getCategoryProgress(lieux, 'METRO_A', PDQ)).toBeCloseTo(4.761905, 5);
-        expect(getCategoryProgress(lieux, 'METRO_B', PDQ)).toBeCloseTo(1.923077, 5);
+        expect(getCategoryProgress(lieux, 'METRO_B', PDQ)).toBeCloseTo(1.886792, 5);
         expect(getCategoryProgress(lieux, 'TELEO', PDQ)).toBe(0);
         expect(getCategoryProgress(lieux, 'LAE', PDQ)).toBe(0);
-        expect(getCategoryProgress(lieux, 'ALL', PDQ)).toBeCloseTo(3.333333, 5); // 3 / 90
+        expect(getCategoryProgress(lieux, 'ALL', PDQ)).toBeCloseTo(3.296703, 5); // 3 / 91
         expect(getLieuProgress(lieu('Arènes'), PDQ, 'METRO_A')).toBeCloseTo(33.333333, 5);
         expect(getLieuProgress(lieu('Palais de Justice'), PDQ, 'METRO_B')).toBe(50);
         // Équipements Station : logique actuelle, plans T1 inclus.

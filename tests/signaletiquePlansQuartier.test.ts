@@ -85,7 +85,7 @@ describe('plans de quartier Équipements Station — lecture seule', () => {
 });
 
 // Sémantique du cockpit : Plans de quartier = périmètre d'audit du module
-// (90 plans) ; Tram T1 = recensement séparé, audité dans Équipements Station.
+// (91 plans) ; Tram T1 = recensement séparé, audité dans Équipements Station.
 describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
     beforeEach(async () => {
         localStorage.clear();
@@ -105,9 +105,9 @@ describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
     const auditTotals = async (lieux: Lieu[]) =>
         summarizePlanQuartierAudit(buildPatrimoineIndex(lieux, await db.signageReferences.toArray()), await pdqModelIds());
 
-    it('Plans de quartier = 90 ; T1 = 52 recensés à part, jamais dans le total PDQ', async () => {
+    it('Plans de quartier = 91 ; T1 = 52 recensés à part, jamais dans le total PDQ', async () => {
         const lieux = useAuditStore.getState().lieux;
-        expect(await auditTotals(lieux)).toEqual({ installed: 90, defects: 0 });
+        expect(await auditTotals(lieux)).toEqual({ installed: 91, defects: 0 });
 
         const plans = collectSignaletiquePlansQuartier(lieux);
         expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 0 });
@@ -121,7 +121,7 @@ describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
         const sig = t1Sig(lieux, 'MEETT');
         sig.planQuartier.meett[0].status = EquipmentStatusType.ABSENT;
 
-        expect(await auditTotals(lieux)).toEqual({ installed: 90, defects: 0 });
+        expect(await auditTotals(lieux)).toEqual({ installed: 91, defects: 0 });
         const plans = collectSignaletiquePlansQuartier(lieux);
         expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 1 });
 
