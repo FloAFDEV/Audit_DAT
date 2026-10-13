@@ -140,14 +140,16 @@ describe('resolveReferencesForEquipment (R10)', () => {
 });
 
 describe('buildPatrimoineIndex', () => {
-    it('DAT : 12 implantations par DAT, clé absente = Non contrôlé (R10)', () => {
+    it('DAT métro : 10 implantations par DAT (ad10 / ad11 réservés au tram), clé absente = Non contrôlé (R10)', () => {
         const lieux = [datLieu('l1', 'Station Un', { ad1: AdhesiveStatus.OK, ad3: AdhesiveStatus.ToBeReplaced })];
         const index = buildPatrimoineIndex(lieux, REFERENCES);
 
-        expect(index.totals.implantationCount).toBe(12);
+        expect(index.totals.implantationCount).toBe(10);
+        expect(index.byReference.get('ad10')?.installedCount ?? 0).toBe(0);
+        expect(index.byReference.get('ad11')?.installedCount ?? 0).toBe(0);
         expect(index.totals.okCount).toBe(1);
         expect(index.totals.toReplaceCount).toBe(1);
-        expect(index.totals.uncheckedCount).toBe(10); // 10 clés absentes → NotChecked
+        expect(index.totals.uncheckedCount).toBe(8); // 8 clés absentes → NotChecked
         expect(index.totals.defectCount).toBe(1);
     });
 
@@ -311,7 +313,7 @@ describe('buildPatrimoineIndex', () => {
         ];
         const index = buildPatrimoineIndex(lieux, REFERENCES);
 
-        expect(index.byLine.get('A')?.installed).toBe(12);
+        expect(index.byLine.get('A')?.installed).toBe(10); // DAT métro : sans ad10 / ad11
         expect(index.byLine.get('A')?.defects).toBe(1);
         expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 4); // BE01 + BE11 + CA01
         expect(index.byLine.get('B')?.installed).toBeGreaterThan(0);

@@ -88,7 +88,7 @@ describe('Producteurs de Selection — même contrat quelle que soit la vue d\'o
         const sel = selectionFromSite(index, 'l1', 'Jean-Jaurès');
         expect(sel.source).toBe('site');
         expect(sel.items.every(i => i.lieuId === 'l1')).toBe(true);
-        expect(sel.items.length).toBe(12); // 12 références DAT, toutes déclarées sur ce lieu
+        expect(sel.items.length).toBe(10); // 10 références DAT d'un DAT métro (ad10 / ad11 réservés au tram)
     });
 
     it('selectionFromLine : source "line", items = toutes les implantations de cette ligne', () => {

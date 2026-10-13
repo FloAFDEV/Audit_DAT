@@ -8,7 +8,7 @@ import { db } from './db';
 import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
 import { LINE_A_STATIONS, LINE_B_STATIONS } from './data/stations';
 import { getInitialSignaletiqueData } from './data/signaletique_config';
-import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives } from './data/adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives, getDatAdhesivesForLine, DAT_TRAM_ONLY_ADHESIVE_IDS, isDatAdhesiveInScope } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
@@ -209,6 +209,37 @@ export const migrateStationRenames = (lieux: Lieu[]): boolean => {
                 for (const station of data?.stations ?? []) {
                     rename(station, 'name');
                     rename(station, 'lieuName');
+                }
+            }
+        }
+    }
+    return changed;
+};
+
+/**
+ * Adhésifs DAT réservés au tram (DAT_TRAM_ONLY_ADHESIVE_IDS : ad10, ad11) :
+ * sur une base existante, les DAT métro et Téléo portent encore ces deux
+ * emplacements, jamais posés chez eux. Ils sont retirés tant qu'ils n'ont
+ * jamais été contrôlés ; un constat déjà saisi n'est jamais effacé (il reste
+ * visible, mais hors inventaire et patrimoine). Idempotente.
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+export const migrateDatTramOnlyAdhesives = (lieux: Lieu[]): boolean => {
+    let changed = false;
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.DAT) continue;
+            for (const station of (module.data as ModeData).stations ?? []) {
+                for (const direction of station.directions ?? []) {
+                    for (const dat of direction.dats ?? []) {
+                        for (const id of DAT_TRAM_ONLY_ADHESIVE_IDS) {
+                            if (isDatAdhesiveInScope(id, module.line)) continue;
+                            if (dat.adhesives?.[id] === AdhesiveStatus.NotChecked) {
+                                delete dat.adhesives[id];
+                                changed = true;
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -890,6 +921,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 if (migrateStationRenames(data)) dataChanged = true;
                 if (migrateTramSingleDirectionDats(data)) dataChanged = true;
                 if (migratePmrFloorExtraAccessPoints(data)) dataChanged = true;
+                if (migrateDatTramOnlyAdhesives(data)) dataChanged = true;
 
                 // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et
                 // sème/enrichit l'inventaire initial connu, à chaque démarrage
@@ -1150,7 +1182,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 // We don't save history for individual DAT reset typically, as it's too granular.
                 // But we can if requested. For now, skipping detailed DAT history to avoid clutter.
                 
-                dat.adhesives = createInitialAdhesiveStatus(ADHESIVES);
+                dat.adhesives = createInitialAdhesiveStatus(getDatAdhesivesForLine(ADHESIVES, module.line));
                 dat.comment = '';
                 delete dat.completionDate;
             }
@@ -1169,7 +1201,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 const newDat: DAT = {
                     id: uuidv4(),
                     name: `DAT ${String(newDatNumber).padStart(2, '0')}`,
-                    adhesives: createInitialAdhesiveStatus(ADHESIVES),
+                    adhesives: createInitialAdhesiveStatus(getDatAdhesivesForLine(ADHESIVES, module.line)),
                     comment: '',
                 };
                 direction.dats.push(newDat);

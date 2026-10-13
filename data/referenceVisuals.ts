@@ -20,6 +20,11 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     'ad8': 'ad8', 'ad10': 'ad10', 'ad11': 'ad11',
     // ECA
     'eca-1': 'eca-1', 'eca-2': 'eca-2', 'eca-3': 'eca-3',
+    // P+R — bornes d'entrée / de sortie (caisses automatiques : plus tard)
+    'adbe3': 'adbe3', 'adbs3': 'adbe3',   // « Tarifs + coordonnées », même visuel
+    'adbe10': 'adbe10', 'adbs11': 'adbs11',
+    // Plans de repérage par type d'équipement (pas des références catalogue)
+    'plan-pr-BE': 'plan-pr-be', 'plan-pr-BS': 'plan-pr-bs',
     // Platines jaunes PMR à bras (eca-4) / à vantaux (eca-5)
     'eca-4': 'eca-4', 'eca-5': 'eca-5',
     'eca-6': 'eca-6', 'eca-7': 'eca-7',

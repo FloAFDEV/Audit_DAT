@@ -8,12 +8,19 @@ import { getReferenceVisualUrl } from '../data/referenceVisuals';
 
 describe('Visuels de référence', () => {
     it('chaque visuel déclaré existe dans public/references', () => {
-        for (const id of ['ad1', 'ad2', 'ad3', 'ad4', 'ad5', 'ad6', 'ad7', 'ad8', 'ad10', 'ad11', 'eca-1', 'eca-2', 'eca-3', 'eca-4', 'eca-5', 'eca-6', 'eca-7', 'eca-8', 'eca-9', 'eca-10', 'pmr-sol',
+        for (const id of ['adbe10', 'adbs11', 'adbe3', 'ad1', 'ad2', 'ad3', 'ad4', 'ad5', 'ad6', 'ad7', 'ad8', 'ad10', 'ad11', 'eca-1', 'eca-2', 'eca-3', 'eca-4', 'eca-5', 'eca-6', 'eca-7', 'eca-8', 'eca-9', 'eca-10', 'pmr-sol',
             'pdq-78x100', 'pdq-78x120', 'pem3d-120x80', 'sign-plan-quartier-tram']) {
             const url = getReferenceVisualUrl(id);
             expect(url).toBe(`/references/${id}.webp`);
             expect(existsSync(join(__dirname, '..', 'public', url!))).toBe(true);
         }
+    });
+
+    it('P+R : le bandeau tarifs de la borne de sortie reprend celui de l\'entrée ; plans de repérage BE / BS', () => {
+        expect(getReferenceVisualUrl('adbs3')).toBe('/references/adbe3.webp');
+        expect(getReferenceVisualUrl('plan-pr-BE')).toBe('/references/plan-pr-be.webp');
+        expect(getReferenceVisualUrl('plan-pr-BS')).toBe('/references/plan-pr-bs.webp');
+        expect(getReferenceVisualUrl('plan-pr-CA')).toBeUndefined();
     });
 
     it('le 78×120 adhésif et dibond partagent la face imprimée du 78×120', () => {
