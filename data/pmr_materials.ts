@@ -12,9 +12,11 @@ const materialMap: Record<string, string> = {
     'Fontaine-Lestang': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Arènes': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Patte d\'Oie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
-    'Saint-Cyprien - République': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Saint-Cyprien - République': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Esquirol': "Vinyle WALL colle renforcée + plastification sol Ultra Protect", // relevé terrain : accès principal + entrée ascenseur, même matière
     'Esquirol|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Esquirol|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Capitole': "Vinyle WALL colle renforcée + plastification sol Ultra Protect", // relevé terrain : accès principal + entrée ascenseur, même matière
     'Capitole|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Capitole|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Accès Principal Ligne A)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
@@ -22,8 +24,8 @@ const materialMap: Record<string, string> = {
     'Jean-Jaurès|Adhésifs PMR au Sol (Liaison A→B)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Liaison B→A)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Marengo-SNCF': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Jolimont|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Bas
-    'Jolimont|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Haut
+    'Jolimont|Adhésifs PMR au Sol (Accès Bas (ASC))': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Bas
+    'Jolimont|Adhésifs PMR au Sol (Accès Haut (PRI))': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // Haut
     'Roseraie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Argoulets': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Balma-Gramont': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
@@ -35,8 +37,8 @@ const materialMap: Record<string, string> = {
     'Minimes - Claude Nougaro': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Canal du Midi': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Compans-Caffarelli': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Jeanne d\'Arc': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'François Verdier': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Jeanne d\'Arc': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'François Verdier': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Carmes': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Palais de Justice': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Saint-Michel - Marcel Langer': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
@@ -45,9 +47,9 @@ const materialMap: Record<string, string> = {
     'Saouzelong': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Rangueil': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Faculté de Pharmacie': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
-    'Université Paul-Sabatier': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
+    'Université Paul Sabatier': "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     'Ramonville|Adhésifs PMR au Sol (Accès Bus)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Ramonville|Adhésifs PMR au Sol (Accès Square)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Ramonville|Adhésifs PMR au Sol (Accès Square)': "Vinyle WALL colle renforcée + plastification sol traditionnelle", // « Ramonville Jardin » du relevé
 };
 
 /** Libellé affiché quand aucune matière n'est connue pour une implantation —

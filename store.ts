@@ -2,17 +2,18 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, MetroLine
 } from './types';
 import { db } from './db';
-import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS } from './data/builder';
+import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
+import { LINE_A_STATIONS, LINE_B_STATIONS } from './data/stations';
 import { getInitialSignaletiqueData } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
-import { canEcaBeNotApplicable } from './data/eca_data';
+import { canEcaBeNotApplicable, isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
@@ -209,6 +210,43 @@ export const migrateStationRenames = (lieux: Lieu[]): boolean => {
                     rename(station, 'name');
                     rename(station, 'lieuName');
                 }
+            }
+        }
+    }
+    return changed;
+};
+
+/**
+ * Adhésifs PMR au sol des accès sans valideur PMR (PMR_FLOOR_EXTRA_ACCESS_POINTS :
+ * accès principal d'Esquirol et de Capitole). Sur une base existante, la
+ * station n'a qu'un module générique « Adhésifs PMR au Sol », issu du
+ * valideur PMR de l'entrée ascenseur : il est renommé avec cet accès
+ * (même objet : identifiant, statut, photos et commentaire conservés) et
+ * l'implantation manquante est ajoutée, vierge. Idempotente.
+ * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
+ */
+export const migratePmrFloorExtraAccessPoints = (lieux: Lieu[]): boolean => {
+    let changed = false;
+    for (const [code, extraAccessPoints] of Object.entries(PMR_FLOOR_EXTRA_ACCESS_POINTS)) {
+        const station = [...LINE_A_STATIONS, ...LINE_B_STATIONS].find(s => s.code === code);
+        if (!station) continue;
+        const ecaAccessPoints = [...new Set((ECA_DEFINITIONS[code] ?? []).filter(t => isPmrEcaType(t.type)).map(t => t.accessPoint))];
+        for (const lieu of lieux) {
+            const pmrModules = lieu.modules.filter(m =>
+                m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (m.data as PMRFloorAdhesiveData).stationCode === code);
+            if (pmrModules.length === 0) continue;
+            const generic = pmrModules.find(m => m.name === 'Adhésifs PMR au Sol');
+            if (generic && ecaAccessPoints.length === 1) {
+                generic.name = `Adhésifs PMR au Sol (${ecaAccessPoints[0]})`;
+                changed = true;
+            }
+            for (const accessPoint of extraAccessPoints) {
+                const name = `Adhésifs PMR au Sol (${accessPoint})`;
+                if (lieu.modules.some(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && m.name === name
+                    && (m.data as PMRFloorAdhesiveData).stationCode === code)) continue;
+                const line = pmrModules[0].line as MetroLine;
+                lieu.modules.push(createSpecificPmrFloorAdhesiveModule(name, station, line));
+                changed = true;
             }
         }
     }
@@ -851,6 +889,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
                 if (migrateStationRenames(data)) dataChanged = true;
                 if (migrateTramSingleDirectionDats(data)) dataChanged = true;
+                if (migratePmrFloorExtraAccessPoints(data)) dataChanged = true;
 
                 // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et
                 // sème/enrichit l'inventaire initial connu, à chaque démarrage
