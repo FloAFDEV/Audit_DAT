@@ -5,6 +5,7 @@ import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import { ReferenceVisual } from './ReferenceVisual';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 
 interface PMRFloorAdhesiveAuditFormProps {
@@ -154,6 +155,8 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                 return (
                 <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1 min-w-0 flex items-start gap-3">
+                    <ReferenceVisual referenceId="pmr-sol" label="Adhésif de signalisation PMR au sol — 920×370 mm" />
                     <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                         {adhesive.name}
@@ -165,6 +168,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                             <span className="font-semibold">Matière utilisée :</span>{' '}
                             {material ?? <span className="font-medium text-amber-700 dark:text-amber-300">{PMR_UNKNOWN_MATERIAL_LABEL}</span>}
                         </p>
+                    </div>
                     </div>
                     <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                         <button

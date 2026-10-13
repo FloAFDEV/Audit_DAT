@@ -80,35 +80,20 @@ export const getEcaDirection = (type: EcaEquipmentType): EcaDirection | null => 
 const ECA_DIRECTION_LABEL: Record<EcaDirection, string> = { in: 'Entrée', out: 'Sortie', both: 'Double sens' };
 const ECA_DIRECTION_ICON: Record<EcaDirection, React.FC<{ className?: string }>> = { in: LogIn, out: LogOut, both: ArrowLeftRight };
 
-// Distinction par la FORME (plein / contour / pointillé) + pictogramme + mot,
-// jamais par la seule couleur : lisible en plein soleil et en niveaux de gris,
-// sans collision avec les couleurs déjà porteuses de sens (vert OK, rouge
-// anomalie, teal progression, bleu PMR).
-const ECA_DIRECTION_CHIP: Record<EcaDirection, string> = {
-    in: 'bg-slate-900 text-white border-2 border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100',
-    out: 'bg-white text-slate-900 border-2 border-slate-900 dark:bg-transparent dark:text-slate-100 dark:border-slate-100',
-    both: 'bg-white text-slate-700 border-2 border-dashed border-slate-500 dark:bg-transparent dark:text-slate-200 dark:border-slate-400',
-};
-
-/** Badge ENTRÉE / SORTIE / DOUBLE SENS — rien si le sens n'est pas déterminable. */
-export const EcaDirectionBadge: React.FC<{ type: EcaEquipmentType }> = ({ type }) => {
-    const direction = getEcaDirection(type);
-    if (!direction) return null;
-    const Icon = ECA_DIRECTION_ICON[direction];
-    return (
-        <span className={`mb-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-extrabold uppercase tracking-wider ${ECA_DIRECTION_CHIP[direction]}`}>
-            <Icon className="w-3.5 h-3.5" aria-hidden="true" />
-            {ECA_DIRECTION_LABEL[direction]}
-        </span>
-    );
-};
-
-/** Pictogramme directionnel ; `fallback` quand le sens n'est pas déterminable. */
+/**
+ * Pictogramme directionnel ; `fallback` quand le sens n'est pas déterminable.
+ * Entrée et sortie se lisent au sens de la flèche : vers la droite pour
+ * l'entrée, vers la gauche pour la sortie (pictogramme retourné).
+ */
 export const EcaDirectionIcon: React.FC<{ type: EcaEquipmentType; className?: string; fallback: React.ReactNode }> = ({ type, className, fallback }) => {
     const direction = getEcaDirection(type);
     if (!direction) return <>{fallback}</>;
     const Icon = ECA_DIRECTION_ICON[direction];
-    return <Icon className={className} aria-hidden="true" />;
+    return (
+        <span role="img" aria-label={ECA_DIRECTION_LABEL[direction]} title={ECA_DIRECTION_LABEL[direction]} className={direction === 'out' ? 'inline-flex -scale-x-100' : 'inline-flex'}>
+            <Icon className={className} aria-hidden="true" />
+        </span>
+    );
 };
 
 /** Résumé d'un accès : « 1 PMR · 2 entrées · 2 sorties ». */

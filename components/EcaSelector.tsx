@@ -7,7 +7,7 @@ import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
-import { formatEcaTypeForDisplay, EcaDirectionBadge, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
+import { formatEcaTypeForDisplay, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
 import useAuditStore from '../store';
 
 /** Durée d'affichage de la surbrillance de retour — même valeur que DATList,
@@ -210,7 +210,6 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         {getEcaIcon(eca)}
                                         <div className="flex-1 min-w-0">
-                                            <EcaDirectionBadge type={eca.type} />
                                             <FormattedCorrespondence 
                                                 as="p" 
                                                 text={eca.name} 
