@@ -2,12 +2,12 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference, PlanQuartierData, AdhesiveStatus,
+    SignageReference, PlanQuartierData, AdhesiveStatus, PMRFloorAdhesiveData,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { readEcaAdhesiveStatus } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
-import { getAllPmrMaterials } from '../data/pmr_materials';
+import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
 import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
@@ -106,18 +106,19 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
                         else if (module.line === 'AEROPORT') cogPictoCountAero += pictoCount;
                         break;
                     }
-                    case AuditModuleType.PMR_FLOOR_ADHESIVE:
-                        pmrFloorAdhesiveCount++;
-                        if (module.line === 'A') {
-                            pmrFloorAdhesiveCountA++;
-                        } else if (module.line === 'B') {
-                            pmrFloorAdhesiveCountB++;
-                        } else if (module.line === 'C') {
-                            pmrFloorAdhesiveCountC++;
-                        } else if (module.line === 'AEROPORT') {
-                            pmrFloorAdhesiveCountAero++;
-                        }
+                    case AuditModuleType.PMR_FLOOR_ADHESIVE: {
+                        // Occurrences applicables : un module « sans objet »
+                        // (Jean-Jaurès, Accès Historique) ne porte aucun adhésif.
+                        const pmrData = module.data as PMRFloorAdhesiveData;
+                        if (pmrData.isNotApplicable) break;
+                        const pmrCount = (pmrData.adhesives ?? []).length;
+                        pmrFloorAdhesiveCount += pmrCount;
+                        if (module.line === 'A') pmrFloorAdhesiveCountA += pmrCount;
+                        else if (module.line === 'B') pmrFloorAdhesiveCountB += pmrCount;
+                        else if (module.line === 'C') pmrFloorAdhesiveCountC += pmrCount;
+                        else if (module.line === 'AEROPORT') pmrFloorAdhesiveCountAero += pmrCount;
                         break;
+                    }
                     case AuditModuleType.SIGNALETIQUE:
                         signaletiqueCount++;
                         if (module.line === 'TRAM') signaletiqueCountTram++;
@@ -247,6 +248,9 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
  * Quantités : dérivées de getEffective*Adhesives (utils/effectiveAdhesives.ts,
  * déjà utilisé par les formulaires terrain) au lieu des listes statiques.
  */
+const pmrInventoryRowId = (material: string) => `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
+const PMR_UNKNOWN_MATERIAL_ROW_ID = 'pmr-sol-matiere-non-renseignee';
+
 export const computeAdhesiveInventory = (
     lieux: Lieu[], references: SignageReference[],
 ): AdhesiveInventoryItem[] => {
@@ -321,7 +325,7 @@ export const computeAdhesiveInventory = (
         if (pmrModule) {
             const allPmrMaterials = getAllPmrMaterials();
             allPmrMaterials.forEach(material => {
-                const id = `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
+                const id = pmrInventoryRowId(material);
                 if (!inventoryMap.has(id)) {
                     inventoryMap.set(id, {
                         id, auditType: pmrModule.shortLabel, repere: '-',
@@ -452,9 +456,17 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
-                    getAllPmrMaterials().forEach(material => {
-                        addQty(`pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`, 1);
-                    });
+                    // Les matières sont des variantes du même adhésif : chaque
+                    // implantation compte UNE fois, sous la matière qui lui est
+                    // attribuée (même fonction que le formulaire terrain et
+                    // l'export CSV). Matière introuvable → ligne « matière non
+                    // renseignée », jamais une matière déduite. Module « sans
+                    // objet » : aucun adhésif, rien à compter.
+                    const pmrData = module.data as PMRFloorAdhesiveData;
+                    if (!pmrData.isNotApplicable) {
+                        const material = getPmrMaterial(pmrData.stationName, module.name);
+                        addQty(material ? pmrInventoryRowId(material) : PMR_UNKNOWN_MATERIAL_ROW_ID, (pmrData.adhesives ?? []).length);
+                    }
                 }
 
                 if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
@@ -479,6 +491,16 @@ export const computeAdhesiveInventory = (
                     }
                 }
             }
+        }
+
+        // Ligne « matière non renseignée » : uniquement si des implantations
+        // PMR n'ont pas de matière connue (aucune ligne vide permanente).
+        const pmrConfig = auditModules.find(c => c.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
+        if (pmrConfig && (quantityMap.get(PMR_UNKNOWN_MATERIAL_ROW_ID) ?? 0) > 0) {
+            inventoryMap.set(PMR_UNKNOWN_MATERIAL_ROW_ID, {
+                id: PMR_UNKNOWN_MATERIAL_ROW_ID, auditType: pmrConfig.shortLabel, repere: '-',
+                name: "Adhésif de signalisation au sol", dimensions: "920x370mm", material: PMR_UNKNOWN_MATERIAL_LABEL, quantity: 0,
+            });
         }
 
         // Merge quantities into inventory items

@@ -5,7 +5,7 @@ import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
-import { getPmrMaterial } from '../data/pmr_materials';
+import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 
 interface PMRFloorAdhesiveAuditFormProps {
   module: AuditModule;
@@ -161,11 +161,10 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                             // <span className="font-bold text-gray-600 dark:text-slate-400">920x370mm</span>
                         </span>
                         </h3>
-                        {material && (
-                            <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
-                                <span className="font-semibold">Matière utilisée :</span> {material}
-                            </p>
-                        )}
+                        <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
+                            <span className="font-semibold">Matière utilisée :</span>{' '}
+                            {material ?? <span className="font-medium text-amber-700 dark:text-amber-300">{PMR_UNKNOWN_MATERIAL_LABEL}</span>}
+                        </p>
                     </div>
                     <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                         <button
