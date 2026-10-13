@@ -43,7 +43,7 @@ export const ReferenceVisual: React.FC<{ referenceId?: string; label: string; si
                     >
                         <X className="w-6 h-6" />
                     </button>
-                    <img src={url} alt={label} className="w-[min(80vw,420px)] max-h-[70vh] rounded-lg bg-white p-3 object-contain" />
+                    <img src={url} alt={label} className="min-w-[min(80vw,420px)] max-w-[92vw] max-h-[78vh] rounded-lg bg-white p-2 object-contain" />
                     <p className="max-w-[90vw] text-center text-sm font-semibold text-white">{label}</p>
                 </div>
             )}

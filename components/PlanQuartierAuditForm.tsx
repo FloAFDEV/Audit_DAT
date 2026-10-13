@@ -3,6 +3,7 @@ import { AuditModule, AdhesiveStatus, PlanQuartierData, PlanQuartierOccurrence, 
 import { CheckCircle2, XCircle, AlertTriangle, Trash2, PlusCircle, History, RotateCcw, ShieldCheck, Ruler } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
 import { ModuleIcon } from './ModuleIcon';
+import { ReferenceVisual } from './ReferenceVisual';
 import { formatDimensions, STATUS_LABELS } from './cockpit/labels';
 
 interface PlanQuartierAuditFormProps {
@@ -259,7 +260,8 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
           return (
             <li key={ref.id} className="bg-slate-50/50 dark:bg-slate-900/20">
               <div className="p-6 pb-3 flex items-center justify-between gap-3">
-                <div>
+                <div className="flex items-center gap-3 min-w-0">
+                  <ReferenceVisual referenceId={ref.id} label={ref.name} />
                   <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {ref.name}
                     <span className="text-base font-normal text-slate-400 dark:text-slate-500 ml-2">
