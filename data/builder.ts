@@ -304,7 +304,18 @@ const createEcaModule = (
     };
 };
 
-const createSpecificPmrFloorAdhesiveModule = (
+/**
+ * Accès portant un adhésif PMR au sol SANS valideur PMR (relevé terrain) :
+ * la règle « un module par accès équipé d'un ECA PMR » ne les voit pas.
+ * Esquirol et Capitole : un adhésif à l'entrée ascenseur (ASC, où se trouve
+ * le valideur PMR) ET un à l'accès principal (PRI).
+ */
+export const PMR_FLOOR_EXTRA_ACCESS_POINTS: Readonly<Record<string, readonly string[]>> = {
+    ESQ: ['Accès Haut (PRI)'],
+    CAP: ['Accès Haut (PRI)'],
+};
+
+export const createSpecificPmrFloorAdhesiveModule = (
     moduleName: string,
     station: Partial<Station>,
     line: MetroLine
@@ -446,6 +457,8 @@ export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {
                 }
             });
         
+            (PMR_FLOOR_EXTRA_ACCESS_POINTS[station.code] ?? []).forEach(accessPoint => pmrAccessPoints.add(accessPoint));
+
             if (pmrAccessPoints.size === 0) {
                 continue; // No PMR ECAs found for this station.
             }
