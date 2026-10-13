@@ -7,7 +7,7 @@ import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
-import { formatEcaTypeForDisplay } from './EcaUiHelpers';
+import { formatEcaTypeForDisplay, EcaDirectionBadge, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
 import useAuditStore from '../store';
 
 /** Durée d'affichage de la surbrillance de retour — même valeur que DATList,
@@ -33,11 +33,11 @@ const getEcaIcon = (eca: ECA) => {
         );
     }
     
-    // For all non-PMR ECAs (Tripodes, Vantaux), use the Fence icon for stability and consistency.
-    const iconProps = { className: "w-8 h-8 text-green-600 dark:text-green-300" };
+    // Tripodes / Vantaux : même carré vert, le pictogramme montre le SENS de
+    // passage (entrée / sortie / double sens) — Fence si non déterminable.
     return (
         <div className="p-3 bg-green-100 dark:bg-green-900/40 rounded-lg">
-            <Fence {...iconProps} />
+            <EcaDirectionIcon type={eca.type} className="w-8 h-8 text-green-700 dark:text-green-300" fallback={<Fence className="w-8 h-8 text-green-600 dark:text-green-300" />} />
         </div>
     );
 };
@@ -102,24 +102,11 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
     };
     
     const sortedEcas = useMemo(() => {
-        return [...ecaData.ecas].sort((a, b) => {
-            const isPmrA = isPmrEcaType(a.type);
-            const isPmrB = isPmrEcaType(b.type);
-            
-            // 1. Sort by PMR status first (PMRs on top)
-            if (isPmrA !== isPmrB) {
-                return isPmrA ? -1 : 1;
-            }
-
-            // 2. Then sort by access point name (grouping by access point)
-            const accessPointCompare = a.accessPoint.localeCompare(b.accessPoint);
-            if (accessPointCompare !== 0) {
-                return accessPointCompare;
-            }
-
-            // 3. Finally, sort by equipment number
-            return a.number - b.number;
-        });
+        // Regroupement par accès, puis dans chaque accès : PMR, entrées,
+        // sorties, double sens ; enfin par numéro d'équipement.
+        const rank = (eca: ECA) => isPmrEcaType(eca.type) ? -1 : ECA_DIRECTION_ORDER.indexOf(getEcaDirection(eca.type) ?? 'both');
+        return [...ecaData.ecas].sort((a, b) =>
+            a.accessPoint.localeCompare(b.accessPoint) || rank(a) - rank(b) || a.number - b.number);
     }, [ecaData.ecas]);
 
 
@@ -179,8 +166,9 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                     <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Aucun valideur n'est enregistré pour cette station.</p>
                 </div>
             ) : (
-                <div className="space-y-4">
-                    {sortedEcas.map((eca) => {
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {sortedEcas.map((eca, index) => {
+                        const isFirstOfAccess = index === 0 || sortedEcas[index - 1].accessPoint !== eca.accessPoint;
                         const progress = getEcaProgress(eca);
                         const isNotApplicable = eca.isNotApplicable;
 
@@ -196,8 +184,14 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                         const isReturnHighlighted = eca.id === returnHighlightId;
 
                         return (
+                            <React.Fragment key={eca.id}>
+                            {isFirstOfAccess && (
+                                <div className={`col-span-full flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-b-2 border-slate-300 dark:border-slate-600 pb-1.5 ${index === 0 ? '' : 'pt-4'}`}>
+                                    <h3 className="text-base font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">{eca.accessPoint}</h3>
+                                    <span className="text-sm text-slate-600 dark:text-slate-300">{summarizeEcaDirections(ecaData.ecas.filter(e => e.accessPoint === eca.accessPoint))}</span>
+                                </div>
+                            )}
                             <button
-                                key={eca.id}
                                 id={`eca-card-${eca.id}`}
                                 onClick={isNotApplicable ? undefined : () => onSelectEca(eca.id)}
                                 // We don't use the `disabled` attribute directly to allow child buttons to be interactive.
@@ -216,13 +210,14 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         {getEcaIcon(eca)}
                                         <div className="flex-1 min-w-0">
+                                            <EcaDirectionBadge type={eca.type} />
                                             <FormattedCorrespondence 
                                                 as="p" 
                                                 text={eca.name} 
                                                 useLogos={isPmr && eca.name.includes('->')}
-                                                className="text-lg font-semibold text-gray-900 dark:text-slate-100 truncate" 
+                                                className="text-lg font-semibold text-gray-900 dark:text-slate-100 break-words" 
                                             />
-                                            <p className="text-sm text-gray-500 dark:text-slate-400">{eca.accessPoint} &bull; {formatEcaTypeForDisplay(eca.type)}</p>
+                                            <p className="text-sm text-gray-500 dark:text-slate-400">{formatEcaTypeForDisplay(eca.type)}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">
@@ -257,6 +252,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     </div>
                                 </div>
                             </button>
+                            </React.Fragment>
                         );
                     })}
                 </div>

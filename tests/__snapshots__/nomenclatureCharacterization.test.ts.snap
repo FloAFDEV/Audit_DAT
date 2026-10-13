@@ -404,7 +404,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "pmr-sol-Vinyle-WALL-colle-renforc-e---plastification-sol-Ultra-Protect",
     "material": "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     "name": "Adhésif de signalisation au sol",
-    "quantity": 45,
+    "quantity": 9,
     "repere": "-",
   },
   {
@@ -413,7 +413,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "pmr-sol-Vinyle-WALL-colle-renforc-e---plastification-sol-traditionnelle",
     "material": "Vinyle WALL colle renforcée + plastification sol traditionnelle",
     "name": "Adhésif de signalisation au sol",
-    "quantity": 45,
+    "quantity": 24,
     "repere": "-",
   },
   {
@@ -422,7 +422,16 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "pmr-sol-Adh-sif-renforc--bitume-dos-aluminium---plastification-sol-Ultra-Protect",
     "material": "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     "name": "Adhésif de signalisation au sol",
-    "quantity": 45,
+    "quantity": 4,
+    "repere": "-",
+  },
+  {
+    "auditType": "PMR au Sol",
+    "dimensions": "920x370mm",
+    "id": "pmr-sol-matiere-non-renseignee",
+    "material": "Matière non renseignée",
+    "name": "Adhésif de signalisation au sol",
+    "quantity": 7,
     "repere": "-",
   },
   {

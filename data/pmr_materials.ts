@@ -50,6 +50,10 @@ const materialMap: Record<string, string> = {
     'Ramonville|Adhésifs PMR au Sol (Accès Square)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
 };
 
+/** Libellé affiché quand aucune matière n'est connue pour une implantation —
+ *  jamais remplacé par une matière déduite. */
+export const PMR_UNKNOWN_MATERIAL_LABEL = 'Matière non renseignée';
+
 /**
  * Retrieves the unique list of all possible materials for PMR floor adhesives.
  * @returns An array of material strings.

@@ -7,7 +7,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
 import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus } from '../../types';
+import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData } from '../../types';
+import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -605,6 +606,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const showPmrFloor = lieuHas(AuditModuleType.PMR_FLOOR_ADHESIVE);
     const showCogPicto = lieuHas(AuditModuleType.COGNITIVE_PICTOGRAMS);
     const showSignaletique = lieuHas(AuditModuleType.SIGNALETIQUE);
+    const selectedLieuPmrMaterials = useMemo(() => (selectedLieuObject?.modules ?? [])
+        .filter(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && isModuleInCurrentScope(m) && !(m.data as PMRFloorAdhesiveData).isNotApplicable)
+        .map(m => ({
+            key: m.id,
+            // Libellé d'accès seulement quand la station porte plusieurs implantations.
+            label: m.name.replace(/^Adhésifs PMR au Sol\s*/, '').replace(/^\((.*)\)$/, '$1'),
+            material: getPmrMaterial((m.data as PMRFloorAdhesiveData).stationName, m.name),
+        })), [selectedLieuObject]);
     const lieuBaches = useMemo(
         () => (selectedLieuObject ? getBachesForLieu(selectedLieuObject.name) : []),
         [selectedLieuObject],
@@ -1130,7 +1139,20 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 {showPmrFloor && (
                 <div>
                 <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
-                {selectedLieuId ? null : (
+                {selectedLieuId ? (
+                    // Vue station : matière réellement posée, ou mention explicite
+                    // quand elle n'est pas connue (jamais une matière déduite).
+                    <ul className="space-y-1.5 mt-2">
+                        {selectedLieuPmrMaterials.map(({ key, label, material }) => (
+                            <li key={key} className="text-sm">
+                                {label && <div className="font-semibold text-slate-700 dark:text-slate-200">{label}</div>}
+                                <div className={material ? 'text-slate-500 dark:text-slate-400' : 'font-medium text-amber-700 dark:text-amber-300'}>
+                                    {material ?? PMR_UNKNOWN_MATERIAL_LABEL}
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
                     <div className="space-y-3 mt-2">
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
