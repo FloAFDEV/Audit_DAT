@@ -5,7 +5,7 @@ import {
     SignageReference, PlanQuartierData, AdhesiveStatus, PMRFloorAdhesiveData,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
-import { readEcaAdhesiveStatus } from '../data/adhesives';
+import { readEcaAdhesiveStatus, isDatAdhesiveInScope } from '../data/adhesives';
 import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
@@ -395,6 +395,7 @@ export const computeAdhesiveInventory = (
                         for (const direction of station.directions ?? []) {
                             for (const dat of direction.dats ?? []) {
                                 datAdhesives.forEach(ad => {
+                                    if (!isDatAdhesiveInScope(ad.id, module.line)) return;
                                     if (dat.adhesives?.[ad.id] === AdhesiveStatus.NotApplicable) return;
                                     addQty(ad.id, 1);
                                 });

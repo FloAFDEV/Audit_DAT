@@ -4,7 +4,7 @@ import {
     Equipment, EquipmentType, EcaData, ECA, EcaEquipmentType, AuditCategory, PMRFloorAdhesiveData, PMRFloorAdhesive, FloorAdhesiveStatus, AuditCategoryConfig, CognitivePictogramData, CognitivePictogram, PrZone, PlanQuartierData
 } from '../types';
 import { v4 as uuidv4 } from 'uuid';
-import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives, getEquipmentAdhesives } from './adhesives';
+import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives, getEquipmentAdhesives, getDatAdhesivesForLine } from './adhesives';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS, AEROPORT_EXPRESS_STATIONS } from './stations';
 import { PR_DATA } from './pr_data';
 import { AUDIT_CATEGORIES } from './config';
@@ -33,7 +33,7 @@ const createDatDirectionsAndDatsForStation = (station: Partial<Station>, line: M
     const createDat = (name: string): DAT => ({
         id: uuidv4(),
         name: `DAT ${name.padStart(2, '0')}`,
-        adhesives: createInitialAdhesiveStatus(ADHESIVES),
+        adhesives: createInitialAdhesiveStatus(getDatAdhesivesForLine(ADHESIVES, line)),
         comment: ''
     });
 

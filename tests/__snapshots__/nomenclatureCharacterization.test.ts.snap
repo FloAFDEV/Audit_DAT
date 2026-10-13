@@ -224,7 +224,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad10",
     "material": "Localisation: A droite et au dessus de l’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Validation avec carte bancaire » + QR_Code",
-    "quantity": 172,
+    "quantity": 56,
     "repere": "10",
   },
   {
@@ -233,7 +233,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad11",
     "material": "Localisation: A droite, entoure le bouton d’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Appel d’urgence. Tous abus sera puni »",
-    "quantity": 172,
+    "quantity": 56,
     "repere": "11",
   },
   {

@@ -24,6 +24,23 @@ export const ADHESIVES: Adhesive[] = [
   { id: 'ad12', name: 'Repère 12 - Adhésif « Appel d’urgence + braille»', description: 'Dimensions: 5,4x3,7cm | Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).', referentiel: '' }
 ];
 
+/**
+ * Adhésifs DAT posés uniquement sur les DAT du tram : « Validation avec carte
+ * bancaire » + QR code (ad10) et cadre « Appel d'urgence » (ad11). Absents des
+ * DAT métro et Téléo. Aéroport Express : mêmes DAT que le tram (hypothèse
+ * métier en attente de confirmation terrain).
+ */
+export const DAT_TRAM_ONLY_ADHESIVE_IDS: ReadonlySet<string> = new Set(['ad10', 'ad11']);
+const DAT_TRAM_LINES: ReadonlySet<string> = new Set(['TRAM', 'AEROPORT']);
+
+/** Un adhésif DAT fait-il partie du périmètre d'un DAT de cette ligne ? */
+export const isDatAdhesiveInScope = (adhesiveId: string, line?: string): boolean =>
+    !DAT_TRAM_ONLY_ADHESIVE_IDS.has(adhesiveId) || (!!line && DAT_TRAM_LINES.has(line));
+
+/** Adhésifs DAT attendus sur un DAT de cette ligne. */
+export const getDatAdhesivesForLine = <T extends { id: string }>(adhesives: readonly T[], line?: string): T[] =>
+    adhesives.filter(ad => isDatAdhesiveInScope(ad.id, line));
+
 // =================================================================
 // ADHÉSIFS P+R (Parcs Relais)
 // =================================================================

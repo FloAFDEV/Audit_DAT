@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { DAT, AdhesiveStatus, Station, Direction, AuditModule, SignageReference } from '../types';
 import { getEffectiveAdhesives } from '../utils/effectiveAdhesives';
+import { getDatAdhesivesForLine } from '../data/adhesives';
 import { CheckCircle2, XCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { DatIcon } from './DatIcon';
 import AuditFormLayout from './AuditFormLayout';
@@ -21,7 +22,8 @@ interface AdhesiveAuditFormProps {
 const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, station, direction, signageReferences, onStatusChange, onBack, onCommentChange, onReset }) => {
   const directionName = useMemo(() => direction.name.replace(/^Direction\s/i, ''), [direction.name]);
 
-  const ADHESIVES = useMemo(() => getEffectiveAdhesives(signageReferences), [signageReferences]);
+  // Périmètre de la ligne : ad10 / ad11 n'existent que sur les DAT du tram.
+  const ADHESIVES = useMemo(() => getDatAdhesivesForLine(getEffectiveAdhesives(signageReferences), module.line), [signageReferences, module.line]);
 
   const progress = useMemo(() => {
     const total = ADHESIVES.length;

@@ -140,7 +140,7 @@ import {
     SignageReference, SignageSupport, PlanQuartierData,
 } from '../../types';
 import { isModuleInCurrentScope } from '../moduleScope';
-import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, EcaValidationZone } from '../../data/adhesives';
+import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, EcaValidationZone, isDatAdhesiveInScope } from '../../data/adhesives';
 
 // -----------------------------------------------------------------
 // Types du contrat (stables : les vues dépendent d'eux, pas de l'arbre)
@@ -305,7 +305,8 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
 
             switch (module.type) {
                 case AuditModuleType.DAT: {
-                    const refs = resolveReferencesForEquipment(references, 'DAT');
+                    const refs = resolveReferencesForEquipment(references, 'DAT')
+                        .filter(ref => isDatAdhesiveInScope(ref.id, module.line));
                     for (const station of (module.data as ModeData).stations ?? []) {
                         for (const direction of station.directions ?? []) {
                             for (const dat of direction.dats ?? []) {

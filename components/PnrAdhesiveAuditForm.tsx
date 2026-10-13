@@ -3,6 +3,8 @@ import { Equipment, AdhesiveStatus, AuditModule, EquipmentType, SignageReference
 import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
 import { MapPin, CheckCircle2, XCircle, AlertTriangle } from 'lucide-react';
 import AuditFormLayout from './AuditFormLayout';
+import { ReferenceVisual } from './ReferenceVisual';
+import { getReferenceVisualUrl } from '../data/referenceVisuals';
 
 interface PrAdhesiveAuditFormProps {
   module: AuditModule;
@@ -55,6 +57,11 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
       comment={equipment.comment}
       onCommentChange={onCommentChange}
     >
+      {getReferenceVisualUrl(`plan-pr-${equipment.type}`) && (
+        <div className="px-6 py-3 border-b border-gray-200 dark:border-slate-700">
+          <ReferenceVisual variant="plan" referenceId={`plan-pr-${equipment.type}`} label={`Plan de repérage — ${equipment.type === EquipmentType.BE ? "borne d'entrée" : 'borne de sortie'} P+R`} />
+        </div>
+      )}
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {adhesives.map((adhesive) => {
           const currentStatus = equipment.adhesives[adhesive.id] || AdhesiveStatus.NotChecked;
@@ -70,6 +77,8 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
           return (
             <li key={adhesive.id} className={`p-6 transition-colors ${isDisabled ? 'opacity-60 bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex-1 min-w-0 flex items-start gap-3">
+                <ReferenceVisual referenceId={adhesive.id} label={adhesive.name} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 flex-wrap">
                     <h3 className={`text-lg font-semibold text-gray-900 dark:text-slate-100 ${isDisabled ? 'line-through' : ''}`}>
@@ -91,6 +100,7 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
                     <MapPin className="w-4 h-4 mr-2 mt-1 text-gray-400 flex-shrink-0" />
                     <span>{adhesive.location}</span>
                   </div>
+                </div>
                 </div>
                 <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
                   <button
