@@ -4,6 +4,7 @@ import { getEffectiveAdhesives } from '../utils/effectiveAdhesives';
 import { CheckCircle2, XCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { DatIcon } from './DatIcon';
 import AuditFormLayout from './AuditFormLayout';
+import { ReferenceVisual } from './ReferenceVisual';
 
 interface AdhesiveAuditFormProps {
   module: AuditModule;
@@ -70,6 +71,8 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
           return (
             <li key={adhesive.id} className="p-6 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0 flex items-start gap-3">
+                <ReferenceVisual referenceId={adhesive.id} label={adhesive.name} />
                 <div className="flex-1 min-w-0">
                   <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100">
                     {adhesive.name}
@@ -85,6 +88,7 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
                         <span>{location}</span>
                     </div>
                   )}
+                </div>
                 </div>
                 <div className="flex-shrink-0 flex items-center flex-wrap justify-start sm:justify-end gap-3">
                   <button
