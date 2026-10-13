@@ -7,6 +7,7 @@ import { FormattedCorrespondence } from './Icons';
 import { getEcaProgress } from '../utils/progressCalculators';
 import AuditFormLayout from './AuditFormLayout';
 import { isPmrEcaType } from '../data/eca_data';
+import { ReferenceVisual } from './ReferenceVisual';
 
 interface EcaAdhesiveAuditFormProps {
   module: AuditModule;
@@ -72,6 +73,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex-1 min-w-0 flex items-start gap-3">
+            <ReferenceVisual referenceId={occurrence.id} label={occurrence.name} />
             <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                     {occurrence.name}
@@ -93,6 +96,7 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                         <span>{location}</span>
                     </div>
                 )}
+            </div>
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex sm:flex-wrap sm:gap-3">
             <button

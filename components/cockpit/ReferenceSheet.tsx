@@ -16,6 +16,7 @@ import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { ImplantationsTree, ImplantationsExportButton } from './ImplantationsTree';
 import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+import { ReferenceVisual } from '../ReferenceVisual';
 
 // LineBadge vit avec l'arbre des implantations ; ré-exporté ici pour les
 // vues qui l'importaient déjà depuis la fiche.
@@ -138,6 +139,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
+                <ReferenceVisual referenceId={reference.id} label={reference.name} size="lg" />
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{reference.name}</h2>
