@@ -16,6 +16,7 @@ import { TERMINUS_BANDEAU_TEXT, TERMINUS_STATIONS } from '../utils/signaletiqueD
 import {
   T1_PLAN_QUARTIER_DIMENSIONS, T1PlanQuartierOccurrence, summarizeT1PlanQuartier, t1PlanQuartierOccurrences,
 } from '../utils/t1PlanQuartierAudit';
+import { ReferenceVisual } from './ReferenceVisual';
 
 type Status = EquipmentStatusType | 'NotChecked';
 type Dir = 'meett' | 'pdj';
@@ -249,6 +250,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
       >
         <div className="bg-slate-50 dark:bg-slate-900/30">
           <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-slate-700">
+            <ReferenceVisual referenceId="sign-plan-quartier-tram" label={`Plan de quartier T1 — ${T1_PLAN_QUARTIER_DIMENSIONS}`} />
             <span className="text-sm font-semibold text-gray-800 dark:text-slate-100">
               Plan de quartier T1 — {T1_PLAN_QUARTIER_DIMENSIONS} · {summary.expected} attendus (1 par sens)
             </span>
