@@ -7,7 +7,7 @@
 //   les lignes C et AEROPORT uniquement.
 // Remplace l'ancienne règle unique qui gardait les modules futurs B/C/
 // AEROPORT dans tous les calculs : la ligne B n'est plus une exception
-// (Parc Technologique du Canal et Labège Madron sont en service).
+// (Parc du Canal et Labège Madron sont en service).
 // =================================================================
 import { describe, it, expect } from 'vitest';
 import { isModuleInCurrentScope, isModuleEditable } from '../utils/moduleScope';
@@ -63,14 +63,14 @@ describe('périmètres sur les données réelles (data/builder.ts)', () => {
         expect(isModuleEditable({ isFuture: station.isFuture, line: datAero.line })).toBe(true);
     });
 
-    it('Parc Technologique du Canal et Labège Madron : en service, exploités et éditables, données présentes', async () => {
+    it('Parc du Canal et Labège Madron : en service, exploités et éditables, données présentes', async () => {
         for (const id of ['sta-b-21', 'sta-b-22']) {
             const def = REGISTRY_LINE_B.find(s => s.id === id)!;
             expect(def.isFuture).toBe(false);
             expect(def.isActive).toBe(true);
         }
         const lieux = await generateInitialLieuxDataAsync();
-        for (const name of ['Parc Technologique du Canal', 'Labège Madron']) {
+        for (const name of ['Parc du Canal', 'Labège Madron']) {
             const modulesB = lieux.find(l => l.name === name)!.modules.filter(m => m.line === 'B');
             expect(modulesB.length).toBeGreaterThan(0);
             expect(modulesB.every(m => isModuleInCurrentScope(m) && isModuleEditable(m))).toBe(true);

@@ -395,7 +395,7 @@ const createPlanQuartierModule = (station: Partial<Station>, line: MetroLine | '
 /** Lieux renommés : l'identifiant reste celui dérivé de l'ancien nom, pour
  *  qu'une base neuve et une base existante désignent le même lieu. */
 const STABLE_LIEU_IDS: Record<string, string> = {
-    'Parc Technologique du Canal': 'lieu-parc-du-canal',
+    'Parc du Canal': 'lieu-parc-du-canal',
 };
 
 export const generateInitialLieuxDataAsync = async (): Promise<Lieu[]> => {

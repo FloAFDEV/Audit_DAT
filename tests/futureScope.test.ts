@@ -137,7 +137,7 @@ describe('station en service', () => {
         expect(stats.stationCountB).toBe(LINE_B_STATIONS.filter(s => !s.isFuture).length);
     });
 
-    it('cas 7 — Parc Technologique du Canal et Labège Madron : en service, comptées, leurs données dans les calculs', async () => {
+    it('cas 7 — Parc du Canal et Labège Madron : en service, comptées, leurs données dans les calculs', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const stats = runStats(lieux).globalCounts;
         const bIds = REGISTRY_LINE_B.filter(s => !s.isFuture).map(s => s.id);
@@ -145,7 +145,7 @@ describe('station en service', () => {
         expect(stats.stationCountB).toBe(LINE_B_STATIONS.filter(s => !s.isFuture).length);
 
         const patrimoine = buildPatrimoineIndex(lieux, refs);
-        for (const name of ['Parc Technologique du Canal', 'Labège Madron']) {
+        for (const name of ['Parc du Canal', 'Labège Madron']) {
             expect(patrimoine.implantations.some(i => i.lieuName === name && i.line === 'B')).toBe(true);
         }
     });

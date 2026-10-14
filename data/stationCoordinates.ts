@@ -86,7 +86,7 @@ export const STATION_COORDINATES: Readonly<Record<string, StationCoordinates>> =
     'sta-tel-1': { lat: 43.554698, lng: 1.428278, source: 'gtfs' }, // Oncopole-Lise Enjalbert
     'sta-tel-2': { lat: 43.558294, lng: 1.452852, source: 'gtfs' }, // Hôpital Rangueil-Louis Lareng
     'sta-tel-3': { lat: 43.560645, lng: 1.463553, source: 'gtfs' }, // Université Paul-Sabatier
-    'sta-b-21': { lat: 43.55166, lng: 1.48600, source: 'chantier' }, // Parc Technologique du Canal (Place du Canal / Rue Hermès, Ramonville-Saint-Agne)
+    'sta-b-21': { lat: 43.55166, lng: 1.48600, source: 'chantier' }, // Parc du Canal (Place du Canal / Rue Hermès, Ramonville-Saint-Agne)
     'sta-b-22': { lat: 43.5436, lng: 1.5034, source: 'chantier' }, // Labège Madron, terminus ligne B — pôle d'échange B/C, mêmes coordonnées que la C
     'sta-c-1': { lat: 43.6044, lng: 1.3353, source: 'chantier' }, // Colomiers Gare
     'sta-c-3': { lat: 43.6086, lng: 1.3542, source: 'chantier' }, // Fontaine Lumineuse

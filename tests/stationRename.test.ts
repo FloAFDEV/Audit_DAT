@@ -1,5 +1,6 @@
 // tests/stationRename.test.ts
-// Renommage « Parc du Canal » → « Parc Technologique du Canal » (PTC) :
+// Nom définitif « Parc du Canal » (PTC), après le nom provisoire « Parc
+// Technologique du Canal » :
 // base neuve, base existante (mise à niveau au démarrage), idempotence.
 // Les identifiants (sta-b-21, lieu-parc-du-canal, modules) ne changent pas.
 import { describe, it, expect } from 'vitest';
@@ -9,8 +10,8 @@ import { generateInitialLieuxDataAsync } from '../data/builder';
 import { ALL_STATION_DEFS } from '../data/stationRegistry';
 import { Lieu } from '../types';
 
-const OLD = 'Parc du Canal';
-const NEW = 'Parc Technologique du Canal';
+const OLD = 'Parc Technologique du Canal';
+const NEW = 'Parc du Canal';
 const LIEU_ID = 'lieu-parc-du-canal';
 
 /** Base « existante » : la base neuve, avec l'ancien nom partout où il était enregistré. */
