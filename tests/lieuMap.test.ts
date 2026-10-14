@@ -49,6 +49,6 @@ describe('localisation d\'un lieu', async () => {
     it('couverture : tous les lieux du réseau sont localisés', () => {
         const missing = lieux.filter(l => !lieuCoordinates(l)).map(l => l.name).sort();
         expect(missing).toEqual([]);
-        expect(lieuCoordinates(byName('Parc Technologique du Canal'))).toEqual({ lat: 43.55166, lng: 1.486, source: 'chantier' });
+        expect(lieuCoordinates(byName('Parc du Canal'))).toEqual({ lat: 43.55166, lng: 1.486, source: 'chantier' });
     });
 });

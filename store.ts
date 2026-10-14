@@ -191,7 +191,9 @@ export const DATA_VERSION = 'v13.2';
  * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
  */
 const STATION_RENAMES: ReadonlyArray<{ from: string; to: string }> = [
-    { from: 'Parc du Canal', to: 'Parc Technologique du Canal' }, // PTC, sta-b-21
+    // PTC, sta-b-21 : « Parc du Canal » est le nom définitif. Un appareil passé
+    // par le nom provisoire « Parc Technologique du Canal » revient au nom définitif.
+    { from: 'Parc Technologique du Canal', to: 'Parc du Canal' },
 ];
 
 export const migrateStationRenames = (lieux: Lieu[]): boolean => {
@@ -916,7 +918,7 @@ const useAuditStore = create<AppState>((set, get) => {
                     });
                 });
 
-                // Stations renommées (ex. Parc du Canal → Parc Technologique du Canal) —
+                // Stations renommées (ex. Parc Technologique du Canal → Parc du Canal) —
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
                 if (migrateStationRenames(data)) dataChanged = true;
                 if (migrateTramSingleDirectionDats(data)) dataChanged = true;
