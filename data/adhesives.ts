@@ -27,15 +27,28 @@ export const ADHESIVES: Adhesive[] = [
 /**
  * Adhésifs DAT posés uniquement sur les DAT du tram : « Validation avec carte
  * bancaire » + QR code (ad10) et cadre « Appel d'urgence » (ad11). Absents des
- * DAT métro et Téléo. Aéroport Express : mêmes DAT que le tram (hypothèse
- * métier en attente de confirmation terrain).
+ * DAT métro et Téléo.
  */
 export const DAT_TRAM_ONLY_ADHESIVE_IDS: ReadonlySet<string> = new Set(['ad10', 'ad11']);
-const DAT_TRAM_LINES: ReadonlySet<string> = new Set(['TRAM', 'AEROPORT']);
+const DAT_TRAM_LINES: ReadonlySet<string> = new Set(['TRAM']);
+
+/**
+ * Lignes dont les DAT portent leurs PROPRES adhésifs, différents de ceux du
+ * réseau (ad1 à ad12), et dont le référentiel n'est pas encore livré.
+ * Aéroport Express : aucun adhésif du réseau n'y est attendu ; l'audit de ces
+ * DAT reste vide (« référentiel en attente ») jusqu'à l'ajout de leurs
+ * références propres.
+ */
+const DAT_LINES_WITH_PENDING_CATALOGUE: ReadonlySet<string> = new Set(['AEROPORT']);
+
+/** Les DAT de cette ligne attendent-ils leur propre référentiel d'adhésifs ? */
+export const isDatCataloguePending = (line?: string): boolean =>
+    !!line && DAT_LINES_WITH_PENDING_CATALOGUE.has(line);
 
 /** Un adhésif DAT fait-il partie du périmètre d'un DAT de cette ligne ? */
 export const isDatAdhesiveInScope = (adhesiveId: string, line?: string): boolean =>
-    !DAT_TRAM_ONLY_ADHESIVE_IDS.has(adhesiveId) || (!!line && DAT_TRAM_LINES.has(line));
+    !isDatCataloguePending(line)
+    && (!DAT_TRAM_ONLY_ADHESIVE_IDS.has(adhesiveId) || (!!line && DAT_TRAM_LINES.has(line)));
 
 /** Adhésifs DAT attendus sur un DAT de cette ligne. */
 export const getDatAdhesivesForLine = <T extends { id: string }>(adhesives: readonly T[], line?: string): T[] =>

@@ -143,7 +143,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad1",
     "material": "Localisation: En haut de la niche bleue, en butée basse avant le renfoncement.",
     "name": "Adhésif « Achat et rechargement »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "1",
   },
   {
@@ -152,7 +152,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad2",
     "material": "Localisation: Au dessus du bouton d’action lié, centré sur celui-ci.",
     "name": "Adhésif « bouton-audio »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "2",
   },
   {
@@ -161,7 +161,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad3",
     "material": "Localisation: Au dessus de la platine Carte Bancaire, en butée avec celle-ci.",
     "name": "Adhésif « Rechargement + paiement CB »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "3",
   },
   {
@@ -170,7 +170,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad4",
     "material": "Localisation: Au dessus de la platine insert monnaie, en butée avec celle-ci.",
     "name": "Adhésif « paiement monnaie »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "4",
   },
   {
@@ -179,7 +179,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad5",
     "material": "Localisation: A droite du lecteur sans contact, la flèche de l’adhésif doit pointer vers le lecteur.",
     "name": "Adhésif « paiement sans-contact »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "5",
   },
   {
@@ -188,7 +188,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad6",
     "material": "Localisation: Au dessus de la trappe rendu monnaie, en butée avec celle-ci et centrée par rapport à celle-ci.",
     "name": "Adhésif « tickets-reçus rendu-monnaie »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "6",
   },
   {
@@ -197,7 +197,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad7",
     "material": "Localisation: Sur le lecteur carte Pastel.",
     "name": "Adhésif « carte pastel »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "7",
   },
   {
@@ -206,7 +206,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad8",
     "material": "Localisation: Dans le support dédié (Voir focus page 7).",
     "name": "Fiche « Tarif »",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "8",
   },
   {
@@ -215,7 +215,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad9",
     "material": "Localisation: Dans l’angle gauche de la partie grise au dessus du bandeau « Achat + rechargement » (Voir focus page 8).",
     "name": "« Numéro » du DAT",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "9",
   },
   {
@@ -224,7 +224,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad10",
     "material": "Localisation: A droite et au dessus de l’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Validation avec carte bancaire » + QR_Code",
-    "quantity": 56,
+    "quantity": 50,
     "repere": "10",
   },
   {
@@ -233,7 +233,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad11",
     "material": "Localisation: A droite, entoure le bouton d’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Appel d’urgence. Tous abus sera puni »",
-    "quantity": 56,
+    "quantity": 50,
     "repere": "11",
   },
   {
@@ -242,7 +242,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "ad12",
     "material": "Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).",
     "name": "Adhésif « Appel d’urgence + braille»",
-    "quantity": 172,
+    "quantity": 166,
     "repere": "12",
   },
   {
