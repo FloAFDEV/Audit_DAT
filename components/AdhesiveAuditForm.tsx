@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { DAT, AdhesiveStatus, Station, Direction, AuditModule, SignageReference } from '../types';
 import { getEffectiveAdhesives } from '../utils/effectiveAdhesives';
-import { getDatAdhesivesForLine } from '../data/adhesives';
+import { getDatAdhesivesForLine, isDatCataloguePending } from '../data/adhesives';
 import { CheckCircle2, XCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { DatIcon } from './DatIcon';
 import AuditFormLayout from './AuditFormLayout';
@@ -57,6 +57,14 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
       comment={dat.comment}
       onCommentChange={onCommentChange}
     >
+      {isDatCataloguePending(module.line) && (
+        // DAT à adhésifs propres (Aéroport Express) : leur référentiel n'est pas
+        // encore livré — rien à contrôler ici tant qu'il n'est pas intégré.
+        <div className="m-6 rounded-lg border border-amber-200 dark:border-amber-800/60 bg-amber-50 dark:bg-amber-900/20 p-4 text-sm text-amber-800 dark:text-amber-200">
+          <p className="font-semibold">Adhésifs spécifiques à l'Aéroport Express — référentiel en attente</p>
+          <p className="mt-1">Les DAT de cette ligne portent des adhésifs différents de ceux du réseau. Ils seront ajoutés à l'audit dès que leur référentiel sera intégré ; rien à contrôler pour l'instant.</p>
+        </div>
+      )}
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">
         {ADHESIVES.map((adhesive) => {
           const currentStatus = dat.adhesives[adhesive.id];
