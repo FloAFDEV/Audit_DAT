@@ -192,10 +192,9 @@ describe('Règle structurelle des plans de quartier T1', () => {
         expect(planCounts(await generateInitialLieuxDataAsync()).MEETT).toEqual({ meett: 3, pdj: 1 });
     });
 
-    // Écart constaté : les données initiales d'Arènes portent aussi un plan
-    // direction Palais de Justice. Le retirer est une correction de données
-    // hors du périmètre « cotes » — à décider séparément.
-    it.todo('Arènes : un seul plan, direction MEETT (données initiales actuelles : 1 MEETT + 1 Palais de Justice)');
+    it('Arènes : un seul plan, direction MEETT', async () => {
+        expect(planCounts(await generateInitialLieuxDataAsync())['Arènes']).toEqual({ meett: 1, pdj: 0 });
+    });
 
     it('la migration des cotes ne crée, ne supprime ni ne réordonne aucun plan (MEETT et Arènes compris)', async () => {
         const lieux = withLegacyT1(await generateInitialLieuxDataAsync());

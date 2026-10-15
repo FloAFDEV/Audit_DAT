@@ -21,7 +21,12 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     // ECA
     'eca-1': 'eca-1', 'eca-2': 'eca-2', 'eca-3': 'eca-3',
     // P+R — bornes d'entrée / de sortie (caisses automatiques : plus tard)
-    'adbe3': 'adbe3', 'adbs3': 'adbe3',   // « Tarifs + coordonnées », même visuel
+    'adbe1': 'adbe1',                     // cible d'entrée (carte Pastel ou smartphone)
+    'adbe2': 'adbe2', 'adbs2': 'adbe2',   // « Information ticket » 9x5, entrée et sortie
+    'adbs4': 'adbs4',                     // cible de sortie (cartes, ticket ou smartphone)
+    'adbs5': 'adbs5',                     // bulle de sortie (carte bancaire)
+    'adbe3': 'adbe3', 'adbs3': 'adbe3',   // « Tarifs + coordonnées » 34x8, même visuel
+    'adca9': 'adbe3',                     // même adhésif « Tarifs + coordonnées Parc Relais » sur la caisse automatique
     'adbe10': 'adbe10', 'adbs11': 'adbs11',
     // Plans de repérage par type d'équipement (pas des références catalogue)
     'plan-pr-BE': 'plan-pr-be', 'plan-pr-BS': 'plan-pr-bs',
@@ -39,6 +44,10 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     'pmr-sol': 'pmr-sol',
     // Plan de quartier T1 (Équipements Station / audit Tram T1)
     'sign-plan-quartier-tram': 'sign-plan-quartier-tram',
+    // Bandeaux direction T1 (audit des plans de quartier T1) — visuels de
+    // l'élément, pas des références catalogue.
+    'bandeau-t1-meett': 'bandeau-t1-meett',
+    'bandeau-t1-pdj': 'bandeau-t1-pdj',
 };
 
 /** URL du visuel de référence d'un id catalogue, ou undefined. */

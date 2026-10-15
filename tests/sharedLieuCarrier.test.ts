@@ -90,7 +90,7 @@ describe('pictogrammes cognitifs dans les cards — lecture seule', () => {
         // Jamais sur la card d'une autre ligne du même lieu.
         expect(summary.get(cognitiveSummaryKey('B', 'Jean-Jaurès'))).toBeUndefined();
         expect(summary.get(cognitiveSummaryKey('TRAM', 'Arènes'))).toBeUndefined();
-        expect(summary.get(cognitiveSummaryKey('A', 'Arènes'))?.accessCount).toBe(1);
+        expect(summary.get(cognitiveSummaryKey('A', 'Arènes'))?.accessCount).toBe(2); // un par totem
         // Aucune ligne C (stations futures) : hors exploitation.
         expect([...summary.keys()].some(k => k.startsWith('C|'))).toBe(false);
         expect(JSON.stringify(lieux)).toBe(snapshot);

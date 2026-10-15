@@ -50,14 +50,14 @@ describe('progression « Plans de quartier → Tram T1 »', () => {
         expect(card('Hippodrome')).toBe(50);
     });
 
-    it('pastille T1 : dénominateur 50 (25 stations en service × 2) — Blagnac futur exclu, extras MEETT sans effet', () => {
+    it('pastille T1 : dénominateur 49 (24 stations × 2 + Arènes × 1) — Blagnac futur exclu, extras MEETT sans effet', () => {
         expect(t1Chip()).toBe(0);
         t1Plans('Hippodrome').meett[0].status = EquipmentStatusType.OK;
-        expect(t1Chip()).toBeCloseTo(100 / 50); // 1 / 50 = 2 %
+        expect(t1Chip()).toBeCloseTo(100 / 49); // 1 / 49
         // Les 2 emplacements supplémentaires de MEETT ne comptent pas.
         t1Plans('MEETT').meett[1].status = EquipmentStatusType.OK;
         t1Plans('MEETT').meett[2].status = EquipmentStatusType.OK;
-        expect(t1Chip()).toBeCloseTo(100 / 50);
+        expect(t1Chip()).toBeCloseTo(100 / 49);
         expect(card('MEETT')).toBe(0);
         // Blagnac (futur) : hors dénominateur, carte jamais à 100 %.
         expect(card('Blagnac')).toBe(0);
@@ -67,11 +67,11 @@ describe('progression « Plans de quartier → Tram T1 »', () => {
             const st = (sig?.data as ModeData | undefined)?.stations[0];
             if (!st?.signaletique || st.isFuture) continue;
             st.signaletique.planQuartier.meett[0].status = EquipmentStatusType.OK;
-            st.signaletique.planQuartier.pdj[0].status = EquipmentStatusType.ABSENT;
+            if (st.signaletique.planQuartier.pdj[0]) st.signaletique.planQuartier.pdj[0].status = EquipmentStatusType.ABSENT;
         }
         expect(t1Chip()).toBe(100);
-        // Données T1 inchangées : toujours 52 emplacements.
-        expect(collectSignaletiquePlansQuartier(lieux)).toHaveLength(52);
+        // Données T1 inchangées : toujours 51 emplacements.
+        expect(collectSignaletiquePlansQuartier(lieux)).toHaveLength(51);
     });
 
     it('stations partagées : seuls les plans T1 comptent (pas les PDQ A/B du lieu)', () => {
@@ -79,7 +79,7 @@ describe('progression « Plans de quartier → Tram T1 »', () => {
         occ('Arènes', 'A').forEach(o => { o.status = AdhesiveStatus.OK; });
         expect(card('Arènes')).toBe(0);
         t1Plans('Arènes').meett[0].status = EquipmentStatusType.OK;
-        expect(card('Arènes')).toBe(50);
+        expect(card('Arènes')).toBe(100); // Arènes : 1 seul plan attendu (MEETT)
     });
 
     it('autres filtres inchangés : PDQ A / B / Téléo / LAE / Tout, Équipements Station', () => {
@@ -90,17 +90,19 @@ describe('progression « Plans de quartier → Tram T1 »', () => {
         occ('Palais de Justice', 'B')[0].status = AdhesiveStatus.OK;
         t1Plans('Hippodrome').meett[0].status = EquipmentStatusType.OK;
 
-        expect(getCategoryProgress(lieux, 'METRO_A', PDQ)).toBeCloseTo(4.761905, 5);
+        expect(getCategoryProgress(lieux, 'METRO_A', PDQ)).toBeCloseTo(100 * 2 / 44, 5); // 2 / 44 (42 + les 2 totems d'Arènes)
         expect(getCategoryProgress(lieux, 'METRO_B', PDQ)).toBeCloseTo(1.886792, 5);
         expect(getCategoryProgress(lieux, 'TELEO', PDQ)).toBe(0);
         expect(getCategoryProgress(lieux, 'LAE', PDQ)).toBe(0);
-        expect(getCategoryProgress(lieux, 'ALL', PDQ)).toBeCloseTo(3.296703, 5); // 3 / 91
-        expect(getLieuProgress(lieu('Arènes'), PDQ, 'METRO_A')).toBeCloseTo(33.333333, 5);
+        expect(getCategoryProgress(lieux, 'ALL', PDQ)).toBeCloseTo(100 * 3 / 93, 5); // 3 / 93
+        expect(getLieuProgress(lieu('Arènes'), PDQ, 'METRO_A')).toBeCloseTo(25, 5); // 2 / 8
         expect(getLieuProgress(lieu('Palais de Justice'), PDQ, 'METRO_B')).toBe(50);
-        // Équipements Station : logique actuelle, plans T1 inclus.
-        expect(getCategoryProgress(lieux, 'TRAM', [T.SIGNALETIQUE])).toBeCloseTo(0.151976, 5);
+        // Équipements Station : logique actuelle, plans T1 inclus — 1 / 656
+        // (658 avant la règle Arènes : son plan Palais de Justice, état +
+        // bandeau, n'existe plus).
+        expect(getCategoryProgress(lieux, 'TRAM', [T.SIGNALETIQUE])).toBeCloseTo(100 / 656, 5);
         expect(getLieuProgress(lieu('Hippodrome'), [T.SIGNALETIQUE], 'TRAM')).toBeCloseTo(3.846154, 5);
         // Vue « Tout » de la catégorie T1 : inchangée.
-        expect(getCategoryProgress(lieux, 'TRAM', [])).toBeCloseTo(0.079491, 5);
+        expect(getCategoryProgress(lieux, 'TRAM', [])).toBeCloseTo(100 / 1256, 5); // 1 / 1258 avant la règle Arènes
     });
 });

@@ -50,7 +50,7 @@ describe('audit T1 — référentiel 2 plans par station (1 par sens)', () => {
         expect(occ).toHaveLength(2);
         expect(summarizeT1PlanQuartier(occ).expected).toBe(2);
         expect(station.signaletique!.planQuartier.meett).toHaveLength(3);
-        expect(collectSignaletiquePlansQuartier(lieux)).toHaveLength(52);
+        expect(collectSignaletiquePlansQuartier(lieux)).toHaveLength(51);
     });
 
     it('sens sans emplacement : non recensé et à traiter, rien de créé', async () => {

@@ -2,6 +2,11 @@
 import { v4 as uuidv4 } from 'uuid';
 import { AuditModule, CognitivePictogram, CognitivePictogramData, FloorAdhesiveStatus } from '../types';
 
+/** Arènes (métro A) : un pictogramme cognitif sur chacun des deux totems. */
+export const ARENES_COGNITIVE_ACCESS_NAMES = ['Escalier gauche (côté agence)', 'Escalier droit (côté entrée métro)'] as const;
+/** Ancien accès unique d'Arènes, remplacé par les deux totems. */
+export const ARENES_LEGACY_COGNITIVE_ACCESS_NAME = 'Accès côté tram';
+
 /** Lignes où les pictogrammes cognitifs sont réellement déployés. Les autres
  *  (Aéroport Express, C…) restent hors des totaux tant que leur référentiel
  *  n'est pas arbitré — la structure n'est pas supprimée, seulement non comptée. */
@@ -151,12 +156,11 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;
-        case 'ARE': // Arènes
-            pictos.push({
-                id: uuidv4(),
-                accessPointName: 'Accès côté tram',
-                status: FloorAdhesiveStatus.NotChecked,
-            });
+        case 'ARE': // Arènes — un pictogramme sur chacun des deux totems
+            pictos.push(
+                { id: uuidv4(), accessPointName: ARENES_COGNITIVE_ACCESS_NAMES[0], status: FloorAdhesiveStatus.NotChecked },
+                { id: uuidv4(), accessPointName: ARENES_COGNITIVE_ACCESS_NAMES[1], status: FloorAdhesiveStatus.NotChecked },
+            );
             return pictos;
         case 'MAR': // Marengo-SNCF
             pictos.push({
