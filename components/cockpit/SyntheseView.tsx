@@ -26,8 +26,9 @@ import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '..
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
-import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
-import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { CognitivePictogramSummary, cognitiveSummaryKey, cognitivePictogramExampleByInventoryRow, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
+import { CognitivePictogramVisual, FIELD_PICTO_BG } from '../CognitivePictogramVisual';
+import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
 import { ReferenceNamePreview } from '../ReferenceVisual';
 import { getInventoryVisualReferenceId } from '../../data/referenceVisuals';
 import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../../utils/cockpit/signaletiquePlansQuartier';
@@ -440,7 +441,7 @@ const PlanQuartierOverview: React.FC<{
                         if (!picto) return null;
                         return (
                             <div className="flex items-center gap-2 mt-1.5 pt-1.5 border-t border-dashed border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400">
-                                <CognitivePictogramVisual stationCode={picto.stationCode} stationName={st.name} size="sm" />
+                                <CognitivePictogramVisual stationCode={picto.stationCode} stationName={st.name} size="sm" field />
                                 <span>
                                     Pictogrammes cognitifs · {picto.accessCount} accès
                                     {picto.toReplaceCount > 0 && (
@@ -684,6 +685,16 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     // Use filtered lieux for stats calculation
     const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
+    // Pictogrammes cognitifs par dimension : lignes de la Nomenclature
+    // (même calcul), plus un exemple de visuel par ligne pour l'aperçu.
+    const cogPictoByDimension = useMemo(() => (adhesiveInventory ?? [])
+        .filter(item => item.id.startsWith('cog-picto-') && item.quantity > 0)
+        .sort((a, b) => b.quantity - a.quantity), [adhesiveInventory]);
+    const cogPictoExamples = useMemo(() => cognitivePictogramExampleByInventoryRow(filteredLieux), [filteredLieux]);
+    const cogPictoPreview = (itemId: string) => {
+        const url = getCognitivePictogramVisualUrl(cogPictoExamples.get(itemId));
+        return url ? { previewUrl: url, background: FIELD_PICTO_BG } : {};
+    };
 
     // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
     // (règle 7 : une seule source de calcul, à l'intérieur de ce référentiel).
@@ -1243,7 +1254,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 <StatRow
                     icon={<ScanEye className="w-5 h-5" />}
                     label={selectedLieuPictoCode
-                        ? <span className="flex items-center gap-2"><CognitivePictogramVisual stationCode={selectedLieuPictoCode} stationName={selectedLieuObject?.name} size="sm" />Audit Pictos Cognitifs</span>
+                        ? <span className="flex items-center gap-2"><CognitivePictogramVisual stationCode={selectedLieuPictoCode} stationName={selectedLieuObject?.name} size="sm" field />Audit Pictos Cognitifs</span>
                         : "Audit Pictos Cognitifs"}
                     value={globalCounts.cogPictoCount}
                     highlight="primary"
@@ -1255,6 +1266,13 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" asDiv />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'B', 'Ligne B'))} />
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" asDiv />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'C', 'Ligne C'))} />
                         <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" asDiv />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'AEROPORT', 'Aéroport Express'))} />
+                    </div>
+                )}
+                {cogPictoByDimension.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                        {cogPictoByDimension.map(item => (
+                            <IndicatorTile key={item.id} size="sm" value={item.quantity} label={(item.dimensions ?? '').replace(/(\d)x(\d)/, '$1 × $2').replace(/(\d)cm/, '$1 cm').replace(/\./g, ',')} tone="slate" />
+                        ))}
                     </div>
                 )}
                 </div>
@@ -1369,7 +1387,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
                             <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">
-                                <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name}>{item.name}</ReferenceNamePreview>
+                                <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name} {...cogPictoPreview(item.id)}>{item.name}</ReferenceNamePreview>
                             </td>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
@@ -1399,7 +1417,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
                                 </div>
                                 <div className="font-medium text-slate-800 dark:text-slate-100 min-w-0">
-                                    <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name}><span className="truncate">{item.name}</span></ReferenceNamePreview>
+                                    <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name} {...cogPictoPreview(item.id)}><span className="truncate">{item.name}</span></ReferenceNamePreview>
                                 </div>
                                 {(item.dimensions || item.material) && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
