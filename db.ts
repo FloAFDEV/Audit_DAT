@@ -11,6 +11,15 @@ export type AuditDb = Dexie & {
     events: EntityTable<AppEvent, 'id'>;
 };
 
+// V24/V25 : fiche adca8 (bulle caisse) réécrite depuis le seed. Idempotente,
+// jamais sur une table jamais seedée.
+const refreshAdca8FromSeed = async (tx: import('dexie').Transaction) => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return;
+    const fresh = buildSignageReferencesSeed().find(r => r.id === 'adca8');
+    if (fresh && await table.get('adca8')) await table.put(fresh);
+};
+
 /**
  * Construit une instance Dexie complète (schéma + chaîne de migrations
  * v5→v12) sous le nom donné. Extrait en factory (Lot 2.3) uniquement pour
@@ -611,12 +620,17 @@ export const createAuditDb = (name: string): AuditDb => {
     history: '++id, date, type, categoryKey',
     signageReferences: 'id, auditType',
     events: '++id, date, type, entityType',
-}).upgrade(async tx => {
-    const table = tx.table<SignageReference, string>('signageReferences');
-    if (!(await table.get('ad1'))) return;
-    const fresh = buildSignageReferencesSeed().find(r => r.id === 'adca8');
-    if (fresh && await table.get('adca8')) await table.put(fresh);
-});
+}).upgrade(refreshAdca8FromSeed);
+
+// V25: la bulle de la caisse devient le repère 5 sur le plan de repérage
+// (id adca8 conservé). Même réécriture qu'en V24, rejouée pour les appareils
+// déjà passés en V24.
+    instance.version(25).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(refreshAdca8FromSeed);
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.

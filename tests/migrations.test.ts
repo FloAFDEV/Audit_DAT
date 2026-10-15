@@ -846,7 +846,7 @@ describe('Migration V23 → V24 (repère 8 des caisses : bulle carte bancaire)',
         const upgraded = createAuditDb(name);
         await upgraded.open();
         const adca8 = await upgraded.table('signageReferences').get('adca8');
-        expect(adca8.name).toBe('Repère 8 - Adhésif caisse "Bulle"');
+        expect(adca8.name).toBe('Repère 5 - Adhésif caisse "Bulle"');
         expect(adca8.isDisabled).toBeUndefined();
         expect(adca8.legacyDescription).toContain('99x115mm');
         expect((await upgraded.table('signageReferences').toArray()).filter(r => r.id !== 'adca8')).toEqual(othersBefore);
@@ -855,8 +855,33 @@ describe('Migration V23 → V24 (repère 8 des caisses : bulle carte bancaire)',
 
         const again = createAuditDb(name);
         await again.open();
-        expect((await again.table('signageReferences').get('adca8')).name).toBe('Repère 8 - Adhésif caisse "Bulle"');
+        expect((await again.table('signageReferences').get('adca8')).name).toBe('Repère 5 - Adhésif caisse "Bulle"');
         again.close();
+        await Dexie.delete(name);
+    });
+});
+
+describe('Migration V24 → V25 (bulle caisse : repère 8 → repère 5)', () => {
+    it('renomme la fiche adca8 déjà réécrite en V24, sans toucher au reste', async () => {
+        const name = uniqueDbName();
+        const seed = buildSignageReferencesSeed();
+        const v24 = new Dexie(name);
+        v24.version(24).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            events: '++id, date, type, entityType',
+        });
+        await v24.open();
+        await v24.table('signageReferences').bulkPut(seed.map(r => r.id === 'adca8' ? { ...r, name: 'Repère 8 - Adhésif caisse "Bulle"' } : r));
+        const othersBefore = (await v24.table('signageReferences').toArray()).filter(r => r.id !== 'adca8');
+        v24.close();
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        expect((await upgraded.table('signageReferences').get('adca8')).name).toBe('Repère 5 - Adhésif caisse "Bulle"');
+        expect((await upgraded.table('signageReferences').toArray()).filter(r => r.id !== 'adca8')).toEqual(othersBefore);
+        upgraded.close();
         await Dexie.delete(name);
     });
 });
