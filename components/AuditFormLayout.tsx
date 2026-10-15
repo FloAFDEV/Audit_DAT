@@ -56,9 +56,12 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     const [isCompact, setIsCompact] = useState(false);
     const sentinelRef = useRef<HTMLDivElement>(null);
 
+    const topSentinelRef = useRef<HTMLDivElement>(null);
+
     useEffect(() => {
         const sentinel = sentinelRef.current;
-        if (!sentinel) return;
+        const topSentinel = topSentinelRef.current;
+        if (!sentinel || !topSentinel) return;
         // threshold: 0 + rootMargin par défaut : la sentinelle déclenche dès
         // qu'elle quitte entièrement le haut du viewport. Sa position/hauteur
         // (fixée en style inline, cf. JSX) est totalement indépendante de la
@@ -69,11 +72,28 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
         // retour en haut de page (constaté en direct : le mode compact restait
         // bloqué après un scroll vers le haut). D'où le positionnement en
         // `absolute` sur le conteneur de la carte, avant le header sticky.
+        //
+        // Hystérésis : on compacte quand la sentinelle de seuil sort par le
+        // haut, mais on ne revient à la variante complète que lorsque le haut
+        // de la carte redevient visible (sentinelle de tête). Sans cet écart,
+        // en bas de page, le compactage raccourcit le document, le navigateur
+        // remonte le scroll d'autant, la sentinelle de seuil réapparaît, le
+        // header se réagrandit… et boucle (constaté en direct sur mobile :
+        // header qui « sautille » en bas des formulaires courts).
         const observer = new IntersectionObserver(
-            ([entry]) => setIsCompact(!entry.isIntersecting),
+            (entries) => {
+                for (const entry of entries) {
+                    if (entry.target === sentinel) {
+                        if (!entry.isIntersecting && entry.boundingClientRect.top < 0) setIsCompact(true);
+                    } else if (entry.isIntersecting) {
+                        setIsCompact(false);
+                    }
+                }
+            },
             { threshold: 0 }
         );
         observer.observe(sentinel);
+        observer.observe(topSentinel);
         return () => observer.disconnect();
     }, []);
 
@@ -97,6 +117,13 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                 aria-hidden="true"
                 className="absolute top-0 left-0 w-px pointer-events-none"
                 style={{ height: COMPACT_TRIGGER_MARGIN_PX }}
+            />
+            {/* Sentinelle de tête — retour à la variante complète uniquement
+             *  quand le haut de la carte redevient visible (hystérésis). */}
+            <div
+                ref={topSentinelRef}
+                aria-hidden="true"
+                className="absolute top-0 left-0 w-px h-px pointer-events-none"
             />
 
             {/* Contexte de l'audit — sticky : reste visible pendant le défilement
