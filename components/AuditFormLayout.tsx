@@ -24,6 +24,8 @@ interface AuditFormLayoutProps {
     /** Visuel de l'objet audité (≈32 px), à côté du nom de l'audit — icône du module par défaut. */
     customIcon?: React.ReactNode;
     progress: number;
+    /** Remplace le pourcentage (ex. « Non applicable » : rien à contrôler). */
+    progressLabel?: string;
     onBack: () => void;
     onReset: () => void;
     resetConfirmTitle: string;
@@ -42,6 +44,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     context,
     customIcon,
     progress,
+    progressLabel,
     onBack,
     onReset,
     resetConfirmTitle,
@@ -164,7 +167,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                 <p className="text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-2">{station}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{title}</p>
                             </div>
-                            <span className="flex-shrink-0 text-xs font-normal text-slate-500 dark:text-slate-400">{Math.round(progress)}%</span>
+                            <span className="flex-shrink-0 text-xs font-normal text-slate-500 dark:text-slate-400">{progressLabel ?? `${Math.round(progress)}%`}</span>
                             <button
                                 onClick={() => setShowResetConfirm(true)}
                                 className="flex-shrink-0 p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
@@ -220,7 +223,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                             <div className="mt-3 sm:mt-4 sm:pl-[52px]">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400">Progression</span>
-                                    <span className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>
+                                    <span className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300">{progressLabel ?? `${Math.round(progress)}%`}</span>
                                 </div>
                                 <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2">
                                     <div className={`${progressBarColor} h-2 rounded-full transition-all duration-75`} style={{ width: `${progress}%` }}></div>

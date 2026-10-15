@@ -226,8 +226,10 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
         }
         case AuditModuleType.PMR_FLOOR_ADHESIVE: {
             const data = module.data as PMRFloorAdhesiveData;
+            // Audit non applicable (adhésif non posé) : rien à contrôler, ni
+            // fait ni à faire — n'entre pas dans la progression du lieu.
             if (data.isNotApplicable) {
-                return { applicable: 0, checked: 0, hasContent: true };
+                return { applicable: 0, checked: 0, hasContent: false };
             }
             const adhesives = data.adhesives ?? [];
             if (adhesives.length > 0) hasAuditableContent = true;
@@ -333,6 +335,10 @@ export function getModuleProgress(module: AuditModule) {
     }
     if (isPendingDatModule(module)) {
         return { percentage: 0, label: 'Référentiel en attente', statusText: 'Référentiel en attente', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
+    }
+
+    if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (module.data as PMRFloorAdhesiveData).isNotApplicable) {
+        return { percentage: 0, label: 'Non applicable', statusText: 'Audit non applicable', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
 
     const { applicable, checked, hasContent } = getModuleProgressCounts(module);

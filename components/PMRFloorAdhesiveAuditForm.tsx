@@ -66,7 +66,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
   const [viewingPhoto, setViewingPhoto] = useState<PMRFloorAdhesive | null>(null);
 
   const progress = useMemo(() => {
-    if (pmrData.isNotApplicable) return 100;
+    if (pmrData.isNotApplicable) return 0;
     const total = pmrData.adhesives.length;
     if (total === 0) return 0;
     const checked = pmrData.adhesives.filter(s => s.status !== FloorAdhesiveStatus.NotChecked).length;
@@ -129,6 +129,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
         title={<FormattedCorrespondence text={module.name} />}
         station={pmrData.stationName}
         progress={progress}
+        progressLabel={pmrData.isNotApplicable ? 'Non applicable' : undefined}
         onBack={onBack}
         onReset={pmrData.isNotApplicable ? () => {} : onReset}
         resetConfirmTitle="Réinitialiser l'audit PMR au Sol"
