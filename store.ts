@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, MetroLine
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, PlanQuartierStatus, MetroLine
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
@@ -13,6 +13,7 @@ import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
+import { ARENES_COGNITIVE_ACCESS_NAMES, ARENES_LEGACY_COGNITIVE_ACCESS_NAME } from './data/cognitive_pictograms';
 import { canEcaBeNotApplicable, isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
@@ -588,6 +589,106 @@ export const migrateT1PlanQuartierDimensions = (lieux: Lieu[]): boolean => {
     return changed;
 };
 
+/** Arènes (T1) : un seul plan de quartier, direction MEETT. */
+const ARENES_T1_STATION_NAME = 'Arènes';
+
+/** Un emplacement plan de quartier porte-t-il une donnée d'audit ? La cote
+ *  (dimensions) n'en est pas une : c'est une copie de la configuration. */
+const planQuartierHasAuditData = (item: PlanQuartierStatus): boolean =>
+    (item.status ?? 'NotChecked') !== 'NotChecked'
+    || !!item.comment
+    || !!item.photo_base64
+    || !!item.photo_note
+    || !!item.photo_rotation
+    || (item.bannerDirection ?? 'NotChecked') !== 'NotChecked'
+    || (item.hap ?? 'NotChecked') !== 'NotChecked';
+
+/**
+ * Arènes T1 n'a qu'un plan de quartier, direction MEETT : retire le ou les
+ * emplacements « direction Palais de Justice » créés par l'ancienne règle
+ * générique (un plan par sens), UNIQUEMENT s'ils sont vierges. Un emplacement
+ * portant la moindre donnée d'audit (statut, commentaire, photo, bandeau,
+ * fiche horaire) est conservé tel quel et signalé (`keptAudited`).
+ * Périmètre : module Équipements Station TRAM d'Arènes, plans de quartier
+ * seulement — DAT, plan réseau, BIV, fiches horaires et autres stations ne
+ * sont jamais touchés. Idempotente. Mute `lieux` en place.
+ */
+export const migrateArenesT1PlanQuartier = (lieux: Lieu[]): { changed: boolean; removed: number; keptAudited: number } => {
+    let removed = 0;
+    let keptAudited = 0;
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.SIGNALETIQUE || module.line !== 'TRAM') continue;
+            for (const station of (module.data as ModeData).stations ?? []) {
+                if (station.name !== ARENES_T1_STATION_NAME) continue;
+                const planQuartier = station.signaletique?.planQuartier;
+                const pdj = planQuartier?.pdj ?? [];
+                if (!planQuartier || pdj.length === 0) continue;
+                if (pdj.some(planQuartierHasAuditData)) { keptAudited += pdj.length; continue; }
+                removed += pdj.length;
+                planQuartier.pdj = [];
+            }
+        }
+    }
+    return { changed: removed > 0, removed, keptAudited };
+};
+
+/** Journalise le résultat de migrateArenesT1PlanQuartier : suppression d'un
+ *  plan vierge, ou plan audité conservé (signalé une seule fois). */
+const logArenesT1PlanQuartierMigration = async (result: { removed: number; keptAudited: number }) => {
+    if (result.removed > 0) {
+        await logEvent({
+            type: 'DATA_MIGRATION', entityType: 'planQuartier', entityId: 'arenes-t1-pdj', entityLabel: 'Arènes T1 — direction Palais de Justice',
+            summary: 'Arènes T1 : plan de quartier direction Palais de Justice (vierge) retiré — un seul plan, direction MEETT',
+        });
+    }
+    if (result.keptAudited > 0) {
+        const alreadyLogged = (await db.events.toArray()).some(e => e.entityId === 'arenes-t1-pdj-audite');
+        if (!alreadyLogged) {
+            await logEvent({
+                type: 'DATA_MIGRATION', entityType: 'planQuartier', entityId: 'arenes-t1-pdj-audite', entityLabel: 'Arènes T1 — direction Palais de Justice',
+                summary: 'Arènes T1 : plan de quartier direction Palais de Justice CONSERVÉ (données d\'audit présentes) — à vérifier : la règle prévoit un seul plan, direction MEETT',
+            });
+        }
+    }
+};
+
+/**
+ * Arènes (métro A) : deux pictogrammes cognitifs, un par totem (escalier
+ * gauche côté agence, escalier droit côté entrée métro) au lieu de l'ancien
+ * accès unique « Accès côté tram ». Appliquée seulement si le module porte
+ * exactement cet ancien accès, jamais contrôlé : il est renommé (même id)
+ * et le second accès est ajouté. Accès déjà contrôlé ou liste différente :
+ * rien n'est touché, signalé (`keptAudited`). Idempotente.
+ */
+export const migrateArenesCognitivePictograms = (lieux: Lieu[]): { changed: boolean; keptAudited: boolean } => {
+    let changed = false;
+    let keptAudited = false;
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS || module.line !== 'A') continue;
+            const data = module.data as CognitivePictogramData;
+            if (data.stationCode !== 'ARE') continue;
+            const pictos = data.pictograms ?? [];
+            if (pictos.length !== 1 || pictos[0].accessPointName !== ARENES_LEGACY_COGNITIVE_ACCESS_NAME) continue;
+            if (pictos[0].status !== FloorAdhesiveStatus.NotChecked) { keptAudited = true; continue; }
+            pictos[0].accessPointName = ARENES_COGNITIVE_ACCESS_NAMES[0];
+            pictos.push({ id: uuidv4(), accessPointName: ARENES_COGNITIVE_ACCESS_NAMES[1], status: FloorAdhesiveStatus.NotChecked });
+            changed = true;
+        }
+    }
+    return { changed, keptAudited };
+};
+
+const logArenesCognitiveMigration = async (result: { keptAudited: boolean }) => {
+    if (!result.keptAudited) return;
+    if ((await db.events.toArray()).some(e => e.entityId === 'arenes-cognitif-audite')) return;
+    await logEvent({
+        type: 'DATA_MIGRATION', entityType: 'pictogram', entityId: 'arenes-cognitif-audite', entityLabel: 'Arènes — pictogrammes cognitifs',
+        summary: 'Arènes : pictogramme cognitif « Accès côté tram » déjà contrôlé, conservé tel quel — à vérifier : deux totems attendus (escalier gauche côté agence, escalier droit côté entrée métro)',
+    });
+};
+
 // --- Caisses automatiques P+R : nombre théorique modifiable ---------------
 // Le nombre de caisses d'une zone EST la liste de ses équipements CA (la
 // structure du P+R) : ajouter ou retirer une caisse modifie cette liste, rien
@@ -1034,6 +1135,10 @@ const useAuditStore = create<AppState>((set, get) => {
                 // Plans de quartier T1 : ancienne cote 83 x 100 → 80 x 100 (après
                 // l'initialisation Équipements Station ci-dessus).
                 if (migrateT1PlanQuartierDimensions(data)) dataChanged = true;
+                const arenesT1 = migrateArenesT1PlanQuartier(data);
+                if (arenesT1.changed) dataChanged = true;
+                const arenesCognitive = migrateArenesCognitivePictograms(data);
+                if (arenesCognitive.changed) dataChanged = true;
 
                 // Stations renommées (ex. Parc Technologique du Canal → Parc du Canal) —
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
@@ -1057,6 +1162,8 @@ const useAuditStore = create<AppState>((set, get) => {
                         summary: 'Données du réseau migrées vers le format courant au démarrage',
                     });
                 }
+                await logArenesT1PlanQuartierMigration(arenesT1);
+                await logArenesCognitiveMigration(arenesCognitive);
 
                 set({ lieux: data });
             } else {
@@ -2283,7 +2390,11 @@ const useAuditStore = create<AppState>((set, get) => {
             // Un ancien export peut porter la cote T1 83 x 100 : corrigée dès
             // l'import plutôt qu'au prochain démarrage.
             const t1DimensionsMigrated = migrateT1PlanQuartierDimensions(pdqReconciled.lieux);
-            if (pdqReconciled.changed || t1DimensionsMigrated) await db.lieux.bulkPut(pdqReconciled.lieux);
+            const arenesT1 = migrateArenesT1PlanQuartier(pdqReconciled.lieux);
+            const arenesCognitive = migrateArenesCognitivePictograms(pdqReconciled.lieux);
+            if (pdqReconciled.changed || t1DimensionsMigrated || arenesT1.changed || arenesCognitive.changed) await db.lieux.bulkPut(pdqReconciled.lieux);
+            await logArenesT1PlanQuartierMigration(arenesT1);
+            await logArenesCognitiveMigration(arenesCognitive);
 
             set({
                 lieux: pdqReconciled.lieux,

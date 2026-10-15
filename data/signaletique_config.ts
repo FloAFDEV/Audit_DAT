@@ -89,6 +89,12 @@ export const getInitialSignaletiqueData = (stationName: string, line: 'TRAM' | '
         planReseauMeett = 3;
         planQuartierMeett = 3;
     }
+    // Arènes (T1) : un seul plan de quartier, direction MEETT. Règle propre
+    // aux plans de quartier — sans lien avec ses 2 DAT côté MEETT
+    // (TRAM_SINGLE_DIRECTION_DATS) ; BIV, plan réseau et HAP inchangés.
+    if (stationName === 'Arènes' && line === 'TRAM') {
+        planQuartierPdj = 0;
+    }
 
     const hapCountsMeett = HAP_COUNTS[stationName]?.meett ?? 1;
     const hapCountsPdj = HAP_COUNTS[stationName]?.pdj ?? 1;

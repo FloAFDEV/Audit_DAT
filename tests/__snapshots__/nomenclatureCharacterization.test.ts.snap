@@ -305,7 +305,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "cog-picto-74.5x97cm",
     "material": "Vinyle + Plastification",
     "name": "Pictogramme cognitif",
-    "quantity": 56,
+    "quantity": 57,
     "repere": "-",
   },
   {
@@ -359,7 +359,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "sign-plan-quartier-tram",
     "material": "Vinyle",
     "name": "Plan de quartier (Tram)",
-    "quantity": 52,
+    "quantity": 51,
     "repere": "-",
   },
   {

@@ -1,7 +1,8 @@
 // utils/t1PlanQuartierAudit.ts
 // =================================================================
-// Audit T1 des plans de quartier : référentiel métier = 2 plans attendus
-// par station, 1 par sens. Les occurrences recensées restent les
+// Audit T1 des plans de quartier : référentiel métier = au plus 1 plan
+// par sens — 2 par station en règle générale, 1 seul à Arènes (direction
+// MEETT). Le nombre de DAT n'intervient jamais. Les occurrences recensées restent les
 // emplacements Équipements Station existants (signaletique.planQuartier,
 // data/signaletique_config.ts) — rien n'est créé ni copié : un sens sans
 // emplacement reste « non recensé », jamais une implantation simulée.
@@ -16,7 +17,12 @@ import { isDefect } from './cockpit/signaletiqueStationIndex';
 
 /** Dimension du référentiel T1 (affichage de l'audit, données inchangées). */
 export const T1_PLAN_QUARTIER_DIMENSIONS = '80 × 100 cm';
-export const T1_PLANS_PER_STATION = 2;
+
+/** Arrêts T1 n'ayant qu'un plan de quartier attendu (règle patrimoine,
+ *  indépendante du nombre de DAT) : Arènes → direction MEETT seulement. */
+export const T1_PLAN_QUARTIER_SINGLE_DIRECTION: Readonly<Record<string, 'meett' | 'pdj'>> = {
+    'Arènes': 'meett',
+};
 
 export interface T1PlanQuartierOccurrence {
     dirKey: 'meett' | 'pdj';
@@ -27,7 +33,8 @@ export interface T1PlanQuartierOccurrence {
     item?: PlanQuartierStatus;
 }
 
-/** Les 2 sens attendus, dans l'ordre des directions réelles de la station. */
+/** Les sens attendus (2, ou 1 pour un arrêt à sens unique comme Arènes),
+ *  dans l'ordre des directions réelles de la station. */
 export const t1PlanQuartierOccurrences = (station: Station): T1PlanQuartierOccurrence[] => {
     const keys: ('meett' | 'pdj')[] = [];
     for (const d of station.directions ?? []) {
@@ -35,7 +42,8 @@ export const t1PlanQuartierOccurrences = (station: Station): T1PlanQuartierOccur
         if (!keys.includes(k)) keys.push(k);
     }
     for (const k of ['meett', 'pdj'] as const) if (!keys.includes(k)) keys.push(k);
-    return keys.map(dirKey => ({
+    const single = T1_PLAN_QUARTIER_SINGLE_DIRECTION[station.name];
+    return keys.filter(k => !single || k === single).map(dirKey => ({
         dirKey,
         direction: station.directions?.find(d => dirKeyOf(d.name) === dirKey)?.name,
         index: 0,
@@ -53,7 +61,7 @@ export interface T1PlanQuartierSummary {
 }
 
 export const summarizeT1PlanQuartier = (occurrences: T1PlanQuartierOccurrence[]): T1PlanQuartierSummary => {
-    const summary = { expected: T1_PLANS_PER_STATION, recensed: 0, conformes: 0, toTreat: 0, unchecked: 0 };
+    const summary = { expected: occurrences.length, recensed: 0, conformes: 0, toTreat: 0, unchecked: 0 };
     for (const occ of occurrences) {
         if (!occ.item) { summary.toTreat++; continue; }
         summary.recensed++;
@@ -75,7 +83,7 @@ export const getT1PlanQuartierProgressCounts = (lieu: Lieu): { applicable: numbe
     if (!signaletique || !station || !isModuleInCurrentScope(signaletique) || !isModuleInCurrentScope(station)) return null;
     const occurrences = t1PlanQuartierOccurrences(station);
     return {
-        applicable: T1_PLANS_PER_STATION,
+        applicable: occurrences.length,
         checked: occurrences.filter(o => o.item && (o.item.status ?? 'NotChecked') !== 'NotChecked').length,
     };
 };

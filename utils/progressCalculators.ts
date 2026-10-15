@@ -1,18 +1,25 @@
 // utils/progressCalculators.ts
 
 import { DAT, Direction, AdhesiveStatus, ECA, Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, FloorAdhesiveStatus, CognitivePictogramData, AuditCategory, PrZone, PlanQuartierData } from '../types';
-import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getPrAdhesives, getEquipmentAdhesives } from '../data/adhesives';
+import { getEcaAdhesiveOccurrences, readEcaAdhesiveStatus, getPrAdhesives, getEquipmentAdhesives, isDatCataloguePending } from '../data/adhesives';
 import { AUDIT_CATEGORIES } from '../data/config';
 import { isModuleInCurrentScope } from './moduleScope';
 import { getT1PlanQuartierProgressCounts } from './t1PlanQuartierAudit';
 
 /** Filtre « Plans de quartier → Tram T1 » : les plans de quartier se lisent
- *  dans l'audit T1 (Équipements Station, 2 attendus par station), jamais dans
+ *  dans l'audit T1 (Équipements Station, 1 attendu par sens), jamais dans
  *  le module générique ni dans les plans de quartier des autres lignes du
  *  lieu. Ne s'applique qu'avec le filtre Plans de quartier explicitement
  *  actif sur la catégorie T1 — aucun autre filtre ni la vue « Tout ». */
 const isT1PlanQuartierContext = (category: AuditCategory | 'ALL' | undefined, activeFilters: AuditModuleType[], module: AuditModule) =>
     category === 'TRAM' && activeFilters.includes(AuditModuleType.PLAN_QUARTIER) && module.type === AuditModuleType.PLAN_QUARTIER;
+
+/** Module DAT d'une ligne dont le référentiel d'adhésifs est en attente
+ *  (Aéroport Express) : ses DAT existent mais n'ont encore rien à contrôler.
+ *  Il ne compte dans aucune progression — sans cela, « 0 élément à
+ *  contrôler » s'affichait comme un audit terminé (100 %). */
+const isPendingDatModule = (module: AuditModule): boolean =>
+    module.type === AuditModuleType.DAT && isDatCataloguePending(module.line);
 
 export enum ProgressStatus {
     NotStarted = 'NotStarted',
@@ -161,7 +168,7 @@ export const getPrZoneProgress = (zone: PrZone): number => {
  * This ensures all progress calculations are consistent.
  */
 const getModuleProgressCounts = (module: AuditModule): { applicable: number; checked: number; hasContent: boolean } => {
-    if (!isModuleInCurrentScope(module)) return { applicable: 0, checked: 0, hasContent: false };
+    if (!isModuleInCurrentScope(module) || isPendingDatModule(module)) return { applicable: 0, checked: 0, hasContent: false };
 
     let totalApplicableItems = 0;
     let totalCheckedItems = 0;
@@ -324,6 +331,9 @@ export function getModuleProgress(module: AuditModule) {
     if (!isModuleInCurrentScope(module)) {
         return { percentage: 0, label: 'Bientôt disponible', statusText: 'Bientôt disponible', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
     }
+    if (isPendingDatModule(module)) {
+        return { percentage: 0, label: 'Référentiel en attente', statusText: 'Référentiel en attente', statusColor: 'text-gray-500 dark:text-slate-400', isComplete: false };
+    }
 
     const { applicable, checked, hasContent } = getModuleProgressCounts(module);
 
@@ -373,7 +383,7 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
     let hasAnyContent = false;
 
     for (const module of modulesToConsider) {
-        if (!isModuleInCurrentScope(module)) continue;
+        if (!isModuleInCurrentScope(module) || isPendingDatModule(module)) continue;
         if (isT1PlanQuartierContext(category, activeFilters, module)) {
             const t1 = module.line === 'TRAM' ? getT1PlanQuartierProgressCounts(lieu) : null;
             if (!t1) continue;
@@ -382,9 +392,11 @@ export const getLieuProgress = (lieu: Lieu, activeFilters: AuditModuleType[] = [
             totalCheckedItems += t1.checked;
             continue;
         }
-        hasAnyNonFutureModule = true;
-
         const counts = getModuleProgressCounts(module);
+        // Un module sans rien à contrôler ni contenu confirmé (Plans de
+        // quartier encore vierge, sans « confirmé vide ») ne rend pas le
+        // lieu « terminé » — même règle que la progression du module.
+        if (counts.applicable > 0 || counts.hasContent) hasAnyNonFutureModule = true;
         totalApplicableItems += counts.applicable;
         totalCheckedItems += counts.checked;
         if(counts.hasContent) hasAnyContent = true;
@@ -421,7 +433,7 @@ export const getCategoryProgress = (
             : lieu.modules.filter(m => category === 'ALL' || !categoryConfig ? true : categoryConfig.predicate(m));
 
         for (const module of modulesToProcess) {
-            if (!isModuleInCurrentScope(module)) continue;
+            if (!isModuleInCurrentScope(module) || isPendingDatModule(module)) continue;
             if (isT1PlanQuartierContext(category, activeFilters, module)) {
                 const t1 = module.line === 'TRAM' ? getT1PlanQuartierProgressCounts(lieu) : null;
                 if (!t1) continue;

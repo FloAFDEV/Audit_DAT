@@ -88,6 +88,10 @@ export const PLAN_QUARTIER_INITIAL_INVENTORY: PlanQuartierInitialEntry[] = [
     { stationName: 'Capitole', line: 'A', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Jolimont', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Ascenseur extérieur', implantationContext: 'ascenseur-exterieur' },
     { stationName: 'Roseraie', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem', implantationContext: 'totem' },
+    // Arènes (métro A) : deux totems, chacun avec un plan 78x100 et un
+    // pictogramme cognitif (cf. data/cognitive_pictograms.ts).
+    { stationName: 'Arènes', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem — escalier gauche (côté agence)', implantationContext: 'totem' },
+    { stationName: 'Arènes', line: 'A', modelId: 'pdq-78x100', quantity: 1, location: 'Totem — escalier droit (côté entrée métro)', implantationContext: 'totem' },
     { stationName: 'Borderouge', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Trois Cocus', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },
     { stationName: 'Barrière de Paris', line: 'B', modelId: 'pdq-78x100', quantity: 2, location: 'Totem', implantationContext: 'totem' },

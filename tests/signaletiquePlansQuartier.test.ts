@@ -16,9 +16,9 @@ const t1Sig = (lieux: Lieu[], lieuName: string) =>
         .find(m => m.type === AuditModuleType.SIGNALETIQUE && m.line === 'TRAM')!.data as ModeData).stations[0].signaletique!;
 
 describe('plans de quartier Équipements Station — lecture seule', () => {
-    it('52 plans T1 en service, aucun Aéroport Express ni Blagnac (hors exploitation)', async () => {
+    it('51 plans T1 en service (Arènes : 1 seul), aucun Aéroport Express ni Blagnac (hors exploitation)', async () => {
         const plans = collectSignaletiquePlansQuartier(await generateInitialLieuxDataAsync());
-        expect(plans).toHaveLength(52);
+        expect(plans).toHaveLength(51);
         expect(plans.every(p => p.line === 'TRAM')).toBe(true);
         expect(plans.some(p => p.lieuName === 'Blagnac')).toBe(false);
         expect(plans.every(p => p.dimensions === '80 x 100 cm')).toBe(true);
@@ -29,11 +29,13 @@ describe('plans de quartier Équipements Station — lecture seule', () => {
         expect(plans.filter(p => p.lieuName === 'Palais de Justice').map(p => p.direction))
             .toEqual(['Direction MEETT / Aéroport', 'Direction Palais de Justice']);
         expect(plans.filter(p => p.lieuName === 'MEETT')).toHaveLength(4);
-        // Arènes, Aéroconstellation : un plan par extrémité ; MEETT : 3 + 1.
-        for (const name of ['Arènes', 'Aéroconstellation']) {
-            expect(plans.filter(p => p.lieuName === name).map(p => p.direction).sort())
-                .toEqual(['Direction MEETT / Aéroport', 'Direction Palais de Justice']);
-        }
+        // Aéroconstellation : un plan par extrémité (ses DAT d'un seul côté
+        // n'y changent rien) ; Arènes : un seul plan, direction MEETT ;
+        // MEETT : 3 + 1.
+        expect(plans.filter(p => p.lieuName === 'Aéroconstellation').map(p => p.direction).sort())
+            .toEqual(['Direction MEETT / Aéroport', 'Direction Palais de Justice']);
+        expect(plans.filter(p => p.lieuName === 'Arènes').map(p => p.direction))
+            .toEqual(['Direction MEETT / Aéroport']);
         const meett = plans.filter(p => p.lieuName === 'MEETT').map(p => p.direction);
         expect(meett.filter(d => d === 'Direction MEETT / Aéroport')).toHaveLength(3);
         expect(meett.filter(d => d === 'Direction Palais de Justice')).toHaveLength(1);
@@ -44,13 +46,13 @@ describe('plans de quartier Équipements Station — lecture seule', () => {
 
     it('direction lue dans la station (même règle que le formulaire), jamais inventée', async () => {
         const lieux = await generateInitialLieuxDataAsync();
-        const station = (lieux.find(l => l.name === 'Arènes')!.modules
+        const station = (lieux.find(l => l.name === 'Aéroconstellation')!.modules
             .find(m => m.type === AuditModuleType.SIGNALETIQUE && m.line === 'TRAM')!.data as ModeData).stations[0];
         // Installation de la fenêtre de régression : une seule extrémité.
         station.directions = station.directions.filter(d => /meett/i.test(d.name));
-        const arenes = collectSignaletiquePlansQuartier(lieux).filter(p => p.lieuName === 'Arènes');
-        expect(arenes).toHaveLength(2); // l'exemplaire reste compté…
-        expect(arenes.map(p => p.direction)).toEqual(['Direction MEETT / Aéroport', undefined]); // …sans libellé inventé
+        const plans = collectSignaletiquePlansQuartier(lieux).filter(p => p.lieuName === 'Aéroconstellation');
+        expect(plans).toHaveLength(2); // l'exemplaire reste compté…
+        expect(plans.map(p => p.direction)).toEqual(['Direction MEETT / Aéroport', undefined]); // …sans libellé inventé
     });
 
     it("défaut selon la même règle que l'index Équipements Station ; « non installé » ignoré ; données intactes", async () => {
@@ -105,12 +107,12 @@ describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
     const auditTotals = async (lieux: Lieu[]) =>
         summarizePlanQuartierAudit(buildPatrimoineIndex(lieux, await db.signageReferences.toArray()), await pdqModelIds());
 
-    it('Plans de quartier = 91 ; T1 = 52 recensés à part, jamais dans le total PDQ', async () => {
+    it('Plans de quartier = 93 ; T1 = 51 recensés à part, jamais dans le total PDQ', async () => {
         const lieux = useAuditStore.getState().lieux;
-        expect(await auditTotals(lieux)).toEqual({ installed: 91, defects: 0 });
+        expect(await auditTotals(lieux)).toEqual({ installed: 93, defects: 0 });
 
         const plans = collectSignaletiquePlansQuartier(lieux);
-        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 0 });
+        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 51, defects: 0 });
         expect(plans.every(p => p.line === 'TRAM')).toBe(true);
         // Aucun plan Aéroport Express hors service introduit.
         expect(plans.some(p => p.line === 'AEROPORT' || p.lieuName === 'Aéroport Toulouse Blagnac')).toBe(false);
@@ -121,9 +123,9 @@ describe('cockpit Plans de quartier — audit PDQ vs recensement T1', () => {
         const sig = t1Sig(lieux, 'MEETT');
         sig.planQuartier.meett[0].status = EquipmentStatusType.ABSENT;
 
-        expect(await auditTotals(lieux)).toEqual({ installed: 91, defects: 0 });
+        expect(await auditTotals(lieux)).toEqual({ installed: 93, defects: 0 });
         const plans = collectSignaletiquePlansQuartier(lieux);
-        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 52, defects: 1 });
+        expect(summarizeSignaletiqueCensus(plans)).toEqual({ total: 51, defects: 1 });
 
         // Toujours localisables, directions réelles : MEETT 3 + 1.
         const meett = plans.filter(p => p.lieuName === 'MEETT');

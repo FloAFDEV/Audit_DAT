@@ -5,7 +5,7 @@
 // des emplacements Équipements Station existants via les actions
 // signalétique du store (cible explicite) — aucune donnée dupliquée.
 import React, { useMemo, useRef, useState } from 'react';
-import { CheckCircle2, XCircle, AlertTriangle, Camera, Edit, Trash2, RotateCw, Flag, MessageSquare, Maximize2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Camera, Edit, Trash2, RotateCw, MessageSquare, Maximize2 } from 'lucide-react';
 import { AuditModule, EquipmentStatusType, SignaletiqueData, Station } from '../types';
 import type { SignaletiqueTarget } from '../store';
 import AuditFormLayout from './AuditFormLayout';
@@ -54,14 +54,24 @@ const StatusButtons: React.FC<{ current: Status; onSelect: (s: Status) => void; 
           aria-pressed={current === opt.value}
           // Un second appui sur l'état actif revient à « Non contrôlé ».
           onClick={() => onSelect(current === opt.value ? 'NotChecked' : opt.value)}
-          className={`flex-1 sm:flex-none flex items-center justify-center ${small ? 'px-2.5 py-1 text-xs' : 'px-3 py-1.5 text-sm'} font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap min-w-0 ${current === opt.value ? opt.activeColorClass : opt.colorClass}`}
+          className={`flex-1 sm:flex-none flex items-center justify-center ${small ? 'px-2.5 py-1 text-xs' : 'px-2 sm:px-3 py-1.5 text-sm'} font-medium rounded-md transition-all duration-75 active:scale-95 whitespace-nowrap min-w-0 ${current === opt.value ? opt.activeColorClass : opt.colorClass}`}
         >
-          <Icon className={`${small ? 'w-4 h-4 mr-1.5' : 'w-5 h-5 mr-2'} flex-shrink-0`} />{opt.label}
+          <Icon className={`${small ? 'w-4 h-4 mr-1.5' : 'w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2'} flex-shrink-0`} />{opt.label}
         </button>
       );
     })}
   </div>
 );
+
+/** Inscription portée par le bandeau direction T1 de chaque sens. */
+const T1_BANDEAU_DIRECTION_TEXT: Record<Dir, string> = {
+  meett: 'T1 Direction MEETT',
+  pdj: 'T1 Direction Palais de Justice',
+};
+const T1_BANDEAU_VISUAL_IDS: Record<Dir, string> = {
+  meett: 'bandeau-t1-meett',
+  pdj: 'bandeau-t1-pdj',
+};
 
 const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
   module, signaletiqueModule, station,
@@ -135,37 +145,53 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
     const directionLabel = direction ?? `Sens ${position + 1} — direction non renseignée`;
     return (
       <div key={dirKey} className="p-4 sm:p-6 border-b border-gray-100 dark:border-slate-700 last:border-0">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-slate-100">{directionLabel}</h3>
-              <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
-                {T1_PLAN_QUARTIER_DIMENSIONS}
-              </span>
-            </div>
-            <p className="text-sm text-gray-500 dark:text-slate-400">
-              {item ? (item.status === 'NotChecked' || !item.status ? 'Non contrôlé' : 'Contrôlé') : 'Aucun emplacement recensé pour ce sens — à traiter'}
-            </p>
-          </div>
-          {item && (
-            <div className="w-full sm:w-auto sm:flex-shrink-0">
-              <StatusButtons current={item.status ?? 'NotChecked'} onSelect={s => onStatusChange('planQuartier', dirKey, 0, s, target)} />
-            </div>
-          )}
-        </div>
+        <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-slate-100">{directionLabel}</h3>
+        {!item && (
+          <p className="text-sm text-gray-500 dark:text-slate-400">Aucun emplacement recensé pour ce sens — à traiter</p>
+        )}
 
         {item && (
           <>
-            {/* Bandeau de direction : contrôle déjà porté par l'occurrence. */}
-            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <Flag className="w-4 h-4 text-indigo-400 flex-shrink-0" />
+            {/* Plan de quartier et bandeau direction : deux éléments audités
+                au même niveau (même présentation, mêmes boutons), dans
+                l'ordre où on les lit sur place. Données inchangées : l'état
+                du plan (status) et celui du bandeau (bannerDirection)
+                restent portés par le même emplacement. */}
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <ReferenceVisual referenceId="sign-plan-quartier-tram" label={`Plan de quartier T1 — ${T1_PLAN_QUARTIER_DIMENSIONS}`} />
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-700 dark:text-slate-300">{isTerminus ? 'Bandeau Terminus' : 'Bandeau Direction'}</p>
-                  {isTerminus && <p className="text-xs text-gray-500 dark:text-slate-400 italic">{TERMINUS_BANDEAU_TEXT}</p>}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm sm:text-base font-semibold text-gray-800 dark:text-slate-100">Plan de quartier</p>
+                    <span className="px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-[10px] font-medium text-gray-500 dark:text-slate-400 rounded uppercase tracking-wider">
+                      {T1_PLAN_QUARTIER_DIMENSIONS}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-slate-400">
+                    {item.status === 'NotChecked' || !item.status ? 'Non contrôlé' : 'Contrôlé'}
+                  </p>
                 </div>
               </div>
-              <StatusButtons small current={item.bannerDirection ?? 'NotChecked'} onSelect={s => onFieldChange('planQuartier', dirKey, 0, 'bannerDirection', s, target)} />
+              <div className="w-full sm:w-auto sm:flex-shrink-0">
+                <StatusButtons current={item.status ?? 'NotChecked'} onSelect={s => onStatusChange('planQuartier', dirKey, 0, s, target)} />
+              </div>
+            </div>
+
+            <div className="mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Visuel du bandeau direction ; pas au terminus, dont le
+                    bandeau porte un autre texte (TERMINUS_BANDEAU_TEXT). */}
+                {!isTerminus && <ReferenceVisual referenceId={T1_BANDEAU_VISUAL_IDS[dirKey]} label={`Bandeau direction T1 — ${T1_BANDEAU_DIRECTION_TEXT[dirKey]}`} />}
+                <div className="min-w-0">
+                  <p className="text-sm sm:text-base font-semibold text-gray-800 dark:text-slate-100">{isTerminus ? 'Bandeau Terminus' : 'Bandeau direction'}</p>
+                  {isTerminus
+                    ? <p className="text-xs text-gray-500 dark:text-slate-400 italic">{TERMINUS_BANDEAU_TEXT}</p>
+                    : <p className="text-sm text-gray-500 dark:text-slate-400">Inscription : <span className="font-medium text-gray-700 dark:text-slate-300">« {T1_BANDEAU_DIRECTION_TEXT[dirKey]} »</span></p>}
+                </div>
+              </div>
+              <div className="w-full sm:w-auto sm:flex-shrink-0">
+                <StatusButtons current={item.bannerDirection ?? 'NotChecked'} onSelect={s => onFieldChange('planQuartier', dirKey, 0, 'bannerDirection', s, target)} />
+              </div>
             </div>
 
             {/* Photo de l'occurrence : stockée sur l'emplacement lui-même. */}
@@ -249,7 +275,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
           <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center gap-2 border-b border-gray-200 dark:border-slate-700">
             <ReferenceVisual referenceId="sign-plan-quartier-tram" label={`Plan de quartier T1 — ${T1_PLAN_QUARTIER_DIMENSIONS}`} />
             <span className="text-sm font-semibold text-gray-800 dark:text-slate-100">
-              Plan de quartier T1 — {T1_PLAN_QUARTIER_DIMENSIONS} · {summary.expected} attendus (1 par sens)
+              Plan de quartier T1 — {T1_PLAN_QUARTIER_DIMENSIONS} · {summary.expected > 1 ? `${summary.expected} attendus (1 par sens)` : `${summary.expected} attendu`}
             </span>
             <span className="text-xs font-semibold px-2 py-0.5 rounded bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300">{summaryLabel}</span>
             {summary.toTreat > 0 && (
