@@ -46,3 +46,9 @@ export const getReferenceVisualUrl = (referenceId?: string): string | undefined 
     const file = referenceId ? REFERENCE_VISUAL_FILES[referenceId] : undefined;
     return file ? `/references/${file}.webp` : undefined;
 };
+
+/** Référence visuelle d'une ligne de l'Inventaire détaillé : son id, sauf
+ *  pour l'adhésif PMR au sol, décliné en une ligne par matière
+ *  (pmr-sol-<matière>) mais toujours le même adhésif, donc le même visuel. */
+export const getInventoryVisualReferenceId = (inventoryItemId: string): string =>
+    inventoryItemId.startsWith('pmr-sol-') ? 'pmr-sol' : inventoryItemId;

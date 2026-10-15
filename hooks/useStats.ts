@@ -6,7 +6,7 @@ import {
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
 import { readEcaAdhesiveStatus, isDatAdhesiveInScope } from '../data/adhesives';
-import { getCognitivePictogramDimension, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
+import { getCognitivePictogramDimension, getCountedCognitivePictograms, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
 import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
@@ -17,6 +17,7 @@ import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { getEffectiveAdhesives, getEffectiveEcaAdhesiveOccurrences, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { formatDimensions } from '../components/cockpit/labels';
+import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
 
 const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
     if (!name) return { repere: '', name: '' };
@@ -98,7 +99,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
                     case AuditModuleType.COGNITIVE_PICTOGRAMS: {
-                        const pictoCount = ((module.data as CognitivePictogramData).pictograms ?? []).length;
+                        const pictoCount = getCountedCognitivePictograms(module).length;
                         cogPictoCount += pictoCount;
                         if (module.line === 'A') cogPictoCountA += pictoCount;
                         else if (module.line === 'B') cogPictoCountB += pictoCount;
@@ -250,6 +251,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
  */
 const pmrInventoryRowId = (material: string) => `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
 const PMR_UNKNOWN_MATERIAL_ROW_ID = 'pmr-sol-matiere-non-renseignee';
+const T1_PLAN_QUARTIER_ROW_ID = 'sign-plan-quartier-tram';
 
 export const computeAdhesiveInventory = (
     lieux: Lieu[], references: SignageReference[],
@@ -364,11 +366,19 @@ export const computeAdhesiveInventory = (
                 { id: 'sign-totem',                 name: 'Totem',                              dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
                 { id: 'sign-biv',                   name: 'BIV (écran dynamique)',               dimensions: 'Variable',        material: 'Écran dynamique' },
                 { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: '80 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-plan-quartier-tram',     name: 'Plan de quartier (Tram)',             dimensions: '83 x 100 cm',     material: 'Vinyle' },
                 { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: '78 x 100 cm',     material: 'Vinyle' },
                 { id: 'sign-hap',                   name: 'HAP (fiche horaire)',                 dimensions: 'Variable',        material: 'Papier' },
                 { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
             ];
+            // Plan de quartier T1 : un seul exemplaire physique, audité dans
+            // Équipements Station mais rangé dans la famille Plans de quartier
+            // (suivi global des plans) — une seule ligne, jamais deux.
+            const t1PlanFamily = pdqConfig?.shortLabel ?? signConfig.shortLabel;
+            inventoryMap.set(T1_PLAN_QUARTIER_ROW_ID, {
+                id: T1_PLAN_QUARTIER_ROW_ID, auditType: t1PlanFamily,
+                repere: '-', name: 'Plan de quartier (Tram)',
+                dimensions: '83 x 100 cm', material: 'Vinyle', quantity: 0,
+            });
             signItems.forEach(item => {
                 if (!inventoryMap.has(item.id)) {
                     inventoryMap.set(item.id, {
@@ -472,27 +482,31 @@ export const computeAdhesiveInventory = (
 
                 if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
                     const cogData = module.data as CognitivePictogramData;
-                    for (const picto of (cogData.pictograms || [])) {
+                    for (const picto of getCountedCognitivePictograms(module)) {
                         const dim = getCognitivePictogramDimension(cogData.stationCode, picto.accessPointName);
                         addQty(`cog-picto-${dim}`, 1);
                     }
                 }
 
                 if (module.type === AuditModuleType.SIGNALETIQUE) {
-                    const planQuartierId = module.line === 'AEROPORT' ? 'sign-plan-quartier-aeroport' : 'sign-plan-quartier-tram';
                     for (const station of (module.data as ModeData).stations) {
                         const sig = station.signaletique;
                         if (!sig) continue;
                         addQty('sign-totem', 2); // direction1 + direction2
                         addQty('sign-biv', (sig.biv?.meett?.length || 0) + (sig.biv?.pdj?.length || 0));
                         addQty('sign-plan-reseau', (sig.planReseau?.meett?.length || 0) + (sig.planReseau?.pdj?.length || 0));
-                        addQty(planQuartierId, (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
+                        // Plans T1 : comptés plus bas, avec la même règle que le cockpit.
+                        if (module.line === 'AEROPORT') addQty('sign-plan-quartier-aeroport', (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
                         addQty('sign-hap', (sig.hap?.meett?.length || 0) + (sig.hap?.pdj?.length || 0));
                         addQty('sign-bandeau', 2); // direction1 + direction2
                     }
                 }
             }
         }
+
+        // Plans de quartier T1 : exactement les plans du cockpit (même
+        // fonction : exploitation actuelle, « non installé » exclu).
+        addQty(T1_PLAN_QUARTIER_ROW_ID, collectSignaletiquePlansQuartier(lieux).filter(p => p.line === 'TRAM').length);
 
         // Ligne « matière non renseignée » : uniquement si des implantations
         // PMR n'ont pas de matière connue (aucune ligne vide permanente).

@@ -2,6 +2,7 @@ import React, { lazy, useEffect } from 'react';
 import { Lieu, AuditModule, Station, Direction, DAT, Equipment, ECA, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PrZone, SignageReference } from '../types';
 import LieuSelector from './LieuSelector';
 import { isPmrEcaType, canEcaBeNotApplicable } from '../data/eca_data';
+import { getPrCaisseRemovalBlocker } from '../store';
 
 // Dynamically import components for code splitting
 const ModuleSelector = lazy(() => import('./ModuleSelector'));
@@ -59,6 +60,8 @@ interface AppRouterProps {
     handleUpdateDatName: any;
 
     handlePrAdhesiveStatusChange: any;
+    handleAddPrCaisseAuto: () => Promise<void>;
+    handleRemovePrCaisseAuto: (equipmentId: string) => Promise<void>;
     handlePrAdhesiveCommentChange: any;
     handleResetPrAdhesiveRequest: any;
 
@@ -285,7 +288,10 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
                 handlers.selectModule(null); // Go back to module selector for single-zone P+R
             }
         };
-        return <EquipmentSelector lieu={selectedLieu!} prData={prData} zone={selectedPrZone} signageReferences={signageReferences} onSelectEquipment={handlers.selectEquipment} onBack={handleBack} />;
+        return <EquipmentSelector lieu={selectedLieu!} prData={prData} zone={selectedPrZone} signageReferences={signageReferences} onSelectEquipment={handlers.selectEquipment} onBack={handleBack}
+            onAddCaisseAuto={handlers.handleAddPrCaisseAuto}
+            onRemoveCaisseAuto={handlers.handleRemovePrCaisseAuto}
+            getCaisseRemovalBlocker={(equipmentId: string) => getPrCaisseRemovalBlocker(selectedLieu!, selectedModule.id, selectedPrZone.id, equipmentId)} />;
     }
     
     // P+R Zone Selector

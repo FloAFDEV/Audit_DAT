@@ -63,8 +63,9 @@ export const collectSignaletiquePlansQuartier = (lieux: Lieu[]): SignaletiquePla
     return plans;
 };
 
-/** Recensement des plans Équipements Station — total et défauts propres,
- *  jamais additionnés au périmètre d'audit Plans de quartier. */
+/** Recensement des plans Équipements Station — total et défauts propres.
+ *  Ces plans n'existent qu'ici (aucune occurrence Plans de quartier ne les
+ *  duplique) : le cockpit les ajoute UNE fois au total Plans de quartier. */
 export const summarizeSignaletiqueCensus = (plans: SignaletiquePlanQuartier[]): { total: number; defects: number } => ({
     total: plans.length,
     defects: plans.filter(p => p.isDefect).length,
