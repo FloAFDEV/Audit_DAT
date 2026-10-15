@@ -599,6 +599,25 @@ export const createAuditDb = (name: string): AuditDb => {
     if (dibond && !(await table.get(dibond.id))) await table.add(dibond);
 });
 
+// V24: repère 8 des caisses automatiques — la fiche « Ticket rechargeable »
+// (désactivée) est remplacée sur le terrain par la bulle carte bancaire.
+// La fiche adca8 est réécrite depuis le seed (nom, description, dimensions,
+// réactivée) : fiches non éditables dans l'app, même principe qu'en V19.
+// Strictement limitée à signageReferences : les statuts d'audit déjà saisis
+// sur les caisses (equipment.adhesives.adca8) ne sont pas touchés.
+// Idempotente, jamais sur une table jamais seedée.
+    instance.version(24).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+}).upgrade(async tx => {
+    const table = tx.table<SignageReference, string>('signageReferences');
+    if (!(await table.get('ad1'))) return;
+    const fresh = buildSignageReferencesSeed().find(r => r.id === 'adca8');
+    if (fresh && await table.get('adca8')) await table.put(fresh);
+});
+
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.
     instance.on('populate', (tx) => {

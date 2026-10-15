@@ -20,7 +20,7 @@ describe('Visuels de référence', () => {
         expect(getReferenceVisualUrl('adbs3')).toBe('/references/adbe3.webp');
         expect(getReferenceVisualUrl('plan-pr-BE')).toBe('/references/plan-pr-be.webp');
         expect(getReferenceVisualUrl('plan-pr-BS')).toBe('/references/plan-pr-bs.webp');
-        expect(getReferenceVisualUrl('plan-pr-CA')).toBeUndefined();
+        expect(getReferenceVisualUrl('plan-pr-CA')).toBe('/references/plan-pr-ca.webp');
     });
 
     it('le 78×120 adhésif et dibond partagent la face imprimée du 78×120', () => {

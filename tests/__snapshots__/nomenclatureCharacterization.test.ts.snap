@@ -85,10 +85,10 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "14,9x10,9cm",
+    "dimensions": "99x115mm",
     "id": "adca8",
-    "material": "Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 »",
-    "name": "Ticket rechargeable",
+    "material": "Adhésif "Bulle" (sortie gratuite avec la carte bancaire)",
+    "name": "Adhésif caisse "Bulle"",
     "quantity": 10,
     "repere": "8",
   },

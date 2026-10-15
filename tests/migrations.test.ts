@@ -822,3 +822,41 @@ describe('Migration V22 → V23 (réparation d\'un référentiel écrasé par un
         await Dexie.delete(name);
     });
 });
+
+describe('Migration V23 → V24 (repère 8 des caisses : bulle carte bancaire)', () => {
+    it('réécrit la fiche adca8 (nom, description, dimensions, réactivée) sans toucher au reste ; idempotente', async () => {
+        const name = uniqueDbName();
+        const seed = buildSignageReferencesSeed();
+        const v23 = new Dexie(name);
+        v23.version(23).stores({
+            lieux: 'id, name',
+            history: '++id, date, type, categoryKey',
+            signageReferences: 'id, auditType',
+            events: '++id, date, type, entityType',
+        });
+        await v23.open();
+        // Référentiel tel qu'un appareil déjà installé l'a persisté : adca8
+        // encore « Ticket rechargeable », désactivée.
+        const legacyAdca8 = { ...seed.find(r => r.id === 'adca8')!, name: 'Repère 8 - Ticket rechargeable', legacyDescription: 'Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 » // 14,9x10,9cm', isDisabled: true };
+        await v23.table('signageReferences').bulkPut(seed.map(r => r.id === 'adca8' ? legacyAdca8 : r));
+        await v23.table('lieux').put({ id: 'lieu-x', name: 'Lieu X', modules: [] });
+        const othersBefore = (await v23.table('signageReferences').toArray()).filter(r => r.id !== 'adca8');
+        v23.close();
+
+        const upgraded = createAuditDb(name);
+        await upgraded.open();
+        const adca8 = await upgraded.table('signageReferences').get('adca8');
+        expect(adca8.name).toBe('Repère 8 - Adhésif caisse "Bulle"');
+        expect(adca8.isDisabled).toBeUndefined();
+        expect(adca8.legacyDescription).toContain('99x115mm');
+        expect((await upgraded.table('signageReferences').toArray()).filter(r => r.id !== 'adca8')).toEqual(othersBefore);
+        expect(await upgraded.table('lieux').get('lieu-x')).toMatchObject({ name: 'Lieu X' });
+        upgraded.close();
+
+        const again = createAuditDb(name);
+        await again.open();
+        expect((await again.table('signageReferences').get('adca8')).name).toBe('Repère 8 - Adhésif caisse "Bulle"');
+        again.close();
+        await Dexie.delete(name);
+    });
+});
