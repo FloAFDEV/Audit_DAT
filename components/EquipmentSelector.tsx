@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone, SignageReference } from '../types';
-import { ChevronRight, ArrowLeft, Ticket, Car, Euro } from 'lucide-react';
+import { ChevronRight, ArrowLeft, Ticket, Car, Euro, Plus, Trash2 } from 'lucide-react';
+import ConfirmationModal from './ConfirmationModal';
 import { LieuBadges } from './Icons';
 
 import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
@@ -12,6 +13,11 @@ interface EquipmentSelectorProps {
   signageReferences: SignageReference[];
   onSelectEquipment: (equipmentId: string) => void;
   onBack: () => void;
+  /** Caisses automatiques : nombre théorique modifiable (zone sélectionnée). */
+  onAddCaisseAuto?: () => void;
+  onRemoveCaisseAuto?: (equipmentId: string) => void;
+  /** Raison empêchant le retrait (caisse déjà auditée…), ou null. */
+  getCaisseRemovalBlocker?: (equipmentId: string) => string | null;
 }
 
 const getEquipmentProgress = (equipment: Equipment, signageReferences: SignageReference[]): number => {
@@ -40,7 +46,10 @@ const getEquipmentIcon = (type: EquipmentType) => {
     }
 }
 
-const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zone, signageReferences, onSelectEquipment, onBack }) => {
+const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zone, signageReferences, onSelectEquipment, onBack, onAddCaisseAuto, onRemoveCaisseAuto, getCaisseRemovalBlocker }) => {
+    const [confirmAdd, setConfirmAdd] = useState(false);
+    const [toRemove, setToRemove] = useState<Equipment | null>(null);
+    const caisseCount = zone?.equipments?.filter(e => e.type === EquipmentType.CA).length ?? 0;
 
     return (
         <div>
@@ -76,9 +85,11 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                         const isComplete = progress === 100;
                         const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
                         
+                        const removalBlocker = equipment.type === EquipmentType.CA && onRemoveCaisseAuto
+                            ? (getCaisseRemovalBlocker?.(equipment.id) ?? null) : undefined;
                         return (
+                            <div key={equipment.id} className="relative">
                             <button
-                                key={equipment.id}
                                 onClick={() => onSelectEquipment(equipment.id)}
                                 className="bg-white dark:bg-slate-800 p-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-75 w-full text-left group dark:ring-1 dark:ring-slate-700/50 dark:hover:ring-slate-600"
                             >
@@ -91,6 +102,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                                         </div>
                                     </div>
                                     <div className="flex items-center flex-shrink-0">
+                                        {removalBlocker !== undefined && <span className="w-9" aria-hidden="true" />}
                                         <ChevronRight className="w-5 h-5 text-gray-400 dark:text-slate-500 group-hover:text-gray-800 dark:group-hover:text-slate-300 transition-colors ml-2" />
                                     </div>
                                 </div>
@@ -106,10 +118,58 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                                     </div>
                                 </div>
                             </button>
+                            {removalBlocker !== undefined && (
+                                <button
+                                    type="button"
+                                    onClick={() => setToRemove(equipment)}
+                                    disabled={!!removalBlocker}
+                                    title={removalBlocker ?? `Retirer ${equipment.name}`}
+                                    aria-label={removalBlocker ?? `Retirer la caisse ${equipment.name}`}
+                                    className="absolute top-4 right-10 p-2 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed dark:hover:bg-red-900/20 transition-colors"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
+                            </div>
                         );
                     })}
                 </div>
             )}
+
+            {onAddCaisseAuto && (
+                <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
+                        Caisses automatiques dans cette zone : <span className="font-semibold text-gray-700 dark:text-slate-200">{caisseCount}</span>
+                    </p>
+                    <button
+                        type="button"
+                        onClick={() => setConfirmAdd(true)}
+                        className="inline-flex items-center justify-center gap-2 px-3 py-2 text-sm font-semibold rounded-md text-amber-700 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:text-amber-300 dark:ring-amber-500/60 dark:hover:bg-amber-900/20 transition-colors"
+                    >
+                        <Plus className="w-4 h-4" />
+                        Ajouter une caisse automatique
+                    </button>
+                </div>
+            )}
+
+            <ConfirmationModal
+                isOpen={confirmAdd}
+                onClose={() => setConfirmAdd(false)}
+                onConfirm={() => { setConfirmAdd(false); onAddCaisseAuto?.(); }}
+                title="Ajouter une caisse automatique"
+                message={`Ajouter une caisse automatique à ${prData.name} — ${zone?.name} ?\n\nElle sera à auditer, et son plan de quartier (repère 12) sera créé dans les Plans de quartier.`}
+                confirmLabel="Ajouter"
+                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
+            />
+            <ConfirmationModal
+                isOpen={!!toRemove}
+                onClose={() => setToRemove(null)}
+                onConfirm={() => { const id = toRemove?.id; setToRemove(null); if (id) onRemoveCaisseAuto?.(id); }}
+                title="Retirer une caisse automatique"
+                message={`Retirer ${toRemove?.name ?? ''} de ${prData.name} — ${zone?.name} ?\n\nCette caisse n'a jamais été auditée : elle et son plan de quartier (repère 12) seront retirés.`}
+                confirmLabel="Retirer"
+                isDestructive
+            />
         </div>
     );
 };

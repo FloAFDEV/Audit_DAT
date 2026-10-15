@@ -1,6 +1,25 @@
 
 import { v4 as uuidv4 } from 'uuid';
-import { CognitivePictogram, FloorAdhesiveStatus } from '../types';
+import { AuditModule, CognitivePictogram, CognitivePictogramData, FloorAdhesiveStatus } from '../types';
+
+/** Lignes où les pictogrammes cognitifs sont réellement déployés. Les autres
+ *  (Aéroport Express, C…) restent hors des totaux tant que leur référentiel
+ *  n'est pas arbitré — la structure n'est pas supprimée, seulement non comptée. */
+export const COGNITIVE_PICTOGRAM_ACTIVE_LINES: ReadonlySet<string> = new Set(['A', 'B']);
+
+/** Emplacement provisoire du référentiel (« Accès à définir », « Accès à
+ *  définir 2 »…) : reste visible et auditable, mais n'est pas un
+ *  pictogramme confirmé sur le terrain. Renommé, il devient un accès réel. */
+export const isProvisionalCognitivePictogram = (pictogram: Pick<CognitivePictogram, 'accessPointName'>): boolean =>
+    /^Accès à définir(\s+\d+)?$/i.test(pictogram.accessPointName.trim());
+
+/** Pictogrammes comptés dans les totaux (cockpit, Nomenclature) : ligne
+ *  active uniquement, emplacements provisoires exclus. Le périmètre
+ *  d'exploitation (isModuleInCurrentScope) reste à la charge de l'appelant. */
+export const getCountedCognitivePictograms = (module: Pick<AuditModule, 'line' | 'data'>): CognitivePictogram[] =>
+    COGNITIVE_PICTOGRAM_ACTIVE_LINES.has(module.line ?? '')
+        ? ((module.data as CognitivePictogramData).pictograms ?? []).filter(p => !isProvisionalCognitivePictogram(p))
+        : [];
 
 // The dimensions can now be a string for simple cases, or an object for stations with multiple models.
 // The keys in the object (e.g., 'Petit Modèle') will be matched against the access point name.

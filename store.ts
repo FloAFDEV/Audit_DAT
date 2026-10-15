@@ -110,6 +110,10 @@ interface AppState {
     // P+R Flow Actions
     selectPrZone: (zoneId: string | null) => void;
     selectEquipment: (equipmentId: string | null) => void;
+    /** Ajoute une caisse automatique à la zone P+R sélectionnée. */
+    handleAddPrCaisseAuto: () => Promise<void>;
+    /** Retire une caisse jamais auditée de la zone P+R sélectionnée. */
+    handleRemovePrCaisseAuto: (equipmentId: string) => Promise<void>;
     handlePrAdhesiveStatusChange: (adhesiveId: string, status: AdhesiveStatus) => Promise<void>;
     handlePrAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetPrAdhesive: () => Promise<void>;
@@ -483,7 +487,7 @@ const CAISSE_AUTO_PDQ_MODEL_ID = 'pdq-adhesif';
  *
  * Mute `lieux` en place ; retourne true si quelque chose a été écrit.
  */
-const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
+export const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
     const now = new Date().toISOString();
     let changed = false;
 
@@ -546,6 +550,77 @@ const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
     }
 
     return changed;
+};
+
+// --- Caisses automatiques P+R : nombre théorique modifiable ---------------
+// Le nombre de caisses d'une zone EST la liste de ses équipements CA (la
+// structure du P+R) : ajouter ou retirer une caisse modifie cette liste, rien
+// d'autre. Le modèle ne porte pas de « nombre mesuré » distinct : l'audit
+// terrain se lit sur chaque caisse (statuts de ses adhésifs), jamais déduit.
+
+const findPrZone = (lieu: Lieu, moduleId: string, zoneId: string): PrZone | undefined =>
+    (lieu.modules.find(m => m.id === moduleId && m.type === AuditModuleType.PR)?.data as Pr | undefined)
+        ?.zones.find(z => z.id === zoneId);
+
+const caisseAutoPdqOccurrenceId = (equipmentId: string) => `pdq-ca-${equipmentId}`;
+
+/** Ajoute une caisse automatique à une zone P+R (nom suivant : CA01, CA02…)
+ *  et crée son plan de quartier (repère 12) avec la même règle que la
+ *  migration — une seule occurrence, jamais deux. Mute `lieu`. */
+export const addPrCaisseAuto = (lieu: Lieu, moduleId: string, zoneId: string): Equipment | undefined => {
+    const zone = findPrZone(lieu, moduleId, zoneId);
+    if (!zone) return undefined;
+    const numbers = zone.equipments
+        .filter(e => e.type === EquipmentType.CA)
+        .map(e => parseInt(e.name.replace(/\D/g, ''), 10))
+        .filter(n => !isNaN(n));
+    const next = (numbers.length ? Math.max(...numbers) : 0) + 1;
+    const equipment: Equipment = {
+        id: uuidv4(),
+        name: `CA${String(next).padStart(2, '0')}`,
+        type: EquipmentType.CA,
+        adhesives: createInitialAdhesiveStatus(getEquipmentAdhesives(EquipmentType.CA)),
+        comment: '',
+    };
+    zone.equipments.push(equipment);
+    migratePrCaisseAutoPlansDeQuartier([lieu]);
+    return equipment;
+};
+
+/** Raison pour laquelle une caisse ne peut pas être retirée, ou null.
+ *  Une caisse qui porte une donnée terrain (statut constaté, commentaire,
+ *  date, ou plan de quartier déjà constaté) n'est jamais supprimée : une
+ *  quantité théorique ne doit pas effacer un historique. */
+export const getPrCaisseRemovalBlocker = (lieu: Lieu, moduleId: string, zoneId: string, equipmentId: string): string | null => {
+    const zone = findPrZone(lieu, moduleId, zoneId);
+    const equipment = zone?.equipments.find(e => e.id === equipmentId);
+    if (!equipment || equipment.type !== EquipmentType.CA) return 'Caisse introuvable.';
+    const audited = Object.values(equipment.adhesives ?? {}).some(st => st !== AdhesiveStatus.NotChecked)
+        || !!equipment.comment || !!equipment.completionDate;
+    if (audited) return 'Cette caisse a déjà été auditée : elle ne peut pas être retirée.';
+    const occId = caisseAutoPdqOccurrenceId(equipmentId);
+    const occ = lieu.modules.filter(m => m.type === AuditModuleType.PLAN_QUARTIER)
+        .flatMap(m => (m.data as PlanQuartierData).occurrences ?? [])
+        .find(o => o.id === occId);
+    if (occ && (occ.status !== AdhesiveStatus.NotChecked || occ.comment || occ.previousConstats?.length)) {
+        return 'Le plan de quartier de cette caisse a déjà été constaté : elle ne peut pas être retirée.';
+    }
+    return null;
+};
+
+/** Retire une caisse jamais auditée, ainsi que son plan de quartier non
+ *  constaté. Refuse (false) dès qu'une donnée terrain existe. Mute `lieu`. */
+export const removePrCaisseAuto = (lieu: Lieu, moduleId: string, zoneId: string, equipmentId: string): boolean => {
+    if (getPrCaisseRemovalBlocker(lieu, moduleId, zoneId, equipmentId)) return false;
+    const zone = findPrZone(lieu, moduleId, zoneId)!;
+    zone.equipments = zone.equipments.filter(e => e.id !== equipmentId);
+    const occId = caisseAutoPdqOccurrenceId(equipmentId);
+    for (const m of lieu.modules) {
+        if (m.type !== AuditModuleType.PLAN_QUARTIER) continue;
+        const data = m.data as PlanQuartierData;
+        data.occurrences = (data.occurrences ?? []).filter(o => o.id !== occId);
+    }
+    return true;
 };
 
 /**
@@ -1256,6 +1331,40 @@ const useAuditStore = create<AppState>((set, get) => {
             const dat = direction?.dats.find(d => d.id === datId);
             if (dat) dat.name = newName;
         });
+    },
+
+    handleAddPrCaisseAuto: async () => {
+        const { selectedModuleId, selectedPrZoneId, selectedLieuId, lieux } = get();
+        if (!selectedModuleId || !selectedPrZoneId) return;
+        let created: Equipment | undefined;
+        await _updateLieu(lieu => { created = addPrCaisseAuto(lieu, selectedModuleId, selectedPrZoneId); });
+        if (created) {
+            const lieuName = lieux.find(l => l.id === selectedLieuId)?.name;
+            const caisse: Equipment = created;
+            await logEvent({
+                type: 'AUDIT_ITEM_ADDED', entityType: 'pr-caisse-auto', entityId: caisse.id, entityLabel: caisse.name,
+                summary: `Caisse automatique ajoutée — ${caisse.name}${lieuName ? ` (${lieuName})` : ''}`,
+            });
+        }
+    },
+
+    handleRemovePrCaisseAuto: async (equipmentId) => {
+        const { selectedModuleId, selectedPrZoneId, selectedLieuId, lieux } = get();
+        if (!selectedModuleId || !selectedPrZoneId) return;
+        const lieuBefore = lieux.find(l => l.id === selectedLieuId);
+        if (!lieuBefore) return;
+        const blocker = getPrCaisseRemovalBlocker(lieuBefore, selectedModuleId, selectedPrZoneId, equipmentId);
+        if (blocker) { toast.error(blocker); return; }
+        const name = (lieuBefore.modules.find(m => m.id === selectedModuleId)?.data as Pr | undefined)
+            ?.zones.find(z => z.id === selectedPrZoneId)?.equipments.find(e => e.id === equipmentId)?.name;
+        let removed = false;
+        await _updateLieu(lieu => { removed = removePrCaisseAuto(lieu, selectedModuleId, selectedPrZoneId, equipmentId); });
+        if (removed && name) {
+            await logEvent({
+                type: 'AUDIT_ITEM_REMOVED', entityType: 'pr-caisse-auto', entityId: equipmentId, entityLabel: name,
+                summary: `Caisse automatique retirée — ${name} (${lieuBefore.name})`,
+            });
+        }
     },
 
     handlePrAdhesiveStatusChange: async (adhesiveId, status) => {

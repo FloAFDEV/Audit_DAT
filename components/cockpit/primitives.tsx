@@ -112,7 +112,9 @@ export const StatRow: React.FC<{
    *  mangerait sinon un cinquième de la largeur disponible. */
   dense?: boolean;
   onClick?: () => void;
-}> = ({ icon, label, value, isSubItem = false, highlight = null, dense = false, onClick }) => {
+  /** Sélection active (filtre de l'Inventaire détaillé appliqué depuis ce compteur). */
+  active?: boolean;
+}> = ({ icon, label, value, isSubItem = false, highlight = null, dense = false, onClick, active = false }) => {
 
   let valueClass = isSubItem ? 'text-sm' : 'text-base';
   let labelClass = isSubItem ? 'text-slate-500 dark:text-slate-400' : 'text-slate-700 dark:text-slate-300';
@@ -147,9 +149,11 @@ export const StatRow: React.FC<{
     const numericValue = typeof value === 'string' ? parseInt(value, 10) : typeof value === 'number' ? value : -1;
     return (
       <button
+        type="button"
         onClick={onClick}
         disabled={numericValue === 0}
-        className="w-full text-left rounded-md hover:bg-slate-100 dark:hover:bg-slate-700/50 -mx-2 px-2 transition-colors disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent"
+        aria-pressed={active}
+        className={`w-full text-left rounded-md -mx-2 px-2 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-transparent ${active ? 'bg-teal-50 dark:bg-teal-900/30 ring-1 ring-inset ring-teal-500/60' : 'hover:bg-slate-100 dark:hover:bg-slate-700/50'}`}
       >
         {content}
       </button>

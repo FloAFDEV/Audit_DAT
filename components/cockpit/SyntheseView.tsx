@@ -7,7 +7,7 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
 import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData } from '../../types';
+import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData, EquipmentType } from '../../types';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -28,8 +28,11 @@ import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockp
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { CognitivePictogramSummary, cognitiveSummaryKey, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { ReferenceNamePreview } from '../ReferenceVisual';
+import { getInventoryVisualReferenceId } from '../../data/referenceVisuals';
 import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../../utils/cockpit/signaletiquePlansQuartier';
 import { summarizePlanQuartierAudit } from '../../utils/cockpit/planQuartierAuditTotals';
+import { InventoryFocus, computeFocusedInventory } from '../../utils/cockpit/inventoryFocus';
 
 /* =====================
    ECA per-line detail sub-components (déplacés depuis StatsPage)
@@ -46,7 +49,20 @@ const ECA_TYPE_ROWS = [
     { label: "PMR vantaux réversible", type: EcaEquipmentType.PMRVantauxReversible },
 ];
 
-const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }> = ({ ecaBreakdown, configs, total }) => {
+/** Filtre d'inventaire ECA (ligne et/ou type) — clé stable pour la sélection. */
+const ecaFocus = (line?: { key: string; label: string }, type?: { type: EcaEquipmentType; label: string }): InventoryFocus => ({
+    key: `ECA|${line?.key ?? '*'}|${type?.type ?? '*'}`,
+    label: ['ECA', line?.label, type?.label].filter(Boolean).join(' · '),
+    moduleType: AuditModuleType.ECA,
+    line: line?.key,
+    ecaTypes: type ? [type.type] : undefined,
+});
+
+/** Cellule cliquable de la matrice ECA : bouton plein cadre, état actif visible. */
+const ecaCellButton = (active: boolean) =>
+    `w-full rounded px-1 -mx-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 ${active ? 'bg-teal-50 dark:bg-teal-900/30 ring-1 ring-inset ring-teal-500/60' : 'hover:bg-slate-100 dark:hover:bg-slate-700/50'}`;
+
+const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number; onFocus?: (focus: InventoryFocus) => void; activeKey?: string }> = ({ ecaBreakdown, configs, total, onFocus, activeKey }) => {
     const { metroAConfig, metroBConfig, lineCConfig, laeConfig } = configs;
 
     // COLONNES DÉRIVÉES DU PÉRIMÈTRE RÉEL DU RÉFÉRENTIEL ECA, et non de la
@@ -103,6 +119,10 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                                 sans ambiguïté comme LE total dont les colonnes
                                 suivantes sont la ventilation — pas comme un
                                 nombre isolé au-dessus du tableau. */}
+                            <button type="button" disabled={!onFocus || total === 0} onClick={() => onFocus?.(ecaFocus())}
+                                aria-pressed={activeKey === ecaFocus().key}
+                                title="Afficher les adhésifs ECA dans l'inventaire détaillé"
+                                className={`text-left disabled:cursor-default ${ecaCellButton(activeKey === ecaFocus().key)}`}>
                             <span className="flex items-center gap-1.5 text-xs font-semibold leading-tight text-slate-700 dark:text-slate-200">
                                 <Fence className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
                                 <span>Total ECA</span>
@@ -113,13 +133,20 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                             <span className="block mt-1 text-left text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">
                                 {total}
                             </span>
+                            </button>
                         </th>
-                        {lines.map(({ key, label, cfg, data }) => (
+                        {lines.map(({ key, label, cfg, data }) => {
+                            const focus = ecaFocus({ key, label });
+                            return (
                             <th key={key} scope="col" className={`py-2 px-2 align-bottom ${data.total > 0 ? '' : mutedCell}`}>
+                                <button type="button" disabled={!onFocus || data.total === 0} onClick={() => onFocus?.(focus)}
+                                    aria-pressed={activeKey === focus.key}
+                                    title={data.total > 0 ? `Afficher les adhésifs ECA de ${label} dans l'inventaire détaillé` : undefined}
+                                    className={`disabled:cursor-default ${ecaCellButton(activeKey === focus.key)}`}>
                                 {/* Le nom de ligne passe à la ligne plutôt que
                                     d'être tronqué. */}
                                 <span className="flex items-center justify-end gap-1.5 text-xs font-semibold leading-tight text-right text-slate-700 dark:text-slate-200">
-                                    <CategoryIcon categoryConfig={cfg} size="sm" />
+                                    <CategoryIcon categoryConfig={cfg} size="sm" asDiv />
                                     <span>{label}</span>
                                 </span>
                                 {/* N2 — total d'un axe : même teal que le total
@@ -130,24 +157,40 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number }
                                     {data.total}
                                     <span className="block text-xs font-medium text-slate-500 dark:text-slate-400">({data.pmr} PMR)</span>
                                 </span>
+                                </button>
                             </th>
-                        ))}
+                            );
+                        })}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
-                    {rows.map(({ label, type }) => (
+                    {rows.map(({ label, type }) => {
+                        const typeFocus = ecaFocus(undefined, { type, label });
+                        return (
                         <tr key={type}>
-                            <th scope="row" className="py-1.5 pr-3 text-left text-xs font-normal text-slate-500 dark:text-slate-400 truncate">{label}</th>
-                            {lines.map(({ key, data }) => {
+                            <th scope="row" className="py-1.5 pr-3 text-left text-xs font-normal text-slate-500 dark:text-slate-400">
+                                <button type="button" disabled={!onFocus} onClick={() => onFocus?.(typeFocus)}
+                                    aria-pressed={activeKey === typeFocus.key}
+                                    title={`Afficher les adhésifs « ${label} » dans l'inventaire détaillé`}
+                                    className={`text-left truncate disabled:cursor-default ${ecaCellButton(activeKey === typeFocus.key)}`}>{label}</button>
+                            </th>
+                            {lines.map(({ key, label: lineLabel, data }) => {
                                 const count = data.byType?.[type] ?? 0;
+                                const cellFocus = ecaFocus({ key, label: lineLabel }, { type, label });
                                 return (
                                     <td key={key} className={`py-1.5 px-2 text-right text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-100 ${data.total > 0 ? '' : mutedCell}`}>
-                                        {count > 0 ? count : <span className="font-normal text-slate-300 dark:text-slate-600">—</span>}
+                                        {count > 0 ? (
+                                            <button type="button" disabled={!onFocus} onClick={() => onFocus?.(cellFocus)}
+                                                aria-pressed={activeKey === cellFocus.key}
+                                                aria-label={`${label}, ${lineLabel} : ${count} — afficher dans l'inventaire détaillé`}
+                                                className={`text-right tabular-nums disabled:cursor-default ${ecaCellButton(activeKey === cellFocus.key)}`}>{count}</button>
+                                        ) : <span className="font-normal text-slate-300 dark:text-slate-600">—</span>}
                                     </td>
                                 );
                             })}
                         </tr>
-                    ))}
+                        );
+                    })}
                 </tbody>
             </table>
         </div>
@@ -243,12 +286,14 @@ const PlanQuartierOverview: React.FC<{
         [models, patrimoineIndex]
     );
 
-    // Plans recensés dans Équipements Station (T1) : recensement séparé,
-    // hors total et hors « à traiter » Plans de quartier — l'audit reste
-    // dans Équipements Station.
+    // Plans recensés dans Équipements Station (T1) : l'audit reste dans
+    // Équipements Station, mais chaque plan est un plan de quartier — il
+    // entre UNE fois dans le total réseau et dans « à traiter ».
     const signaletiqueLabel = (plan: SignaletiquePlanQuartier) =>
         `${lineConfigs[plan.line]?.shortLabel ?? plan.line} ${plan.dimensions.replace(/\s*x\s*/i, ' × ')}`;
     const census = useMemo(() => summarizeSignaletiqueCensus(signaletiquePlans), [signaletiquePlans]);
+    const networkTotal = total + census.total;
+    const networkDefects = totalDefects + census.defects;
 
     // Combien de ces plans sont posés sur une caisse automatique de P+R ?
     // Lu sur le contexte porté par l'implantation, jamais deviné d'un libellé.
@@ -416,24 +461,22 @@ const PlanQuartierOverview: React.FC<{
         </p>
     );
 
-    if (total === 0 && census.total === 0) return emptyPdq;
+    if (networkTotal === 0) return emptyPdq;
 
     return (
         <div className="space-y-6">
             {/* Bande 1 — total réseau (N1) + ce qui appelle une action (N5). */}
-            {total === 0 ? emptyPdq : (
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
+                <span className="text-2xl font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{networkTotal}</span>
                 <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
                     plans de quartier recensés
                 </span>
-                {totalDefects > 0 && (
+                {networkDefects > 0 && (
                     <span className="text-xs font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300">
-                        {totalDefects} à traiter
+                        {networkDefects} à traiter
                     </span>
                 )}
             </div>
-            )}
 
             {/* Bande 2 — par format (N3). Vue « bureau » : préparer une commande. */}
             {total > 0 && (
@@ -494,7 +537,7 @@ const PlanQuartierOverview: React.FC<{
                         >
                             <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
                                 <ChevronDown className={`w-4 h-4 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
+                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" asDiv />}
                                 {label}
                             </span>
                             <span className="text-xl font-bold text-teal-700 dark:text-teal-300 tabular-nums">{installed}</span>
@@ -512,9 +555,9 @@ const PlanQuartierOverview: React.FC<{
                 })}
             </div>
 
-            {/* Recensement Équipements Station (Tram T1…) : hors périmètre
-                d'audit Plans de quartier — total, défauts et localisation
-                propres, l'audit se fait dans Équipements Station. */}
+            {/* Plans audités dans Équipements Station (Tram T1…) : inclus une
+                fois dans le total réseau ci-dessus, détaillés ici par station ;
+                l'audit se fait dans Équipements Station. */}
             {censusByLine.map(({ line, cfg, label, installed, stations }) => {
                 const key = `census:${line}`;
                 const isOpen = openLines.has(key);
@@ -529,10 +572,10 @@ const PlanQuartierOverview: React.FC<{
                         >
                             <span className="flex items-start gap-2 min-w-0">
                                 <ChevronDown className={`w-4 h-4 mt-0.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
-                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" />}
+                                {cfg && <CategoryIcon categoryConfig={cfg} size="sm" asDiv />}
                                 <span className="min-w-0">
                                     <span className="block text-sm font-semibold text-slate-700 dark:text-slate-200">{label} — plans recensés dans Équipements Station</span>
-                                    <span className="block text-xs text-slate-500 dark:text-slate-400">Audit dans Équipements Station · hors total Plans de quartier</span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400">Audit dans Équipements Station · inclus dans le total Plans de quartier</span>
                                     {defects > 0 && (
                                         <span className="inline-block mt-1 text-xs font-semibold px-2 py-0.5 rounded bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300">
                                             {defects} à traiter · Équipements Station
@@ -669,11 +712,44 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [modalContent, setModalContent] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
-    const filteredInventory = (adhesiveInventory || []).filter(item => !selectedLieuId || item.quantity > 0).filter(item =>
+    // Filtre posé depuis un compteur (ligne, type…) : l'inventaire est
+    // recalculé sur ce seul périmètre, par la même fonction ; la recherche
+    // texte s'applique ensuite, en plus (combinaison affichée dans le bandeau).
+    const [inventoryFocus, setInventoryFocus] = useState<InventoryFocus | null>(null);
+    const inventoryRef = useRef<HTMLDivElement>(null);
+    useEffect(() => { setInventoryFocus(null); }, [selectedLieuId]);
+    const focusedInventory = useMemo(
+        () => inventoryFocus ? computeFocusedInventory(filteredLieux, references, inventoryFocus) : null,
+        [inventoryFocus, filteredLieux, references]
+    );
+    const applyInventoryFocus = (focus: InventoryFocus) => {
+        const isSame = inventoryFocus?.key === focus.key;
+        setInventoryFocus(isSame ? null : focus);
+        if (isSame) return;
+        const reduceMotion = typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        requestAnimationFrame(() => inventoryRef.current?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' }));
+    };
+    /** Props d'un compteur relié à l'inventaire (clic = filtre, re-clic = retrait). */
+    const focusProps = (focus: InventoryFocus) => ({ onClick: () => applyInventoryFocus(focus), active: inventoryFocus?.key === focus.key });
+    const lineFocus = (moduleType: AuditModuleType, family: string, line: string | undefined, lineLabel?: string): InventoryFocus => ({
+        key: `${moduleType}|${line ?? '*'}`, label: [family, lineLabel].filter(Boolean).join(' · '), moduleType, line,
+    });
+    const prFocus = (type: EquipmentType | undefined, label: string): InventoryFocus => ({
+        key: `PR|${type ?? '*'}`, label: `P+R · ${label}`, moduleType: AuditModuleType.PR, prEquipmentType: type,
+    });
+    const ecaGroupFocus = (key: string, label: string, types: EcaEquipmentType[]): InventoryFocus => ({
+        key: `ECA|*|${key}`, label: `ECA · ${label}`, moduleType: AuditModuleType.ECA, ecaTypes: types,
+    });
+
+    const filteredInventory = (focusedInventory ?? adhesiveInventory ?? []).filter(item => !selectedLieuId || item.quantity > 0).filter(item =>
         (item.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.auditType || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (item.repere || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
+
+    const inventoryEmptyMessage = inventoryFocus
+        ? `Aucune référence d'inventaire pour « ${inventoryFocus.label} »${searchTerm ? ` avec la recherche « ${searchTerm} »` : ''}.`
+        : searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} ».` : 'Aucun adhésif sur ce lieu.';
 
     const categoryMap = useMemo(() => Object.fromEntries(
         AUDIT_CATEGORIES.map(c => [c.key, c])
@@ -936,7 +1012,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     {/* DAT */}
                     {showDat && (
                     <div>
-                    <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" />
+                    <StatRow icon={<Euro className="w-5 h-5" />} label="DAT (Distributeurs)" value={globalCounts.datCount} highlight="primary" {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', undefined))} />
                     <div className="space-y-3 mt-2">
                         {selectedLieuId ? (
                             datByDirection.length > 1 && datByDirection.map(({ name, count }) => (
@@ -944,12 +1020,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             ))
                         ) : (
                             <>
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.datCountA} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.datCountB} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.datCountC} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.datCountAero} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.datCountTram} isSubItem />
-                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" asDiv />Ligne A</span>} value={globalCounts.datCountA} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'A', 'Ligne A'))} />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" asDiv />Ligne B</span>} value={globalCounts.datCountB} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'B', 'Ligne B'))} />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" asDiv />Ligne C</span>} value={globalCounts.datCountC} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'C', 'Ligne C'))} />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" asDiv />Aéroport Express</span>} value={globalCounts.datCountAero} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'AEROPORT', 'Aéroport Express'))} />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" asDiv />Tram</span>} value={globalCounts.datCountTram} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'TRAM', 'Tram'))} />
+                            <StatRow label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={teleoConfig} size="sm" asDiv />Téléo</span>} value={globalCounts.datCountTeleo} isSubItem {...focusProps(lineFocus(AuditModuleType.DAT, 'DAT', 'TELEO', 'Téléo'))} />
                             </>
                         )}
                     </div>
@@ -961,15 +1037,15 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         introduit par son propre libellé principal. */}
                     {showPr && (
                     <div>
-                    {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" />}
+                    {selectedLieuId ? null : <StatRow icon={<Car className="w-5 h-5" />} label="Nombre de P+R" value={globalCounts.prCount} highlight="primary" {...focusProps(prFocus(undefined, 'tous équipements'))} />}
                     {/* Espacement intermédiaire : ces lignes sont des équipements
                         distincts (et non une ventilation du total au-dessus),
                         elles gardent donc leur taille pleine, avec plus d'air
                         que les sous-listes indentées de DAT ou des stations. */}
                     <div className="space-y-2 mt-2">
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} />
-                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} />
-                        <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} />
+                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Entrée" value={globalCounts.beCount} {...focusProps(prFocus(EquipmentType.BE, 'Bornes Entrée'))} />
+                        <StatRow icon={<Car className="w-4 h-4" />} label="Bornes Sortie" value={globalCounts.bsCount} {...focusProps(prFocus(EquipmentType.BS, 'Bornes Sortie'))} />
+                        <StatRow icon={<Euro className="w-4 h-4" />} label="Caisses Auto" value={globalCounts.caCount} {...focusProps(prFocus(EquipmentType.CA, 'Caisses Auto'))} />
                     </div>
                     </div>
                     )}
@@ -992,22 +1068,22 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         contraint à la largeur d'une colonne de la rangée 1
                         pour que la valeur reste proche de son libellé. */}
                     <div className="max-w-xl md:max-w-[calc(50%-0.75rem)] lg:max-w-[calc(50%-1rem)]">
-                        <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" />
+                        <StatRow icon={<Fence className="w-5 h-5" />} label="ECA (Valideurs)" value={globalCounts.ecaCount} highlight="primary" {...focusProps(lineFocus(AuditModuleType.ECA, 'ECA', undefined))} />
                     </div>
                     <div className="space-y-3 mt-2">
-                        <StatRow label="Entrée" value={ecaEntreeCount} isSubItem />
-                        <StatRow label="Sortie" value={ecaSortieCount} isSubItem />
+                        <StatRow label="Entrée" value={ecaEntreeCount} isSubItem {...focusProps(ecaGroupFocus('entree', 'Entrée', [EcaEquipmentType.TripodeEntree, EcaEquipmentType.VantauxEntree]))} />
+                        <StatRow label="Sortie" value={ecaSortieCount} isSubItem {...focusProps(ecaGroupFocus('sortie', 'Sortie', [EcaEquipmentType.TripodeSortie, EcaEquipmentType.VantauxSortie]))} />
                         {ecaPmrBrasCount > 0 && (
-                            <StatRow label="PMR à bras" value={ecaPmrBrasCount} isSubItem />
+                            <StatRow label="PMR à bras" value={ecaPmrBrasCount} isSubItem {...focusProps(ecaGroupFocus('pmr-bras', 'PMR à bras', [EcaEquipmentType.PMRBras]))} />
                         )}
                         {ecaPmrVantauxCount > 0 && (
-                            <StatRow label="PMR à vantaux" value={ecaPmrVantauxCount} isSubItem />
+                            <StatRow label="PMR à vantaux" value={ecaPmrVantauxCount} isSubItem {...focusProps(ecaGroupFocus('pmr-vantaux', 'PMR à vantaux', [EcaEquipmentType.PMRVantaux]))} />
                         )}
                         {ecaPmrVantauxReversibleCount > 0 && (
-                            <StatRow label="PMR à vantaux réversible" value={ecaPmrVantauxReversibleCount} isSubItem />
+                            <StatRow label="PMR à vantaux réversible" value={ecaPmrVantauxReversibleCount} isSubItem {...focusProps(ecaGroupFocus('pmr-vantaux-rev', 'PMR à vantaux réversible', [EcaEquipmentType.PMRVantauxReversible]))} />
                         )}
                         {ecaReversibleCount > 0 && (
-                            <StatRow label="Vantaux réversible" value={ecaReversibleCount} isSubItem />
+                            <StatRow label="Vantaux réversible" value={ecaReversibleCount} isSubItem {...focusProps(ecaGroupFocus('vantaux-rev', 'Vantaux réversible', [EcaEquipmentType.VantauxReversible]))} />
                         )}
                     </div>
                     </>
@@ -1029,7 +1105,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     <div className="text-lg font-bold text-gray-800 dark:text-slate-100">
                         ECA (Valideurs)
                     </div>
-                    <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} total={globalCounts.ecaCount} />
+                    <EcaLineDetail ecaBreakdown={ecaBreakdown} configs={{ metroAConfig, metroBConfig, lineCConfig, laeConfig }} total={globalCounts.ecaCount} onFocus={applyInventoryFocus} activeKey={inventoryFocus?.key} />
                     </>
                 )}
                 </div>
@@ -1138,7 +1214,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2 gap-x-8 gap-y-6">
                 {showPmrFloor && (
                 <div>
-                <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" />
+                <StatRow icon={<Footprints className="w-5 h-5" />} label="Audit Sol PMR" value={globalCounts.pmrFloorAdhesiveCount} highlight="primary" {...focusProps(lineFocus(AuditModuleType.PMR_FLOOR_ADHESIVE, 'PMR au sol', undefined))} />
                 {selectedLieuId ? (
                     // Vue station : matière réellement posée, ou mention explicite
                     // quand elle n'est pas connue (jamais une matière déduite).
@@ -1154,10 +1230,10 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </ul>
                 ) : (
                     <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" asDiv />Ligne A</span>} value={globalCounts.pmrFloorAdhesiveCountA} isSubItem {...focusProps(lineFocus(AuditModuleType.PMR_FLOOR_ADHESIVE, 'PMR au sol', 'A', 'Ligne A'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" asDiv />Ligne B</span>} value={globalCounts.pmrFloorAdhesiveCountB} isSubItem {...focusProps(lineFocus(AuditModuleType.PMR_FLOOR_ADHESIVE, 'PMR au sol', 'B', 'Ligne B'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" asDiv />Ligne C</span>} value={globalCounts.pmrFloorAdhesiveCountC} isSubItem {...focusProps(lineFocus(AuditModuleType.PMR_FLOOR_ADHESIVE, 'PMR au sol', 'C', 'Ligne C'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" asDiv />Aéroport Express</span>} value={globalCounts.pmrFloorAdhesiveCountAero} isSubItem {...focusProps(lineFocus(AuditModuleType.PMR_FLOOR_ADHESIVE, 'PMR au sol', 'AEROPORT', 'Aéroport Express'))} />
                     </div>
                 )}
                 </div>
@@ -1171,24 +1247,25 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         : "Audit Pictos Cognitifs"}
                     value={globalCounts.cogPictoCount}
                     highlight="primary"
+                    {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', undefined))}
                 />
                 {selectedLieuId ? null : (
                     <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroAConfig} size="sm" asDiv />Ligne A</span>} value={globalCounts.cogPictoCountA} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'A', 'Ligne A'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={metroBConfig} size="sm" asDiv />Ligne B</span>} value={globalCounts.cogPictoCountB} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'B', 'Ligne B'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={lineCConfig} size="sm" asDiv />Ligne C</span>} value={globalCounts.cogPictoCountC} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'C', 'Ligne C'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" asDiv />Aéroport Express</span>} value={globalCounts.cogPictoCountAero} isSubItem {...focusProps(lineFocus(AuditModuleType.COGNITIVE_PICTOGRAMS, 'Pictos cognitifs', 'AEROPORT', 'Aéroport Express'))} />
                     </div>
                 )}
                 </div>
                 )}
                 {showSignaletique && (
                 <div>
-                <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" />
+                <StatRow icon={<Layout className="w-5 h-5" />} label="Équipements Station" value={globalCounts.signaletiqueCount} highlight="primary" {...focusProps(lineFocus(AuditModuleType.SIGNALETIQUE, 'Équipements station', undefined))} />
                 {selectedLieuId ? null : (
                     <div className="space-y-3 mt-2">
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem />
-                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={tramConfig} size="sm" asDiv />Tram</span>} value={globalCounts.signaletiqueCountTram} isSubItem {...focusProps(lineFocus(AuditModuleType.SIGNALETIQUE, 'Équipements station', 'TRAM', 'Tram'))} />
+                        <StatRow dense label={<span className="flex items-center gap-2"><CategoryIcon categoryConfig={laeConfig} size="sm" asDiv />Aéroport Express</span>} value={globalCounts.signaletiqueCountAero} isSubItem {...focusProps(lineFocus(AuditModuleType.SIGNALETIQUE, 'Équipements station', 'AEROPORT', 'Aéroport Express'))} />
                     </div>
                 )}
                 </div>
@@ -1240,8 +1317,26 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
             </div>
 
             {/* Inventaire Adhésifs (Pleine largeur) */}
+            <div ref={inventoryRef} className="scroll-mt-4">
             <StatCard title={`Inventaire Détaillé ${selectedLieuId ? ' - ' + selectedLieuObject?.name : ''}`} icon={<Search className="w-6 h-6" />} titleAside={selectedLieuObject && <LieuBadges lieu={selectedLieuObject} />}>
                 <div>
+                {inventoryFocus && (
+                    <div role="status" className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-teal-200 dark:border-teal-800 bg-teal-50 dark:bg-teal-900/20 px-3 py-2 text-sm text-teal-900 dark:text-teal-100">
+                        <Filter className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 flex-1">
+                            Filtre : <strong className="font-semibold">{inventoryFocus.label}</strong>
+                            <span className="text-teal-700 dark:text-teal-300"> — quantités de ce seul périmètre{searchTerm ? ', combiné à la recherche' : ''}</span>
+                        </span>
+                        <button
+                            type="button"
+                            onClick={() => setInventoryFocus(null)}
+                            className="inline-flex items-center gap-1 rounded-md px-2 py-1 font-semibold text-teal-800 hover:bg-teal-100 dark:text-teal-200 dark:hover:bg-teal-800/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                        >
+                            <X className="w-4 h-4" aria-hidden="true" />
+                            Retirer le filtre
+                        </button>
+                    </div>
+                )}
                 <div className="relative mb-4">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <Search className="h-4 w-4 text-slate-400" aria-hidden="true" />
@@ -1265,15 +1360,17 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider">Nom du Produit</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions (cm)</th>
                         <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider hidden lg:table-cell">Matière / Usage</th>
-                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">{selectedLieuId ? 'Qté' : 'Qté réseau'}</th>
+                        <th scope="col" className="p-3 font-bold text-xs uppercase tracking-wider text-center">{inventoryFocus ? 'Qté filtre' : selectedLieuId ? 'Qté' : 'Qté réseau'}</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filteredInventory.map((item, idx) => (
-                        <tr key={item.id} className={`hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
+                        <tr key={item.id} className={`hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${inventoryFocus ? 'bg-teal-50/60 dark:bg-teal-900/20 shadow-[inset_3px_0_0_0_rgb(20_184_166)]' : idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
                             <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
-                            <td className="p-3 font-medium text-slate-800 dark:text-slate-100">{item.name}</td>
+                            <td className="p-3 font-medium text-slate-800 dark:text-slate-100">
+                                <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name}>{item.name}</ReferenceNamePreview>
+                            </td>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
                             <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
@@ -1284,7 +1381,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
 
                         {(!filteredInventory || filteredInventory.length === 0) && (
                         <tr>
-                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">{searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} »` : 'Aucun adhésif sur ce lieu.'}</td>
+                            <td colSpan={6} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">{inventoryEmptyMessage}</td>
                         </tr>
                         )}
                     </tbody>
@@ -1296,12 +1393,14 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     en ligne, pas masquées silencieusement). */}
                 <div className="sm:hidden space-y-2 max-h-96 overflow-auto">
                     {filteredInventory.map(item => (
-                        <div key={item.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900">
+                        <div key={item.id} className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${inventoryFocus ? 'border-teal-300 dark:border-teal-700 bg-teal-50/60 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}>
                             <div className="min-w-0">
                                 <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400 truncate">
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
                                 </div>
-                                <div className="font-medium text-slate-800 dark:text-slate-100 truncate">{item.name}</div>
+                                <div className="font-medium text-slate-800 dark:text-slate-100 min-w-0">
+                                    <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name}><span className="truncate">{item.name}</span></ReferenceNamePreview>
+                                </div>
                                 {(item.dimensions || item.material) && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
                                         {[item.dimensions, item.material].filter(Boolean).join(' · ')}
@@ -1312,19 +1411,20 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                 <div className="text-lg font-bold text-teal-700 dark:text-teal-400">
                                     {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
                                 </div>
-                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">{selectedLieuId ? 'qté' : 'réseau'}</div>
+                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">{inventoryFocus ? 'filtre' : selectedLieuId ? 'qté' : 'réseau'}</div>
                             </div>
                         </div>
                     ))}
 
                     {(!filteredInventory || filteredInventory.length === 0) && (
                         <p className="p-6 text-center text-sm text-slate-500 dark:text-slate-400">
-                            {searchTerm ? `Aucun adhésif trouvé correspondant à la recherche « ${searchTerm} ».` : 'Aucun adhésif sur ce lieu.'}
+                            {inventoryEmptyMessage}
                         </p>
                     )}
                 </div>
                 </div>
             </StatCard>
+            </div>
 
             <MaintenanceListModal
                 isOpen={!!modalContent}

@@ -283,15 +283,6 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Équipements",
-    "dimensions": "83 x 100 cm",
-    "id": "sign-plan-quartier-tram",
-    "material": "Vinyle",
-    "name": "Plan de quartier (Tram)",
-    "quantity": 52,
-    "repere": "-",
-  },
-  {
-    "auditType": "Équipements",
     "dimensions": "80 x 100 cm",
     "id": "sign-plan-reseau",
     "material": "Vinyle",
@@ -314,7 +305,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "cog-picto-74.5x97cm",
     "material": "Vinyle + Plastification",
     "name": "Pictogramme cognitif",
-    "quantity": 63,
+    "quantity": 56,
     "repere": "-",
   },
   {
@@ -361,6 +352,15 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "name": "PEM 3D — Plan Multimodal 3D géo-orienté (120×80)",
     "quantity": 0,
     "repere": "",
+  },
+  {
+    "auditType": "Plans de quartier",
+    "dimensions": "83 x 100 cm",
+    "id": "sign-plan-quartier-tram",
+    "material": "Vinyle",
+    "name": "Plan de quartier (Tram)",
+    "quantity": 52,
+    "repere": "-",
   },
   {
     "auditType": "Plans de quartier",

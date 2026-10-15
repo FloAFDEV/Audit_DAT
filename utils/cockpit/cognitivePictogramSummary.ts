@@ -5,6 +5,7 @@
 import { AuditModuleType, CognitivePictogramData, FloorAdhesiveStatus, Lieu } from '../../types';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
+import { getCountedCognitivePictograms } from '../../data/cognitive_pictograms';
 
 export interface CognitivePictogramSummary {
     /** Code station dont le visuel est connu (sinon le premier module). */
@@ -24,7 +25,8 @@ export const summarizeCognitivePictograms = (lieux: Lieu[]): Map<string, Cogniti
         for (const module of lieu.modules) {
             if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS || !isModuleInCurrentScope(module)) continue;
             const data = module.data as CognitivePictogramData;
-            const pictograms = data.pictograms ?? [];
+            // Mêmes pictogrammes que les totaux du cockpit et la Nomenclature.
+            const pictograms = getCountedCognitivePictograms(module);
             if (pictograms.length === 0) continue;
             const key = cognitiveSummaryKey(module.line ?? '', lieu.name);
             const summary = byLieu.get(key) ?? { accessCount: 0, toReplaceCount: 0 };
