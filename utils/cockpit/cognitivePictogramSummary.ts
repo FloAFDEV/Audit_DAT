@@ -5,7 +5,7 @@
 import { AuditModuleType, CognitivePictogramData, FloorAdhesiveStatus, Lieu } from '../../types';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
-import { getCountedCognitivePictograms } from '../../data/cognitive_pictograms';
+import { getCognitivePictogramDimension, getCountedCognitivePictograms } from '../../data/cognitive_pictograms';
 
 export interface CognitivePictogramSummary {
     /** Code station dont le visuel est connu (sinon le premier module). */
@@ -39,4 +39,23 @@ export const summarizeCognitivePictograms = (lieux: Lieu[]): Map<string, Cogniti
         }
     }
     return byLieu;
+};
+
+/** Ligne d'inventaire « Pictogramme cognitif » (une par dimension) →
+ *  code d'une station dont le visuel est connu, pour l'aperçu : mêmes
+ *  pictogrammes et même dimension que la quantité de la ligne. */
+export const cognitivePictogramExampleByInventoryRow = (lieux: Lieu[]): Map<string, string> => {
+    const examples = new Map<string, string>();
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS || !isModuleInCurrentScope(module)) continue;
+            const data = module.data as CognitivePictogramData;
+            if (!getCognitivePictogramVisualUrl(data.stationCode)) continue;
+            for (const picto of getCountedCognitivePictograms(module)) {
+                const rowId = `cog-picto-${getCognitivePictogramDimension(data.stationCode, picto.accessPointName)}`;
+                if (!examples.has(rowId)) examples.set(rowId, data.stationCode);
+            }
+        }
+    }
+    return examples;
 };

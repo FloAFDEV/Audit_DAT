@@ -199,7 +199,7 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                                             <div>
                                                 <div className="font-semibold text-gray-900 dark:text-slate-50 flex items-center gap-2">
                                                     {item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS && (
-                                                        <CognitivePictogramVisual stationCode={item.stationCode} stationName={item.lieuName} size="sm" />
+                                                        <CognitivePictogramVisual stationCode={item.stationCode} stationName={item.lieuName} size="sm" field />
                                                     )}
                                                     {item.elementName}
                                                 </div>

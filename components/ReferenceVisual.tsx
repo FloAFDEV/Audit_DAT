@@ -4,7 +4,7 @@ import { X, Map as MapIcon, Image as ImageIcon } from 'lucide-react';
 import { getReferenceVisualUrl } from '../data/referenceVisuals';
 
 /** Agrandissement plein écran d'un visuel (Échap, clic ou bouton pour fermer). */
-const ReferenceZoom: React.FC<{ url: string; label: string; referenceId?: string; onClose: () => void }> = ({ url, label, referenceId, onClose }) => {
+const ReferenceZoom: React.FC<{ url: string; label: string; referenceId?: string; background?: string; onClose: () => void }> = ({ url, label, referenceId, background, onClose }) => {
     const [failed, setFailed] = useState(false);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -29,7 +29,7 @@ const ReferenceZoom: React.FC<{ url: string; label: string; referenceId?: string
             </button>
             {failed
                 ? <p className="rounded-lg bg-white/10 px-4 py-3 text-sm text-white">Visuel indisponible pour le moment.</p>
-                : <img src={url} alt={label} onError={() => setFailed(true)} className="min-w-[min(80vw,420px)] max-w-[92vw] max-h-[78vh] rounded-lg bg-white p-2 object-contain" />}
+                : <img src={url} alt={label} onError={() => setFailed(true)} className="min-w-[min(80vw,420px)] max-w-[92vw] max-h-[78vh] rounded-lg bg-white p-2 object-contain" style={background ? { backgroundColor: background } : undefined} />}
             <p className="max-w-[90vw] text-center text-sm font-semibold text-white">
                 {label}
                 {referenceId && <span className="ml-2 font-mono text-xs font-normal text-white/70">{referenceId}</span>}
@@ -81,9 +81,11 @@ const PREVIEW_SIZE = 160;
  *    n'être ni coupée par son conteneur défilant ni déplacer la mise en page ;
  *  - tactile : pas de survol, l'icône ouvre l'agrandissement existant.
  *  L'image n'est demandée qu'à l'affichage. Sans visuel connu : le nom seul,
- *  sans icône. Image en erreur : plus d'aperçu, le nom reste. */
-export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: string; children: React.ReactNode }> = ({ referenceId, label, children }) => {
-    const url = getReferenceVisualUrl(referenceId);
+ *  sans icône. Image en erreur : plus d'aperçu, le nom reste.
+ *  `previewUrl` / `background` : visuel hors catalogue de références
+ *  (pictogramme cognitif, fond jaune terrain). */
+export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: string; previewUrl?: string; background?: string; children: React.ReactNode }> = ({ referenceId, label, previewUrl, background, children }) => {
+    const url = previewUrl ?? getReferenceVisualUrl(referenceId);
     const anchorRef = useRef<HTMLSpanElement>(null);
     const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
     const [isZoomOpen, setIsZoomOpen] = useState(false);
@@ -126,14 +128,14 @@ export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: strin
                 <div
                     role="tooltip"
                     className="pointer-events-none fixed z-50 rounded-lg bg-white p-1.5 shadow-xl ring-1 ring-slate-200 dark:ring-slate-600"
-                    style={{ left: pos.left, top: pos.top, width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
+                    style={{ left: pos.left, top: pos.top, width: PREVIEW_SIZE, height: PREVIEW_SIZE, ...(background ? { backgroundColor: background } : {}) }}
                 >
                     <img src={url} alt="" onError={() => { setFailed(true); hide(); }} className="w-full h-full object-contain" />
                 </div>,
                 document.body
             )}
             {isZoomOpen && createPortal(
-                <ReferenceZoom url={url} label={label} referenceId={referenceId} onClose={() => setIsZoomOpen(false)} />,
+                <ReferenceZoom url={url} label={label} referenceId={referenceId} background={background} onClose={() => setIsZoomOpen(false)} />,
                 document.body
             )}
         </span>
