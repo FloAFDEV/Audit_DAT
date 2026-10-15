@@ -184,7 +184,7 @@ const EcaLineDetail: React.FC<{ ecaBreakdown: any; configs: any; total: number; 
                                                 aria-pressed={activeKey === cellFocus.key}
                                                 aria-label={`${label}, ${lineLabel} : ${count} — afficher dans l'inventaire détaillé`}
                                                 className={`text-right tabular-nums disabled:cursor-default ${ecaCellButton(activeKey === cellFocus.key)}`}>{count}</button>
-                                        ) : <span className="font-normal text-slate-300 dark:text-slate-600">—</span>}
+                                        ) : <span className="font-normal text-slate-500 dark:text-slate-400">—</span>}
                                     </td>
                                 );
                             })}
@@ -406,8 +406,8 @@ const PlanQuartierOverview: React.FC<{
                             {st.defects > 0 && (
                                 <span className="text-xs font-semibold text-red-600 dark:text-red-400">{st.defects} à traiter</span>
                             )}
-                            <span className="text-base font-extrabold text-teal-600 dark:text-teal-400 tabular-nums">{st.installed}</span>
-                            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-400 dark:text-slate-500">équipements</span>
+                            <span className="text-base font-extrabold text-teal-700 dark:text-teal-400 tabular-nums">{st.installed}</span>
+                            <span className="text-[11px] font-medium uppercase tracking-wide text-slate-500 dark:text-slate-400">équipements</span>
                         </span>
                     </div>
                     <ul className="space-y-1">
@@ -887,7 +887,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         className={`block w-full rounded-lg border py-3 pl-10 pr-10 text-sm shadow-sm focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base transition-colors ${
                             selectedLieuId
                             ? 'border-teal-500 bg-teal-50 text-teal-900 dark:bg-teal-900/20 dark:border-teal-500/50 dark:text-teal-100 placeholder:text-teal-700 dark:placeholder:text-teal-300 font-semibold'
-                            : 'border-gray-300 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-gray-400'
+                            : 'border-gray-300 bg-white text-gray-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400'
                         }`}
                     />
                     {selectedLieuId && (
@@ -896,7 +896,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                 setSelectedLieuId(null);
                                 setFilterQuery('');
                             }}
-                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-teal-600 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-200"
                         >
                             <X className="h-5 w-5" />
                         </button>
@@ -915,7 +915,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             }}
                         >
                             <div className="flex items-center">
-                                <span className="truncate text-teal-600 dark:text-teal-400">Tout le réseau</span>
+                                <span className="truncate text-teal-700 dark:text-teal-400">Tout le réseau</span>
                             </div>
                         </li>
 
@@ -1286,7 +1286,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 className="min-w-0 xl:col-start-1 xl:row-start-2"
             >
                 {refsLoading ? (
-                    <div className="py-6 text-center text-slate-400 dark:text-slate-500 text-sm">Chargement du référentiel…</div>
+                    <div className="py-6 text-center text-slate-500 dark:text-slate-400 text-sm">Chargement du référentiel…</div>
                 ) : (
                     <>
                         {/* Deux nombres, pas six : le référentiel est acté dans
@@ -1300,7 +1300,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         <div className="flex flex-wrap gap-3 pt-1">
                             <button
                                 onClick={() => nav.navigate({ section: 'referentiel' })}
-                                className="px-4 py-2 rounded-lg bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold transition-colors"
+                                className="px-4 py-2 rounded-lg bg-teal-700 hover:bg-teal-800 text-white text-sm font-semibold transition-colors"
                             >
                                 Explorer le référentiel →
                             </button>
@@ -1346,7 +1346,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     placeholder="Rechercher par nom, type ou repère..."
                     value={searchTerm}
                     onChange={e => setSearchTerm(e.target.value)}
-                    className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                    className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm dark:placeholder:text-slate-400"
                     />
                 </div>
 
@@ -1374,7 +1374,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
                             <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
-                                {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
+                                {item.quantity > 0 ? item.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
                             </td>
                         </tr>
                         ))}
@@ -1395,7 +1395,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     {filteredInventory.map(item => (
                         <div key={item.id} className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${inventoryFocus ? 'border-teal-300 dark:border-teal-700 bg-teal-50/60 dark:bg-teal-900/20' : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900'}`}>
                             <div className="min-w-0">
-                                <div className="text-[11px] font-semibold uppercase text-teal-600 dark:text-teal-400 truncate">
+                                <div className="text-[11px] font-semibold uppercase text-teal-700 dark:text-teal-400 truncate">
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
                                 </div>
                                 <div className="font-medium text-slate-800 dark:text-slate-100 min-w-0">
@@ -1409,9 +1409,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             </div>
                             <div className="flex-shrink-0 text-right">
                                 <div className="text-lg font-bold text-teal-700 dark:text-teal-400">
-                                    {item.quantity > 0 ? item.quantity : <span className="text-slate-400 font-normal">—</span>}
+                                    {item.quantity > 0 ? item.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
                                 </div>
-                                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">{inventoryFocus ? 'filtre' : selectedLieuId ? 'qté' : 'réseau'}</div>
+                                <div className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">{inventoryFocus ? 'filtre' : selectedLieuId ? 'qté' : 'réseau'}</div>
                             </div>
                         </div>
                     ))}

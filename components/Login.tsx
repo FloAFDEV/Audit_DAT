@@ -88,7 +88,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </div>
           <div>
             <p className="text-lg font-bold tracking-tight text-slate-900 dark:text-white">AuditRef</p>
-            <p className="text-[11px] font-medium uppercase tracking-widest text-teal-600 dark:text-teal-400">Auditer · Contrôler · Valoriser</p>
+            <p className="text-[11px] font-medium uppercase tracking-widest text-teal-700 dark:text-teal-400">Auditer · Contrôler · Valoriser</p>
           </div>
         </div>
 
@@ -146,7 +146,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           ))}
         </div>
 
-        <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-slate-500">
+        <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-slate-400">
           Plus qu'un outil, une solution terrain.
         </p>
       </div>
@@ -169,7 +169,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <motion.div initial="initial" animate="enter" variants={pageVariants} className="relative w-full max-w-md">
           <div className="mb-6 text-center lg:text-left">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
-              Bienvenue sur <span className="text-teal-600 dark:text-teal-400">AuditRef</span>
+              Bienvenue sur <span className="text-teal-700 dark:text-teal-400">AuditRef</span>
             </h1>
             <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
               Votre solution pour des audits terrain simples, rapides et efficaces.
@@ -198,7 +198,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                       setPassword(e.target.value);
                       if (error) setError("");
                     }}
-                    className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-400 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    className="block w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 py-2.5 pl-10 pr-10 text-sm text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 transition-colors focus:border-teal-500/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                     placeholder="Mot de passe"
                     aria-invalid={!!error}
                     aria-describedby={error ? "password-error" : undefined}
@@ -206,7 +206,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                   <button
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500 transition-colors hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400 transition-colors hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
                     aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -223,7 +223,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
               <button
                 type="submit"
                 disabled={!password}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-teal-700 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-teal-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-900 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-teal-500"
               >
                 Se connecter
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
@@ -231,11 +231,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             </form>
           </div>
 
-          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-slate-500 dark:text-slate-500">
+          <p className="mt-6 text-center text-[10px] font-light uppercase tracking-wider text-slate-500 dark:text-slate-400">
             AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
             <a
               href="mailto:florent.perez@tisseo.fr?subject=Contact%20depuis%20AuditRef"
-              className="font-normal normal-case text-teal-600 dark:text-teal-400 hover:underline"
+              className="font-normal normal-case text-teal-700 dark:text-teal-400 hover:underline"
             >
               Contact
             </a>{" "}

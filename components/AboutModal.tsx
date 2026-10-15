@@ -33,7 +33,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-1.5 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                                className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors dark:text-gray-400"
                                 aria-label="Fermer"
                             >
                                 <X className="w-5 h-5" />
@@ -51,7 +51,7 @@ const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
                             ))}
                         </div>
 
-                        <div className="flex items-start gap-2 text-xs text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-slate-700 pt-3">
+                        <div className="flex items-start gap-2 text-xs text-slate-500 dark:text-slate-400 border-t border-slate-100 dark:border-slate-700 pt-3">
                             <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
                             <p>Conception et développement : <span className="font-semibold text-slate-600 dark:text-slate-300">{APP_AUTHOR}</span></p>
                         </div>

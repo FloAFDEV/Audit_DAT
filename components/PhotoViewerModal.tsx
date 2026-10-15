@@ -95,7 +95,7 @@ const PhotoViewerModal: React.FC<PhotoViewerModalProps> = ({ isOpen, onClose, ph
                     />
                      <button
                         onClick={handleSaveNote}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-teal-600 text-white hover:bg-teal-500 transition-colors"
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md bg-teal-700 text-white hover:bg-teal-800 transition-colors"
                     >
                         <Save className="w-5 h-5" />
                         <span>Enregistrer et Fermer</span>

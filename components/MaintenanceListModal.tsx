@@ -150,7 +150,7 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                             </button>
                             <button
                                 onClick={onClose}
-                                className="p-2 rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors dark:text-gray-400"
                                 aria-label="Fermer"
                             >
                                 <X className="h-6 w-6" />
@@ -247,7 +247,7 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
                     <button
                         type="button"
                         onClick={handleExport}
-                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:w-auto mt-3 sm:mt-0"
+                        className="inline-flex w-full justify-center items-center gap-2 rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 sm:w-auto mt-3 sm:mt-0"
                     >
                         <Download className="w-4 h-4" />
                         <span>Exporter (CSV)</span>

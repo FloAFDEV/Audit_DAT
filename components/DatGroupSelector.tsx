@@ -81,7 +81,7 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
 
                 <div className="space-y-6">
                     <section>
-                        {title && <h3 className="text-sm font-bold text-gray-400 dark:text-slate-500 uppercase tracking-wider mb-3 ml-1">{title}</h3>}
+                        {title && <h3 className="text-sm font-bold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-3 ml-1">{title}</h3>}
                         <div className="space-y-4">
                             {station.directions.map(direction => {
                                 const progress = getDirectionProgress(direction);

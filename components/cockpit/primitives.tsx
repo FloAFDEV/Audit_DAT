@@ -51,7 +51,7 @@ export const Header: React.FC<{ title: string; onBack: () => void }> = ({ title,
 export const StatCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode; className?: string; titleAside?: React.ReactNode }> = ({ title, icon, children, className = '', titleAside }) => (
   <section className={`bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-teal-500/10 dark:border-slate-700/50 ${className}`}>
     <div className="flex items-center gap-4 mb-5">
-      <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
+      <div className="w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
         {icon}
       </div>
       <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-slate-100">{title}</h2>
@@ -78,17 +78,17 @@ export const IndicatorTile: React.FC<{
     onClick?: () => void;
 }> = ({ value, label, tone, size = 'md', hint, onClick }) => {
     const tones: Record<string, string> = {
-        teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-700 dark:text-teal-300',
-        red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-700 dark:text-red-300',
-        amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-700 dark:text-amber-300',
-        slate: 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300',
-        sky:   'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/30 text-sky-700 dark:text-sky-300',
+        teal:  'bg-teal-50 dark:bg-teal-900/20 border-teal-100 dark:border-teal-900/30 text-teal-800 dark:text-teal-300',
+        red:   'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/30 text-red-800 dark:text-red-300',
+        amber: 'bg-amber-50 dark:bg-amber-900/20 border-amber-100 dark:border-amber-900/30 text-amber-800 dark:text-amber-300',
+        slate: 'bg-slate-50 dark:bg-slate-700/30 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-300',
+        sky:   'bg-sky-50 dark:bg-sky-900/20 border-sky-100 dark:border-sky-900/30 text-sky-800 dark:text-sky-300',
     };
     const content = (
         <>
             <div className={size === 'sm' ? 'text-lg font-semibold tabular-nums' : 'text-2xl font-bold tabular-nums'}>{value}</div>
-            <div className="text-xs font-semibold uppercase mt-1 opacity-80">{label}</div>
-            {hint && <div className="text-xs font-medium mt-0.5 opacity-70">{hint}</div>}
+            <div className="text-xs font-semibold uppercase mt-1 opacity-90">{label}</div>
+            {hint && <div className="text-xs font-medium mt-0.5 opacity-85">{hint}</div>}
         </>
     );
     if (onClick) {
@@ -128,8 +128,8 @@ export const StatRow: React.FC<{
   } else {
     // Styles pour les alertes et sous-éléments
     badgeClass = highlight === 'danger' ? 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-300 font-semibold px-2 py-0.5 rounded' :
-                 highlight === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 font-semibold px-2 py-0.5 rounded' :
-                 highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'warning' ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 font-semibold px-2 py-0.5 rounded' :
+                 highlight === 'info' ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 font-semibold px-2 py-0.5 rounded' :
                  isSubItem
                     ? 'font-medium text-slate-800 dark:text-slate-200'
                     : 'font-semibold px-2 py-0.5 rounded text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-700';
@@ -192,7 +192,7 @@ export const AnomalySummaryCard: React.FC<AnomalySummaryCardProps> = ({ icon, ti
     if (!hasAnomalies) {
         return (
             <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 flex items-center gap-2 min-w-0">
-                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-400 dark:text-slate-500">
+                <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400">
                     {icon}
                 </div>
                 <span className="text-sm text-slate-500 dark:text-slate-400 truncate">

@@ -241,7 +241,7 @@ export const ImplantationsExportButton: React.FC<ImplantationsExportButtonProps>
             type="button"
             onClick={handleExport}
             disabled={isExporting || total === 0}
-            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors bg-teal-600 text-white hover:bg-teal-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 flex-shrink-0"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500 flex-shrink-0"
         >
             <Download className="w-4 h-4" />
             {isExporting ? 'Export…' : 'Exporter .xlsx'}

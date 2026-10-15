@@ -116,7 +116,7 @@ export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: strin
                 onClick={(e) => { e.stopPropagation(); hide(); setIsZoomOpen(true); }}
                 onFocus={() => show(true)}
                 onBlur={hide}
-                className="flex-shrink-0 rounded p-0.5 text-slate-400 hover:text-teal-600 dark:text-slate-500 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                className="flex-shrink-0 rounded p-0.5 text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
                 aria-label={`Voir le visuel — ${label}`}
                 title="Voir le visuel"
             >

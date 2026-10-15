@@ -227,13 +227,13 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const getTabButtonStyle = (catKey: AuditCategory | 'ALL') => {
         if (activeFilter !== catKey) return {};
         const color = getCategoryHoverColor(catKey);
-        return { borderColor: color, color: color };
+        return { borderColor: color };
     };
     
     const getTabButtonClass = (catKey: AuditCategory | 'ALL') => {
         const baseClasses = 'whitespace-nowrap border-b-2 py-4 px-1 text-sm transition-colors duration-75 flex items-center gap-2 tracking-wide rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900';
-        if (activeFilter === catKey) return `${baseClasses} font-medium`;
-        return `${baseClasses} border-transparent text-slate-500 dark:text-slate-400 hover:text-[var(--hover-color)] hover:border-[var(--hover-color)] font-normal`;
+        if (activeFilter === catKey) return `${baseClasses} font-medium text-slate-900 dark:text-slate-100`;
+        return `${baseClasses} border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:border-[var(--hover-color)] font-normal`;
     };
 
     const handleConfirmReset = () => {
@@ -344,7 +344,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                         </div>
                                         <ProgressBadge progress={getCategoryProgress(lieux, 'ALL', activeAuditFilters)} isActive={activeFilter === 'ALL'} />
                                     </div>
-                                    {activeFilter === 'ALL' && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-600 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
+                                    {activeFilter === 'ALL' && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-700 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
                                 </li>
                                 {AUDIT_CATEGORIES.map(cat => (
                                     <li key={cat.key} className="text-gray-900 dark:text-slate-100 relative cursor-pointer select-none py-2 pl-3 pr-9 hover:bg-teal-50 dark:hover:bg-slate-700" onClick={() => { onFilterChange(cat.key); setIsMobileMenuOpen(false); }}>
@@ -355,7 +355,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                                             </div>
                                             <ProgressBadge progress={getCategoryProgress(lieux, cat.key, activeAuditFilters)} isActive={activeFilter === cat.key} />
                                         </div>
-                                        {activeFilter === cat.key && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-600 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
+                                        {activeFilter === cat.key && <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-teal-700 dark:text-teal-400"><Check className="h-5 w-5" aria-hidden="true" /></span>}
                                     </li>
                                 ))}
                             </ul>
@@ -373,7 +373,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                     <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-4">
                         <Search className="h-5 w-5 text-gray-400 dark:text-slate-400" aria-hidden="true" />
                     </div>
-                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base" autoComplete="off" />
+                    <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onFocus={() => setIsDropdownOpen(true)} placeholder={placeholderText} className="block w-full rounded-lg border-0 bg-white dark:bg-slate-700 py-3 pl-12 pr-4 text-gray-900 dark:text-slate-50 shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-base" autoComplete="off" />
                     {isDropdownOpen && (
                         <ul className="absolute z-10 mt-1 max-h-80 w-full overflow-auto rounded-md bg-white dark:bg-slate-800 py-1 text-base shadow-lg border border-gray-200 dark:border-slate-600 focus:outline-none sm:text-sm">
                             {(!searchResults?.inCategory || searchResults.inCategory.length === 0) && (!searchResults?.others || searchResults.others.length === 0) && searchQuery.trim() && (
@@ -459,7 +459,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 icon={resetModalProps.icon} 
                 isDestructive 
             />
-            <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr ? Toutes les données actuelles seront remplacées par les données importées." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-500 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
+            <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr ? Toutes les données actuelles seront remplacées par les données importées." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-800 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
         </div>
     );
 };

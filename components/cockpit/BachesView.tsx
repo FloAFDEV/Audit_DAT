@@ -28,13 +28,13 @@ const BachesView: React.FC = () => {
                         placeholder="Filtrer par station (nom ou trigramme)…"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm dark:placeholder:text-slate-400"
                     />
                 </div>
                 <button
                     onClick={() => downloadFile(buildBachesCsv(visibleRows), 'baches-stations.csv', 'text/csv;charset=utf-8')}
                     disabled={visibleRows.length === 0}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-full text-sm font-semibold bg-teal-700 text-white hover:bg-teal-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     <Download className="w-4 h-4" /> Exporter CSV
                 </button>
@@ -88,7 +88,7 @@ const BachesView: React.FC = () => {
                                                 <td className="p-3 text-slate-600 dark:text-slate-300">{b.direction ?? '—'}</td>
                                                 <td className="p-3 text-slate-600 dark:text-slate-300">{BACHE_TYPE_LABELS[b.type]}</td>
                                                 {b.pending ? (
-                                                    <td className="p-3 text-center tabular-nums text-amber-600 dark:text-amber-400" title="Quantité à relever">
+                                                    <td className="p-3 text-center tabular-nums text-amber-700 dark:text-amber-400" title="Quantité à relever">
                                                         0 <span className="text-[10px] font-semibold uppercase">à relever</span>
                                                     </td>
                                                 ) : (
@@ -106,7 +106,7 @@ const BachesView: React.FC = () => {
             {filtering && visibleRows.length === 0 && (
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucune station ne correspond à « {query} ».</p>
             )}
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
                 Recensement des supports physiques — hors audit.
             </p>
         </div>

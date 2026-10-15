@@ -80,7 +80,7 @@ const ActionCard: React.FC<{ action: MaintenanceAction; onOpenReference: (id: st
             </div>
             <div className="flex-shrink-0 text-right">
                 <div className="text-2xl font-extrabold text-slate-800 dark:text-slate-100">{action.items.length}</div>
-                <div className="text-[10px] font-semibold uppercase text-slate-400 dark:text-slate-500">unité{action.items.length > 1 ? 's' : ''}</div>
+                <div className="text-[10px] font-semibold uppercase text-slate-500 dark:text-slate-400">unité{action.items.length > 1 ? 's' : ''}</div>
             </div>
         </div>
 
@@ -166,7 +166,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     ), [signaletiqueStationIndex]);
 
     if (isLoading) {
-        return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement…</div>;
+        return <div className="py-16 text-center text-slate-500 dark:text-slate-400">Chargement…</div>;
     }
 
     return (
@@ -189,7 +189,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                                         onClick={() => setMode(key)}
                                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                                             mode === key
-                                                ? 'bg-teal-600 text-white'
+                                                ? 'bg-teal-700 text-white'
                                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                                         }`}
                                     >
@@ -231,7 +231,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                             );
                         })}
 
-                        <p className="text-xs text-slate-400 dark:text-slate-500">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
                             Priorisation par facteurs transparents (gravité, ampleur) — aucun score agrégé tant que les pondérations métier
                             ne sont pas validées. Source : moteur d'index du patrimoine.
                         </p>

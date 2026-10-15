@@ -125,7 +125,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                                     disabled={!!removalBlocker}
                                     title={removalBlocker ?? `Retirer ${equipment.name}`}
                                     aria-label={removalBlocker ?? `Retirer la caisse ${equipment.name}`}
-                                    className="absolute top-4 right-10 p-2 rounded-md text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed dark:hover:bg-red-900/20 transition-colors"
+                                    className="absolute top-4 right-10 p-2 rounded-md text-slate-500 hover:text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:hover:text-slate-400 disabled:hover:bg-transparent disabled:cursor-not-allowed dark:hover:bg-red-900/20 transition-colors dark:text-slate-400"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
@@ -159,7 +159,7 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                 title="Ajouter une caisse automatique"
                 message={`Ajouter une caisse automatique à ${prData.name} — ${zone?.name} ?\n\nElle sera à auditer, et son plan de quartier (repère 12) sera créé dans les Plans de quartier.`}
                 confirmLabel="Ajouter"
-                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
+                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 sm:ml-3 sm:w-auto"
             />
             <ConfirmationModal
                 isOpen={!!toRemove}

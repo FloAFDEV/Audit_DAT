@@ -50,7 +50,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
-                            <button onClick={() => onNavigate('lieu')} disabled={!module} className={`ms-1 text-sm font-medium ${module ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}>
+                            <button onClick={() => onNavigate('lieu')} disabled={!module} className={`ms-1 text-sm font-medium ${module ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {lieu.name}
                             </button>
                         </div>
@@ -64,7 +64,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                             <button 
                                 onClick={() => onNavigate('module')} 
                                 disabled={module.type === AuditModuleType.DAT ? !station : !prZone && !equipment && !eca} 
-                                className={`ms-1 text-sm font-medium ${station || prZone || equipment || eca ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}
+                                className={`ms-1 text-sm font-medium ${station || prZone || equipment || eca ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-400'}`}
                             >
                                 {module.name}
                             </button>
@@ -77,7 +77,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
-                            <button onClick={() => onNavigate('station')} disabled={!direction} className={`ms-1 text-sm font-medium ${direction ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}>
+                            <button onClick={() => onNavigate('station')} disabled={!direction} className={`ms-1 text-sm font-medium ${direction ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {station.name}
                             </button>
                         </div>
@@ -87,7 +87,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
-                            <button onClick={() => onNavigate('direction')} disabled={!dat && module?.type !== AuditModuleType.SIGNALETIQUE && !!module} className={`ms-1 text-sm font-medium ${(dat || module?.type === AuditModuleType.SIGNALETIQUE || !module) ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}>
+                            <button onClick={() => onNavigate('direction')} disabled={!dat && module?.type !== AuditModuleType.SIGNALETIQUE && !!module} className={`ms-1 text-sm font-medium ${(dat || module?.type === AuditModuleType.SIGNALETIQUE || !module) ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {direction.name}
                             </button>
                         </div>
@@ -107,7 +107,7 @@ export const Breadcrumbs: React.FC<BreadcrumbsProps> = (props) => {
                     <li>
                         <div className="flex items-center">
                             <ChevronRight className="rtl:rotate-180 w-3 h-3 text-gray-400 mx-1" />
-                            <button onClick={() => onNavigate('module')} disabled={!equipment} className={`ms-1 text-sm font-medium ${equipment ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-500'}`}>
+                            <button onClick={() => onNavigate('module')} disabled={!equipment} className={`ms-1 text-sm font-medium ${equipment ? 'text-gray-700 hover:text-blue-600 dark:text-gray-400 dark:hover:text-white' : 'text-gray-500 dark:text-gray-400'}`}>
                                 {prZone.name}
                             </button>
                         </div>

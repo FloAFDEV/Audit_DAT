@@ -31,7 +31,7 @@ const InitErrorScreen: React.FC<{ message: string }> = ({ message }) => (
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">{message}</p>
       <button
         onClick={() => window.location.reload()}
-        className="inline-flex items-center gap-2 rounded-md bg-teal-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+        className="inline-flex items-center gap-2 rounded-md bg-teal-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
       >
         Réessayer
       </button>
@@ -58,7 +58,7 @@ const SuccessAnimation: React.FC = () => (
 
             {/* Animated filling circle. */}
             <circle
-                className="text-teal-500"
+                className="text-teal-700 dark:text-teal-500"
                 cx="60"
                 cy="60"
                 r="54"
@@ -257,14 +257,14 @@ const App: React.FC = () => {
           AuditRef &copy; {new Date().getFullYear()} - Tous droits réservés |{" "}
           <a
             href="mailto:florent.perez@tisseo.fr"
-            className="text-teal-500 hover:underline font-normal"
+            className="text-teal-700 hover:underline font-normal dark:text-teal-500"
           >
             Contact
           </a>{" "}
           | 72 76 |{" "}
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="text-teal-500 hover:underline font-normal uppercase tracking-wider"
+            className="text-teal-700 hover:underline font-normal uppercase tracking-wider dark:text-teal-500"
           >
             À propos
           </button>
@@ -282,7 +282,7 @@ const App: React.FC = () => {
                         <LogOut className="h-5 w-5 text-teal-600 dark:text-teal-400" aria-hidden="true" />
                     </div>
                 }
-                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-700 sm:ml-3 sm:w-auto"
+                confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 sm:ml-3 sm:w-auto"
                 confirmLabel="Se déconnecter"
             />
             {modalState.reminderOptions && modalState.pendingExport && (

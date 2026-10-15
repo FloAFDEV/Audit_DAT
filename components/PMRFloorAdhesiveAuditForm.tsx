@@ -157,7 +157,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                     <div className="flex-1 min-w-0">
                         <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
                         {adhesive.name}
-                        <span className="text-base font-normal text-gray-400 dark:text-slate-500 ml-2">
+                        <span className="text-base font-normal text-gray-500 dark:text-slate-400 ml-2">
                             // <span className="font-bold text-gray-600 dark:text-slate-400">920x370mm</span>
                         </span>
                         </h3>
@@ -172,7 +172,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.OK
-                            ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
+                            ? 'bg-teal-700 text-white shadow-sm dark:bg-teal-700'
                             : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                         }`}
                         >
@@ -183,7 +183,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.ToBeReplaced
-                            ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
+                            ? 'bg-red-600 text-white shadow-sm dark:bg-red-600'
                             : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                         }`}
                         >
@@ -194,7 +194,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                             onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.ToPlan ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToPlan)}
                             className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.ToPlan
-                                ? 'bg-sky-600 text-white shadow-sm dark:bg-sky-500'
+                                ? 'bg-sky-700 text-white shadow-sm dark:bg-sky-700'
                                 : 'bg-white text-sky-700 ring-1 ring-inset ring-sky-600 hover:bg-sky-50 dark:bg-slate-700/50 dark:text-sky-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                             }`}
                         >
@@ -211,7 +211,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                                 className={`flex items-center justify-center text-sm font-medium transition-all duration-75 active:scale-95 ${
                                     adhesive.photo_base64
                                     ? 'p-2 rounded-full bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
-                                    : 'px-3 py-1.5 rounded-md bg-teal-600 text-white shadow-sm hover:bg-teal-500 whitespace-nowrap'
+                                    : 'px-3 py-1.5 rounded-md bg-teal-700 text-white shadow-sm hover:bg-teal-800 whitespace-nowrap'
                                 }`}
                                 title={adhesive.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
                             >
@@ -252,7 +252,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                                     {adhesive.photo_note ? (
                                         <p className="text-sm text-gray-600 dark:text-slate-300 italic p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md whitespace-pre-wrap">{adhesive.photo_note}</p>
                                     ) : (
-                                        <p className="text-sm text-gray-400 dark:text-slate-500 italic">Aucune note pour cette photo.</p>
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 italic">Aucune note pour cette photo.</p>
                                     )}
                                 </div>
                             </div>

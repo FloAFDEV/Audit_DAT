@@ -88,8 +88,8 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                             <div className="flex flex-col items-center justify-center min-w-[90px] bg-slate-50 dark:bg-slate-700/50 border-r border-slate-200 dark:border-slate-700 py-4">
                                 <span className="text-2xl font-bold text-gray-700 dark:text-slate-200 leading-none">{day}</span>
                                 <span className="text-xs font-bold uppercase text-gray-500 dark:text-slate-400 mt-1">{month}</span>
-                                <span className="text-xs text-gray-400 dark:text-slate-500 mt-2">{year}</span>
-                                <span className="text-xs text-gray-400 dark:text-slate-500">{time}</span>
+                                <span className="text-xs text-gray-500 dark:text-slate-400 mt-2">{year}</span>
+                                <span className="text-xs text-gray-500 dark:text-slate-400">{time}</span>
                             </div>
 
                             {/* Centre : Contenu (Cliquable) */}
@@ -98,7 +98,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                                 className="flex-1 flex items-center p-4 text-left outline-none focus:bg-slate-50 dark:focus:bg-slate-700/50"
                             >
                                 <div className="flex-1 min-w-0 pr-4">
-                                    <h4 className="font-bold text-lg text-gray-900 dark:text-slate-100 truncate mb-1 group-hover:text-teal-600 dark:group-hover:text-teal-400 transition-colors">
+                                    <h4 className="font-bold text-lg text-gray-900 dark:text-slate-100 truncate mb-1 group-hover:text-teal-700 dark:group-hover:text-teal-400 transition-colors">
                                         {entry.title}
                                     </h4>
                                     <p className="text-sm text-gray-500 dark:text-slate-400 flex items-center gap-2">
@@ -124,7 +124,7 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                             <div className="flex items-center pr-4 pl-2 border-l border-slate-100 dark:border-slate-700">
                                 <button
                                     onClick={() => setEntryToDelete(entry)}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors"
+                                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors dark:text-gray-400"
                                     title="Supprimer cette entrée"
                                 >
                                     <Trash2 className="w-5 h-5" />
@@ -212,7 +212,7 @@ const EventJournal: React.FC = () => {
                         onClick={() => setFilter(g.key)}
                         className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                             filter === g.key
-                                ? 'bg-teal-600 text-white'
+                                ? 'bg-teal-700 text-white'
                                 : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                         }`}
                     >
@@ -222,7 +222,7 @@ const EventJournal: React.FC = () => {
             </div>
 
             {filtered.length === 0 ? (
-                <p className="text-center py-8 text-sm text-slate-400 dark:text-slate-500">Aucun événement dans cette catégorie.</p>
+                <p className="text-center py-8 text-sm text-slate-500 dark:text-slate-400">Aucun événement dans cette catégorie.</p>
             ) : (
                 <ul className="divide-y divide-slate-100 dark:divide-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden bg-white dark:bg-slate-800">
                     {filtered.map(event => {
@@ -233,13 +233,13 @@ const EventJournal: React.FC = () => {
                                 <div className={`flex-shrink-0 mt-0.5 h-7 w-7 rounded-full flex items-center justify-center ${
                                     isError
                                         ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                                        : 'bg-teal-50 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400'
+                                        : 'bg-teal-50 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
                                 }`}>
                                     <Icon className="w-3.5 h-3.5" />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="text-sm text-slate-800 dark:text-slate-100 leading-snug">{event.summary}</p>
-                                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{formatEventDate(event.date)}</p>
+                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{formatEventDate(event.date)}</p>
                                 </div>
                             </li>
                         );

@@ -111,7 +111,7 @@ const StatsPage: React.FC<StatsPageProps> = ({ lieux, onBack }) => {
                     onClick={() => setActiveSection(key)}
                     className={`${
                         activeSection === key
-                            ? 'border-teal-500 text-teal-600 dark:text-teal-400'
+                            ? 'border-teal-500 text-teal-700 dark:text-teal-400'
                             : 'border-transparent text-slate-500 dark:text-slate-400 hover:text-teal-600/70 hover:border-teal-500/30 dark:hover:text-teal-400/70 dark:hover:border-teal-400/30'
                     } whitespace-nowrap border-b-2 py-4 px-1 text-sm font-medium flex items-center gap-2 transition-colors rounded-t-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-900`}
                 >

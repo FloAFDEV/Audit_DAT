@@ -78,7 +78,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
 
                         {/* Reminder Section */}
                         <div className="mt-5 pt-5 border-t border-dashed border-gray-200 dark:border-slate-700">
-                            <h4 className="text-center text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                            <h4 className="text-center text-xs font-bold uppercase tracking-wider text-teal-700 dark:text-teal-400">
                                 Option : Créer un rappel de suivi
                             </h4>
                             <p className="mt-2 text-sm text-gray-600 dark:text-slate-300 text-left">
@@ -94,7 +94,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                                     id="reminder-date"
                                     value={dateString}
                                     onChange={(e) => setDateString(e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 sm:text-sm sm:leading-6"
+                                    className="mt-1 block w-full rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 sm:text-sm sm:leading-6"
                                 />
                             </div>
                         </div>
@@ -104,7 +104,7 @@ const ReminderModal: React.FC<ReminderModalProps> = ({ isOpen, onClose, onConfir
                     <button
                         type="button"
                         onClick={handleConfirm}
-                        className="inline-flex w-full justify-center rounded-md bg-teal-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 sm:ml-3 sm:w-auto"
+                        className="inline-flex w-full justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 sm:ml-3 sm:w-auto"
                     >
                         Exporter avec rappel
                     </button>

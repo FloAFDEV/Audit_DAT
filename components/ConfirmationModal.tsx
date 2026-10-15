@@ -179,7 +179,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                                 value={userInput}
                                 onChange={(e) => setUserInput(e.target.value.trim())}
                                 onKeyDown={handleKeyDown}
-                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 leading-6"
+                                className="block w-full text-center text-lg font-mono rounded-md border-0 bg-white dark:bg-slate-900 px-3 py-2 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 placeholder:text-gray-500 dark:placeholder-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 dark:focus:ring-teal-500 leading-6 dark:placeholder:text-gray-400"
                                 placeholder="****"
                                 maxLength={4}
                                 autoComplete="off"
@@ -196,7 +196,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 type="button"
                 onClick={onConfirm}
                 disabled={!isConfirmationMatch}
-                className={confirmButtonClass || "inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"}
+                className={confirmButtonClass || "inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"}
             >
                 {confirmLabel}
             </button>

@@ -91,7 +91,7 @@ const AccessPointItem: React.FC<{
                         onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.OK
-                                ? 'bg-teal-600 text-white shadow-sm dark:bg-teal-500'
+                                ? 'bg-teal-700 text-white shadow-sm dark:bg-teal-700'
                                 : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                         }`}
                     >
@@ -102,7 +102,7 @@ const AccessPointItem: React.FC<{
                         onClick={() => onStatusChange(pictogram.id, currentStatus === FloorAdhesiveStatus.ToBeReplaced ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToBeReplaced)}
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
                             currentStatus === FloorAdhesiveStatus.ToBeReplaced
-                                ? 'bg-red-600 text-white shadow-sm dark:bg-red-500'
+                                ? 'bg-red-600 text-white shadow-sm dark:bg-red-600'
                                 : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                         }`}
                     >
@@ -159,7 +159,7 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                 <div className="p-6 border-t border-gray-200 dark:border-slate-700">
                     <button
                         onClick={onAddAccessPoint}
-                        className="w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
+                        className="w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-800"
                     >
                         <PlusCircle className="-ml-0.5 h-5 w-5" />
                         Ajouter un accès

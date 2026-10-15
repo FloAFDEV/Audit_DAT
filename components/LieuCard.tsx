@@ -76,7 +76,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     <span className={`text-xs font-medium ${isInProgress ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
                         {isInProgress ? 'En cours' : 'Progression'}
                     </span>
-                    <span className={`text-sm ${isInProgress ? 'font-semibold text-amber-600 dark:text-amber-400' : 'font-normal text-slate-700 dark:text-slate-300'}`}>
+                    <span className={`text-sm ${isInProgress ? 'font-semibold text-amber-700 dark:text-amber-400' : 'font-normal text-slate-700 dark:text-slate-300'}`}>
                         {Math.round(progress)}%
                     </span>
                 </div>

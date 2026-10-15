@@ -18,14 +18,14 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({ progress, isActive
 
     if (isActive) {
         if (isComplete) {
-            backgroundClass = 'bg-teal-600';
+            backgroundClass = 'bg-teal-700';
             textColorClass = 'text-white';
         } else {
             backgroundClass = 'bg-sky-100 dark:bg-sky-900/50';
             if (roundedProgress === 0) {
-                textColorClass = 'text-slate-500 dark:text-slate-400';
+                textColorClass = 'text-slate-600 dark:text-slate-300';
             } else {
-                textColorClass = 'text-amber-600 dark:text-amber-400';
+                textColorClass = 'text-amber-800 dark:text-amber-400';
             }
         }
     } else { // inactive
@@ -35,9 +35,9 @@ export const ProgressBadge: React.FC<ProgressBadgeProps> = ({ progress, isActive
         } else {
             backgroundClass = 'bg-slate-200 dark:bg-slate-700';
             if (roundedProgress === 0) {
-                textColorClass = 'text-slate-500 dark:text-slate-400';
+                textColorClass = 'text-slate-600 dark:text-slate-300';
             } else {
-                textColorClass = 'text-amber-600 dark:text-amber-400';
+                textColorClass = 'text-amber-800 dark:text-amber-400';
             }
         }
     }
