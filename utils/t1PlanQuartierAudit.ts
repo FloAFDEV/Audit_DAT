@@ -15,7 +15,7 @@ import { dirKeyOf } from './signaletiqueDirections';
 import { isDefect } from './cockpit/signaletiqueStationIndex';
 
 /** Dimension du référentiel T1 (affichage de l'audit, données inchangées). */
-export const T1_PLAN_QUARTIER_DIMENSIONS = '78 × 100 cm';
+export const T1_PLAN_QUARTIER_DIMENSIONS = '80 × 100 cm';
 export const T1_PLANS_PER_STATION = 2;
 
 export interface T1PlanQuartierOccurrence {

@@ -87,12 +87,12 @@ const stripDirectionPrefix = (name: string) => name.replace(/^Direction\s+/i, ''
 
 const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 
-// Le Plan de Quartier mesure réellement 83 x 100 cm sur le réseau Tram et
-// 78 x 100 cm sur l'Aéroport Express (valeur conservée telle quelle dans le
-// référentiel et les exports/bon de commande — item.dimensions n'est jamais
-// modifié, voir data/signaletique_config.ts). Sur le terrain, l'équipe
-// parle par convention de « 80 » quelle que soit la ligne — cet écart
-// d'affichage est local au relevé d'audit uniquement.
+// Le Plan de Quartier mesure 80 x 100 cm sur le Tram T1 et 78 x 100 cm sur
+// l'Aéroport Express (cote encore à confirmer) — valeur conservée telle
+// quelle dans le référentiel et les exports/bon de commande, item.dimensions
+// n'est jamais modifié ici (voir data/signaletique_config.ts). Le relevé
+// d'audit affiche « 80 » quelle que soit la ligne : exact pour le T1, simple
+// convention d'affichage pour l'Aéroport Express en attendant l'arbitrage.
 const PLAN_QUARTIER_DISPLAY_DIMENSIONS = '80 x 100 cm';
 
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
