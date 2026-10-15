@@ -355,7 +355,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "83 x 100 cm",
+    "dimensions": "80 x 100 cm",
     "id": "sign-plan-quartier-tram",
     "material": "Vinyle",
     "name": "Plan de quartier (Tram)",

@@ -552,6 +552,42 @@ export const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
     return changed;
 };
 
+/** Ancienne cote des plans de quartier T1, remplacée par la cote validée. */
+const T1_PLAN_QUARTIER_LEGACY_DIMENSIONS = '83 x 100 cm';
+const T1_PLAN_QUARTIER_DIMENSIONS_VALUE = '80 x 100 cm';
+
+/**
+ * Plans de quartier T1 créés avec l'ancienne cote (83 x 100 cm) → cote
+ * validée 80 x 100 cm. Périmètre strict : modules Équipements Station de la
+ * ligne TRAM, emplacements planQuartier dont la cote vaut EXACTEMENT
+ * l'ancienne valeur. Seul le champ `dimensions` est réécrit, en place :
+ * statut, commentaire, photo, bandeau, fiche horaire, ordre des
+ * emplacements restent intacts ; rien n'est supprimé ni recréé. Aéroport
+ * Express, Métro et toute autre cote : jamais touchés. Idempotente.
+ * Mute `lieux` en place ; retourne true si une cote a été corrigée.
+ */
+export const migrateT1PlanQuartierDimensions = (lieux: Lieu[]): boolean => {
+    let changed = false;
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.SIGNALETIQUE || module.line !== 'TRAM') continue;
+            for (const station of (module.data as ModeData).stations ?? []) {
+                const planQuartier = station.signaletique?.planQuartier;
+                if (!planQuartier) continue;
+                for (const dir of ['meett', 'pdj'] as const) {
+                    for (const item of planQuartier[dir] ?? []) {
+                        if (item.dimensions === T1_PLAN_QUARTIER_LEGACY_DIMENSIONS) {
+                            item.dimensions = T1_PLAN_QUARTIER_DIMENSIONS_VALUE;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return changed;
+};
+
 // --- Caisses automatiques P+R : nombre théorique modifiable ---------------
 // Le nombre de caisses d'une zone EST la liste de ses équipements CA (la
 // structure du P+R) : ajouter ou retirer une caisse modifie cette liste, rien
@@ -994,6 +1030,10 @@ const useAuditStore = create<AppState>((set, get) => {
                         }
                     });
                 });
+
+                // Plans de quartier T1 : ancienne cote 83 x 100 → 80 x 100 (après
+                // l'initialisation Équipements Station ci-dessus).
+                if (migrateT1PlanQuartierDimensions(data)) dataChanged = true;
 
                 // Stations renommées (ex. Parc Technologique du Canal → Parc du Canal) —
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
@@ -2240,7 +2280,10 @@ const useAuditStore = create<AppState>((set, get) => {
             // payload.lieux tel quel, cette étape ne fait qu'y ajouter ce qui
             // manquait, jamais une régénération complète.
             const pdqReconciled = await reconcilePlanQuartier(payload.lieux);
-            if (pdqReconciled.changed) await db.lieux.bulkPut(pdqReconciled.lieux);
+            // Un ancien export peut porter la cote T1 83 x 100 : corrigée dès
+            // l'import plutôt qu'au prochain démarrage.
+            const t1DimensionsMigrated = migrateT1PlanQuartierDimensions(pdqReconciled.lieux);
+            if (pdqReconciled.changed || t1DimensionsMigrated) await db.lieux.bulkPut(pdqReconciled.lieux);
 
             set({
                 lieux: pdqReconciled.lieux,

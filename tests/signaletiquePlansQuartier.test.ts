@@ -21,7 +21,7 @@ describe('plans de quartier Équipements Station — lecture seule', () => {
         expect(plans).toHaveLength(52);
         expect(plans.every(p => p.line === 'TRAM')).toBe(true);
         expect(plans.some(p => p.lieuName === 'Blagnac')).toBe(false);
-        expect(plans.every(p => p.dimensions === '83 x 100 cm')).toBe(true);
+        expect(plans.every(p => p.dimensions === '80 x 100 cm')).toBe(true);
     });
 
     it('un exemplaire par plan et par direction (Palais de Justice : 2, MEETT : 4)', async () => {

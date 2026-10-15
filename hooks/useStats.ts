@@ -377,7 +377,7 @@ export const computeAdhesiveInventory = (
             inventoryMap.set(T1_PLAN_QUARTIER_ROW_ID, {
                 id: T1_PLAN_QUARTIER_ROW_ID, auditType: t1PlanFamily,
                 repere: '-', name: 'Plan de quartier (Tram)',
-                dimensions: '83 x 100 cm', material: 'Vinyle', quantity: 0,
+                dimensions: '80 x 100 cm', material: 'Vinyle', quantity: 0,
             });
             signItems.forEach(item => {
                 if (!inventoryMap.has(item.id)) {
