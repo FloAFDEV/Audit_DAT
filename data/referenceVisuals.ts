@@ -26,10 +26,13 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     'adbs4': 'adbs4',                     // cible de sortie (cartes, ticket ou smartphone)
     'adbs5': 'adbs5',                     // bulle de sortie (carte bancaire)
     'adbe3': 'adbe3', 'adbs3': 'adbe3',   // « Tarifs + coordonnées » 34x8, même visuel
+    'adca6': 'adbs4',                     // caisse : même cible « cartes, ticket ou smartphone »
+    'adca7': 'adbe2',                     // caisse : même visuel ticket P+R
+    'adca8': 'adbs5',                     // caisse : même bulle carte bancaire que la borne de sortie
     'adca9': 'adbe3',                     // même adhésif « Tarifs + coordonnées Parc Relais » sur la caisse automatique
     'adbe10': 'adbe10', 'adbs11': 'adbs11',
     // Plans de repérage par type d'équipement (pas des références catalogue)
-    'plan-pr-BE': 'plan-pr-be', 'plan-pr-BS': 'plan-pr-bs',
+    'plan-pr-BE': 'plan-pr-be', 'plan-pr-BS': 'plan-pr-bs', 'plan-pr-CA': 'plan-pr-ca',
     // Platines jaunes PMR à bras (eca-4) / à vantaux (eca-5)
     'eca-4': 'eca-4', 'eca-5': 'eca-5',
     'eca-6': 'eca-6', 'eca-7': 'eca-7',

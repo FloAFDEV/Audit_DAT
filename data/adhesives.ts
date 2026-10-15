@@ -78,7 +78,11 @@ export const PR_ADHESIVES_BS: PrAdhesive[] = [
 export const PR_ADHESIVES_CA: PrAdhesive[] = [
     { id: 'adca6', name: 'Repère 6 - Information caisse', description: 'Adhésif « caisse-P+r-gauche-rustine _ 2025-02-05 » // 10,5x12,9cm', location: 'Sous l’écran de la caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca6.pdf' },
     { id: 'adca7', name: 'Repère 7 - Récupération ticket', description: 'Adhésif « caisse-P+r-gauche-rustine-ticket-P+r_ 2025-02-14 » // 8,2x5,5cm', location: 'En bas à droite au niveau du distributeur de ticket suite à un paiement via caisse auto', referentiel: '//serveur/docs/PNR/CA/ref-adca7.pdf' },
-    { id: 'adca8', name: 'Repère 8 - Ticket rechargeable', description: 'Fiche « adhesif-ticket-rechargeable-p+r-caisse_120x80mm_2025-02-07 » // 14,9x10,9cm', location: 'En bas a gauche à l’opposé du n°7', referentiel: '//serveur/docs/PNR/CA/ref-adca8.pdf', isDisabled: true },
+    // Repère 8 : la fiche « Ticket rechargeable » a été remplacée sur le
+    // terrain par la bulle carte bancaire (même visuel que la bulle de la
+    // borne de sortie, adbs5). Mise à jour des référentiels déjà installés :
+    // db.ts, V24.
+    { id: 'adca8', name: 'Repère 8 - Adhésif caisse "Bulle"', description: 'Adhésif "Bulle" (sortie gratuite avec la carte bancaire) // 99x115mm', location: 'En bas à gauche de la caisse auto, à l’opposé du n°7', referentiel: '//serveur/docs/PNR/CA/ref-adca8.pdf' },
     { id: 'adca9', name: 'Repère 9 - Adhésif « Tarifs + coordonnées Parc Relais »', description: 'Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée // 34x8cm', location: 'En haut de la caisse auto, au dessus de l’écran principal', referentiel: '//serveur/docs/PNR/CA/ref-adca9.pdf' },
     // Suspendu ici depuis que les plans de quartier ont UN SEUL patrimoine :
     // l'exemplaire posé sur cette caisse est désormais une occurrence de

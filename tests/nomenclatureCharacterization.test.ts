@@ -152,12 +152,14 @@ describe('Nomenclature — NotApplicable exclu, désactivation conservée, migra
         const inventory = computeAdhesiveInventory(lieux, references);
         const index = buildPatrimoineIndex(lieux, references);
 
-        expect(references.find(r => r.id === 'adca8')?.isDisabled).toBe(true);
         expect(references.find(r => r.id === 'eca-r-1')?.isDisabled).toBe(true);
-        expect(qty(inventory, 'adca8')).toBe(1);
         expect(qty(inventory, 'eca-r-1')).toBe(1);
-        expect(index.byReference.has('adca8')).toBe(false);
         expect(index.byReference.has('eca-r-1')).toBe(false);
+        // adca8 : réactivée (bulle carte bancaire, mise à jour terrain) —
+        // comptée dans l'inventaire ET dans l'index.
+        expect(references.find(r => r.id === 'adca8')?.isDisabled).toBeUndefined();
+        expect(qty(inventory, 'adca8')).toBe(1);
+        expect(index.byReference.has('adca8')).toBe(true);
     });
 
     it('référence migrée : adca12 reste à 0 (comptée côté Plans de quartier)', () => {

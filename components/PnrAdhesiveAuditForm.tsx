@@ -56,7 +56,7 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
     >
       {getReferenceVisualUrl(`plan-pr-${equipment.type}`) && (
         <div className="px-6 py-3 border-b border-gray-200 dark:border-slate-700">
-          <ReferenceVisual variant="plan" referenceId={`plan-pr-${equipment.type}`} label={`Plan de repérage — ${equipment.type === EquipmentType.BE ? "borne d'entrée" : 'borne de sortie'} P+R`} />
+          <ReferenceVisual variant="plan" referenceId={`plan-pr-${equipment.type}`} label={`Plan de repérage — ${equipment.type === EquipmentType.BE ? "borne d'entrée" : equipment.type === EquipmentType.CA ? 'caisse automatique' : 'borne de sortie'} P+R`} />
         </div>
       )}
       <ul className="divide-y divide-gray-200 dark:divide-slate-700">

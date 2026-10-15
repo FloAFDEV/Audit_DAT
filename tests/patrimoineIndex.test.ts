@@ -132,9 +132,10 @@ describe('resolveReferencesForEquipment (R10)', () => {
         expect(ids).toContain('eca-5');
     });
 
-    it('isDisabled (adca8) exclu du scope CA', () => {
+    it('isDisabled (adca12) exclu du scope CA ; adca8 (bulle) réactivée', () => {
         const ids = resolveReferencesForEquipment(REFERENCES, 'PR', EquipmentType.CA).map(r => r.id);
-        expect(ids).not.toContain('adca8');
+        expect(ids).not.toContain('adca12');
+        expect(ids).toContain('adca8');
         expect(ids).toContain('adca9');
     });
 });
@@ -156,10 +157,10 @@ describe('buildPatrimoineIndex', () => {
     it('P+R : surcharge locale respectée + isDisabled exclu', () => {
         const index = buildPatrimoineIndex([prLieu()], REFERENCES);
 
-        // BE01 : 4 références BE ; BE11 : 1 seule (surcharge) ; CA01 : 4
-        // (6 refs CA moins adca8 et adca12, toutes deux désactivées — adca12
-        // parce que le plan de quartier de la caisse appartient désormais au
-        // patrimoine Plans de quartier, cf. store.ts).
+        // BE01 : 4 références BE ; BE11 : 1 seule (surcharge) ; CA01 : 5
+        // (6 refs CA moins adca12, désactivée parce que le plan de quartier
+        // de la caisse appartient désormais au patrimoine Plans de quartier,
+        // cf. store.ts ; adca8, la bulle, est réactivée).
         const be01 = index.implantations.filter(i => i.equipmentLabel === 'BE01');
         const be11 = index.implantations.filter(i => i.equipmentLabel === 'BE11');
         const ca01 = index.implantations.filter(i => i.equipmentLabel === 'CA01');
@@ -167,8 +168,8 @@ describe('buildPatrimoineIndex', () => {
         expect(be11).toHaveLength(1);
         expect(be11[0].referenceId).toBe('adbe3');
         expect(be11[0].status).toBe(AdhesiveStatus.ToBeReplaced);
-        expect(ca01).toHaveLength(4);
-        expect(ca01.map(i => i.referenceId)).not.toContain('adca8');
+        expect(ca01).toHaveLength(5);
+        expect(ca01.map(i => i.referenceId)).toContain('adca8');
         expect(ca01.map(i => i.referenceId)).not.toContain('adca12');
         // Le dos gris, lui, reste suivi sur la caisse : c'est une pièce de la
         // borne, comptée pour elle-même, jamais un plan de quartier.
@@ -315,7 +316,7 @@ describe('buildPatrimoineIndex', () => {
 
         expect(index.byLine.get('A')?.installed).toBe(10); // DAT métro : sans ad10 / ad11
         expect(index.byLine.get('A')?.defects).toBe(1);
-        expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 4); // BE01 + BE11 + CA01
+        expect(index.byLine.get('P+R')?.installed).toBe(4 + 1 + 5); // BE01 + BE11 + CA01
         expect(index.byLine.get('B')?.installed).toBeGreaterThan(0);
         // Cohérence : somme des lignes = total.
         let sum = 0;
