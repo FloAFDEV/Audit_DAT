@@ -235,11 +235,8 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
       <AuditFormLayout
         module={module}
         title="Plans de quartier T1"
-        subtitle={
-          <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Tram T1 — {station.name}</span> &bull; audit dans Équipements Station
-          </p>
-        }
+        station={station.name}
+        context="audit dans Équipements Station"
         progress={progress}
         onBack={onBack}
         onReset={handleReset}

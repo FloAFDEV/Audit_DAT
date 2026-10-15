@@ -127,11 +127,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
       <AuditFormLayout
         module={module}
         title={<FormattedCorrespondence text={module.name} />}
-        subtitle={
-          <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {pmrData.stationName}
-          </p>
-        }
+        station={pmrData.stationName}
         progress={progress}
         onBack={onBack}
         onReset={pmrData.isNotApplicable ? () => {} : onReset}

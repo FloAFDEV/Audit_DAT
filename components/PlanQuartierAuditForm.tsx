@@ -222,11 +222,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
       module={module}
       customIcon={<ModuleIcon type={module.type} className="w-8 h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
       title={module.name}
-      subtitle={
-        <p className="text-gray-600 dark:text-slate-400 text-sm">
-          <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {data.stationName}
-        </p>
-      }
+      station={data.stationName}
       progress={progress}
       onBack={onBack}
       onReset={onReset}

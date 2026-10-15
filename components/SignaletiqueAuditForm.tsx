@@ -558,11 +558,8 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       <AuditFormLayout
         module={module}
         title="Équipements Station"
-        subtitle={
-          <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-medium text-gray-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-medium text-gray-800 dark:text-slate-200">{directionLabel}</span>
-          </p>
-        }
+        station={station.name}
+        context={directionLabel}
         progress={progress}
         onBack={onBack}
         onReset={onReset}

@@ -44,11 +44,8 @@ const PrAdhesiveAuditForm: React.FC<PrAdhesiveAuditFormProps> = ({ module, equip
     <AuditFormLayout
       module={module}
       title={`Audit pour ${equipment.name}`}
-      subtitle={
-        <p className="text-gray-600 dark:text-slate-400 text-sm">
-            {prName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Type :</span> {equipment.type}
-        </p>
-      }
+      station={prName}
+      context={<>Type : {equipment.type}</>}
       progress={progress}
       onBack={onBack}
       onReset={onReset}
