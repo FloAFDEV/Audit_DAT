@@ -17,8 +17,12 @@ const COMPACT_TRIGGER_MARGIN_PX = 140;
 interface AuditFormLayoutProps {
     module: AuditModule;
     title: React.ReactNode;
+    /** Lieu audité (station, P+R) — information principale du header. */
+    station: React.ReactNode;
+    /** Précision affichée après le nom de l'audit (direction, équipement…). */
+    context?: React.ReactNode;
+    /** Visuel de l'objet audité (≈32 px), à côté du nom de l'audit — icône du module par défaut. */
     customIcon?: React.ReactNode;
-    subtitle: React.ReactNode;
     progress: number;
     onBack: () => void;
     onReset: () => void;
@@ -34,8 +38,9 @@ interface AuditFormLayoutProps {
 const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     module,
     title,
+    station,
+    context,
     customIcon,
-    subtitle,
     progress,
     onBack,
     onReset,
@@ -98,6 +103,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     }, []);
 
     const progressBarColor = 'bg-teal-500 dark:bg-teal-600';
+    const visual = customIcon ?? <ModuleIcon type={module.type} className="w-7 h-7 text-gray-700 dark:text-slate-300 flex-shrink-0" />;
 
     return (
         // overflow-clip (pas overflow-hidden) : rogne les coins arrondis exactement
@@ -127,28 +133,24 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
             />
 
             {/* Contexte de l'audit — sticky : reste visible pendant le défilement
-             *  des repères (station/direction/progression/réinitialisation sont
-             *  consultés en continu pendant la saisie terrain). Compact sur
-             *  mobile (une seule ligne, action de reset réduite à son icône)
-             *  pour maximiser la hauteur utile ; identique à l'existant à partir
-             *  de sm: (aucun changement visuel tablette/desktop hors le sticky).
+             *  des repères. Hiérarchie terrain : STATION (information
+             *  principale) > badge ligne + visuel de l'objet audité (repères
+             *  visuels) > nom de l'audit (secondaire) > progression.
+             *  Sur mobile, le header se compacte une fois le seuil de scroll
+             *  franchi (une seule bande : ligne, visuel, station, audit, %).
              *  Le conteneur borne naturellement le sticky à la hauteur de la
              *  carte : il cesse de coller une fois la carte entièrement défilée,
              *  sans JS ni position: fixed. */}
             <div className="sticky top-0 z-10 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700">
-                {/* Variante compacte — mobile uniquement, affichée une fois le
-                 *  seuil de scroll franchi. Ne remplace pas la variante complète
-                 *  dans le DOM : les deux existent, une seule a une hauteur non
-                 *  nulle (transition CSS pure sur grid-template-rows, sans
-                 *  mesure JS ni nouvelle dépendance). L'agent terrain garde
-                 *  Retour, l'identité de l'audit (titre + repère existants,
-                 *  non modifiés), Réinitialiser et la progression en %. */}
+                {/* Variante compacte — mobile uniquement. Les deux variantes
+                 *  existent dans le DOM, une seule a une hauteur non nulle
+                 *  (transition CSS pure sur grid-template-rows). */}
                 <div
                     className="sm:hidden grid overflow-hidden transition-[grid-template-rows] duration-200 ease-in-out"
                     style={{ gridTemplateRows: isCompact ? '1fr' : '0fr' }}
                 >
                     <div className="min-h-0 overflow-hidden">
-                        <div className="flex items-start gap-2 px-3 py-2">
+                        <div className="flex items-center gap-2 px-3 py-2">
                             <button
                                 onClick={onBack}
                                 className="p-1.5 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
@@ -156,28 +158,13 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                             >
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
-                            {customIcon ?? <ModuleIcon type={module.type} className="w-5 h-5 mt-1.5 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
-                            {/* Uniquement le sous-titre ici (pas le titre) : sur les 7
-                             *  formulaires, le titre en compact ("Audit pour DAT 03",
-                             *  "ECA (Valideurs)"...) fait doublon avec l'icône/badge déjà
-                             *  affiché juste à gauche (ex. DatIcon montre déjà "03"), alors
-                             *  que le sous-titre porte l'info qui distingue vraiment deux
-                             *  équipements (station, direction/accès, équipement précis) —
-                             *  notamment la Direction d'un DAT Tram (ex. MEETT vs Palais de
-                             *  Justice, deux jeux d'équipements bien distincts, contre
-                             *  "Salle des billets" en général unique en Métro).
-                             *  line-clamp-2 (pas troncature une ligne) : même après avoir
-                             *  retiré le titre, station + direction combinées dépassent
-                             *  souvent une ligne à 375px (constaté en direct sur le Tram,
-                             *  "Palais de Justice" + "MEETT / Aéroport" coupait quand même
-                             *  la direction) — autoriser 2 lignes garde toute l'info dans
-                             *  l'immense majorité des cas, sans revenir à un header aussi
-                             *  haut que la variante complète. {subtitle} reste le <p> fourni
-                             *  par chacun des 7 formulaires, non modifié. */}
-                            <div className="flex-1 min-w-0 text-sm text-slate-700 dark:text-slate-300 [&>p]:m-0 [&>p]:text-inherit [&>p]:text-sm [&>p]:font-medium [&>p]:line-clamp-2">
-                                {subtitle}
+                            <LineIcon module={module} size="md" />
+                            {visual}
+                            <div className="flex-1 min-w-0 leading-tight">
+                                <p className="text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-2">{station}</p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{title}</p>
                             </div>
-                            <span className="flex-shrink-0 mt-1 text-xs font-normal text-slate-500 dark:text-slate-400">{Math.round(progress)}%</span>
+                            <span className="flex-shrink-0 text-xs font-normal text-slate-500 dark:text-slate-400">{Math.round(progress)}%</span>
                             <button
                                 onClick={() => setShowResetConfirm(true)}
                                 className="flex-shrink-0 p-1.5 rounded-md text-red-600 hover:bg-red-50 transition-colors dark:text-red-400 dark:hover:bg-red-900/20"
@@ -187,42 +174,37 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                 <DatabaseBackup className="w-4 h-4" />
                             </button>
                         </div>
+                        <div className="h-1 bg-gray-200 dark:bg-slate-700">
+                            <div className={`${progressBarColor} h-1 transition-all duration-75`} style={{ width: `${progress}%` }}></div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Variante complète — comportement et rendu strictement
-                 *  identiques à l'existant. sm:!grid-rows-[1fr] force cette
-                 *  variante à occuper toute sa hauteur à partir de sm:, quel
-                 *  que soit isCompact : le desktop n'est jamais affecté. */}
+                {/* Variante complète — toujours affichée à partir de sm:
+                 *  (sm:!grid-rows-[1fr]), quel que soit isCompact. */}
                 <div
                     className="grid overflow-hidden transition-[grid-template-rows] duration-200 ease-in-out sm:!grid-rows-[1fr]"
                     style={{ gridTemplateRows: isCompact ? '0fr' : '1fr' }}
                 >
                     <div className="min-h-0 overflow-hidden">
-                        <div className="p-3 sm:p-6">
-                            <div className="flex items-center sm:items-start justify-between gap-2 sm:gap-4">
-                                <div className="flex items-center sm:items-start gap-2 sm:gap-4 flex-1 min-w-0">
-                                    <button
-                                        onClick={onBack}
-                                        className="p-1.5 sm:p-2 sm:mt-1 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                                        aria-label="Retour"
-                                    >
-                                        <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
-                                    </button>
-                                    <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
-                                        {customIcon ?? <ModuleIcon type={module.type} className="w-6 h-6 sm:w-8 sm:h-8 text-gray-700 dark:text-slate-300 flex-shrink-0" />}
-                                        <div className="flex-1 min-w-0">
-                                            <h2 className="text-base sm:text-2xl font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate sm:overflow-visible sm:whitespace-normal">{title}</h2>
-                                            {/* [&>p]:... : corrige le retour à la ligne du sous-titre sur
-                                             *  mobile (le <p> fourni par chaque formulaire n'a pas de
-                                             *  truncate propre) sans toucher aux 7 formulaires ni à leurs
-                                             *  données — neutralisé à partir de sm: pour ne rien changer
-                                             *  au rendu desktop existant (retour à whitespace-normal). */}
-                                            <div className="flex items-center gap-2 sm:gap-3 mt-0.5 sm:mt-1 min-w-0 [&>p]:min-w-0 [&>p]:truncate sm:[&>p]:overflow-visible sm:[&>p]:whitespace-normal">
-                                                <LineIcon module={module} size="sm" />
-                                                {subtitle}
-                                            </div>
-                                        </div>
+                        <div className="p-3 sm:p-5 lg:p-6">
+                            <div className="flex items-start gap-3 sm:gap-4">
+                                <button
+                                    onClick={onBack}
+                                    className="p-1.5 sm:p-2 -ml-1 mt-0.5 rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors flex-shrink-0 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+                                    aria-label="Retour"
+                                >
+                                    <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
+                                </button>
+                                <div className="mt-0.5 flex-shrink-0"><LineIcon module={module} size="lg" /></div>
+                                <div className="flex-1 min-w-0">
+                                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-100 break-words">{station}</h2>
+                                    <div className="flex items-center gap-2 mt-1.5 sm:mt-2 min-w-0">
+                                        {visual}
+                                        <p className="min-w-0 text-sm sm:text-base font-medium leading-snug text-slate-600 dark:text-slate-300">
+                                            {title}
+                                            {context && <span className="font-normal text-slate-500 dark:text-slate-400"> &bull; {context}</span>}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
@@ -235,7 +217,7 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                     <span className="hidden sm:inline">Réinitialiser</span>
                                 </button>
                             </div>
-                            <div className="mt-2 sm:mt-4 pl-0 sm:pl-[72px]"> {/* Aligned with title content */}
+                            <div className="mt-3 sm:mt-4 sm:pl-[52px]">
                                 <div className="flex justify-between items-center mb-1">
                                     <span className="text-xs sm:text-sm font-normal text-slate-500 dark:text-slate-400">Progression</span>
                                     <span className="text-xs sm:text-sm font-normal text-slate-700 dark:text-slate-300">{Math.round(progress)}%</span>

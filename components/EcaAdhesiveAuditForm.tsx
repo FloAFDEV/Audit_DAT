@@ -155,11 +155,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
       module={module}
       customIcon={formIcon}
       title={<FormattedCorrespondence text={module.name} />}
-      subtitle={
-        <p className="text-gray-600 dark:text-slate-400 text-sm">
-            <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {stationName} &bull; <span className="font-semibold text-gray-800 dark:text-slate-200">Équipement :</span> <FormattedCorrespondence text={eca.name} />
-        </p>
-      }
+      station={stationName}
+      context={<>Équipement : <FormattedCorrespondence text={eca.name} /></>}
       progress={progress}
       onBack={onBack}
       onReset={onReset}

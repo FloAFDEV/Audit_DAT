@@ -146,14 +146,8 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
         <AuditFormLayout
             module={module}
             title={module.name}
-            subtitle={
-                <div className="flex items-center gap-3">
-                    <CognitivePictogramVisual stationCode={cogData.stationCode} stationName={cogData.stationName} />
-                    <p className="text-gray-600 dark:text-slate-400 text-sm">
-                        <span className="font-semibold text-gray-800 dark:text-slate-200">Station :</span> {cogData.stationName}
-                    </p>
-                </div>
-            }
+            station={cogData.stationName}
+            customIcon={<CognitivePictogramVisual stationCode={cogData.stationCode} stationName={cogData.stationName} field />}
             progress={progress}
             onBack={onBack}
             onReset={onReset}

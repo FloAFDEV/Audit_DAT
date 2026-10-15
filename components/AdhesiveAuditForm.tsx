@@ -42,13 +42,10 @@ const AdhesiveAuditForm: React.FC<AdhesiveAuditFormProps> = ({ module, dat, stat
   return (
     <AuditFormLayout
       module={module}
-      customIcon={<DatIcon dat={dat} size="md" />}
+      customIcon={<DatIcon dat={dat} size="sm" />}
       title={`Audit pour ${dat.name}`}
-      subtitle={
-        <p className="text-slate-500 dark:text-slate-400 text-sm font-light">
-          <span className="font-normal text-slate-800 dark:text-slate-200">Station :</span> {station.name} &bull; <span className="font-normal text-slate-800 dark:text-slate-200">Direction :</span> {directionName}
-        </p>
-      }
+      station={station.name}
+      context={<>Direction : {directionName}</>}
       progress={progress}
       onBack={onBack}
       onReset={onReset}
