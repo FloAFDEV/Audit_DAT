@@ -124,7 +124,7 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                                                 <FormattedCorrespondence text={module.name} />
                                             </div>
                                             {module.type === AuditModuleType.DAT || module.type === AuditModuleType.SIGNALETIQUE ? (
-                                                <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                                                <span className="text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                                                     {(module.data as ModeData).stations?.[0]?.code}
                                                 </span>
                                             ) : null}

@@ -13,10 +13,10 @@ export const ColoredProgressBadge: React.FC<ColoredProgressBadgeProps> = ({ prog
         textColorClass = 'text-slate-500 dark:text-slate-400';
     } else if (roundedProgress > 0 && roundedProgress < 100) {
         // Ambre pour 1-99%
-        textColorClass = 'text-amber-600 dark:text-amber-400';
+        textColorClass = 'text-amber-700 dark:text-amber-400';
     } else {
         // Sarcelle (Teal) pour 100%
-        textColorClass = 'text-teal-600 dark:text-teal-400';
+        textColorClass = 'text-teal-700 dark:text-teal-400';
     }
 
     return (

@@ -404,8 +404,8 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             console.error("No station found for Signaletique module:", selectedModule.id);
             return (
                 <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                    <p className="text-red-500 mb-4 font-medium">Erreur : Données de station manquantes pour ce module.</p>
-                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">Retour</button>
+                    <p className="text-red-600 mb-4 font-medium dark:text-red-500">Erreur : Données de station manquantes pour ce module.</p>
+                    <button onClick={() => handlers.selectModule(null)} className="px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors">Retour</button>
                 </div>
             );
         }
@@ -438,8 +438,8 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
     console.error('AppRouter : aucun écran ne correspond à la sélection courante.', { selectedModule, selectedStation, selectedDirection });
     return (
         <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-            <p className="text-red-500 mb-4 font-medium">Cet élément n'est pas reconnu par l'application.</p>
-            <button onClick={() => handlers.selectLieu(null)} className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors">Retour à l'accueil</button>
+            <p className="text-red-600 mb-4 font-medium dark:text-red-500">Cet élément n'est pas reconnu par l'application.</p>
+            <button onClick={() => handlers.selectLieu(null)} className="px-4 py-2 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition-colors">Retour à l'accueil</button>
         </div>
     );
 };

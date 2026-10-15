@@ -55,7 +55,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         <div className="relative" ref={menuRef}>
             <button
                 onClick={toggleMenu}
-                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-teal-600 dark:text-teal-400 ring-1 ring-inset ring-teal-600 dark:ring-teal-400 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900 transition-colors"
+                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 ring-1 ring-inset ring-teal-600 dark:ring-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-700 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900 transition-colors"
                 aria-haspopup="true" aria-expanded={isOpen}
             >
                 <Download className="h-5 w-5" />
@@ -74,7 +74,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                         <div className="py-1" role="none">
                             {isViewFiltered && (
                                 <>
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export Personnalisé</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">📤 Export Personnalisé</p></div>
                                     <button onClick={() => { onExportCurrentView(); handleClose(); }} className="w-full text-left flex items-center justify-between gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <span className="flex-1 min-w-0 truncate">Sélection actuelle (CSV)</span>
                                         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -90,7 +90,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                             )}
                             <div className="sm:grid sm:grid-cols-2 sm:gap-x-2">
                                 <div>
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des données par ligne</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">📤 Export des données par ligne</p></div>
                                     <button onClick={() => { onExportAll(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                         <CategoryIcon size="sm" /><span>Réseau complet (CSV)</span>
                                     </button>
@@ -101,7 +101,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
                                     ))}
                                 </div>
                                 <div className="sm:border-l sm:border-gray-200 sm:dark:border-slate-700 sm:pl-2">
-                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">📤 Export des audits par type</p></div>
+                                    <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">📤 Export des audits par type</p></div>
                                     {AUDIT_MODULES_CONFIG.map(({ type, label, Icon }) => (
                                         <button key={`export-module-${type}`} onClick={() => { onExportByModuleType(type); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                             <div className="flex items-center justify-center w-6 h-6 bg-slate-100 dark:bg-slate-600 rounded-md"><Icon className="w-4 h-4 text-gray-600 dark:text-slate-300" /></div>
@@ -167,7 +167,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
         <div className="relative" ref={menuRef}>
             <button
                 onClick={toggleMenu}
-                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-teal-600 dark:text-teal-400 ring-1 ring-inset ring-teal-600 dark:ring-teal-400 hover:bg-teal-600 hover:text-white dark:hover:bg-teal-500 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900 transition-colors"
+                className="group inline-flex items-center justify-center gap-x-2 rounded-md px-3 py-2 text-sm font-semibold text-teal-700 dark:text-teal-400 ring-1 ring-inset ring-teal-600 dark:ring-teal-400 hover:bg-teal-700 hover:text-white dark:hover:bg-teal-700 dark:hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 dark:focus:ring-offset-slate-900 transition-colors"
                 aria-haspopup="true" aria-expanded={isOpen}
             >
                 <DatabaseBackup className="h-5 w-5" />
@@ -184,7 +184,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                         role="menu" aria-orientation="vertical"
                     >
                         <div className="py-1" role="none">
-                            <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wider">Sauvegarde & Restauration</p></div>
+                            <div className="px-4 py-2 title-animate" style={{ animationDelay: getDelay() }}><p className="text-xs font-semibold text-teal-700 dark:text-teal-400 uppercase tracking-wider">Sauvegarde & Restauration</p></div>
                             <button onClick={() => { onExportJson(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Download className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Sauvegarder les données (.json)</span>
                             </button>
@@ -195,7 +195,7 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                                 <>
                                     <div className="border-t border-gray-200 dark:border-slate-700 my-1 separator-animate" style={{ animationDelay: getDelay(false) }} />
                                     <div className="px-4 py-1 menu-item-animate" style={{ animationDelay: getDelay() }}>
-                                        <p className="text-xs text-gray-400 dark:text-slate-500">
+                                        <p className="text-xs text-gray-500 dark:text-slate-400">
                                             Dernier backup auto : {new Date(lastBackupDate).toLocaleString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                                         </p>
                                     </div>

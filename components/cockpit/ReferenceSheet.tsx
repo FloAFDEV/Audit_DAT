@@ -31,7 +31,7 @@ export { LineBadge } from './ImplantationsTree';
 const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
-            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-600 dark:text-teal-300">
+            <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
                 {icon}
             </div>
             {title}
@@ -48,7 +48,7 @@ const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, va
     if (value === undefined || value === null || value === '') return null;
     return (
         <div className="flex flex-col gap-0.5">
-            <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">{label}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">{label}</span>
             <span className="text-sm text-slate-800 dark:text-slate-100">{value}</span>
         </div>
     );
@@ -124,7 +124,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
             onClick={() => onOpenReference(id)}
             className="text-teal-700 dark:text-teal-300 hover:underline font-medium text-sm text-left"
         >
-            {refName(id)} <span className="font-mono text-xs text-slate-400">({id})</span>
+            {refName(id)} <span className="font-mono text-xs text-slate-500 dark:text-slate-400">({id})</span>
         </button>
     );
 
@@ -149,17 +149,17 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                         est la question qu'on se pose en ouvrant une fiche. */}
                     {usage && (
                         <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
-                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{usage.installedCount}</span>
+                            <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.installedCount}</span>
                             <span className="text-slate-600 dark:text-slate-300">exemplaire{usage.installedCount > 1 ? 's' : ''}</span>
                             <span className="text-slate-300 dark:text-slate-600">·</span>
-                            <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
+                            <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
                             <span className="text-slate-600 dark:text-slate-300">lieu{usage.lieuCount > 1 ? 'x' : ''}</span>
                         </p>
                     )}
                     {/* L'identifiant technique reste consultable, mais il ne
                         dispute plus la place au nom : ce n'est pas ce qu'on
                         vient chercher ici. */}
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 font-mono">
                         {reference.code ? `${reference.code} · ` : ''}{reference.id} · v{reference.version}
                     </p>
                 </div>
@@ -184,13 +184,13 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                     <div className="space-y-2">
                         {reference.sameAs && reference.sameAs.length > 0 && (
                             <div className="flex flex-col gap-1">
-                                <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">Équivalences (même visuel)</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Équivalences (même visuel)</span>
                                 {reference.sameAs.map(linked)}
                             </div>
                         )}
                         {reference.pairedWith && (
                             <div className="flex flex-col gap-1">
-                                <span className="text-xs text-slate-400 dark:text-slate-500 uppercase font-semibold">Posée avec</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase font-semibold">Posée avec</span>
                                 {linked(reference.pairedWith)}
                             </div>
                         )}
@@ -207,7 +207,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                             {reference.arbitrage.reason ? ` — ${reference.arbitrage.reason}` : ''}
                         </p>
                         {reference.arbitrage.updatedAt && (
-                            <p className="text-xs text-slate-400 dark:text-slate-500">
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
                                 Décidé le {new Date(reference.arbitrage.updatedAt).toLocaleDateString('fr-FR')}
                                 {(reference.arbitrage.history?.length ?? 0) > 0 ? ` · ${reference.arbitrage.history!.length} décision(s) antérieure(s)` : ''}
                             </p>

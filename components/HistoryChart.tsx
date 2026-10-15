@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
     return (
       <div className="bg-white dark:bg-slate-800 p-3 border border-slate-200 dark:border-slate-700 shadow-lg rounded-lg">
         <p className="text-sm font-semibold text-gray-900 dark:text-slate-100">{label}</p>
-        <p className="text-sm text-teal-600 dark:text-teal-400">
+        <p className="text-sm text-teal-700 dark:text-teal-400">
           Score : <span className="font-bold">{payload[0].value}%</span>
         </p>
         <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">{payload[0].payload.title}</p>

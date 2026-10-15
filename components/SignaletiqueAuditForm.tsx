@@ -273,9 +273,9 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     currentStatus: EquipmentStatusType | 'NotChecked',
     onChange: (status: EquipmentStatusType | 'NotChecked') => void
   ) => {
-    const okOpt = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const absentOpt = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOpt = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOpt = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-700 text-white shadow-sm dark:bg-teal-700' };
+    const absentOpt = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600' };
+    const toReplaceOpt = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-4 h-4 mr-1.5" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-700 text-white shadow-sm' };
     const subOptions = [okOpt, absentOpt, toReplaceOpt];
 
     return (
@@ -313,7 +313,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
           onClick={() => handlePhotoUploadClick(category, dir, index)}
           className={`flex items-center justify-center p-2 rounded-lg transition-all duration-75 active:scale-95 ${
             item.photo_base64
-              ? 'bg-teal-50 text-teal-600 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:ring-teal-800'
+              ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:ring-teal-800'
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
           }`}
           title={item.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
@@ -358,7 +358,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             {item.photo_note ? (
               <p className="text-sm text-gray-600 dark:text-slate-300 italic p-3 bg-slate-100 dark:bg-slate-700/50 rounded-md whitespace-pre-wrap">{item.photo_note}</p>
             ) : (
-              <p className="text-sm text-gray-400 dark:text-slate-500 italic">Aucune note pour cette photo.</p>
+              <p className="text-sm text-gray-500 dark:text-slate-400 italic">Aucune note pour cette photo.</p>
             )}
           </div>
         </div>
@@ -375,10 +375,10 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   ) => {
     if (!item) return null;
 
-    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
-    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-700 text-white shadow-sm dark:bg-teal-700' };
+    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-700 text-white shadow-sm' };
+    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600' };
+    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-700 text-white shadow-sm' };
 
     const options = category === 'totem'
       ? [okOption, degradedOption]
@@ -431,11 +431,11 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     const itemsArr = (signaletique[category] as any)?.[dir] ?? [];
     const itemName = `${baseLabel} ${itemsArr.length > 1 ? `#${index + 1}` : ''}`.trim();
 
-    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' };
-    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-500 text-white shadow-sm' };
-    const hsOption = { value: EquipmentStatusType.HS, label: 'HS', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' };
-    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-500 text-white shadow-sm' };
+    const okOption = { value: EquipmentStatusType.OK, label: 'OK', icon: <CheckCircle2 className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-teal-700 text-white shadow-sm dark:bg-teal-700' };
+    const degradedOption = { value: EquipmentStatusType.DEGRADED, label: 'Dégradé', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-amber-700 text-white shadow-sm' };
+    const hsOption = { value: EquipmentStatusType.HS, label: 'HS', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600' };
+    const absentOption = { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: <XCircle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600' };
+    const toReplaceOption = { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: <AlertTriangle className="w-5 h-5 mr-2" />, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600 dark:hover:bg-slate-700', activeColorClass: 'bg-orange-700 text-white shadow-sm' };
 
     let options = [okOption, absentOption, toReplaceOption];
     if (category === 'biv') options = [okOption, degradedOption, hsOption];
@@ -513,7 +513,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
               <button
                 type="button"
                 onClick={onOpenT1PlanQuartierAudit}
-                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-teal-600 text-white hover:bg-teal-700 dark:bg-teal-500 dark:hover:bg-teal-600 transition-all active:scale-95"
+                className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-teal-700 text-white hover:bg-teal-800 dark:bg-teal-700 dark:hover:bg-teal-800 transition-all active:scale-95"
               >
                 Ouvrir l'audit <ArrowRight className="w-4 h-4" />
               </button>
@@ -528,7 +528,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     <div className="bg-white dark:bg-slate-800 shadow-sm border-b border-gray-200 dark:border-slate-700 overflow-hidden">
       <div className="w-full flex items-center p-6 border-b border-gray-100 dark:border-slate-700">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 rounded-xl">
+          <div className="p-3 bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-400 rounded-xl">
             {CATEGORY_ICONS[category]}
           </div>
           <span className="text-lg font-medium text-gray-900 dark:text-slate-100">{CATEGORY_LABELS[category]}</span>

@@ -106,7 +106,7 @@ const VoiceInput: React.FC<VoiceInputProps> = ({ value, onChange, placeholder, r
                     onClick={toggleListening}
                     className={`absolute bottom-2 right-2 p-2 rounded-full transition-all duration-200 shadow-md ${
                         isListening 
-                        ? 'bg-red-500 text-white animate-pulse' 
+                        ? 'bg-red-600 text-white animate-pulse' 
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
                     }`}
                     title={isListening ? "Arrêter la dictée" : "Démarrer la dictée vocale"}

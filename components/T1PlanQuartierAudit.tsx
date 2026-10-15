@@ -38,9 +38,9 @@ interface T1PlanQuartierAuditProps {
 }
 
 const OPTIONS = [
-  { value: EquipmentStatusType.OK, label: 'OK', icon: CheckCircle2, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500' },
-  { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: XCircle, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500' },
-  { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: AlertTriangle, colorClass: 'bg-white text-orange-600 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-500 text-white shadow-sm' },
+  { value: EquipmentStatusType.OK, label: 'OK', icon: CheckCircle2, colorClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600', activeColorClass: 'bg-teal-700 text-white shadow-sm dark:bg-teal-700' },
+  { value: EquipmentStatusType.ABSENT, label: 'Absent', icon: XCircle, colorClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600', activeColorClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600' },
+  { value: EquipmentStatusType.TO_REPLACE, label: 'À remplacer', icon: AlertTriangle, colorClass: 'bg-white text-orange-700 ring-1 ring-inset ring-orange-500 hover:bg-orange-50 dark:bg-slate-700/50 dark:text-orange-300 dark:ring-slate-600', activeColorClass: 'bg-orange-700 text-white shadow-sm' },
 ];
 
 const StatusButtons: React.FC<{ current: Status; onSelect: (s: Status) => void; small?: boolean }> = ({ current, onSelect, small }) => (

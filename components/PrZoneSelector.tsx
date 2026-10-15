@@ -19,7 +19,7 @@ const getZoneIcon = (zone: PrZone) => {
 
   if (name.includes('silo'))
     return (
-      <div className="p-3 bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg">
+      <div className="p-3 bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg">
         <Building {...iconProps} />
       </div>
     );
@@ -33,7 +33,7 @@ const getZoneIcon = (zone: PrZone) => {
 
   if (name.includes('sud'))
     return (
-      <div className="p-3 bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-300 rounded-lg">
+      <div className="p-3 bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 rounded-lg">
         <Navigation2 {...iconProps} style={{ transform: 'rotate(180deg)' }} />
       </div>
     );
@@ -48,7 +48,7 @@ if (name.includes('est'))
 
 if (name.includes('ouest'))
   return (
-    <div className="p-3 bg-green-100 text-green-600 dark:bg-green-900/40 dark:text-green-300 rounded-lg">
+    <div className="p-3 bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300 rounded-lg">
       <Navigation2 {...iconProps} style={{ transform: 'rotate(270deg)' }} />
     </div>
   );
@@ -63,7 +63,7 @@ if (name.includes('ouest'))
   const numberMatch = name.match(/\d+/);
   if (numberMatch) {
     return (
-      <div className="flex-shrink-0 flex items-center justify-center rounded-lg font-bold shadow-sm w-12 h-12 text-lg bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300">
+      <div className="flex-shrink-0 flex items-center justify-center rounded-lg font-bold shadow-sm w-12 h-12 text-lg bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
         {numberMatch[0]}
       </div>
     );
@@ -71,7 +71,7 @@ if (name.includes('ouest'))
 
   // Fallback
   return (
-    <div className="p-3 bg-pink-100 text-pink-600 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg">
+    <div className="p-3 bg-pink-100 text-pink-700 dark:bg-pink-900/40 dark:text-pink-300 rounded-lg">
       <MapPin {...iconProps} />
     </div>
   );
@@ -126,7 +126,7 @@ const PrZoneSelector: React.FC<PrZoneSelectorProps> = ({ lieu, module, onSelectZ
                 <div className="flex justify-between items-center mb-1">
                   <span
                     className={`text-xs font-medium ${
-                      isComplete ? 'text-teal-600 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'
+                      isComplete ? 'text-teal-700 dark:text-teal-400' : 'text-gray-500 dark:text-slate-400'
                     }`}
                   >
                     {isComplete ? 'Terminé' : 'Progression'}

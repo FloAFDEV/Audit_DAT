@@ -27,9 +27,9 @@ interface DATListProps {
 const getStatusLabelColor = (status: ProgressStatus) => {
     switch (status) {
         case ProgressStatus.Completed:
-            return 'text-teal-600 dark:text-teal-400';
+            return 'text-teal-700 dark:text-teal-400';
         case ProgressStatus.InProgress:
-            return 'text-amber-600 dark:text-amber-400';
+            return 'text-amber-700 dark:text-amber-400';
         default:
             return 'text-gray-500 dark:text-slate-400';
     }
@@ -144,7 +144,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                     <div>
                         <div className="flex items-center gap-2">
                             <p className="text-sm font-light text-slate-500 dark:text-slate-400">{station.name}</p>
-                            <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
+                            <span className="text-[10px] font-mono font-medium text-slate-600 dark:text-slate-300 uppercase tracking-wider bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">
                                 {station.code}
                             </span>
                         </div>
@@ -156,7 +156,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </div>
             <button
                 onClick={onAddDat}
-                className="hidden sm:inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-500"
+                className="hidden sm:inline-flex items-center gap-x-2 rounded-md bg-teal-700 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-800"
             >
                 <PlusCircle className="h-5 w-5" />
                 Ajouter un DAT
@@ -167,7 +167,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
          *  suffit. */}
         <button
             onClick={onAddDat}
-            className="sm:hidden w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-500 mt-3 mb-6"
+            className="sm:hidden w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-700 px-3.5 py-2.5 text-sm font-normal text-white shadow-sm hover:bg-teal-800 mt-3 mb-6"
         >
             <PlusCircle className="h-5 w-5" />
             Ajouter un DAT
@@ -182,7 +182,7 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
                     <button
                         type="button"
                         onClick={onAddDat}
-                        className="inline-flex items-center rounded-md bg-teal-600 px-3 py-2 text-sm font-normal text-white shadow-sm hover:bg-teal-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
+                        className="inline-flex items-center rounded-md bg-teal-700 px-3 py-2 text-sm font-normal text-white shadow-sm hover:bg-teal-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-600"
                     >
                         <PlusCircle className="-ml-0.5 mr-1.5 h-5 w-5" />
                         Ajouter le premier DAT

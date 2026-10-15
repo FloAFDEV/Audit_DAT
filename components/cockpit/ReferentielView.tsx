@@ -97,7 +97,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                         placeholder="Rechercher (nom, id, code, matière)…"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm dark:placeholder:text-slate-400"
                     />
                 </div>
                 <div className="flex gap-1.5 flex-wrap">
@@ -107,7 +107,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                             onClick={() => setFamily(f)}
                             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
                                 family === f
-                                    ? 'bg-teal-600 text-white'
+                                    ? 'bg-teal-700 text-white'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                             }`}
                         >
@@ -139,7 +139,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                     type="button"
                     onClick={onViewSelectedImplantations}
                     disabled={selectedIds.size === 0}
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-600 text-white hover:bg-teal-500 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                 >
                     <MapPinned className="w-4 h-4" />
                     Voir les implantations {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
@@ -158,7 +158,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                     ref={el => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected; }}
                                     onChange={toggleSelectAllVisible}
                                     aria-label="Sélectionner toutes les références visibles"
-                                    className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                    className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
                                 />
                             </th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
@@ -186,7 +186,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                             checked={isSelected}
                                             onChange={() => onToggleSelect(ref.id)}
                                             aria-label={`Sélectionner ${ref.name}`}
-                                            className="h-4 w-4 rounded border-slate-300 text-teal-600 focus:ring-teal-500"
+                                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
                                         />
                                     </td>
                                     <td className="p-3">
@@ -194,14 +194,14 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                             <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
                                             {ref.isDisabled && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">Désactivée</span>}
                                         </div>
-                                        <span className="block font-mono text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                                        <span className="block font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                             {ref.code ? `${ref.code} · ` : ''}{ref.id}
                                         </span>
                                     </td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
-                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-400 font-normal">—</span>}</td>
+                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                 </tr>
@@ -217,7 +217,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                     </tbody>
                 </table>
             </div>
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
                 {filtered.length} référence{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''} · quantités, stations et lignes calculées par le moteur d'index du patrimoine.
             </p>
         </div>
@@ -319,7 +319,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                         placeholder="Rechercher (lieu, équipement, référence)…"
                         value={query}
                         onChange={e => setQuery(e.target.value)}
-                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-400 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm"
+                        className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm dark:placeholder:text-slate-400"
                     />
                 </div>
                 <select
@@ -350,7 +350,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
                     Aucune implantation ne correspond aux filtres.
                 </p>
             )}
-            <p className="text-xs text-slate-400 dark:text-slate-500">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
                 {filtered.length} implantation{filtered.length > 1 ? 's' : ''} · source : moteur d'index du patrimoine.
             </p>
         </div>
@@ -391,7 +391,7 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                 <div className="min-w-0 flex-1">
                     <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
                     <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
-                        <span className="text-lg font-bold text-teal-600 dark:text-teal-400 tabular-nums">{total}</span>
+                        <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{total}</span>
                         <span className="text-slate-600 dark:text-slate-300">implantation{total > 1 ? 's' : ''}</span>
                         <span className="text-slate-300 dark:text-slate-600">·</span>
                         <span className="text-slate-600 dark:text-slate-300">{selection.label}</span>
@@ -476,7 +476,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     }, [nav.pendingReferenceId]);
 
     if (isLoading) {
-        return <div className="py-16 text-center text-slate-400 dark:text-slate-500">Chargement du référentiel…</div>;
+        return <div className="py-16 text-center text-slate-500 dark:text-slate-400">Chargement du référentiel…</div>;
     }
 
     // Fiche de vie (règle 2 : LA fiche unique) — prioritaire sur les sous-vues.
@@ -525,7 +525,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                         onClick={() => setSubSection(key)}
                         className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
                             subSection === key
-                                ? 'bg-teal-600 text-white shadow-sm'
+                                ? 'bg-teal-700 text-white shadow-sm'
                                 : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700'
                         }`}
                     >

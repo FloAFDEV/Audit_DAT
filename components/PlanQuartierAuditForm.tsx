@@ -24,14 +24,14 @@ interface PlanQuartierAuditFormProps {
 
 const STATUS_BUTTONS: { status: AdhesiveStatus; label: string; Icon: typeof CheckCircle2; activeClass: string; idleClass: string }[] = [
   { status: AdhesiveStatus.OK, label: 'OK', Icon: CheckCircle2,
-    activeClass: 'bg-teal-600 text-white shadow-sm dark:bg-teal-500',
+    activeClass: 'bg-teal-700 text-white shadow-sm dark:bg-teal-700',
     idleClass: 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
   { status: AdhesiveStatus.Absent, label: 'Absent', Icon: XCircle,
-    activeClass: 'bg-red-600 text-white shadow-sm dark:bg-red-500',
+    activeClass: 'bg-red-600 text-white shadow-sm dark:bg-red-600',
     idleClass: 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
   { status: AdhesiveStatus.ToBeReplaced, label: 'À remplacer', Icon: AlertTriangle,
-    activeClass: 'bg-amber-500 text-white shadow-sm',
-    idleClass: 'bg-white text-amber-600 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
+    activeClass: 'bg-amber-700 text-white shadow-sm',
+    idleClass: 'bg-white text-amber-700 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700' },
   // Pas de statut "Non applicable" ici : une occurrence n'existe que si
   // l'exemplaire est réellement présent — si l'audit ne s'applique pas à
   // cet endroit, l'occurrence n'est simplement pas créée.
@@ -126,7 +126,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 {isBlank && (
                   <button
                     onClick={() => onRemoveOccurrence(occ.id)}
-                    className="p-1 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                    className="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-slate-400"
                     title="Retirer (erreur de saisie — aucun constat encore saisi)"
                     aria-label="Retirer cet exemplaire"
                   >
@@ -136,12 +136,12 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
               </div>
             )}
             {!simplified && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Constat du {formatDate(occ.constatedAt)} · recensé le {formatDate(occ.discoveredAt)}
                 {history.length > 0 && (
                   <button
                     onClick={() => setExpandedHistory(prev => ({ ...prev, [occ.id]: !prev[occ.id] }))}
-                    className="ml-2 inline-flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline"
+                    className="ml-2 inline-flex items-center gap-1 text-teal-700 dark:text-teal-400 hover:underline"
                   >
                     <History className="w-3.5 h-3.5" /> Historique ({history.length})
                   </button>
@@ -151,7 +151,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
             {simplified && history.length > 0 && (
               <button
                 onClick={() => setExpandedHistory(prev => ({ ...prev, [occ.id]: !prev[occ.id] }))}
-                className="inline-flex items-center gap-1 text-xs text-teal-600 dark:text-teal-400 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-teal-700 dark:text-teal-400 hover:underline"
               >
                 <History className="w-3.5 h-3.5" /> Historique ({history.length})
               </button>
@@ -260,7 +260,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                   <ReferenceVisual referenceId={ref.id} label={ref.name} />
                   <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-slate-100">
                     {ref.name}
-                    <span className="text-base font-normal text-slate-400 dark:text-slate-500 ml-2">
+                    <span className="text-base font-normal text-slate-500 dark:text-slate-400 ml-2">
                       // <span className="font-medium text-slate-600 dark:text-slate-400">{dimensions}</span>
                     </span>
                   </h3>
@@ -282,7 +282,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
               <h3 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
                 Découvertes non cataloguées ({adHocOccurrences.length})
               </h3>
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                 Élément trouvé sur le terrain qui ne correspond à aucun modèle connu — reste compté et audité normalement, à intégrer au référentiel lors d'une prochaine mise à jour du code.
               </p>
             </div>
@@ -327,7 +327,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
               </div>
               <div className="flex gap-2 justify-end">
                 <button onClick={() => setShowAdHocForm(false)} className="px-3 py-1.5 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md">Annuler</button>
-                <button onClick={handleAddAdHoc} disabled={!adHocLabel.trim()} className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-40">Ajouter</button>
+                <button onClick={handleAddAdHoc} disabled={!adHocLabel.trim()} className="px-3 py-1.5 text-sm font-medium rounded-md bg-amber-700 text-white hover:bg-amber-800 disabled:opacity-40">Ajouter</button>
               </div>
             </div>
           )}

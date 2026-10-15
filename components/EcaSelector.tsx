@@ -142,7 +142,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                 </div>
                 <button
                     onClick={handleOpenAddModal}
-                    className="hidden sm:inline-flex items-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500"
+                    className="hidden sm:inline-flex items-center gap-x-2 rounded-md bg-teal-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-800"
                 >
                     <PlusCircle className="h-5 w-5" />
                     Ajouter un ECA
@@ -153,7 +153,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
              *  header suffit. */}
             <button
                 onClick={handleOpenAddModal}
-                className="sm:hidden w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-500 mt-3 mb-8"
+                className="sm:hidden w-full inline-flex items-center justify-center gap-x-2 rounded-md bg-teal-700 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 mt-3 mb-8"
             >
                 <PlusCircle className="h-5 w-5" />
                 Ajouter un ECA
@@ -177,7 +177,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                         const statusLabelColor = isNotApplicable
                             ? 'text-slate-500 dark:text-slate-400'
                             : progress.isComplete
-                                ? 'text-teal-600 dark:text-teal-400'
+                                ? 'text-teal-700 dark:text-teal-400'
                                 : 'text-gray-500 dark:text-slate-400';
 
                         const isPmr = isPmrEcaType(eca.type);
@@ -222,7 +222,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">
                                         <button 
                                             onClick={(e) => { e.stopPropagation(); handleOpenEditModal(eca); }}
-                                            className="p-2 rounded-full hover:bg-teal-100 text-teal-600 transition-colors dark:text-teal-400 dark:hover:bg-teal-900/20"
+                                            className="p-2 rounded-full hover:bg-teal-100 text-teal-700 transition-colors dark:text-teal-400 dark:hover:bg-teal-900/20"
                                             aria-label={`Modifier ${eca.name}`}
                                         >
                                             <Edit className="w-5 h-5" />

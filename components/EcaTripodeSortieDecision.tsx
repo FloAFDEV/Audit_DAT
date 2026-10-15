@@ -69,7 +69,7 @@ const EcaTripodeSortieDecision: React.FC<EcaTripodeSortieDecisionProps> = ({
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <button
             onClick={onConfirmNA}
-            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-teal-600 text-white shadow-lg hover:bg-teal-700 transition-all duration-200 transform hover:scale-105"
+            className="w-full flex flex-col items-center justify-center p-6 text-center rounded-lg bg-teal-700 text-white shadow-lg hover:bg-teal-800 transition-all duration-200 transform hover:scale-105"
           >
             <Check className="w-10 h-10 mb-3" />
             <span className="text-lg font-semibold">Valider (sans adhésifs)</span>
