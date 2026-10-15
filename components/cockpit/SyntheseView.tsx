@@ -1269,9 +1269,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                     </div>
                 )}
                 {cogPictoByDimension.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2 mt-3">
+                    <div className="space-y-3 mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
                         {cogPictoByDimension.map(item => (
-                            <IndicatorTile key={item.id} size="sm" value={item.quantity} label={(item.dimensions ?? '').replace(/(\d)x(\d)/, '$1 × $2').replace(/(\d)cm/, '$1 cm').replace(/\./g, ',')} tone="slate" />
+                            <StatRow key={item.id} dense label={(item.dimensions ?? '').replace(/(\d)x(\d)/, '$1 × $2').replace(/(\d)cm/, '$1 cm').replace(/\./g, ',')} value={item.quantity} isSubItem />
                         ))}
                     </div>
                 )}
