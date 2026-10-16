@@ -46,6 +46,8 @@ export interface CognitivePictogramStationEntry {
     stationCode: string;
     line: string;
     count: number;
+    /** Dimension, renseignée quand la liste mêle plusieurs dimensions. */
+    dimensions?: string;
 }
 
 /** Ligne d'inventaire « Pictogramme cognitif » (une par dimension) →
