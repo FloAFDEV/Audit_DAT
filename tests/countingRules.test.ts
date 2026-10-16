@@ -54,11 +54,12 @@ describe('Pictogrammes cognitifs — emplacements provisoires et périmètre', (
         expect(isProvisionalCognitivePictogram({ accessPointName: 'Accès Gare Bus (sur mur)' })).toBe(false);
     });
 
-    it('les 7 emplacements provisoires restent dans les données mais sortent des totaux', async () => {
+    // 5 depuis que François Verdier a ses 2 accès nommés (7 auparavant).
+    it('les 5 emplacements provisoires restent dans les données mais sortent des totaux', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const all = cogModules(lieux).flatMap(m => (m.data as CognitivePictogramData).pictograms);
-        expect(all.filter(isProvisionalCognitivePictogram)).toHaveLength(7);
-        expect(cogTotal(lieux)).toBe(all.length - 7);
+        expect(all.filter(isProvisionalCognitivePictogram)).toHaveLength(5);
+        expect(cogTotal(lieux)).toBe(all.length - 5);
     });
 
     it('carte station : Basso Cambo ne compte que ses accès confirmés', async () => {
