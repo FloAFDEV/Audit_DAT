@@ -6,6 +6,10 @@ import { AuditModule, CognitivePictogram, CognitivePictogramData, FloorAdhesiveS
 export const ARENES_COGNITIVE_ACCESS_NAMES = ['Escalier gauche (côté agence)', 'Escalier droit (côté entrée métro)'] as const;
 /** Ancien accès unique d'Arènes, remplacé par les deux totems. */
 export const ARENES_LEGACY_COGNITIVE_ACCESS_NAME = 'Accès côté tram';
+/** Mirail-Université : picto posé à l'étage, accès ascenseur par l'extérieur
+ *  (mezzanine) — ancien libellé renommé à l'init et à l'import (store.ts). */
+export const MIRAIL_COGNITIVE_ACCESS_NAME = 'Étage — accès ascenseur par ext (mezzanine)';
+export const MIRAIL_LEGACY_COGNITIVE_ACCESS_NAME = 'Accès côté rue de l’Université du Mirail';
 
 /** Lignes où les pictogrammes cognitifs sont réellement déployés. Les autres
  *  (Aéroport Express, C…) restent hors des totaux tant que leur référentiel
@@ -47,6 +51,7 @@ export const COGNITIVE_PICTOGRAM_DIMENSIONS: Record<string, string | Record<stri
   'REY': '74.5x97cm',
   'SCY': '74.5x97cm',
   'MUN': '80x80cm (Totem)',
+  'ARE': '82x75.5cm', // deux totems (820 x 755 mm)
   // Ligne B
   'BPA': '74.5x97cm',
   'BOR': '74.5x97cm',
@@ -152,7 +157,7 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
         case 'MUN': // Mirail-Université
             pictos.push({
                 id: uuidv4(),
-                accessPointName: 'Accès côté rue de l’Université du Mirail',
+                accessPointName: MIRAIL_COGNITIVE_ACCESS_NAME,
                 status: FloorAdhesiveStatus.NotChecked,
             });
             return pictos;

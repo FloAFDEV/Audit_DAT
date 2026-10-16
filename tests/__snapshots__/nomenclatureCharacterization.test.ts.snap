@@ -305,7 +305,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "cog-picto-74.5x97cm",
     "material": "Vinyle + Plastification",
     "name": "Pictogramme cognitif",
-    "quantity": 57,
+    "quantity": 55,
     "repere": "-",
   },
   {
@@ -342,6 +342,15 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "material": "Vinyle + Plastification",
     "name": "Pictogramme cognitif",
     "quantity": 1,
+    "repere": "-",
+  },
+  {
+    "auditType": "Picto. Cognitifs",
+    "dimensions": "82x75.5cm",
+    "id": "cog-picto-82x75.5cm",
+    "material": "Vinyle + Plastification",
+    "name": "Pictogramme cognitif",
+    "quantity": 2,
     "repere": "-",
   },
   {

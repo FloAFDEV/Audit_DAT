@@ -1290,6 +1290,16 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                         {cogPictoByDimension.map(item => (
                             <StatRow key={item.id} dense label={(item.dimensions ?? '').replace(/(\d)x(\d)/, '$1 × $2').replace(/(\d)cm/, '$1 cm').replace(/\./g, ',')} value={item.quantity} isSubItem />
                         ))}
+                        <button
+                            type="button"
+                            onClick={() => setCogPictoGallery({
+                                title: 'Pictogrammes cognitifs — toutes dimensions',
+                                entries: cogPictoByDimension.flatMap(item => (cogPictoStations.get(item.id) ?? []).map(e => ({ ...e, dimensions: item.dimensions }))),
+                            })}
+                            className="text-sm font-semibold text-teal-700 hover:underline dark:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 rounded"
+                        >
+                            Voir tous les pictogrammes →
+                        </button>
                     </div>
                 )}
                 </div>

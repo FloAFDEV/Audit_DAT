@@ -40,7 +40,9 @@ export const CognitivePictogramStationsModal: React.FC<{
         rank(LINE_ORDER, a.line, 99) - rank(LINE_ORDER, b.line, 99)
         || rank(STATION_ORDER[a.line] ?? [], a.lieuName, 999) - rank(STATION_ORDER[b.line] ?? [], b.lieuName, 999)
         || a.lieuName.localeCompare(b.lieuName, 'fr')
+        || (a.dimensions ?? '').localeCompare(b.dimensions ?? '')
     ), [entries]);
+    const stationCount = new Set(entries.map(e => `${e.line}|${e.lieuName}`)).size;
     const total = entries.reduce((sum, e) => sum + e.count, 0);
 
     return createPortal(
@@ -56,7 +58,7 @@ export const CognitivePictogramStationsModal: React.FC<{
                     <div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                            {total} pictogramme{total > 1 ? 's' : ''} · {entries.length} station{entries.length > 1 ? 's' : ''}
+                            {total} pictogramme{total > 1 ? 's' : ''} · {stationCount} station{stationCount > 1 ? 's' : ''}
                         </p>
                     </div>
                     <button
@@ -72,9 +74,12 @@ export const CognitivePictogramStationsModal: React.FC<{
                     {sorted.map(e => {
                         const cfg = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY[e.line]);
                         return (
-                            <li key={`${e.line}|${e.lieuName}`} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
+                            <li key={`${e.line}|${e.lieuName}|${e.dimensions ?? ''}`} className="flex items-center gap-3 rounded-lg border border-slate-200 p-2 dark:border-slate-700">
                                 <CognitivePictogramVisual stationCode={e.stationCode} stationName={e.lieuName} field />
-                                <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800 dark:text-slate-100">{e.lieuName}</span>
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate text-sm font-medium text-slate-800 dark:text-slate-100">{e.lieuName}</span>
+                                    {e.dimensions && <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{e.dimensions}</span>}
+                                </span>
                                 {cfg && <CategoryIcon categoryConfig={cfg} size="sm" asDiv />}
                                 <span className="w-8 text-right text-sm font-bold tabular-nums text-teal-700 dark:text-teal-400">×{e.count}</span>
                             </li>
