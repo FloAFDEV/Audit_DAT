@@ -41,21 +41,33 @@ export const summarizeCognitivePictograms = (lieux: Lieu[]): Map<string, Cogniti
     return byLieu;
 };
 
+export interface CognitivePictogramStationEntry {
+    lieuName: string;
+    stationCode: string;
+    line: string;
+    count: number;
+}
+
 /** Ligne d'inventaire « Pictogramme cognitif » (une par dimension) →
- *  code d'une station dont le visuel est connu, pour l'aperçu : mêmes
- *  pictogrammes et même dimension que la quantité de la ligne. */
-export const cognitivePictogramExampleByInventoryRow = (lieux: Lieu[]): Map<string, string> => {
-    const examples = new Map<string, string>();
+ *  stations qui la composent, avec leur nombre de pictogrammes : mêmes
+ *  pictogrammes et même dimension que la quantité de la ligne (la somme
+ *  des `count` égale la quantité affichée). */
+export const cognitivePictogramStationsByInventoryRow = (lieux: Lieu[]): Map<string, CognitivePictogramStationEntry[]> => {
+    const rows = new Map<string, Map<string, CognitivePictogramStationEntry>>();
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
             if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS || !isModuleInCurrentScope(module)) continue;
             const data = module.data as CognitivePictogramData;
-            if (!getCognitivePictogramVisualUrl(data.stationCode)) continue;
             for (const picto of getCountedCognitivePictograms(module)) {
                 const rowId = `cog-picto-${getCognitivePictogramDimension(data.stationCode, picto.accessPointName)}`;
-                if (!examples.has(rowId)) examples.set(rowId, data.stationCode);
+                const stations = rows.get(rowId) ?? new Map<string, CognitivePictogramStationEntry>();
+                const key = `${module.line ?? ''}|${lieu.name}`;
+                const entry = stations.get(key) ?? { lieuName: lieu.name, stationCode: data.stationCode, line: module.line ?? '', count: 0 };
+                entry.count++;
+                stations.set(key, entry);
+                rows.set(rowId, stations);
             }
         }
     }
-    return examples;
+    return new Map([...rows].map(([rowId, stations]) => [rowId, [...stations.values()]]));
 };

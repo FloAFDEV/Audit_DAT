@@ -6,8 +6,8 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 // `Map` est importée sous alias : le nom brut masquerait le constructeur
 // Map natif utilisé par les agrégations de ce fichier.
-import { Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
-import { Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData, EquipmentType } from '../../types';
+import { Images, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
+import { AdhesiveInventoryItem, Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData, EquipmentType } from '../../types';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
 import { useStats } from '../../hooks/useStats';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -26,9 +26,9 @@ import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '..
 import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import { lieuMapEmbedUrl, lieuMapOpenUrl, lieuMapQuery } from '../../utils/cockpit/lieuMap';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
-import { CognitivePictogramSummary, cognitiveSummaryKey, cognitivePictogramExampleByInventoryRow, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
-import { CognitivePictogramVisual, FIELD_PICTO_BG } from '../CognitivePictogramVisual';
-import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
+import { CognitivePictogramSummary, CognitivePictogramStationEntry, cognitiveSummaryKey, cognitivePictogramStationsByInventoryRow, summarizeCognitivePictograms } from '../../utils/cockpit/cognitivePictogramSummary';
+import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { CognitivePictogramStationsModal } from './CognitivePictogramStationsModal';
 import { ReferenceNamePreview } from '../ReferenceVisual';
 import { getInventoryVisualReferenceId } from '../../data/referenceVisuals';
 import { SignaletiquePlanQuartier, collectSignaletiquePlansQuartier, summarizeSignaletiqueCensus } from '../../utils/cockpit/signaletiquePlansQuartier';
@@ -686,14 +686,31 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const { globalCounts, ecaBreakdown, maintenanceSummary, adhesiveInventory } = useStats(filteredLieux, references);
     const activeReferencesCount = useMemo(() => references.filter(r => !r.isDisabled).length, [references]);
     // Pictogrammes cognitifs par dimension : lignes de la Nomenclature
-    // (même calcul), plus un exemple de visuel par ligne pour l'aperçu.
+    // (même calcul), et stations qui composent chaque ligne.
     const cogPictoByDimension = useMemo(() => (adhesiveInventory ?? [])
         .filter(item => item.id.startsWith('cog-picto-') && item.quantity > 0)
         .sort((a, b) => b.quantity - a.quantity), [adhesiveInventory]);
-    const cogPictoExamples = useMemo(() => cognitivePictogramExampleByInventoryRow(filteredLieux), [filteredLieux]);
-    const cogPictoPreview = (itemId: string) => {
-        const url = getCognitivePictogramVisualUrl(cogPictoExamples.get(itemId));
-        return url ? { previewUrl: url, background: FIELD_PICTO_BG } : {};
+    const cogPictoStations = useMemo(() => cognitivePictogramStationsByInventoryRow(filteredLieux), [filteredLieux]);
+    const [cogPictoGallery, setCogPictoGallery] = useState<{ title: string; entries: CognitivePictogramStationEntry[] } | null>(null);
+    // Nom de produit de l'inventaire : bouton « stations » pour les lignes
+    // Pictogramme cognitif, aperçu du visuel de référence sinon.
+    const inventoryName = (item: AdhesiveInventoryItem, name: React.ReactNode) => {
+        const stations = cogPictoStations.get(item.id);
+        if (!stations?.length) return <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name}>{name}</ReferenceNamePreview>;
+        return (
+            <span className="inline-flex max-w-full min-w-0 items-center gap-1.5">
+                {name}
+                <button
+                    type="button"
+                    onClick={() => setCogPictoGallery({ title: `${item.name} — ${item.dimensions}`, entries: stations })}
+                    className="flex-shrink-0 rounded p-0.5 text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                    aria-label={`Voir les stations — ${item.name} ${item.dimensions}`}
+                    title="Voir les stations"
+                >
+                    <Images className="w-3.5 h-3.5" aria-hidden="true" />
+                </button>
+            </span>
+        );
     };
 
     // Signalétique IV (DAT/PR/ECA) : totaux exclusivement patrimoineIndex
@@ -1387,7 +1404,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 font-medium">{item.auditType}</td>
                             <td className="p-3 text-center font-mono text-xs text-slate-500 dark:text-slate-400">{item.repere}</td>
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">
-                                <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name} {...cogPictoPreview(item.id)}>{item.name}</ReferenceNamePreview>
+                                {inventoryName(item, item.name)}
                             </td>
                             <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
@@ -1417,7 +1434,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                     {item.auditType}{item.repere ? ` · ${item.repere}` : ''}
                                 </div>
                                 <div className="font-medium text-slate-800 dark:text-slate-100 min-w-0">
-                                    <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(item.id)} label={item.name} {...cogPictoPreview(item.id)}><span className="truncate">{item.name}</span></ReferenceNamePreview>
+                                    {inventoryName(item, <span className="truncate">{item.name}</span>)}
                                 </div>
                                 {(item.dimensions || item.material) && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
@@ -1450,6 +1467,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 title={modalContent?.title || ''}
                 items={modalContent?.items || []}
             />
+            {cogPictoGallery && (
+                <CognitivePictogramStationsModal title={cogPictoGallery.title} entries={cogPictoGallery.entries} onClose={() => setCogPictoGallery(null)} />
+            )}
         </>
     );
 };

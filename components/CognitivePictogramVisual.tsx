@@ -2,7 +2,7 @@ import React from 'react';
 import { getCognitivePictogramVisualUrl } from '../data/cognitivePictogramVisuals';
 
 /** Fond jaune du pictogramme physique posé en station. */
-export const FIELD_PICTO_BG = '#F9A02B';
+const FIELD_PICTO_BG = '#F9A02B';
 
 /** Visuel du pictogramme cognitif d'une station (fond blanc : lisible en
  *  mode clair comme sombre). Rien n'est rendu si la station n'a pas de
