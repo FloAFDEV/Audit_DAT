@@ -10,6 +10,16 @@ export const ARENES_LEGACY_COGNITIVE_ACCESS_NAME = 'Accès côté tram';
  *  (mezzanine) — ancien libellé renommé à l'init et à l'import (store.ts). */
 export const MIRAIL_COGNITIVE_ACCESS_NAME = 'Étage — accès ascenseur par ext (mezzanine)';
 export const MIRAIL_LEGACY_COGNITIVE_ACCESS_NAME = 'Accès côté rue de l’Université du Mirail';
+/** François Verdier : un picto de chaque côté de l'avenue — libellés
+ *  provisoires validés, à préciser sur le terrain (avril 2027). */
+export const FVE_COGNITIVE_ACCESS_NAMES = ['Accès côté avenue — trottoir 1', 'Accès côté avenue — trottoir 2'] as const;
+
+/** Libellés d'accès renommés dans les données déjà enregistrées (init et
+ *  import, store.ts) : code station → ancien libellé → nouveau. */
+export const COGNITIVE_ACCESS_NAME_RENAMES: Record<string, Record<string, string>> = {
+    MUN: { [MIRAIL_LEGACY_COGNITIVE_ACCESS_NAME]: MIRAIL_COGNITIVE_ACCESS_NAME },
+    FVE: { 'Accès à définir 1': FVE_COGNITIVE_ACCESS_NAMES[0], 'Accès à définir 2': FVE_COGNITIVE_ACCESS_NAMES[1] },
+};
 
 /** Lignes où les pictogrammes cognitifs sont réellement déployés. Les autres
  *  (Aéroport Express, C…) restent hors des totaux tant que leur référentiel
@@ -147,6 +157,12 @@ export const generateInitialCognitivePictogramsForStation = (stationCode: string
     // Special cases based on station configuration
     switch (stationCode) {
         // --- Ligne A ---
+        case 'FVE': // François Verdier — de part et d'autre de l'avenue
+            pictos.push(
+                { id: uuidv4(), accessPointName: FVE_COGNITIVE_ACCESS_NAMES[0], status: FloorAdhesiveStatus.NotChecked },
+                { id: uuidv4(), accessPointName: FVE_COGNITIVE_ACCESS_NAMES[1], status: FloorAdhesiveStatus.NotChecked },
+            );
+            return pictos;
         case 'BEL': // Bellefontaine
             pictos.push({
                 id: uuidv4(),

@@ -13,7 +13,7 @@ import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
-import { ARENES_COGNITIVE_ACCESS_NAMES, ARENES_LEGACY_COGNITIVE_ACCESS_NAME, MIRAIL_COGNITIVE_ACCESS_NAME, MIRAIL_LEGACY_COGNITIVE_ACCESS_NAME } from './data/cognitive_pictograms';
+import { ARENES_COGNITIVE_ACCESS_NAMES, ARENES_LEGACY_COGNITIVE_ACCESS_NAME, COGNITIVE_ACCESS_NAME_RENAMES } from './data/cognitive_pictograms';
 import { canEcaBeNotApplicable, isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
@@ -680,18 +680,21 @@ export const migrateArenesCognitivePictograms = (lieux: Lieu[]): { changed: bool
     return { changed, keptAudited };
 };
 
-/** Mirail-Université : renomme l'accès du pictogramme cognitif (même picto
- *  physique, statut et photo conservés). Idempotente. */
-export const migrateMirailCognitivePictogram = (lieux: Lieu[]): boolean => {
+/** Renomme les accès de pictogrammes cognitifs précisés depuis le terrain
+ *  (Mirail-Université, François Verdier…) : même picto physique, statut et
+ *  photo conservés. Idempotente. */
+export const migrateCognitivePictogramAccessNames = (lieux: Lieu[]): boolean => {
     let changed = false;
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
             if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS) continue;
             const data = module.data as CognitivePictogramData;
-            if (data.stationCode !== 'MUN') continue;
+            const renames = COGNITIVE_ACCESS_NAME_RENAMES[data.stationCode];
+            if (!renames) continue;
             for (const picto of data.pictograms ?? []) {
-                if (picto.accessPointName !== MIRAIL_LEGACY_COGNITIVE_ACCESS_NAME) continue;
-                picto.accessPointName = MIRAIL_COGNITIVE_ACCESS_NAME;
+                const renamed = renames[picto.accessPointName];
+                if (!renamed) continue;
+                picto.accessPointName = renamed;
                 changed = true;
             }
         }
@@ -1158,7 +1161,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 if (arenesT1.changed) dataChanged = true;
                 const arenesCognitive = migrateArenesCognitivePictograms(data);
                 if (arenesCognitive.changed) dataChanged = true;
-                if (migrateMirailCognitivePictogram(data)) dataChanged = true;
+                if (migrateCognitivePictogramAccessNames(data)) dataChanged = true;
 
                 // Stations renommées (ex. Parc Technologique du Canal → Parc du Canal) —
                 // avant la réconciliation PDQ, qui rapproche les lieux par nom.
@@ -2412,8 +2415,8 @@ const useAuditStore = create<AppState>((set, get) => {
             const t1DimensionsMigrated = migrateT1PlanQuartierDimensions(pdqReconciled.lieux);
             const arenesT1 = migrateArenesT1PlanQuartier(pdqReconciled.lieux);
             const arenesCognitive = migrateArenesCognitivePictograms(pdqReconciled.lieux);
-            const mirailCognitive = migrateMirailCognitivePictogram(pdqReconciled.lieux);
-            if (pdqReconciled.changed || t1DimensionsMigrated || arenesT1.changed || arenesCognitive.changed || mirailCognitive) await db.lieux.bulkPut(pdqReconciled.lieux);
+            const cognitiveAccessRenamed = migrateCognitivePictogramAccessNames(pdqReconciled.lieux);
+            if (pdqReconciled.changed || t1DimensionsMigrated || arenesT1.changed || arenesCognitive.changed || cognitiveAccessRenamed) await db.lieux.bulkPut(pdqReconciled.lieux);
             await logArenesT1PlanQuartierMigration(arenesT1);
             await logArenesCognitiveMigration(arenesCognitive);
 
