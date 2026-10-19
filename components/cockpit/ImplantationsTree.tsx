@@ -7,7 +7,7 @@
 // par le moteur d'index (aucun second calcul).
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, Download } from 'lucide-react';
+import { ChevronDown, Download, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdhesiveStatus, SignageReference } from '../../types';
 import { AUDIT_CATEGORIES } from '../../data/config';
@@ -16,10 +16,13 @@ import { CategoryIcon } from '../CategoryIcon';
 import { ImplantationRef, PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
-import { downloadImplantationsWorkbook, ImplantationExportRow, SyntheseExportRow } from '../../utils/cockpit/implantationsExporter';
+import { downloadImplantationsWorkbook } from '../../utils/cockpit/implantationsExporter';
+import { buildImplantationLineSheets, buildImplantationSyntheseRows, buildPoseRows } from './implantationsExportRows';
+import { buildPoseCsv } from '../../utils/cockpit/poseExport';
+import { CognitivePictogramPoseItem } from '../../utils/cockpit/cognitivePictogramSummary';
+import { downloadFile } from '../../utils/csvExporter';
 import {
-    STATUS_LABELS, compareLines, displayReferenceName, exportZoneLabel, fieldDesignation, formatDimensions,
-    implantationEquipmentLabel, implantationZoneLabel, validatorTypeLabel,
+    STATUS_LABELS, compareLines, displayReferenceName, implantationEquipmentLabel, implantationZoneLabel,
 } from './labels';
 
 /** Ligne de transport → config visuelle (mêmes couleurs que partout
@@ -184,47 +187,8 @@ export const ImplantationsExportButton: React.FC<ImplantationsExportButtonProps>
     const handleExport = async () => {
         setIsExporting(true);
         try {
-            const syntheseRows: SyntheseExportRow[] = [];
-            const referenceIds = [...new Set(items.map(i => i.referenceId))];
-            for (const refId of referenceIds) {
-                const usage = index.byReference.get(refId);
-                const ref = refById.get(refId);
-                if (!usage || !ref) continue;
-                for (const lineEntry of usage.byLine) {
-                    syntheseRows.push({
-                        reference: refId,
-                        designation: fieldDesignation(ref),
-                        catalogDesignation: displayReferenceName(ref),
-                        dimensions: formatDimensions(ref.dimensions),
-                        line: lineEntry.line,
-                        count: lineEntry.installed,
-                    });
-                }
-            }
-            syntheseRows.sort((a, b) => a.reference.localeCompare(b.reference) || compareLines(a.line, b.line));
-
-            const lines = [...new Set(items.map(i => i.line))].sort(compareLines);
-            const ligneSheets = lines.map(line => ({
-                line,
-                sheetName: line === 'P+R' ? 'P+R' : `Ligne ${line}`,
-                // Stations dans leur ordre physique sur la ligne (export uniquement).
-                rows: sortByPhysicalStationOrder(line, items.filter(i => i.line === line), i => i.lieuName)
-                    .map((imp): ImplantationExportRow => {
-                        const ref = refById.get(imp.referenceId);
-                        return {
-                            station: imp.lieuName,
-                            context: imp.context,
-                            equipment: imp.equipmentLabel,
-                            validatorType: validatorTypeLabel(imp.equipmentType),
-                            reference: imp.referenceId,
-                            designation: ref ? fieldDesignation(ref) : imp.referenceId,
-                            catalogDesignation: ref ? displayReferenceName(ref) : imp.referenceId,
-                            zoneLabel: exportZoneLabel(imp.equipmentType, imp.zone),
-                            dimensions: ref ? formatDimensions(ref.dimensions) : '',
-                            quantity: 1,
-                        };
-                    }),
-            }));
+            const syntheseRows = buildImplantationSyntheseRows(items, index, refById);
+            const ligneSheets = buildImplantationLineSheets(items, refById);
 
             const fileName = `implantations-${new Date().toISOString().slice(0, 10)}.xlsx`;
             const result = await downloadImplantationsWorkbook(syntheseRows, ligneSheets, fileName);
@@ -245,6 +209,38 @@ export const ImplantationsExportButton: React.FC<ImplantationsExportButtonProps>
         >
             <Download className="w-4 h-4" />
             {isExporting ? 'Export…' : 'Exporter .xlsx'}
+        </button>
+    );
+};
+
+/* ================= CSV de pose (référentiel transmis au SAE) ================= */
+// Mêmes implantations, même ordre et mêmes quantités que l'export .xlsx
+// (source commune : ./implantationsExportRows), plus les pictogrammes
+// cognitifs éventuellement inclus dans la sélection. Sans statut d'audit.
+
+interface PoseCsvExportButtonProps {
+    items: ImplantationRef[];
+    refById: Map<string, SignageReference>;
+    cognitive?: CognitivePictogramPoseItem[];
+}
+
+export const PoseCsvExportButton: React.FC<PoseCsvExportButtonProps> = ({ items, refById, cognitive = [] }) => {
+    const total = items.length + cognitive.length;
+    const handleExport = () => {
+        const rows = buildPoseRows(buildImplantationLineSheets(items, refById), refById, cognitive);
+        downloadFile(buildPoseCsv(rows), `pose-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
+        toast.success(`CSV de pose téléchargé (${rows.length} élément${rows.length > 1 ? 's' : ''}).`);
+    };
+    return (
+        <button
+            type="button"
+            onClick={handleExport}
+            disabled={total === 0}
+            title="Éléments à poser de la sélection courante (une ligne par exemplaire)"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors bg-white text-teal-700 ring-1 ring-inset ring-teal-600 hover:bg-teal-50 disabled:bg-slate-200 disabled:text-slate-400 disabled:ring-0 disabled:cursor-not-allowed dark:bg-slate-800 dark:text-teal-300 dark:ring-teal-400 dark:hover:bg-slate-700 dark:disabled:bg-slate-700 dark:disabled:text-slate-500 flex-shrink-0"
+        >
+            <FileText className="w-4 h-4" />
+            Exporter CSV de pose ({total})
         </button>
     );
 };
