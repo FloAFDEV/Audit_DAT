@@ -27,12 +27,15 @@ import { Lieu, SignageReference, SignageSupport, AdhesiveStatus } from '../../ty
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import ReferenceSheet from './ReferenceSheet';
-import { ImplantationsTree, ImplantationsExportButton } from './ImplantationsTree';
+import { ImplantationsTree, ImplantationsExportButton, LineBadge, PoseCsvExportButton } from './ImplantationsTree';
 import BachesView from './BachesView';
 import { useCockpitNav } from './cockpitNav';
 import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, compareLines } from './labels';
 import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
+import { CognitivePictogramPoseItem, cognitivePictogramPoseItems } from '../../utils/cockpit/cognitivePictogramSummary';
+import { buildPoseRows } from './implantationsExportRows';
+import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 
 /* ================= Références : liste filtrable ================= */
 
@@ -44,10 +47,15 @@ interface ReferencesListProps {
     onToggleSelect: (id: string) => void;
     onSetSelection: (ids: string[]) => void;
     onViewSelectedImplantations: () => void;
+    /** Pictogrammes cognitifs ajoutés à la sélection (famille sans
+     *  référence catalogue, servie par son propre module). */
+    includeCognitive: boolean;
+    onToggleCognitive: () => void;
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
     references, usageOf, onOpen, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
+    includeCognitive, onToggleCognitive,
 }) => {
     const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
     const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
@@ -130,19 +138,28 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
             {/* Barre de sélection — n'apparaît que si au moins une référence est
                 cochée, pour ne pas alourdir la vue par défaut. */}
             <div className="flex items-center justify-between gap-3 flex-wrap min-h-[2.25rem]">
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                <span className="flex items-center gap-3 flex-wrap text-sm font-medium text-slate-600 dark:text-slate-300">
                     {selectedIds.size > 0
                         ? `${selectedIds.size} référence${selectedIds.size > 1 ? 's' : ''} sélectionnée${selectedIds.size > 1 ? 's' : ''}`
                         : ''}
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={includeCognitive}
+                            onChange={onToggleCognitive}
+                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
+                        />
+                        + Pictogrammes cognitifs
+                    </label>
                 </span>
                 <button
                     type="button"
                     onClick={onViewSelectedImplantations}
-                    disabled={selectedIds.size === 0}
+                    disabled={selectedIds.size === 0 && !includeCognitive}
                     className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                 >
                     <MapPinned className="w-4 h-4" />
-                    Voir les implantations {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
+                    Voir les implantations {selectedIds.size > 0 ? `(${selectedIds.size}${includeCognitive ? ' + pictos' : ''})` : includeCognitive ? '(pictos)' : ''}
                 </button>
             </div>
 
@@ -365,6 +382,8 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
 interface SelectedImplantationsViewProps {
     selection: Selection;
+    /** Pictogrammes cognitifs inclus dans la sélection (vide sinon). */
+    cognitive: CognitivePictogramPoseItem[];
     index: PatrimoineIndex;
     references: SignageReference[];
     onBack: () => void;
@@ -372,11 +391,33 @@ interface SelectedImplantationsViewProps {
 }
 
 const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
-    selection, index, references, onBack, onOpenReference,
+    selection, cognitive, index, references, onBack, onOpenReference,
 }) => {
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
 
-    const total = selection.items.length;
+    // Lignes de la sélection : toutes cochées par défaut ; décocher une
+    // ligne la retire de l'affichage ET des exports (même périmètre).
+    const lines = useMemo(
+        () => [...new Set([...selection.items.map(i => i.line), ...cognitive.map(c => c.line)])].sort(compareLines),
+        [selection, cognitive],
+    );
+    const [excludedLines, setExcludedLines] = useState<Set<string>>(new Set());
+    const toggleLine = (line: string) => setExcludedLines(prev => {
+        const next = new Set(prev);
+        if (next.has(line)) next.delete(line); else next.add(line);
+        return next;
+    });
+    const items = useMemo(() => selection.items.filter(i => !excludedLines.has(i.line)), [selection, excludedLines]);
+    const cognitiveItems = useMemo(() => cognitive.filter(c => !excludedLines.has(c.line)), [cognitive, excludedLines]);
+    // Pictogrammes affichés exactement comme exportés (même construction,
+    // même ordre que le CSV de pose) : une ligne par pictogramme.
+    const cognitiveRows = useMemo(
+        () => buildPoseRows([], refById, cognitiveItems).map((row, i) => ({ row, key: i })),
+        [refById, cognitiveItems],
+    );
+    const stationCodeByName = useMemo(() => new Map(cognitive.map(c => [`${c.line}|${c.lieuName}`, c.stationCode])), [cognitive]);
+
+    const total = items.length;
 
     return (
         <div className="space-y-5">
@@ -395,18 +436,77 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                         <span className="text-slate-600 dark:text-slate-300">implantation{total > 1 ? 's' : ''}</span>
                         <span className="text-slate-300 dark:text-slate-600">·</span>
                         <span className="text-slate-600 dark:text-slate-300">{selection.label}</span>
+                        {cognitive.length > 0 && (
+                            <>
+                                <span className="text-slate-300 dark:text-slate-600">·</span>
+                                <span className="text-slate-600 dark:text-slate-300">
+                                    {cognitiveItems.length} pictogramme{cognitiveItems.length > 1 ? 's' : ''} cognitif{cognitiveItems.length > 1 ? 's' : ''}
+                                </span>
+                            </>
+                        )}
                     </p>
                 </div>
-                <ImplantationsExportButton items={selection.items} index={index} refById={refById} />
+                <div className="flex flex-wrap justify-end gap-2">
+                    <ImplantationsExportButton items={items} index={index} refById={refById} />
+                    <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} />
+                </div>
             </div>
 
-            {total === 0 && (
+            {/* Lignes de la sélection : périmètre commun à l'affichage et aux
+                deux exports (.xlsx, CSV de pose). */}
+            {lines.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Lignes exportées">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Lignes</span>
+                    {lines.map(line => {
+                        const active = !excludedLines.has(line);
+                        return (
+                            <button
+                                key={line}
+                                type="button"
+                                onClick={() => toggleLine(line)}
+                                aria-pressed={active}
+                                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                    active
+                                        ? 'bg-teal-700 text-white'
+                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                                }`}
+                            >
+                                {line === 'P+R' ? 'P+R' : `Ligne ${line}`}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+
+            {selection.items.length === 0 && cognitive.length === 0 && (
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                     Aucune implantation connue pour cette sélection (références désactivées, hors scope, ou partout non applicable).
                 </p>
             )}
 
-            <ImplantationsTree items={selection.items} refById={refById} onOpenReference={onOpenReference} />
+            <ImplantationsTree items={items} refById={refById} onOpenReference={onOpenReference} />
+
+            {cognitiveRows.length > 0 && (
+                <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Pictogrammes cognitifs</span>
+                        <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{cognitiveRows.length}</span>
+                    </div>
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {cognitiveRows.map(({ row, key }) => (
+                            <li key={key} className="flex items-center gap-3 px-4 py-2 text-sm">
+                                <LineBadge line={row.line} size="xs" />
+                                <CognitivePictogramVisual stationCode={stationCodeByName.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium text-slate-800 dark:text-slate-100">{row.station}</span>
+                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.location}</span>
+                                </span>
+                                <span className="flex-shrink-0 text-xs text-slate-600 dark:text-slate-300">{row.dimensions}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
         </div>
     );
 };
@@ -438,6 +538,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     // les libellés affichés — cf. utils/cockpit/selection.ts.
     const [selectedReferenceIds, setSelectedReferenceIds] = useState<Set<string>>(new Set());
     const [activeSelection, setActiveSelection] = useState<Selection | null>(null);
+    const [includeCognitive, setIncludeCognitive] = useState(false);
+    const cognitivePose = useMemo(() => (includeCognitive ? cognitivePictogramPoseItems(lieux) : []), [includeCognitive, lieux]);
 
     const toggleSelectReference = (id: string) => {
         setSelectedReferenceIds(prev => {
@@ -451,11 +553,14 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     // (même arbre, même export) — pas de vue intermédiaire.
     const handleViewSelectedImplantations = () => {
         const ids = [...selectedReferenceIds];
-        if (ids.length === 1) {
+        if (ids.length === 1 && !includeCognitive) {
             setOpenReferenceId(ids[0]);
             return;
         }
-        setActiveSelection(selectionFromReferences(index, ids, `${ids.length} références sélectionnées`));
+        const label = ids.length > 0
+            ? `${ids.length} référence${ids.length > 1 ? 's' : ''} sélectionnée${ids.length > 1 ? 's' : ''}${includeCognitive ? ' + pictogrammes cognitifs' : ''}`
+            : 'Pictogrammes cognitifs';
+        setActiveSelection(selectionFromReferences(index, ids, label));
     };
 
     // Navigation transverse : une autre section peut demander l'ouverture
@@ -507,6 +612,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         return (
             <SelectedImplantationsView
                 selection={activeSelection}
+                cognitive={cognitivePose}
                 index={index}
                 references={references}
                 onBack={() => setActiveSelection(null)}
@@ -544,6 +650,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     onToggleSelect={toggleSelectReference}
                     onSetSelection={(ids) => setSelectedReferenceIds(new Set(ids))}
                     onViewSelectedImplantations={handleViewSelectedImplantations}
+                    includeCognitive={includeCognitive}
+                    onToggleCognitive={() => setIncludeCognitive(v => !v)}
                 />
             )}
             {subSection === 'implantations' && (

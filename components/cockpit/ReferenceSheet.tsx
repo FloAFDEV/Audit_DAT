@@ -14,7 +14,7 @@ import React, { useMemo } from 'react';
 import { ArrowLeft, Ruler, Link2, Flag, Radar } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
-import { ImplantationsTree, ImplantationsExportButton } from './ImplantationsTree';
+import { ImplantationsTree, ImplantationsExportButton, PoseCsvExportButton } from './ImplantationsTree';
 import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
 import { ReferenceVisual } from '../ReferenceVisual';
 
@@ -98,8 +98,9 @@ const UsageSection: React.FC<{
                     <Field label="Types d'équipements" value={usage.equipmentTypes.join(', ')} />
                 </div>
             )}
-            <div className="flex justify-end mb-3">
+            <div className="flex flex-wrap justify-end gap-2 mb-3">
                 <ImplantationsExportButton items={items} index={index} refById={refById} />
+                <PoseCsvExportButton items={items} refById={refById} />
             </div>
             {/* Même arbre que « Implantations sélectionnées » (rendu unique). */}
             <ImplantationsTree items={items} refById={refById} onOpenReference={onOpenReference} />

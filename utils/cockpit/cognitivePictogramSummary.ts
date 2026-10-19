@@ -73,3 +73,38 @@ export const cognitivePictogramStationsByInventoryRow = (lieux: Lieu[]): Map<str
     }
     return new Map([...rows].map(([rowId, stations]) => [rowId, [...stations.values()]]));
 };
+
+export interface CognitivePictogramPoseItem {
+    line: string;
+    lieuName: string;
+    stationCode: string;
+    /** Accès / emplacement du pictogramme (libellé saisi au module). */
+    accessPointName: string;
+    dimensions: string;
+}
+
+/** Un élément par pictogramme cognitif compté (mêmes règles que les totaux
+ *  et l'Inventaire détaillé : périmètre d'exploitation, lignes actives,
+ *  emplacements « Accès à définir » exclus), filtré sur les lignes
+ *  demandées. Ordre : celui des lieux et des pictogrammes du module. */
+export const cognitivePictogramPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): CognitivePictogramPoseItem[] => {
+    const items: CognitivePictogramPoseItem[] = [];
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type !== AuditModuleType.COGNITIVE_PICTOGRAMS || !isModuleInCurrentScope(module)) continue;
+            const line = module.line ?? '';
+            if (lines && !lines.has(line)) continue;
+            const data = module.data as CognitivePictogramData;
+            for (const picto of getCountedCognitivePictograms(module)) {
+                items.push({
+                    line,
+                    lieuName: lieu.name,
+                    stationCode: data.stationCode,
+                    accessPointName: picto.accessPointName,
+                    dimensions: getCognitivePictogramDimension(data.stationCode, picto.accessPointName),
+                });
+            }
+        }
+    }
+    return items;
+};
