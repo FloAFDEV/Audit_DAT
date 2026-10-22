@@ -733,13 +733,21 @@ const logEcaFieldTraceCarryOver = async (result: EcaCarryOverResult, scope: stri
     }
 };
 
+const ECA_ALIGNMENT_BACKUP_FAILED_ID = 'eca-source-alignment-backup-failed';
+
 /** Journal de l'alignement des valideurs corrigés dans la source : un
  *  événement par valideur aligné, un par conflit (une seule fois — clé
  *  stable). Aucun événement pour un valideur déjà conforme. */
-const logEcaSourceAlignment = async (plan: EcaAlignmentEntry[]) => {
+const logEcaSourceAlignment = async (plan: EcaAlignmentEntry[], backupFailed = false) => {
     const reportable = plan.filter(e => e.outcome === 'aligned' || e.outcome === 'conflict' || e.outcome === 'missing');
-    if (reportable.length === 0) return;
+    if (reportable.length === 0 && !backupFailed) return;
     const known = new Set((await db.events.toArray()).map(e => e.entityId));
+    if (backupFailed && !known.has(ECA_ALIGNMENT_BACKUP_FAILED_ID)) {
+        await logEvent({
+            type: 'DATA_MIGRATION', entityType: 'eca', entityId: ECA_ALIGNMENT_BACKUP_FAILED_ID, entityLabel: 'ECA — alignement sur la source corrigée',
+            summary: "Alignement ECA non appliqué : sauvegarde locale impossible (stockage plein ?) — aucun valideur modifié, nouvel essai au prochain démarrage",
+        });
+    }
     for (const entry of reportable) {
         const { correction: c, outcome } = entry;
         const entityId = `eca-source-${outcome === 'aligned' ? 'alignment' : 'conflict'}:${c.moduleId}|${c.accessPoint}|${c.number}`;
@@ -978,7 +986,7 @@ const useAuditStore = create<AppState>((set, get) => {
      * Si localStorage est plein, déclenche un téléchargement automatique du fichier JSON.
      * @returns la clé localStorage utilisée pour le backup, ou '' si download forcé.
      */
-    const _backupBeforeReset = async (scope: string): Promise<string> => {
+    const _backupBeforeReset = async (scope: string, options: { requireLocalCopy?: boolean } = {}): Promise<string> => {
         const fullPayload = await buildFullExportPayload();
         const now = fullPayload.exportDate;
         // Format identique à l'export JSON v2 (clé 'data' + signageReferences)
@@ -987,6 +995,21 @@ const useAuditStore = create<AppState>((set, get) => {
         const backup = { ...fullPayload, scope };
         const json = JSON.stringify(backup);
         const backupKey = `tisseo-audit-backup-${Date.now()}`;
+        // requireLocalCopy : seule une copie écrite ET relue dans localStorage
+        // compte comme sauvegarde ; aucun téléchargement de repli (il ne
+        // prouve rien) — échec → '' sans toucher au dernier backup connu.
+        if (options.requireLocalCopy) {
+            try {
+                localStorage.setItem(backupKey, json);
+                if (localStorage.getItem(backupKey) !== json) throw new Error('Sauvegarde locale illisible');
+                localStorage.setItem('tisseo-audit-last-backup-key', backupKey);
+                localStorage.setItem('tisseo-audit-last-backup-date', now);
+                return backupKey;
+            } catch {
+                try { localStorage.removeItem(backupKey); } catch { /* ignore */ }
+                return '';
+            }
+        }
         try {
             localStorage.setItem(backupKey, json);
             localStorage.setItem('tisseo-audit-last-backup-key', backupKey);
@@ -1228,13 +1251,18 @@ const useAuditStore = create<AppState>((set, get) => {
                 // (utils/ecaFieldCorrection.ts). Sauvegarde complète d'abord ;
                 // sans elle, rien n'est aligné (nouvel essai au démarrage suivant).
                 let ecaAlignment = planEcaSourceAlignment(data);
+                let ecaAlignmentBackupFailed = false;
                 if (ecaAlignment.some(e => e.outcome === 'aligned')) {
-                    try {
-                        await _backupBeforeReset('eca-source-alignment');
+                    // Copie locale relue obligatoire : un téléchargement de
+                    // secours ne vaut pas sauvegarde.
+                    const backupKey = await _backupBeforeReset('eca-source-alignment', { requireLocalCopy: true })
+                        .catch(error => { console.error('Sauvegarde avant alignement ECA impossible :', error); return ''; });
+                    if (backupKey) {
                         applyEcaSourceAlignment(ecaAlignment);
                         dataChanged = true;
-                    } catch (error) {
-                        console.error("Sauvegarde impossible avant l'alignement ECA — alignement reporté :", error);
+                    } else {
+                        console.error("Sauvegarde locale non écrite — alignement ECA reporté au prochain démarrage.");
+                        ecaAlignmentBackupFailed = true;
                         ecaAlignment = ecaAlignment.filter(e => e.outcome !== 'aligned');
                     }
                 }
@@ -1248,7 +1276,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 }
                 await logArenesT1PlanQuartierMigration(arenesT1);
                 await logArenesCognitiveMigration(arenesCognitive);
-                await logEcaSourceAlignment(ecaAlignment);
+                await logEcaSourceAlignment(ecaAlignment, ecaAlignmentBackupFailed);
 
                 set({ lieux: data });
             } else {
