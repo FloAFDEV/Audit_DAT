@@ -33,12 +33,14 @@ describe('Implantations : accès complet et cohérence des compteurs', () => {
         expect(new Set(all).size).toBe(index.implantations.length);
     });
 
-    it('eca-1 = 251 occurrences, ZH et ZB séparées', () => {
+    // 255 = 251 + 4 entrées rétablies d'après les relevés terrain (EMP, RAN,
+    // PHA, UPS) ; ZB (PMR) inchangé.
+    it('eca-1 = 255 occurrences, ZH et ZB séparées', () => {
         const eca1 = index.implantations.filter(i => i.referenceId === 'eca-1');
-        expect(eca1).toHaveLength(251);
-        expect(index.byReference.get('eca-1')!.installedCount).toBe(251);
-        expect(selectionFromReference(index, 'eca-1', 'eca-1').items).toHaveLength(251);
-        expect(eca1.filter(i => i.zone === 'ZH')).toHaveLength(205);
+        expect(eca1).toHaveLength(255);
+        expect(index.byReference.get('eca-1')!.installedCount).toBe(255);
+        expect(selectionFromReference(index, 'eca-1', 'eca-1').items).toHaveLength(255);
+        expect(eca1.filter(i => i.zone === 'ZH')).toHaveLength(209);
         expect(eca1.filter(i => i.zone === 'ZB')).toHaveLength(46);
     });
 });
@@ -64,7 +66,7 @@ describe('filtre matière (cards)', () => {
     it('Adhésif : uniquement des implantations adhésives, eca-1 ZH/ZB inclus', () => {
         const items = filterImplantationsBySupports(index.implantations, refById, new Set<SignageSupport>(['adhesif']));
         expect(items.every(i => supportOf(i.referenceId) === 'adhesif')).toBe(true);
-        expect(items.filter(i => i.referenceId === 'eca-1')).toHaveLength(251);
+        expect(items.filter(i => i.referenceId === 'eca-1')).toHaveLength(255);
         expect(flatten(groupImplantationsByLocation(items))).toHaveLength(items.length);
     });
 

@@ -226,6 +226,21 @@ export interface ECA {
     comment: string;
     isNotApplicable?: boolean;
     completionDate?: string;
+    /** Position de l'équipement dans data/eca_data.ts (accès + numéro),
+     *  figée à la première trace terrain : le lien avec la source tient même
+     *  si l'accès ou le numéro est ensuite modifié. Clé complète : id du
+     *  module + accès + numéro (le numéro seul n'est pas unique). */
+    sourceRef?: { accessPoint: string; number: number };
+    /** Correction terrain du type (sens et/ou catégorie), jamais écrasée par
+     *  la source — cf. utils/ecaFieldCorrection.ts. */
+    fieldTypeCorrection?: { initialType: EcaEquipmentType; correctedAt: string };
+    /** Sens vérifié sur le terrain (date). Indépendant du type : aucun effet
+     *  sur les comptages. */
+    fieldVerifiedAt?: string;
+    /** Statuts des adhésifs devenus inapplicables après un changement de
+     *  type, conservés (jamais comptés : hors `adhesives`) et restaurés si
+     *  le type y revient. */
+    archivedAdhesives?: { [key: string]: AdhesiveStatus };
 }
 
 export interface EcaData {
@@ -457,7 +472,7 @@ export interface HistoryEntry {
 export type AppEventType =
     | 'RESET_GLOBAL' | 'RESET_CATEGORY' | 'RESET_MODULE_TYPE' | 'RESET_AUDIT'
     | 'IMPORT' | 'EXPORT'
-    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED'
+    | 'AUDIT_ITEM_ADDED' | 'AUDIT_ITEM_REMOVED' | 'AUDIT_ITEM_UPDATED'
     | 'REFERENCE_ARBITRAGE'
     | 'DATA_MIGRATION'
     | 'PERSISTENCE_ERROR';

@@ -14,8 +14,9 @@ import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from '.
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
 import { ARENES_COGNITIVE_ACCESS_NAMES, ARENES_LEGACY_COGNITIVE_ACCESS_NAME, COGNITIVE_ACCESS_NAME_RENAMES } from './data/cognitive_pictograms';
-import { canEcaBeNotApplicable, isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
+import { isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
+import { applyEcaEdit, applyEcaSourceAlignment, carryOverEcaFieldTraces, carryOverEcaFieldTracesForLieux, confirmedSourceTemplate, EcaAlignmentEntry, EcaCarryOverResult, EcaEditResult, planEcaSourceAlignment } from './utils/ecaFieldCorrection';
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
@@ -711,6 +712,49 @@ const logArenesCognitiveMigration = async (result: { keptAudited: boolean }) => 
     });
 };
 
+// --- ECA : traces terrain lors d'une reconstruction depuis la source -------
+/** Journalise le report des corrections terrain ECA après une
+ *  réinitialisation, et chaque trace non reportée (correspondance absente ou
+ *  ambiguë — elle reste dans l'archive de la réinitialisation). */
+const logEcaFieldTraceCarryOver = async (result: EcaCarryOverResult, scope: string) => {
+    if (result.carried === 0 && result.unmatched.length === 0) return;
+    await logEvent({
+        type: 'DATA_MIGRATION', entityType: 'eca', entityId: `eca-field-carry-over:${scope}`, entityLabel: 'ECA — corrections terrain',
+        summary: `Réinitialisation (${scope}) : ${result.carried} correction(s) terrain ECA conservée(s)`
+            + (result.unmatched.length ? `, ${result.unmatched.length} non reportée(s) — à vérifier (archive)` : ''),
+        metadata: { carried: result.carried, unmatched: result.unmatched.length },
+    });
+    for (const { moduleId, eca } of result.unmatched) {
+        await logEvent({
+            type: 'DATA_MIGRATION', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
+            summary: `Correction terrain ECA non reportée (correspondance incertaine) — ${eca.name}, ${eca.accessPoint} n°${eca.number} : à ressaisir`,
+            metadata: { module: moduleId, accessPoint: eca.accessPoint, number: eca.number, type: eca.type },
+        });
+    }
+};
+
+/** Journal de l'alignement des valideurs corrigés dans la source : un
+ *  événement par valideur aligné, un par conflit (une seule fois — clé
+ *  stable). Aucun événement pour un valideur déjà conforme. */
+const logEcaSourceAlignment = async (plan: EcaAlignmentEntry[]) => {
+    const reportable = plan.filter(e => e.outcome === 'aligned' || e.outcome === 'conflict' || e.outcome === 'missing');
+    if (reportable.length === 0) return;
+    const known = new Set((await db.events.toArray()).map(e => e.entityId));
+    for (const entry of reportable) {
+        const { correction: c, outcome } = entry;
+        const entityId = `eca-source-${outcome === 'aligned' ? 'alignment' : 'conflict'}:${c.moduleId}|${c.accessPoint}|${c.number}`;
+        if (known.has(entityId)) continue;
+        const label = `${c.stationCode} — ${c.accessPoint} n°${c.number}`;
+        await logEvent({
+            type: 'DATA_MIGRATION', entityType: 'eca', entityId, entityLabel: label,
+            summary: outcome === 'aligned'
+                ? `ECA ${label} aligné sur la source corrigée (relevé terrain) : ${c.previousType} → ${confirmedSourceTemplate(c)?.type}`
+                : `ECA ${label} non aligné sur la source corrigée (${entry.reason}) — conservé tel quel, à contrôler`,
+            metadata: { module: c.moduleId, accessPoint: c.accessPoint, number: c.number, outcome, ...(entry.eca ? { storedType: entry.eca.type } : {}) },
+        });
+    }
+};
+
 // --- Caisses automatiques P+R : nombre théorique modifiable ---------------
 // Le nombre de caisses d'une zone EST la liste de ses équipements CA (la
 // structure du P+R) : ajouter ou retirer une caisse modifie cette liste, rien
@@ -1178,6 +1222,23 @@ const useAuditStore = create<AppState>((set, get) => {
                 data = pdqReconciled.lieux;
                 if (pdqReconciled.changed) dataChanged = true;
 
+                // ECA : valideurs corrigés dans la source d'après les relevés
+                // terrain — alignés seulement si non audités, de type exactement
+                // égal à l'ancienne valeur source et de correspondance certaine
+                // (utils/ecaFieldCorrection.ts). Sauvegarde complète d'abord ;
+                // sans elle, rien n'est aligné (nouvel essai au démarrage suivant).
+                let ecaAlignment = planEcaSourceAlignment(data);
+                if (ecaAlignment.some(e => e.outcome === 'aligned')) {
+                    try {
+                        await _backupBeforeReset('eca-source-alignment');
+                        applyEcaSourceAlignment(ecaAlignment);
+                        dataChanged = true;
+                    } catch (error) {
+                        console.error("Sauvegarde impossible avant l'alignement ECA — alignement reporté :", error);
+                        ecaAlignment = ecaAlignment.filter(e => e.outcome !== 'aligned');
+                    }
+                }
+
                 if (dataChanged) {
                     await db.lieux.bulkPut(data);
                     await logEvent({
@@ -1187,6 +1248,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 }
                 await logArenesT1PlanQuartierMigration(arenesT1);
                 await logArenesCognitiveMigration(arenesCognitive);
+                await logEcaSourceAlignment(ecaAlignment);
 
                 set({ lieux: data });
             } else {
@@ -1661,24 +1723,33 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handleUpdateEca: async (ecaData) => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        // Hors PMR, un changement de type conserve les statuts compatibles,
+        // archive les autres et trace la correction (utils/ecaFieldCorrection.ts) ;
+        // un type PMR en jeu garde le comportement historique.
+        const result: { edit?: EcaEditResult } = {};
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: EcaData };
             const ecaIndex = module.data.ecas.findIndex(e => e.id === ecaData.id);
             if (ecaIndex > -1) {
-                const originalEca = module.data.ecas[ecaIndex];
-                const updatedEca = { ...originalEca, ...ecaData };
-                if (ecaData.type && ecaData.type !== originalEca.type) {
-                    updatedEca.adhesives = createInitialAdhesiveStatus(
-                        getEcaAdhesiveOccurrences(ecaData.type).map(occ => ({ id: occ.statusKey }))
-                    );
-                    delete updatedEca.completionDate;
-                }
-                if (!canEcaBeNotApplicable(updatedEca.type)) delete updatedEca.isNotApplicable;
-                if (updatedEca.isNotApplicable) updatedEca.completionDate = new Date().toISOString();
-                module.data.ecas[ecaIndex] = updatedEca;
+                result.edit = applyEcaEdit(module.data.ecas[ecaIndex], ecaData, new Date().toISOString());
+                module.data.ecas[ecaIndex] = result.edit.eca;
             }
         });
+        const typeChange = result.edit?.typeChange;
+        if (result.edit && typeChange) {
+            const { eca } = result.edit;
+            const lieuName = lieux.find(l => l.id === selectedLieuId)?.name;
+            await logEvent({
+                type: 'AUDIT_ITEM_UPDATED', entityType: 'eca', entityId: eca.id, entityLabel: eca.name,
+                summary: `ECA corrigé sur le terrain — ${eca.name}${lieuName ? ` (${lieuName})` : ''} : ${typeChange.from} → ${typeChange.to}`,
+                metadata: {
+                    module: selectedModuleId ?? '', accessPoint: eca.accessPoint, number: eca.number,
+                    from: typeChange.from, to: typeChange.to,
+                    archived: typeChange.archived.join(', '), restored: typeChange.restored.join(', '),
+                },
+            });
+        }
     },
 
     handleRemoveEca: async (ecaId) => {
@@ -2270,10 +2341,15 @@ const useAuditStore = create<AppState>((set, get) => {
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
 
+            // Corrections terrain ECA reportées sur les modules reconstruits.
+            const ecaCarry: EcaCarryOverResult = { carried: 0, unmatched: [] };
             for (const lieu of updatedLieux) {
                 const modulesToKeep = lieu.modules.filter((m: AuditModule) => !categoryConfig.predicate(m));
                 const freshLieu = freshLieuxMap.get(lieu.name);
                 const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)) : [];
+                const carry = carryOverEcaFieldTraces(lieu.modules.filter((m: AuditModule) => categoryConfig.predicate(m)), freshModulesToAdd);
+                ecaCarry.carried += carry.carried;
+                ecaCarry.unmatched.push(...carry.unmatched);
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
 
@@ -2296,6 +2372,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 summary: `Catégorie « ${categoryConfig.label} » réinitialisée`,
                 metadata: { lieuxConcernes: lieuxToSnapshot.length },
             });
+            await logEcaFieldTraceCarryOver(ecaCarry, categoryConfig.label);
 
         } catch (error) {
             console.error(`Failed to reset category ${category}:`, error);
@@ -2316,10 +2393,14 @@ const useAuditStore = create<AppState>((set, get) => {
             const freshLieuxMap = new Map(freshLieux.map(l => [l.name, l]));
             const updatedLieux = JSON.parse(JSON.stringify(currentLieux));
 
+            const ecaCarry: EcaCarryOverResult = { carried: 0, unmatched: [] };
             for (const lieu of updatedLieux) {
                 const modulesToKeep = lieu.modules.filter((m: AuditModule) => m.type !== moduleType);
                 const freshLieu = freshLieuxMap.get(lieu.name);
                 const freshModulesToAdd = freshLieu ? freshLieu.modules.filter((m: AuditModule) => m.type === moduleType) : [];
+                const carry = carryOverEcaFieldTraces(lieu.modules.filter((m: AuditModule) => m.type === moduleType), freshModulesToAdd);
+                ecaCarry.carried += carry.carried;
+                ecaCarry.unmatched.push(...carry.unmatched);
                 lieu.modules = [...modulesToKeep, ...freshModulesToAdd];
             }
 
@@ -2338,6 +2419,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 summary: `Type d'audit « ${moduleType} » réinitialisé`,
                 metadata: { lieuxConcernes: snapshotData.length },
             });
+            await logEcaFieldTraceCarryOver(ecaCarry, moduleType);
 
         } catch (error) {
             console.error(`Failed to reset module type ${moduleType}:`, error);
@@ -2366,8 +2448,10 @@ const useAuditStore = create<AppState>((set, get) => {
 
             // Sauvegarde automatique avant effacement.
             await _backupBeforeReset('reset-all');
-            await db.lieux.clear();
             const initialData = await generateInitialLieuxDataAsync();
+            // Corrections terrain ECA reportées (l'avancement, lui, repart de zéro).
+            const ecaCarry = carryOverEcaFieldTracesForLieux(currentLieux, initialData);
+            await db.lieux.clear();
             await db.lieux.bulkPut(initialData);
             set({
                 lieux: initialData,
@@ -2385,6 +2469,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 summary: 'Réinitialisation complète du réseau',
                 metadata: { lieuxConcernes: currentLieux.length },
             });
+            await logEcaFieldTraceCarryOver(ecaCarry, 'réseau complet');
         } catch (error) {
             console.error("Failed to reset all data:", error);
             throw error;
