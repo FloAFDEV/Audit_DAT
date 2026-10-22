@@ -449,7 +449,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-1",
     "material": "Sur le support de validation. A la pose laisser la diode visible pour diagnostic.",
     "name": "Adhesif valideur-billetique-metro-cible",
-    "quantity": 251,
+    "quantity": 255,
     "repere": "1",
   },
   {
@@ -458,7 +458,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-2",
     "material": "Autour du support de validation, format carré.",
     "name": "Adhesif gris valideur-billetique-metro-pastel",
-    "quantity": 205,
+    "quantity": 209,
     "repere": "2",
   },
   {
@@ -467,7 +467,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
     "id": "eca-3",
     "material": "Sous la vitre en tête haute de l’ECA, vitrophanie.",
     "name": "Adhesif valideur-openpayment-metro",
-    "quantity": 205,
+    "quantity": 209,
     "repere": "3",
   },
   {

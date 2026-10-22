@@ -9,6 +9,13 @@ import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
 import { formatEcaTypeForDisplay, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
 import useAuditStore from '../store';
+import { EcaFieldStatus, getEcaFieldStatuses } from '../utils/ecaFieldCorrection';
+
+const FIELD_STATUS_BADGES: Record<EcaFieldStatus, { label: string; className: string }> = {
+    corrected: { label: 'Corrigé terrain', className: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-200' },
+    verified: { label: 'Sens vérifié', className: 'bg-teal-100 text-teal-900 dark:bg-teal-900/40 dark:text-teal-200' },
+    to_check: { label: 'À contrôler', className: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200' },
+};
 
 /** Durée d'affichage de la surbrillance de retour — même valeur que DATList,
  *  discrète et alignée sur les transitions déjà présentes sur ces cartes. */
@@ -182,6 +189,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
 
                         const isPmr = isPmrEcaType(eca.type);
                         const isReturnHighlighted = eca.id === returnHighlightId;
+                        const fieldStatuses = getEcaFieldStatuses(eca, ecaData.stationCode, module.id);
 
                         return (
                             <React.Fragment key={eca.id}>
@@ -217,6 +225,15 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                                 className="text-lg font-semibold text-gray-900 dark:text-slate-100 break-words" 
                                             />
                                             <p className="text-sm text-gray-500 dark:text-slate-400">{formatEcaTypeForDisplay(eca.type)}</p>
+                                            {fieldStatuses.length > 0 && (
+                                                <p className="mt-1 flex flex-wrap gap-1">
+                                                    {fieldStatuses.map(status => (
+                                                        <span key={status} className={`rounded px-1.5 py-0.5 text-xs font-medium ${FIELD_STATUS_BADGES[status].className}`}>
+                                                            {FIELD_STATUS_BADGES[status].label}
+                                                        </span>
+                                                    ))}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="flex items-center flex-shrink-0 gap-1 sm:gap-2">

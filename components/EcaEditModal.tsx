@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ECA, EcaEquipmentType } from '../types';
 import { canEcaBeNotApplicable } from '../data/eca_data';
 import { getEcaTypeLabel } from './EcaUiHelpers';
+import { getEcaAdhesiveOccurrences } from '../data/adhesives';
+import { getEcaPhysicalType, transitionEcaAdhesives } from '../utils/ecaFieldCorrection';
 
 interface EcaEditModalProps {
     isOpen: boolean;
@@ -30,6 +32,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
     const [type, setType] = useState<EcaEquipmentType>(EcaEquipmentType.TripodeEntree);
     const [number, setNumber] = useState<number>(1);
     const [isNotApplicable, setIsNotApplicable] = useState(false);
+    const [isVerified, setIsVerified] = useState(false);
 
     useEffect(() => {
         if (eca) {
@@ -38,6 +41,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
             setType(eca.type);
             setNumber(eca.number);
             setIsNotApplicable(eca.isNotApplicable ?? false);
+            setIsVerified(!!eca.fieldVerifiedAt);
         } else {
             // Reset form for new ECA
             setName('');
@@ -45,6 +49,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
             setType(EcaEquipmentType.TripodeEntree);
             setNumber(1);
             setIsNotApplicable(false);
+            setIsVerified(false);
         }
     }, [eca, isOpen]);
 
@@ -60,12 +65,30 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
             number,
             isNotApplicable: canBeNA ? isNotApplicable : undefined,
         };
+        // Sens vérifié : valideurs hors PMR uniquement ; envoyé à l'édition
+        // pour que décocher le retire.
+        if (eca || isVerified) {
+            ecaData.fieldVerifiedAt = isVerified && isFieldTraceable ? (eca?.fieldVerifiedAt ?? new Date().toISOString()) : undefined;
+        }
         onSave(ecaData);
     };
     
+    // Valideurs hors PMR : changement de type tracé, statuts compatibles
+    // conservés, autres archivés (utils/ecaFieldCorrection.ts).
+    const isFieldTraceable = getEcaPhysicalType(type) !== null;
+
     if (!isOpen) return null;
 
     const canBeNA = canEcaBeNotApplicable(type);
+    const typeChanged = !!eca && type !== eca.type;
+    const tracedChange = typeChanged && isFieldTraceable && getEcaPhysicalType(eca!.type) !== null;
+    const transition = tracedChange ? transitionEcaAdhesives(eca!, type) : null;
+    const adhesiveLabel = (key: string) => {
+        const occ = [...getEcaAdhesiveOccurrences(eca!.type), ...getEcaAdhesiveOccurrences(type)]
+            .find(o => o.statusKey === key || o.legacyStatusKey === key);
+        return occ ? occ.name : key;
+    };
+    const correction = eca?.fieldTypeCorrection;
 
     return (
         <div
@@ -133,6 +156,48 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                     </select>
                                 </div>
                             </div>
+                            {correction && (
+                                <p className="text-sm text-amber-800 dark:text-amber-300">
+                                    Corrigé sur le terrain le {new Date(correction.correctedAt).toLocaleDateString('fr-FR')} — type d'origine : {getEcaTypeLabel(correction.initialType)}
+                                </p>
+                            )}
+                            {transition && transition.archived.length > 0 && (
+                                <div className="rounded-md bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200">
+                                    <p className="font-medium">Adhésifs archivés (plus comptés, restaurés si le type revient) :</p>
+                                    <ul className="mt-1 list-disc pl-5">
+                                        {transition.archived.map(key => <li key={key}>{adhesiveLabel(key)}</li>)}
+                                    </ul>
+                                </div>
+                            )}
+                            {transition && transition.restored.length > 0 && (
+                                <p className="text-sm text-teal-800 dark:text-teal-300">
+                                    Statuts repris de l'archive : {transition.restored.map(adhesiveLabel).join(', ')}
+                                </p>
+                            )}
+                            {typeChanged && !tracedChange && (
+                                <p className="text-sm text-amber-800 dark:text-amber-300">
+                                    Type PMR concerné : l'avancement de cet équipement sera réinitialisé.
+                                </p>
+                            )}
+                            {isFieldTraceable && (
+                                <div className="relative flex items-start">
+                                    <div className="flex h-6 items-center">
+                                        <input
+                                            id="isVerified"
+                                            name="isVerified"
+                                            type="checkbox"
+                                            checked={isVerified}
+                                            onChange={(e) => setIsVerified(e.target.checked)}
+                                            className="h-4 w-4 rounded border-gray-300 text-teal-700 focus:ring-teal-600 dark:text-teal-600"
+                                        />
+                                    </div>
+                                    <div className="ml-3 text-sm leading-6">
+                                        <label htmlFor="isVerified" className="font-medium text-gray-900 dark:text-slate-200">
+                                            Sens vérifié sur le terrain
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
                              {canBeNA && (
                                 <div className="relative flex items-start mt-4">
                                     <div className="flex h-6 items-center">

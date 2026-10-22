@@ -58,6 +58,10 @@ export const ECA_DEFINITIONS_JJA_A_PRINCIPAL: EcaTemplate[] = [
 // ECA DEFINITIONS FOR ALL OTHER STATIONS
 // =================================================================
 
+// Types entrée/sortie : EMP, RAN, PHA et UPS rétablis d'après les relevés
+// terrain (identiques à la version d'octobre 2025, ec3733c) ; les autres
+// stations modifiées le 30/12/2025 (ca650ce, 26fa57a) restent à vérifier
+// sur le terrain — liste : data/ecaFieldVerification.ts.
 export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
     // --- LIGNE A ---
     'BGR': [
@@ -369,7 +373,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 2', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 2 },
         { name: 'Valideur 3', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 3 },
         { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
-        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: 'Valideur 5 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 5 },
         { name: 'PMR 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 6 },
     ],
     'SAG': [
@@ -391,16 +395,16 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
         { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 2 },
         { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
-        { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
-        { name: 'Valideur 5 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 5 },
+        { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
+        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
     ],
     'PHA': [
         { name: 'PMR 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 1 },
         { name: 'Valideur 2 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 2 },
-        { name: 'Valideur 3 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 3 },
-        { name: 'Valideur 4 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 4 },
-        { name: 'Valideur 5 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 5 },
-        { name: 'Valideur 6 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 6 },
+        { name: 'Valideur 3', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 3 },
+        { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
+        { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
+        { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
     ],
     'UPS': [
         { name: 'Valideur 1', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 1 },
@@ -409,7 +413,7 @@ export const ECA_DEFINITIONS: Record<string, EcaTemplate[]> = {
         { name: 'Valideur 4', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 4 },
         { name: 'Valideur 5', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 5 },
         { name: 'Valideur 6', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 6 },
-        { name: 'Valideur 7', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeEntree, number: 7 },
+        { name: 'Valideur 7 (Sortie)', accessPoint: 'Accès Principal', type: EcaEquipmentType.TripodeSortie, number: 7 },
         { name: 'PMR 8', accessPoint: 'Accès Principal', type: EcaEquipmentType.PMRVantaux, number: 8 },
     ],
     'RAM': [ 

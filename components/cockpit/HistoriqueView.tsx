@@ -161,14 +161,14 @@ const EVENT_TYPE_GROUPS: { key: string; label: string; types: AppEventType[] }[]
     { key: 'ALL', label: 'Tout', types: [] },
     { key: 'RESET', label: 'Réinitialisations', types: ['RESET_GLOBAL', 'RESET_CATEGORY', 'RESET_MODULE_TYPE', 'RESET_AUDIT'] },
     { key: 'IO', label: 'Import / Export', types: ['IMPORT', 'EXPORT'] },
-    { key: 'AUDIT', label: "Éléments d'audit", types: ['AUDIT_ITEM_ADDED', 'AUDIT_ITEM_REMOVED'] },
+    { key: 'AUDIT', label: "Éléments d'audit", types: ['AUDIT_ITEM_ADDED', 'AUDIT_ITEM_REMOVED', 'AUDIT_ITEM_UPDATED'] },
     { key: 'REF', label: 'Référentiel', types: ['REFERENCE_ARBITRAGE'] },
 ];
 
 const EVENT_ICON: Record<AppEventType, LucideIcon> = {
     RESET_GLOBAL: RotateCcw, RESET_CATEGORY: RotateCcw, RESET_MODULE_TYPE: RotateCcw, RESET_AUDIT: RotateCcw,
     IMPORT: Upload, EXPORT: Download,
-    AUDIT_ITEM_ADDED: PlusCircle, AUDIT_ITEM_REMOVED: MinusCircle,
+    AUDIT_ITEM_ADDED: PlusCircle, AUDIT_ITEM_REMOVED: MinusCircle, AUDIT_ITEM_UPDATED: FilePenLine,
     REFERENCE_ARBITRAGE: Scale,
     DATA_MIGRATION: Database,
     PERSISTENCE_ERROR: AlertTriangle,

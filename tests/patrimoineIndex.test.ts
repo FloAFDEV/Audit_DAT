@@ -328,15 +328,16 @@ describe('buildPatrimoineIndex', () => {
 // ------------------------------------------------------------------
 // Régression réseau réel : le moteur d'index (Posés/Implantations, la
 // source consultée par ReferentielView) doit refléter le même total
-// eca-1 que la Nomenclature (hooks/useStats.ts, déjà vérifiée à 251
-// dans tests/nomenclatureCharacterization.test.ts) — un seul compte
+// eca-1 que la Nomenclature (hooks/useStats.ts, vérifiée à 255 — 251 + 4
+// entrées rétablies d'après les relevés terrain — dans
+// tests/nomenclatureCharacterization.test.ts) — un seul compte
 // juste ne suffit pas si l'autre moteur reste sur l'ancien modèle.
 // ------------------------------------------------------------------
 describe('buildPatrimoineIndex — régression réseau réel (Posés = Nomenclature)', () => {
-    it("eca-1 = 251 implantations sur le réseau réel, comme la Nomenclature", async () => {
+    it("eca-1 = 255 implantations sur le réseau réel, comme la Nomenclature", async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const index = buildPatrimoineIndex(lieux, REFERENCES);
-        expect(index.byReference.get('eca-1')?.installedCount).toBe(251);
+        expect(index.byReference.get('eca-1')?.installedCount).toBe(255);
     });
 
     it("une référence non concernée par la correction ZH/ZB garde son compte inchangé (eca-11 : un par ECA, aucune zone)", async () => {
