@@ -14,16 +14,19 @@ interface EcaEditModalProps {
     stationName: string;
 }
 
-// The simplified, final list of user-selectable ECA types.
+// Types proposés à la saisie terrain : tripode d'entrée / de sortie, PMR à
+// bras / à vantaux. Le type actuel d'un ECA existant hors de cette liste
+// (vantaux, réversible…) reste proposé, pour ne jamais le changer à l'insu
+// de l'utilisateur.
 export const EDITABLE_ECA_TYPES = [
     EcaEquipmentType.TripodeEntree,
     EcaEquipmentType.TripodeSortie,
-    EcaEquipmentType.VantauxEntree,
-    EcaEquipmentType.VantauxSortie,
-    EcaEquipmentType.VantauxReversible,
     EcaEquipmentType.PMRBras,
     EcaEquipmentType.PMRVantaux,
 ];
+
+export const getSelectableEcaTypes = (currentType?: EcaEquipmentType): EcaEquipmentType[] =>
+    currentType && !EDITABLE_ECA_TYPES.includes(currentType) ? [...EDITABLE_ECA_TYPES, currentType] : EDITABLE_ECA_TYPES;
 
 
 const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, eca, stationName }) => {
@@ -150,7 +153,7 @@ const EcaEditModal: React.FC<EcaEditModalProps> = ({ isOpen, onClose, onSave, ec
                                         onChange={(e) => setType(e.target.value as EcaEquipmentType)}
                                         className="block w-full rounded-md border-0 py-1.5 px-2 bg-white dark:bg-slate-900 text-gray-900 dark:text-slate-100 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm sm:leading-6"
                                     >
-                                        {EDITABLE_ECA_TYPES.map((t) => (
+                                        {getSelectableEcaTypes(eca?.type).map((t) => (
                                             <option key={t} value={t}>{getEcaTypeLabel(t)}</option>
                                         ))}
                                     </select>
