@@ -411,4 +411,109 @@ describe('store — alignement prudent des valideurs confirmés au démarrage', 
         expect(ecaAt(await db.lieux.toArray(), mod('EMP'), 5).type).toBe(TE);
         expect((await db.events.toArray()).some(e => e.entityId?.startsWith('eca-source-alignment:'))).toBe(false);
     }, 60000);
+
+    // --- R1 : seule une copie locale écrite et relue autorise l'alignement ---
+    const ecaModuleIds = [...new Set(CONFIRMED_ECA_SOURCE_CORRECTIONS.map(c => c.moduleId))];
+    const ecaSnapshot = (lieux: Lieu[]) => JSON.stringify(ecaModuleIds.map(id => moduleById(lieux, id).data));
+    const backupKeys = () => Array.from({ length: localStorage.length }, (_, i) => localStorage.key(i)!)
+        .filter(k => k.startsWith('tisseo-audit-backup-'));
+    /** localStorage refuse toute nouvelle sauvegarde (quota), le reste fonctionne. */
+    const failBackupWrites = () => {
+        const setItem = localStorage.setItem.bind(localStorage);
+        return vi.spyOn(localStorage, 'setItem').mockImplementation((k: string, v: string) => {
+            if (k.startsWith('tisseo-audit-backup-')) throw new Error('QuotaExceededError');
+            setItem(k, v);
+        });
+    };
+    /** Neutralise et compte les téléchargements de secours (_triggerJsonDownload). */
+    const countDownloads = () => {
+        const downloads: string[] = [];
+        const doc = (globalThis as any).document;
+        const createElement = doc.createElement;
+        const { createObjectURL, revokeObjectURL } = URL;
+        doc.createElement = () => ({ click() { downloads.push((this as any).download); } });
+        URL.createObjectURL = () => 'blob:test';
+        URL.revokeObjectURL = () => {};
+        return { downloads, restore: () => { doc.createElement = createElement; Object.assign(URL, { createObjectURL, revokeObjectURL }); } };
+    };
+    const seedWithFieldCorrection = () => seedOldSource(lieux => {
+        Object.assign(ecaAt(lieux, mod('RAN'), 4), { type: TE, fieldTypeCorrection: { initialType: TS, correctedAt: NOW } });
+        ecaAt(lieux, mod('PHA'), 3).adhesives['eca-11'] = AdhesiveStatus.OK;
+    });
+
+    it('R1 — sauvegarde locale réussie : copie relisible créée, puis alignement', async () => {
+        await seedWithFieldCorrection();
+        const lieux = await reload();
+        const keys = backupKeys();
+        expect(keys).toHaveLength(1);
+        expect(localStorage.getItem('tisseo-audit-last-backup-key')).toBe(keys[0]);
+        const backup = JSON.parse(localStorage.getItem(keys[0])!);
+        expect(backup.scope).toBe('eca-source-alignment');
+        expect(ecaAt(backup.data, mod('EMP'), 5).type).toBe(TE);
+        expect(ecaAt(lieux, mod('EMP'), 5).type).toBe(TS);
+        expect(ecaAt(lieux, mod('RAN'), 4)).toMatchObject({ type: TE, fieldTypeCorrection: { initialType: TS } });
+        expect(ecaAt(lieux, mod('PHA'), 3).type).toBe(TS);
+    }, 60000);
+
+    it('R1 — sauvegarde locale impossible : aucun valideur modifié, échec journalisé une fois, sans téléchargement', async () => {
+        const seeded = await seedWithFieldCorrection();
+        localStorage.setItem('tisseo-audit-last-backup-key', 'tisseo-audit-backup-precedent');
+        failBackupWrites();
+        const dl = countDownloads();
+        try {
+            for (let start = 0; start < 2; start++) {
+                const lieux = await reload();
+                expect(useAuditStore.getState().initError).toBeNull();
+                // Ni en mémoire ni en base : modules ECA concernés strictement identiques
+                // (types, noms, adhésifs, correction terrain).
+                expect(ecaSnapshot(lieux)).toBe(ecaSnapshot(seeded));
+                expect(ecaSnapshot(await db.lieux.toArray())).toBe(ecaSnapshot(seeded));
+            }
+            expect(dl.downloads).toEqual([]);
+        } finally {
+            dl.restore();
+        }
+        expect(backupKeys()).toEqual([]);
+        expect(localStorage.getItem('tisseo-audit-last-backup-key')).toBe('tisseo-audit-backup-precedent');
+        const events = await db.events.toArray();
+        expect(events.filter(e => e.entityId?.startsWith('eca-source-alignment:'))).toEqual([]);
+        expect(events.filter(e => e.entityId === 'eca-source-alignment-backup-failed')).toHaveLength(1);
+        // Conflit (PHA n°3, audité) signalé comme tel, jamais comme résolu ; RAN n°4,
+        // corrigé sur le terrain au type de la source corrigée, n'est pas un conflit.
+        const conflicts = events.filter(e => e.entityId?.startsWith('eca-source-conflict:'));
+        expect(conflicts.map(e => [e.entityLabel, e.metadata?.outcome])).toEqual([['PHA — Accès Principal n°3', 'conflict']]);
+    }, 60000);
+
+    it('R1 — copie locale illisible après écriture : aucun alignement', async () => {
+        const seeded = await seedOldSource();
+        const getItem = localStorage.getItem.bind(localStorage);
+        vi.spyOn(localStorage, 'getItem').mockImplementation((k: string) => (k.startsWith('tisseo-audit-backup-') ? '{}' : getItem(k)));
+        const lieux = await reload();
+        expect(ecaSnapshot(lieux)).toBe(ecaSnapshot(seeded));
+        expect(backupKeys()).toEqual([]);
+    }, 60000);
+
+    it('R1 — le téléchargement de secours (réinitialisations) ne suffit jamais à aligner', async () => {
+        await seedOldSource();
+        failBackupWrites();
+        const dl = countDownloads();
+        try {
+            // Démarrage : ni alignement ni téléchargement.
+            expect(ecaAt(await reload(), mod('EMP'), 5).type).toBe(TE);
+            expect(dl.downloads).toEqual([]);
+            // Le repli téléchargement reste celui des réinitialisations...
+            await useAuditStore.getState().handleResetAll();
+            expect(dl.downloads.length).toBeGreaterThan(0);
+            // ...et ne vaut pas sauvegarde pour l'alignement au démarrage suivant.
+            await db.lieux.clear();
+            await seedOldSource();
+            expect(ecaAt(await reload(), mod('EMP'), 5).type).toBe(TE);
+            expect((await db.events.toArray()).some(e => e.entityId?.startsWith('eca-source-alignment:'))).toBe(false);
+        } finally {
+            dl.restore();
+        }
+        // Stockage de nouveau disponible : l'alignement a lieu au démarrage suivant.
+        vi.restoreAllMocks();
+        expect(ecaAt(await reload(), mod('EMP'), 5).type).toBe(TS);
+    }, 60000);
 });
