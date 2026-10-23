@@ -96,6 +96,18 @@ export const EcaDirectionIcon: React.FC<{ type: EcaEquipmentType; className?: st
     );
 };
 
+/**
+ * Titre d'une carte valideur : nom sans le suffixe de sens « (Sortie) » /
+ * « (Entrée) » des données source, et sens lu sur le type — affiché pour les
+ * seuls valideurs d'entrée ou de sortie. PMR et vantaux réversibles : nom
+ * inchangé, aucun sens ajouté.
+ */
+export const getEcaCardTitle = (eca: ECA): { name: string; direction: string | null } => {
+    const direction = isPmrEcaType(eca.type) ? null : getEcaDirection(eca.type);
+    if (direction !== 'in' && direction !== 'out') return { name: eca.name, direction: null };
+    return { name: eca.name.replace(/\s*\((sortie|entrée)\)\s*$/i, ''), direction: ECA_DIRECTION_LABEL[direction] };
+};
+
 /** Résumé d'un accès : « 1 PMR · 2 entrées · 2 sorties ». */
 export const summarizeEcaDirections = (ecas: ECA[]): string => {
     const pmr = ecas.filter(e => isPmrEcaType(e.type)).length;
