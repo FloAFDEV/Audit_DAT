@@ -7,7 +7,7 @@ import { FormattedCorrespondence } from './Icons';
 import ConfirmationModal from './ConfirmationModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
-import { formatEcaTypeForDisplay, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
+import { getEcaTypeLabel, getEcaCardTitle, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
 import useAuditStore from '../store';
 import { EcaFieldStatus, getEcaFieldStatuses } from '../utils/ecaFieldCorrection';
 
@@ -190,6 +190,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                         const isPmr = isPmrEcaType(eca.type);
                         const isReturnHighlighted = eca.id === returnHighlightId;
                         const fieldStatuses = getEcaFieldStatuses(eca, ecaData.stationCode, module.id);
+                        const cardTitle = getEcaCardTitle(eca);
 
                         return (
                             <React.Fragment key={eca.id}>
@@ -218,13 +219,15 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                     <div className="flex items-center gap-4 flex-1 min-w-0">
                                         {getEcaIcon(eca)}
                                         <div className="flex-1 min-w-0">
-                                            <FormattedCorrespondence 
-                                                as="p" 
-                                                text={eca.name} 
-                                                useLogos={isPmr && eca.name.includes('->')}
-                                                className="text-lg font-semibold text-gray-900 dark:text-slate-100 break-words" 
-                                            />
-                                            <p className="text-sm text-gray-500 dark:text-slate-400">{formatEcaTypeForDisplay(eca.type)}</p>
+                                            {/* Numéro + sens (lu sur le type) en titre, type d'équipement dessous. */}
+                                            <p className="text-base sm:text-lg font-semibold text-gray-900 dark:text-slate-100 break-words">
+                                                <FormattedCorrespondence
+                                                    text={cardTitle.name}
+                                                    useLogos={isPmr && eca.name.includes('->')}
+                                                />
+                                                {cardTitle.direction && <> <span className="whitespace-nowrap">— {cardTitle.direction}</span></>}
+                                            </p>
+                                            <p className="text-sm text-gray-500 dark:text-slate-400">{getEcaTypeLabel(eca.type)}</p>
                                             {fieldStatuses.length > 0 && (
                                                 <p className="mt-1 flex flex-wrap gap-1">
                                                     {fieldStatuses.map(status => (
@@ -256,7 +259,7 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                                          )}
                                     </div>
                                 </div>
-                                <div className="mt-4">
+                                <div className="mt-3 border-t border-gray-100 pt-3 dark:border-slate-700">
                                     <div className="flex justify-between items-center mb-1">
                                          <span className={`text-xs font-medium ${statusLabelColor}`}>
                                             {progress.label}
