@@ -36,6 +36,7 @@ import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { CognitivePictogramPoseItem, cognitivePictogramPoseItems } from '../../utils/cockpit/cognitivePictogramSummary';
 import { buildPoseRows } from './implantationsExportRows';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { ReferenceNamePreview } from '../ReferenceVisual';
 
 /* ================= Références : liste filtrable ================= */
 
@@ -208,7 +209,11 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                     </td>
                                     <td className="p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
+                                            {/* Aperçu du visuel au survol : même composant et même
+                                                identifiant que l'Inventaire détaillé (Synthèse). */}
+                                            <ReferenceNamePreview referenceId={ref.id} label={ref.name}>
+                                                <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
+                                            </ReferenceNamePreview>
                                             {ref.isDisabled && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">Désactivée</span>}
                                         </div>
                                         <span className="block font-mono text-xs text-slate-500 dark:text-slate-400 mt-0.5">

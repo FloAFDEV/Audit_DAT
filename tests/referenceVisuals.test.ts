@@ -2,9 +2,11 @@
 // chaque id déclaré a son fichier dans public/references, et une référence
 // sans visuel (eca-11) n'en affiche aucun.
 import { describe, it, expect } from 'vitest';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
-import { getReferenceVisualUrl } from '../data/referenceVisuals';
+import { getInventoryVisualReferenceId, getReferenceVisualUrl } from '../data/referenceVisuals';
+import { buildSignageReferencesSeed } from '../data/signage_seed';
 
 describe('Visuels de référence', () => {
     it('chaque visuel déclaré existe dans public/references', () => {
@@ -31,5 +33,20 @@ describe('Visuels de référence', () => {
     it('aucun visuel pour une référence non illustrée ou en attente', () => {
         expect(getReferenceVisualUrl('eca-11')).toBeUndefined();
         expect(getReferenceVisualUrl(undefined)).toBeUndefined();
+    });
+
+    it('Référentiel : chaque référence du catalogue a le même visuel que sa ligne d\'Inventaire détaillé', () => {
+        for (const ref of buildSignageReferencesSeed()) {
+            expect(getReferenceVisualUrl(ref.id)).toBe(getReferenceVisualUrl(getInventoryVisualReferenceId(ref.id)));
+        }
+    });
+
+    it('ECA : aucun visuel en double entre références distinctes ; eca-11 et eca-r-1 sans visuel', () => {
+        const eca = buildSignageReferencesSeed().filter(r => r.auditType === 'ECA');
+        const files = eca.map(r => getReferenceVisualUrl(r.id)).filter(Boolean);
+        expect(new Set(files).size).toBe(files.length);
+        const contents = files.map(url => createHash('md5').update(readFileSync(join(__dirname, '..', 'public', url!))).digest('hex'));
+        expect(new Set(contents).size).toBe(contents.length);
+        expect(eca.filter(r => !getReferenceVisualUrl(r.id)).map(r => r.id).sort()).toEqual(['eca-11', 'eca-r-1']);
     });
 });

@@ -133,7 +133,12 @@ export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: strin
                 document.body
             )}
             {isZoomOpen && createPortal(
-                <ReferenceZoom url={url} label={label} referenceId={referenceId} onClose={() => setIsZoomOpen(false)} />,
+                // Un portail propage ses clics aux ancêtres React : fermer
+                // l'agrandissement ne doit pas déclencher le clic de la ligne
+                // qui contient le nom (ex. ouverture de la fiche, Référentiel).
+                <div onClick={e => e.stopPropagation()}>
+                    <ReferenceZoom url={url} label={label} referenceId={referenceId} onClose={() => setIsZoomOpen(false)} />
+                </div>,
                 document.body
             )}
         </span>
