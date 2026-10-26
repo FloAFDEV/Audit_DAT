@@ -19,7 +19,7 @@ import { CategoryIcon } from '../CategoryIcon';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { LieuBadges } from '../Icons';
 import { StatCard, StatRow, IndicatorTile, AnomalySummaryCard } from './primitives';
-import { compareLines, formatDimensions, SUPPORT_LABELS } from './labels';
+import { compareLines, formatDimensions, formatDimensionText, SUPPORT_LABELS } from './labels';
 import { useCockpitNav } from './cockpitNav';
 import { LineBadge } from './ReferenceSheet';
 import { BACHE_LINES, getBacheTotal, getBachesForLieu, isLineRecensee } from '../../utils/cockpit/baches';
@@ -1288,7 +1288,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                 {cogPictoByDimension.length > 0 && (
                     <div className="space-y-3 mt-3 pt-3 border-t border-dashed border-slate-200 dark:border-slate-700">
                         {cogPictoByDimension.map(item => (
-                            <StatRow key={item.id} dense label={(item.dimensions ?? '').replace(/(\d)x(\d)/, '$1 × $2').replace(/(\d)cm/, '$1 cm').replace(/\./g, ',')} value={item.quantity} isSubItem />
+                            <StatRow key={item.id} dense label={formatDimensionText(item.dimensions)} value={item.quantity} isSubItem />
                         ))}
                         <button
                             type="button"
@@ -1416,7 +1416,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                             <td className="p-3 font-medium text-slate-800 dark:text-slate-100">
                                 {inventoryName(item, item.name)}
                             </td>
-                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{item.dimensions}</td>
+                            <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(item.dimensions) || '—'}</td>
                             <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{item.material}</td>
                             <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                 {item.quantity > 0 ? item.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
@@ -1448,7 +1448,7 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
                                 </div>
                                 {(item.dimensions || item.material) && (
                                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate">
-                                        {[item.dimensions, item.material].filter(Boolean).join(' · ')}
+                                        {[formatDimensionText(item.dimensions), item.material].filter(Boolean).join(' · ')}
                                     </div>
                                 )}
                             </div>

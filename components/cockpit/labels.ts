@@ -51,16 +51,49 @@ export const formatDimensions = (d?: SignageDimensions): string => {
     return `${w} × ${h} ${d.unit}`;
 };
 
+/** Même présentation que formatDimensions pour une cote déjà écrite en texte
+ *  (« 80 x 100 cm », « 74.5x97cm », « 80x80cm (Totem) » → « 80 × 80 cm
+ *  (Totem) »). Un texte qui n'est pas une cote (« Variable », description
+ *  libre) est rendu tel quel, jamais interprété comme une dimension. */
+export const formatDimensionText = (text?: string): string => {
+    if (!text) return '';
+    const m = text.match(/^(\d+(?:[.,]\d+)?)\s*[xX×]\s*(\d+(?:[.,]\d+)?)\s*(cm|mm)\b(.*)$/);
+    if (!m) return text;
+    return `${m[1].replace('.', ',')} × ${m[2].replace('.', ',')} ${m[3]}${m[4]}`;
+};
+
+// -----------------------------------------------------------------
+// Libellés d'une référence — quatre niveaux, jamais confondus :
+//  1. ref.name — nom métier enregistré (data/adhesives.ts → signage_seed →
+//     Dexie), lu tel quel par les formulaires terrain et l'export CSV
+//     d'audit. Jamais réécrit pour une raison d'affichage.
+//  2. displayReferenceName(ref) — nom d'affichage des vues cockpit
+//     (Référentiel, fiche, Inventaire détaillé, Implantations) et de leurs
+//     exports : nom métier + corrections de présentation ci-dessous.
+//  3. shortReferenceName(ref) — le même, sans le préfixe « Repère N - »
+//     (porté par une colonne Repère séparée dans l'Inventaire détaillé).
+//  4. fieldDesignation(ref) — désignation terrain des exports Excel / pose.
+// L'identifiant (ref.id) ne change jamais.
+// -----------------------------------------------------------------
+
 /** Correction de PRÉSENTATION uniquement, jamais dans le catalogue lui-même
  *  (data/adhesives.ts reste inchangé, aucune deuxième référence créée) —
  *  désignation demandée à l'identique dans la vue Implantations et son
  *  export .xlsx, pour eca-1 à ce jour. Toute autre référence garde son
- *  nom catalogue tel quel. */
+ *  nom catalogue, à la seule correction d'accent près (fixAccents). */
 const DISPLAY_NAME_OVERRIDES: Record<string, string> = {
     'eca-1': 'Repère 1 — Adhésif valideur-billetterie-métro-cible',
 };
+// Accent manquant dans certains noms catalogue ECA (« Adhesif ») —
+// présentation seulement, le nom enregistré reste inchangé.
+const fixAccents = (name: string): string => name.replace(/\bAdhesif\b/g, 'Adhésif');
+
 export const displayReferenceName = (ref: { id: string; name: string }): string =>
-    DISPLAY_NAME_OVERRIDES[ref.id] ?? ref.name;
+    DISPLAY_NAME_OVERRIDES[ref.id] ?? fixAccents(ref.name);
+
+/** Nom d'affichage sans le préfixe « Repère N - » / « Repère N — ». */
+export const shortReferenceName = (ref: { id: string; name: string }): string =>
+    displayReferenceName(ref).replace(/^Repère\s+[\w\d]+\s*[-—]\s*/, '');
 
 // -----------------------------------------------------------------
 // Export Excel des implantations — présentation terrain uniquement.

@@ -105,7 +105,11 @@ const ARBITRAGE_DECISIONS: Record<string, { status: ArbitrageStatus; reason: str
     },
 };
 
-// Équivalences métier (comptage commun dans l'inventaire — jamais de fusion, R1).
+// Équivalences métier : même article (même visuel / même fichier d'impression)
+// posé sur d'autres équipements. Affichées sur la fiche de référence
+// (ReferenceSheet) ; chaque référence garde SON comptage et sa ligne de
+// Nomenclature — aucun regroupement de quantités, jamais de fusion (R1).
+// Un comptage commun pour la commande reste une décision métier à prendre.
 const SAME_AS: Record<string, string[]> = {
     'adbe2': ['adbs2'], // même artwork « P+r-rustine-ticket-P+r_2025-02-12 »
     'adbs2': ['adbe2'],

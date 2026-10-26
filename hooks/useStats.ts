@@ -15,7 +15,7 @@ import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { splitLegacyPrDescription } from '../utils/effectiveAdhesives';
-import { formatDimensions } from '../components/cockpit/labels';
+import { formatDimensions, shortReferenceName } from '../components/cockpit/labels';
 import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
 import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
 
@@ -271,23 +271,24 @@ export const computeAdhesiveInventory = (
         const buildRowsFromReferences = (refs: SignageReference[], auditType: string, isPr: boolean) => {
             refs.forEach(ref => {
                 if (inventoryMap.has(ref.id)) return;
-                const { repere, name } = parseAdhesiveName(ref.name);
+                // Repère lu sur le nom métier ; nom affiché = nom d'affichage
+                // commun du cockpit, sans le repère (components/cockpit/labels.ts).
+                const { repere } = parseAdhesiveName(ref.name);
+                const name = shortReferenceName(ref);
                 const legacyText = isPr
                     ? splitLegacyPrDescription(ref.legacyDescription, '', '').description
                     : (ref.legacyDescription ?? '');
-                let dimensions = '';
                 let material = legacyText;
                 if (legacyText.includes('|')) {
-                    [dimensions, material] = legacyText.split('|').map(s => s.trim());
+                    material = legacyText.split('|').map(s => s.trim())[1];
                 } else if (legacyText.includes('//')) {
-                    [material, dimensions] = legacyText.split('//').map(s => s.trim());
+                    material = legacyText.split('//').map(s => s.trim())[0];
                 }
-                // Repli sur les champs structurés du référentiel, champ par
-                // champ : certaines fiches décrivent leur format en toutes
-                // lettres (« ... au format 78x120cm »), sans le séparateur que
-                // le découpage historique attend — la colonne Dimensions
-                // restait alors vide alors que la donnée existe.
-                if (!dimensions && ref.dimensions) dimensions = formatDimensions(ref.dimensions);
+                // Dimensions : la cote structurée du référentiel, au même format
+                // que le Référentiel (formatDimensions) — jamais le texte
+                // historique, qui contient parfois une description libre à la
+                // place d'une cote (eca-11, eca-r-1). Pas de cote connue : vide.
+                const dimensions = ref.dimensions ? formatDimensions(ref.dimensions) : '';
                 if (!material) material = ref.material ?? '';
                 inventoryMap.set(ref.id, { id: ref.id, auditType, repere, name, dimensions, material, quantity: 0 });
             });
