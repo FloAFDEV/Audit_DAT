@@ -1,15 +1,16 @@
 // utils/fieldPhotos.ts
 // =================================================================
-// Photos terrain des adhésifs PMR au sol.
+// Photos terrain — même circuit pour tous les audits qui en prennent
+// (adhésifs PMR au sol, Équipements Station, plans de quartier T1).
 //
 // Une prise de vue = un enregistrement de la table `photos` (db.ts, V26) :
 // l'original reçu de l'appareil photo, octet pour octet (+ type, taille,
-// nom, SHA-256), son rattachement (station, module/accès, adhésif) et la
-// date de prise de vue retenue. La photo AFFICHÉE dans l'audit reste
-// `adhesive.photo_base64` : une copie annotée « Station · Accès ·
-// AAAA-MM-JJ HH:MM » générée depuis l'original (utils/resizeImage.ts) —
-// c'est elle qui voyage dans la sauvegarde JSON ; l'original reste sur
-// l'appareil de prise de vue.
+// nom, SHA-256), son rattachement (station, module, accès/direction,
+// élément) et la date de prise de vue retenue. La photo AFFICHÉE dans
+// l'audit reste `photo_base64` de l'élément : une copie annotée « Station ·
+// Accès · AAAA-MM-JJ HH:MM » générée depuis l'original
+// (utils/resizeImage.ts) — c'est elle qui voyage dans la sauvegarde JSON ;
+// l'original reste sur l'appareil de prise de vue.
 //
 // Cycle de vie : aucun effacement physique. Remplacer, supprimer ou
 // réinitialiser change seulement le statut de l'enregistrement.
@@ -21,7 +22,7 @@ import { resizeImage } from './resizeImage';
 
 /** Côté le plus long de la copie annotée (lisibilité du bandeau, poids
  *  raisonnable dans la sauvegarde JSON). */
-export const PMR_PHOTO_MAX_SIZE = 1600;
+export const FIELD_PHOTO_MAX_SIZE = 1600;
 
 // -----------------------------------------------------------------
 // Empreinte
@@ -180,7 +181,7 @@ export const captionOf = (photo: Pick<FieldPhoto, 'stationName' | 'accessLabel' 
  *  appliquée aux pixels avant le bandeau. L'original n'est jamais modifié. */
 export const renderAnnotatedPhoto = (photo: Pick<FieldPhoto, 'original' | 'originalType' | 'stationName' | 'accessLabel' | 'takenAt' | 'rotation'>): Promise<string> => {
     const caption = captionOf(photo);
-    return resizeImage(new Blob([photo.original], { type: photo.originalType || 'image/jpeg' }), PMR_PHOTO_MAX_SIZE, {
+    return resizeImage(new Blob([photo.original], { type: photo.originalType || 'image/jpeg' }), FIELD_PHOTO_MAX_SIZE, {
         rotation: photo.rotation,
         annotate: (ctx, width, height) => drawCaptionBanner(ctx, width, height, caption),
     });
@@ -189,24 +190,26 @@ export const renderAnnotatedPhoto = (photo: Pick<FieldPhoto, 'original' | 'origi
 // -----------------------------------------------------------------
 // Enregistrement et cycle de vie
 // -----------------------------------------------------------------
-export interface PmrPhotoContext {
+/** Rattachement d'une prise de vue. `itemId` est unique dans le module
+ *  (adhésif PMR : son id ; Équipements Station : station:catégorie:sens:rang). */
+export interface FieldPhotoContext {
     lieuId: string;
     stationName: string;
     stationCode: string;
     moduleId: string;
     moduleName: string;
+    accessLabel: string;
     itemId: string;
     itemLabel: string;
 }
 
 /** Enregistrement d'une prise de vue : original intact, empreinte, date. */
-export const createPmrPhotoRecord = async (file: Blob & { name?: string; lastModified?: number }, context: PmrPhotoContext, now = new Date()): Promise<FieldPhoto> => {
+export const createFieldPhotoRecord = async (file: Blob & { name?: string; lastModified?: number }, context: FieldPhotoContext, now = new Date()): Promise<FieldPhoto> => {
     const original = await file.arrayBuffer();
     const { takenAt, source } = resolveTakenAt(readExifDateTime(original), file.lastModified, now);
     return {
         id: uuidv4(),
         ...context,
-        accessLabel: pmrAccessLabel(context.moduleName),
         original,
         originalName: file.name ?? '',
         originalType: file.type || 'image/jpeg',
@@ -223,23 +226,30 @@ export const createPmrPhotoRecord = async (file: Blob & { name?: string; lastMod
 const setStatus = (database: AuditDb, photos: FieldPhoto[], status: FieldPhotoStatus, at: string) =>
     Promise.all(photos.map(p => database.photos.update(p.id, { status, statusChangedAt: at })));
 
-const currentPhotosOf = (database: AuditDb, moduleId: string, itemId?: string) =>
+/** Élément visé : un id exact, tous ceux d'un préfixe (une station
+ *  d'Équipements Station), ou tout le module si absent. */
+export type FieldPhotoItemFilter = string | { prefix: string };
+
+const matchesItem = (itemId: string, filter?: FieldPhotoItemFilter) =>
+    filter === undefined || (typeof filter === 'string' ? itemId === filter : itemId.startsWith(filter.prefix));
+
+const currentPhotosOf = (database: AuditDb, moduleId: string, filter?: FieldPhotoItemFilter) =>
     database.photos.where('moduleId').equals(moduleId)
-        .filter(p => p.status === 'current' && (itemId === undefined || p.itemId === itemId))
+        .filter(p => p.status === 'current' && matchesItem(p.itemId, filter))
         .toArray();
 
-/** Ajoute la nouvelle photo d'un adhésif ; la précédente passe 'replaced'. */
-export const savePmrPhoto = (database: AuditDb, photo: FieldPhoto): Promise<void> =>
+/** Ajoute la nouvelle photo d'un élément ; la précédente passe 'replaced'. */
+export const saveFieldPhoto = (database: AuditDb, photo: FieldPhoto): Promise<void> =>
     database.transaction('rw', database.photos, async () => {
         await setStatus(database, await currentPhotosOf(database, photo.moduleId, photo.itemId), 'replaced', photo.createdAt);
         await database.photos.add(photo);
     });
 
-/** Suppression (un adhésif) ou réinitialisation (tout le module) : les
+/** Suppression (un élément) ou réinitialisation (module ou station) : les
  *  photos en cours passent 'removed', l'enregistrement est conservé. */
-export const releasePmrPhotos = (database: AuditDb, moduleId: string, itemId?: string, at = new Date().toISOString()): Promise<void> =>
+export const releaseFieldPhotos = (database: AuditDb, moduleId: string, filter?: FieldPhotoItemFilter, at = new Date().toISOString()): Promise<void> =>
     database.transaction('rw', database.photos, async () => {
-        await setStatus(database, await currentPhotosOf(database, moduleId, itemId), 'removed', at);
+        await setStatus(database, await currentPhotosOf(database, moduleId, filter), 'removed', at);
     });
 
 /** Demande au navigateur de ne pas évincer la base en cas de manque de

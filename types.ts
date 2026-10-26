@@ -108,9 +108,15 @@ export enum EquipmentStatusType {
 export interface EquipmentStatus {
     status: EquipmentStatusType | 'NotChecked';
     comment?: string;
+    /** Photo affichée : copie annotée pour une photo prise avec original
+     *  (table `photos`), photo historique sinon. */
     photo_base64?: string | null;
     photo_note?: string;
     photo_rotation?: number;
+    /** Photo en cours dans la table `photos`. Absent : photo historique. */
+    photo_id?: string;
+    /** Date/heure de prise de vue retenue (ISO). */
+    photo_taken_at?: string;
 }
 
 export interface TotemStatus extends EquipmentStatus {
@@ -267,7 +273,8 @@ export interface PMRFloorAdhesive {
 }
 
 // =================================================================
-// PHOTOS TERRAIN (adhésifs PMR au sol) — table Dexie `photos`
+// PHOTOS TERRAIN (PMR au sol, Équipements Station, plans de quartier T1)
+// — table Dexie `photos`
 // =================================================================
 /** Origine de la date de prise de vue, par priorité décroissante. */
 export type PhotoTakenAtSource = 'exif' | 'file' | 'validation';
@@ -285,7 +292,8 @@ export interface FieldPhoto {
     stationCode: string;
     moduleId: string;
     moduleName: string;
-    /** Accès tiré du nom du module, vide pour un module sans accès. */
+    /** Accès (PMR : tiré du nom du module) ou direction (Équipements
+     *  Station) ; vide si aucun. */
     accessLabel: string;
     itemId: string;
     itemLabel: string;

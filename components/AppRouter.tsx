@@ -102,6 +102,7 @@ interface AppRouterProps {
     handleSignaletiqueStatusChange: any;
     handleSignaletiqueCommentChange: any;
     handleSignaletiquePhotoChange: any;
+    handleSignaletiquePhotoCapture: any;
     handleSignaletiqueStationCommentChange: any;
     onPhotoNoteChange: any;
     onPhotoRotationChange: any;
@@ -247,6 +248,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
                 onFieldChange={handlers.onFieldChange}
                 onCommentChange={handlers.handleSignaletiqueCommentChange}
                 onPhotoChange={handlers.handleSignaletiquePhotoChange}
+                onPhotoCapture={handlers.handleSignaletiquePhotoCapture}
                 onPhotoNoteChange={handlers.onPhotoNoteChange}
                 onPhotoRotationChange={handlers.onPhotoRotationChange}
                 onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}
@@ -425,6 +427,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onFieldChange={handlers.onFieldChange}
             onCommentChange={handlers.handleSignaletiqueCommentChange}
             onPhotoChange={handlers.handleSignaletiquePhotoChange}
+            onPhotoCapture={handlers.handleSignaletiquePhotoCapture}
             onPhotoNoteChange={handlers.onPhotoNoteChange}
             onPhotoRotationChange={handlers.onPhotoRotationChange}
             onStationCommentChange={handlers.handleSignaletiqueStationCommentChange}

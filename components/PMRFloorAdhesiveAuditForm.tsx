@@ -5,6 +5,7 @@ import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
 import { ReferenceVisual } from './ReferenceVisual';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 
@@ -29,6 +30,9 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
   // Visionneuse : lue dans le store (la rotation régénère la copie annotée).
   const [viewingPhotoId, setViewingPhotoId] = useState<string | null>(null);
   const viewingPhoto = viewingPhotoId ? pmrData.adhesives.find(a => a.id === viewingPhotoId && a.photo_base64) ?? null : null;
+  // Suppression d'une photo : toujours après confirmation.
+  const [deletingPhotoId, setDeletingPhotoId] = useState<string | null>(null);
+  const deletingPhoto = deletingPhotoId ? pmrData.adhesives.find(a => a.id === deletingPhotoId) ?? null : null;
 
   const progress = useMemo(() => {
     if (pmrData.isNotApplicable) return 0;
@@ -191,7 +195,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                             </button>
                             {adhesive.photo_base64 && (
                                 <button
-                                    onClick={() => onPhotoChange(adhesive.id, null)}
+                                    onClick={() => setDeletingPhotoId(adhesive.id)}
                                     className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
                                     aria-label="Supprimer la photo"
                                     title="Supprimer la photo"
@@ -229,6 +233,11 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
             </ul>
         )}
       </AuditFormLayout>
+      <ConfirmPhotoDeleteModal
+        label={deletingPhoto ? `${pmrData.stationName} — ${module.name}` : null}
+        onClose={() => setDeletingPhotoId(null)}
+        onConfirm={() => deletingPhoto && onPhotoChange(deletingPhoto.id, null)}
+      />
        {viewingPhoto && (
         <PhotoViewerModal
             isOpen={!!viewingPhoto}

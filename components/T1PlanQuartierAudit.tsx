@@ -7,11 +7,11 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { CheckCircle2, XCircle, AlertTriangle, Camera, Edit, Trash2, RotateCw, MessageSquare, Maximize2 } from 'lucide-react';
 import { AuditModule, EquipmentStatusType, SignaletiqueData, Station } from '../types';
-import type { SignaletiqueTarget } from '../store';
+import type { SignaletiquePhotoLabels, SignaletiqueTarget } from '../store';
 import AuditFormLayout from './AuditFormLayout';
 import PhotoViewerModal from './PhotoViewerModal';
+import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
 import { showPromiseToast } from './ToastManager';
-import { resizeImage } from '../utils/resizeImage';
 import { TERMINUS_BANDEAU_TEXT, TERMINUS_STATIONS } from '../utils/signaletiqueDirections';
 import {
   T1_PLAN_QUARTIER_DIMENSIONS, T1PlanQuartierOccurrence, summarizeT1PlanQuartier, t1PlanQuartierOccurrences,
@@ -31,6 +31,8 @@ interface T1PlanQuartierAuditProps {
   onFieldChange: (category: keyof SignaletiqueData, dir: Dir, index: number, field: string, value: any, target: SignaletiqueTarget) => Promise<void> | void;
   onCommentChange: (category: keyof SignaletiqueData, dir: Dir, index: number, comment: string, target: SignaletiqueTarget) => Promise<void> | void;
   onPhotoChange: (category: keyof SignaletiqueData, dir: Dir, index: number, photo: string | null, target: SignaletiqueTarget) => Promise<void> | void;
+  /** Prise de vue : original conservé, copie annotée affichée (store). */
+  onPhotoCapture: (category: keyof SignaletiqueData, dir: Dir, index: number, file: File, labels: SignaletiquePhotoLabels, target: SignaletiqueTarget) => Promise<void>;
   onPhotoNoteChange: (category: keyof SignaletiqueData, dir: Dir, index: number, note: string, target: SignaletiqueTarget) => Promise<void> | void;
   onPhotoRotationChange: (category: keyof SignaletiqueData, dir: Dir, index: number, rotation: number, target: SignaletiqueTarget) => Promise<void> | void;
   onStationCommentChange: (comment: string, target: SignaletiqueTarget) => void;
@@ -75,7 +77,7 @@ const T1_BANDEAU_VISUAL_IDS: Record<Dir, string> = {
 
 const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
   module, signaletiqueModule, station,
-  onStatusChange, onFieldChange, onCommentChange, onPhotoChange, onPhotoNoteChange, onPhotoRotationChange, onStationCommentChange, onBack,
+  onStatusChange, onFieldChange, onCommentChange, onPhotoChange, onPhotoCapture, onPhotoNoteChange, onPhotoRotationChange, onStationCommentChange, onBack,
 }) => {
   const target: SignaletiqueTarget = { moduleId: signaletiqueModule.id, stationId: station.id };
   const occurrences = useMemo(() => t1PlanQuartierOccurrences(station), [station]);
@@ -86,6 +88,14 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
   const uploadDirRef = useRef<Dir | null>(null);
   const [viewingDir, setViewingDir] = useState<Dir | null>(null);
   const viewing = occurrences.find(o => o.dirKey === viewingDir)?.item;
+  // Suppression d'une photo : toujours après confirmation.
+  const [deletingDir, setDeletingDir] = useState<Dir | null>(null);
+  const photoLabelsOf = (dir: Dir): SignaletiquePhotoLabels => ({
+    stationName: station.name,
+    // Même libellé que dans Équipements Station (préfixe « Direction » retiré).
+    accessLabel: (occurrences.find(o => o.dirKey === dir)?.direction ?? '').replace(/^Direction\s+/i, ''),
+    itemLabel: 'Plan de quartier T1',
+  });
 
   // Progression : état du plan + bandeau de chaque occurrence recensée.
   const progress = useMemo(() => {
@@ -109,16 +119,12 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
     const file = event.target.files?.[0];
     const dir = uploadDirRef.current;
     if (file && dir) {
-      const hadRotation = !!occurrences.find(o => o.dirKey === dir)?.item?.photo_rotation;
-      // Écritures enchaînées (jamais concurrentes sur le même lieu) ; une
-      // nouvelle photo repart d'une orientation nulle.
-      const promise = resizeImage(file, 1024).then(async base64 => {
-        await onPhotoChange('planQuartier', dir, 0, base64, target);
-        if (hadRotation) await onPhotoRotationChange('planQuartier', dir, 0, 0, target);
-      });
+      // Original conservé tel quel ; copie annotée (station · direction ·
+      // date/heure) générée et affichée à sa place, orientation remise à zéro.
+      const promise = onPhotoCapture('planQuartier', dir, 0, file, photoLabelsOf(dir), target);
       showPromiseToast(
         promise,
-        { icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>, title: "Traitement de l'image...", message: 'Compression en cours.' },
+        { icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>, title: "Traitement de l'image...", message: 'Annotation en cours.' },
         { icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-white" /></div>, title: 'Photo ajoutée', message: "L'image a été enregistrée avec succès." },
         { icon: <div className="h-full w-full rounded-full bg-red-500 flex items-center justify-center"><XCircle className="h-5 w-5 text-white" /></div>, title: 'Erreur', message: "Impossible de traiter l'image." }
       );
@@ -203,7 +209,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
                   className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-all active:scale-95 ${item.photo_base64 ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-300 dark:ring-teal-800' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'}`}
                 >
                   {item.photo_base64 ? <Edit className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-                  {item.photo_base64 ? 'Remplacer' : 'Ajouter une photo'}
+                  {item.photo_base64 ? 'Remplacer' : 'Prendre une photo'}
                 </button>
                 {item.photo_base64 && (
                   <>
@@ -216,7 +222,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => onPhotoChange('planQuartier', dirKey, 0, null, target)}
+                      onClick={() => setDeletingDir(dirKey)}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40 transition-all active:scale-95"
                     >
                       <Trash2 className="w-4 h-4" /> Supprimer
@@ -291,6 +297,11 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
         </div>
       </AuditFormLayout>
 
+      <ConfirmPhotoDeleteModal
+        label={deletingDir ? `Plan de quartier T1 — ${photoLabelsOf(deletingDir).accessLabel || station.name}` : null}
+        onClose={() => setDeletingDir(null)}
+        onConfirm={() => deletingDir && onPhotoChange('planQuartier', deletingDir, 0, null, target)}
+      />
       {viewingDir && viewing?.photo_base64 && (
         <PhotoViewerModal
           isOpen

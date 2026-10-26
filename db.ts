@@ -633,8 +633,9 @@ export const createAuditDb = (name: string): AuditDb => {
     events: '++id, date, type, entityType',
 }).upgrade(refreshAdca8FromSeed);
 
-// V26: table photos — originaux des photos des adhésifs PMR au sol et leur
-// rattachement (station, module, adhésif). Ajout pur : aucune table
+// V26: table photos — originaux des photos terrain (PMR au sol, Équipements
+// Station, plans de quartier T1) et leur rattachement (station, module,
+// élément). Ajout pur : aucune table
 // existante modifiée, aucune donnée réécrite, pas d'upgrade.
     instance.version(26).stores({
     lieux: 'id, name',
