@@ -31,6 +31,7 @@ import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
 import { resizeImage } from '../utils/resizeImage';
+import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 
 type SignDir = 'meett' | 'pdj' | 'direction1' | 'direction2';
 
@@ -93,7 +94,7 @@ const MULTI_QUAI_STATIONS = ['Arènes', 'Odyssud'];
 // n'est jamais modifié ici (voir data/signaletique_config.ts). Le relevé
 // d'audit affiche « 80 » quelle que soit la ligne : exact pour le T1, simple
 // convention d'affichage pour l'Aéroport Express en attendant l'arbitrage.
-const PLAN_QUARTIER_DISPLAY_DIMENSIONS = '80 x 100 cm';
+const PLAN_QUARTIER_DISPLAY_DIMENSIONS = STATION_EQUIPMENT_DIMENSIONS.planQuartierTram;
 
 const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   module,

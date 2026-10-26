@@ -100,7 +100,9 @@ describe('export Excel — présentation terrain', () => {
         expect(fieldDesignation(refs.get('eca-3')!)).toBe('OpenPayment sous vitre');
         expect(fieldDesignation(refs.get('eca-4')!)).toBe('Cible sur zone validation PMR à bras');
         expect(fieldDesignation(refs.get('eca-11')!)).toBe('Numéro du valideur');
-        expect(displayReferenceName(refs.get('eca-3')!)).toBe(refs.get('eca-3')!.name);
+        // Nom enregistré inchangé ; seul l'accent manquant est corrigé à l'affichage.
+        expect(refs.get('eca-3')!.name).toBe('Repère 3 - Adhesif valideur-openpayment-metro');
+        expect(displayReferenceName(refs.get('eca-3')!)).toBe('Repère 3 - Adhésif valideur-openpayment-metro');
     });
 
     it('DAT, P+R et plans de quartier : pas de désignation terrain figée, nom catalogue conservé', () => {

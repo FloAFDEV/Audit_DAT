@@ -40,7 +40,7 @@ describe('Nomenclature — caractérisation (non-régression signageReferences)'
         // et dimensions extraites du texte historique (legacyDescription).
         const pr = inventory.find(item => item.id === 'adbe1');
         expect(pr).toBeDefined();
-        expect(pr!.dimensions).toBe('11x12,5cm');
+        expect(pr!.dimensions).toBe('11 × 12,5 cm'); // format commun (formatDimensions)
         expect(pr!.material).toContain('P+r-rustine-entree');
     });
 

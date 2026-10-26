@@ -629,7 +629,7 @@ export interface SignageReference {
     externalDocuments?: ExternalDocumentRef[];
 
     // --- Liens et drapeaux ---
-    sameAs?: string[];   // équivalences métier (comptage commun) — jamais de fusion
+    sameAs?: string[];   // équivalences métier (même article posé sur d'autres équipements), affichées sur la fiche — chaque référence garde son propre comptage, jamais de fusion
     pairedWith?: string; // association physique (ex. recto/verso adca12/adca13)
     isDisabled?: boolean;
     /** Arbitrage métier — sous-objet unique (statut, motif, historique). */

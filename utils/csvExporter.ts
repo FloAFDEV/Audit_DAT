@@ -8,7 +8,8 @@ import {
 import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
-import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
+import { physicalStationIndex } from './cockpit/exportStationOrder';
+import { parseAdhesiveName } from './adhesiveNames';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { buildFullExportPayload, validateLieuxData } from './signageSerializer';
 
@@ -252,17 +253,6 @@ const PDQ_MODEL_DESCRIPTIONS: Record<string, string> = {
     'pem3d-120x80': 'PEM 3D | 120x80cm | Dibond',
 };
 
-const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
-    if (!name) return { repere: '', name: '' };
-    const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
-    if (repereMatch) {
-        return {
-            repere: repereMatch[1],
-            name: repereMatch[2].trim()
-        };
-    }
-    return { repere: '', name: name };
-};
 
 const getModeFromLine = (line: string | undefined): string => {
     if (!line) return '';
@@ -410,24 +400,10 @@ function buildGroupedCsvRows(
     return result;
 }
 
-// Configuration pour le tri physique des stations
-const STATION_ORDER_MAP = new Map<string, Map<string, number>>();
-
-const buildStationIndexMap = (line: string, stations: any[]) => {
-    const map = new Map<string, number>();
-    stations.forEach((s, index) => {
-        const name = s.lieuName || s.name;
-        if (name) map.set(name, index);
-    });
-    STATION_ORDER_MAP.set(line, map);
-};
-
-// Build the maps once
-buildStationIndexMap('A', LINE_A_STATIONS);
-buildStationIndexMap('B', LINE_B_STATIONS);
-buildStationIndexMap('C', LINE_C_STATIONS);
-buildStationIndexMap('TRAM', TRAM_STATIONS);
-buildStationIndexMap('TELEO', TELEO_STATIONS);
+// Tri physique des stations : rang commun (utils/cockpit/exportStationOrder),
+// appliqué aux seules lignes historiquement ordonnées dans cet export — les
+// autres lignes restent triées par ordre alphabétique, comme avant.
+const CSV_PHYSICAL_ORDER_LINES: ReadonlySet<string> = new Set(['A', 'B', 'C', 'TRAM', 'TELEO']);
 
 export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: boolean; error?: string } => {
     try {
@@ -807,11 +783,10 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
             const rankB = lineRank.get(b.Ligne) ?? 99;
             if (rankA !== rankB) return rankA - rankB;
 
-            // 2. Ordre physique de la station sur sa ligne (via STATION_ORDER_MAP)
-            const stationsOnLine = STATION_ORDER_MAP.get(a.Ligne);
-            if (stationsOnLine) {
-                const idxA = stationsOnLine.get(a.Lieu) ?? 999;
-                const idxB = stationsOnLine.get(b.Lieu) ?? 999;
+            // 2. Ordre physique de la station sur sa ligne (rang commun)
+            if (CSV_PHYSICAL_ORDER_LINES.has(a.Ligne)) {
+                const idxA = physicalStationIndex(a.Ligne, a.Lieu) ?? 999;
+                const idxB = physicalStationIndex(a.Ligne, b.Lieu) ?? 999;
                 if (idxA !== idxB) return idxA - idxB;
             }
 

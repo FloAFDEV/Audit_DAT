@@ -30,7 +30,7 @@ import ReferenceSheet from './ReferenceSheet';
 import { ImplantationsTree, ImplantationsExportButton, LineBadge, PoseCsvExportButton } from './ImplantationsTree';
 import BachesView from './BachesView';
 import { useCockpitNav } from './cockpitNav';
-import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, compareLines } from './labels';
+import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, compareLines, displayReferenceName } from './labels';
 import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { CognitivePictogramPoseItem, cognitivePictogramPoseItems } from '../../utils/cockpit/cognitivePictogramSummary';
@@ -69,6 +69,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
             if (support !== 'ALL' && r.support !== support) return false;
             if (q && !(
                 r.name.toLowerCase().includes(q) ||
+                displayReferenceName(r).toLowerCase().includes(q) ||
                 r.id.toLowerCase().includes(q) ||
                 (r.code ?? '').toLowerCase().includes(q) ||
                 (r.material ?? '').toLowerCase().includes(q)
@@ -211,8 +212,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                         <div className="flex items-center gap-2 flex-wrap">
                                             {/* Aperçu du visuel au survol : même composant et même
                                                 identifiant que l'Inventaire détaillé (Synthèse). */}
-                                            <ReferenceNamePreview referenceId={ref.id} label={ref.name}>
-                                                <span className="font-medium text-slate-800 dark:text-slate-100">{ref.name}</span>
+                                            <ReferenceNamePreview referenceId={ref.id} label={displayReferenceName(ref)}>
+                                                <span className="font-medium text-slate-800 dark:text-slate-100">{displayReferenceName(ref)}</span>
                                             </ReferenceNamePreview>
                                             {ref.isDisabled && <span className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">Désactivée</span>}
                                         </div>

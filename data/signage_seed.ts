@@ -105,7 +105,11 @@ const ARBITRAGE_DECISIONS: Record<string, { status: ArbitrageStatus; reason: str
     },
 };
 
-// Équivalences métier (comptage commun dans l'inventaire — jamais de fusion, R1).
+// Équivalences métier : même article (même visuel / même fichier d'impression)
+// posé sur d'autres équipements. Affichées sur la fiche de référence
+// (ReferenceSheet) ; chaque référence garde SON comptage et sa ligne de
+// Nomenclature — aucun regroupement de quantités, jamais de fusion (R1).
+// Un comptage commun pour la commande reste une décision métier à prendre.
 const SAME_AS: Record<string, string[]> = {
     'adbe2': ['adbs2'], // même artwork « P+r-rustine-ticket-P+r_2025-02-12 »
     'adbs2': ['adbe2'],
@@ -124,7 +128,8 @@ const SAME_AS: Record<string, string[]> = {
  * propriétaire du patrimoine porte ce compte, et l'additionner des deux côtés
  * reviendrait à compter deux fois le même objet physique.
  *
- * À distinguer d'une référence simplement désactivée (adca8, eca-r-1) : celle-là
+ * À distinguer d'une référence simplement désactivée (eca-r-1 ; adca8 l'était
+ * jusqu'à sa réactivation en bulle carte bancaire, migrations V24/V25) : celle-là
  * n'a pas changé de propriétaire, elle est retirée du catalogue actif, et son
  * comptage historique reste inchangé — une désactivation n'est pas une
  * migration, et ne doit jamais se comporter comme telle.
@@ -270,9 +275,11 @@ const buildPlanQuartierReferencesSeed = (): SignageReference[] => [
 ];
 
 /**
- * Construit les enregistrements du référentiel (39 depuis la qualification V15) depuis le catalogue
- * historique. Les scopes P+R et ECA sont DÉRIVÉS de l'appartenance réelle
- * aux listes actuelles (aucune recopie manuelle des règles d'implantation).
+ * Construit les 44 enregistrements du référentiel : les 39 références du
+ * catalogue historique (12 DAT, 15 P+R, 12 ECA — data/adhesives.ts) et les 5
+ * modèles de plans de quartier (+ PEM 3D) figés ci-dessus. Les scopes P+R et
+ * ECA sont DÉRIVÉS de l'appartenance réelle aux listes actuelles (aucune
+ * recopie manuelle des règles d'implantation).
  */
 export const buildSignageReferencesSeed = (): SignageReference[] => {
     const seed: SignageReference[] = [];

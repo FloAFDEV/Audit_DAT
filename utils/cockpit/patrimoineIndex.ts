@@ -257,9 +257,10 @@ export const resolveReferencesForEquipment = (
     auditType: 'DAT' | 'PR' | 'ECA' | 'PDQ',
     equipmentType?: string,
     surchargeIds?: string[],
+    options: CatalogueWalkOptions = {},
 ): SignageReference[] => {
     let list = references.filter(ref => {
-        if (ref.isDisabled) return false;
+        if (ref.isDisabled && !options.includeDisabled) return false;
         if (ref.scope.auditType !== auditType) return false;
         const scopeTypes = (ref.scope as { equipmentTypes?: string[] }).equipmentTypes;
         // equipmentTypes absent = toute la famille ; présent = liste blanche.
@@ -278,9 +279,23 @@ export const resolveReferencesForEquipment = (
 
 const isDefect = (s: AdhesiveStatus) => s === AdhesiveStatus.Absent || s === AdhesiveStatus.ToBeReplaced;
 
-export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference[]): PatrimoineIndex => {
+/** Options du parcours des implantations cataloguées.
+ *  includeDisabled : inclure les références désactivées. Le patrimoine
+ *  ACTUEL (index, implantations, exports) les exclut ; la Nomenclature
+ *  (hooks/useStats.ts) les inclut, une désactivation conservant son
+ *  comptage historique (cf. data/signage_seed.ts). */
+export interface CatalogueWalkOptions { includeDisabled?: boolean }
+
+/**
+ * LE parcours unique de l'arbre d'audit pour les références du catalogue
+ * (DAT / P+R / ECA / Plans de quartier) : une implantation par exemplaire
+ * attendu, « non applicable » exclu. Partagé par l'index du patrimoine et
+ * par la Nomenclature — aucun second calcul de ces règles.
+ */
+export const collectCatalogueImplantations = (
+    lieux: Lieu[], references: SignageReference[], options: CatalogueWalkOptions = {},
+): ImplantationRef[] => {
     const implantations: ImplantationRef[] = [];
-    const refById = new Map(references.map(r => [r.id, r]));
 
     const pushImplantations = (
         refs: SignageReference[],
@@ -305,7 +320,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
 
             switch (module.type) {
                 case AuditModuleType.DAT: {
-                    const refs = resolveReferencesForEquipment(references, 'DAT')
+                    const refs = resolveReferencesForEquipment(references, 'DAT', undefined, undefined, options)
                         .filter(ref => isDatAdhesiveInScope(ref.id, module.line));
                     for (const station of (module.data as ModeData).stations ?? []) {
                         for (const direction of station.directions ?? []) {
@@ -325,7 +340,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                 case AuditModuleType.PR: {
                     for (const zone of (module.data as Pr).zones ?? []) {
                         for (const equip of zone.equipments ?? []) {
-                            const refs = resolveReferencesForEquipment(references, 'PR', equip.type, equip.adhesiveIds);
+                            const refs = resolveReferencesForEquipment(references, 'PR', equip.type, equip.adhesiveIds, options);
                             pushImplantations(refs, equip.adhesives ?? {}, {
                                 lieuId: lieu.id, lieuName: lieu.name,
                                 line: 'P+R',
@@ -341,7 +356,7 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
                 case AuditModuleType.ECA: {
                     for (const eca of (module.data as EcaData).ecas ?? []) {
                         if (eca.isNotApplicable) continue;
-                        const refs = resolveReferencesForEquipment(references, 'ECA', eca.type);
+                        const refs = resolveReferencesForEquipment(references, 'ECA', eca.type, undefined, options);
                         // Occurrences plutôt que simple présence d'id : un ECA
                         // d'entrée PMR porte eca-1 en 2 exemplaires physiques (ZH
                         // + ZB), un ECA d'entrée standard en 1 (ZH) — cf.
@@ -426,6 +441,12 @@ export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference
             }
         }
     }
+    return implantations;
+};
+
+export const buildPatrimoineIndex = (lieux: Lieu[], references: SignageReference[]): PatrimoineIndex => {
+    const implantations = collectCatalogueImplantations(lieux, references);
+    const refById = new Map(references.map(r => [r.id, r]));
 
     // --- Agrégation : une seule passe sur les implantations ---
     const byReference = new Map<string, ReferenceUsage>();

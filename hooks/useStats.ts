@@ -2,31 +2,25 @@
 import { useMemo } from 'react';
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference, PlanQuartierData, AdhesiveStatus, PMRFloorAdhesiveData,
+    SignageReference, PMRFloorAdhesiveData,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
-import { readEcaAdhesiveStatus, isDatAdhesiveInScope } from '../data/adhesives';
 import { getCognitivePictogramDimension, getCountedCognitivePictograms, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInCurrentScope } from '../utils/moduleScope';
-import { getEffectiveAdhesives, getEffectiveEcaAdhesiveOccurrences, getEffectiveEquipmentAdhesives, splitLegacyPrDescription } from '../utils/effectiveAdhesives';
-import { formatDimensions } from '../components/cockpit/labels';
+import { splitLegacyPrDescription } from '../utils/effectiveAdhesives';
+import { parseAdhesiveName } from '../utils/adhesiveNames';
+import { formatDimensions, shortReferenceName } from '../components/cockpit/labels';
 import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
+import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
 
-const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
-    if (!name) return { repere: '', name: '' };
-    const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
-    if (repereMatch) {
-        return { repere: repereMatch[1], name: repereMatch[2].trim() };
-    }
-    return { repere: '', name: name };
-};
 
 export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
 
@@ -271,23 +265,24 @@ export const computeAdhesiveInventory = (
         const buildRowsFromReferences = (refs: SignageReference[], auditType: string, isPr: boolean) => {
             refs.forEach(ref => {
                 if (inventoryMap.has(ref.id)) return;
-                const { repere, name } = parseAdhesiveName(ref.name);
+                // Repère lu sur le nom métier ; nom affiché = nom d'affichage
+                // commun du cockpit, sans le repère (components/cockpit/labels.ts).
+                const { repere } = parseAdhesiveName(ref.name);
+                const name = shortReferenceName(ref);
                 const legacyText = isPr
                     ? splitLegacyPrDescription(ref.legacyDescription, '', '').description
                     : (ref.legacyDescription ?? '');
-                let dimensions = '';
                 let material = legacyText;
                 if (legacyText.includes('|')) {
-                    [dimensions, material] = legacyText.split('|').map(s => s.trim());
+                    material = legacyText.split('|').map(s => s.trim())[1];
                 } else if (legacyText.includes('//')) {
-                    [material, dimensions] = legacyText.split('//').map(s => s.trim());
+                    material = legacyText.split('//').map(s => s.trim())[0];
                 }
-                // Repli sur les champs structurés du référentiel, champ par
-                // champ : certaines fiches décrivent leur format en toutes
-                // lettres (« ... au format 78x120cm »), sans le séparateur que
-                // le découpage historique attend — la colonne Dimensions
-                // restait alors vide alors que la donnée existe.
-                if (!dimensions && ref.dimensions) dimensions = formatDimensions(ref.dimensions);
+                // Dimensions : la cote structurée du référentiel, au même format
+                // que le Référentiel (formatDimensions) — jamais le texte
+                // historique, qui contient parfois une description libre à la
+                // place d'une cote (eca-11, eca-r-1). Pas de cote connue : vide.
+                const dimensions = ref.dimensions ? formatDimensions(ref.dimensions) : '';
                 if (!material) material = ref.material ?? '';
                 inventoryMap.set(ref.id, { id: ref.id, auditType, repere, name, dimensions, material, quantity: 0 });
             });
@@ -363,12 +358,12 @@ export const computeAdhesiveInventory = (
             // 78cm Aéroport Express) — deux lignes de nomenclature séparées pour
             // rester exactes sur l'export/bon de commande (cf. signaletique_config.ts).
             const signItems = [
-                { id: 'sign-totem',                 name: 'Totem',                              dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
+                { id: 'sign-totem',                 name: 'Totem',                              dimensions: STATION_EQUIPMENT_DIMENSIONS.totem, material: 'Aluminium + façade' },
                 { id: 'sign-biv',                   name: 'BIV (écran dynamique)',               dimensions: 'Variable',        material: 'Écran dynamique' },
-                { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: '80 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: '78 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: STATION_EQUIPMENT_DIMENSIONS.planReseau,     material: 'Vinyle' },
+                { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: STATION_EQUIPMENT_DIMENSIONS.planQuartierAeroport,     material: 'Vinyle' },
                 { id: 'sign-hap',                   name: 'HAP (fiche horaire)',                 dimensions: 'Variable',        material: 'Papier' },
-                { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
+                { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: STATION_EQUIPMENT_DIMENSIONS.bandeau,      material: 'Aluminium + façade' },
             ];
             // Plan de quartier T1 : un seul exemplaire physique, audité dans
             // Équipements Station mais rangé dans la famille Plans de quartier
@@ -377,7 +372,7 @@ export const computeAdhesiveInventory = (
             inventoryMap.set(T1_PLAN_QUARTIER_ROW_ID, {
                 id: T1_PLAN_QUARTIER_ROW_ID, auditType: t1PlanFamily,
                 repere: '-', name: 'Plan de quartier (Tram)',
-                dimensions: '80 x 100 cm', material: 'Vinyle', quantity: 0,
+                dimensions: STATION_EQUIPMENT_DIMENSIONS.planQuartierTram, material: 'Vinyle', quantity: 0,
             });
             signItems.forEach(item => {
                 if (!inventoryMap.has(item.id)) {
@@ -390,81 +385,25 @@ export const computeAdhesiveInventory = (
             });
         }
 
-        // --- Compute quantities from lieux ---
+        // --- Références du catalogue (DAT / P+R / ECA / Plans de quartier) ---
+        // Même parcours que l'index du patrimoine (collectCatalogueImplantations :
+        // « non applicable » exclu, ECA « sans adhésifs » exclu, une occurrence
+        // par zone ZH/ZB), une seule règle pour toutes les vues. Seule
+        // différence, documentée : une référence simplement désactivée garde ici
+        // son comptage historique, alors qu'une référence dont le patrimoine a
+        // été repris par un autre référentiel n'est plus comptée ICI (elle l'est
+        // là-bas — cf. REFERENCES_MIGRATED_TO_PLAN_QUARTIER, data/signage_seed.ts).
+        if (referencesReady) {
+            for (const imp of collectCatalogueImplantations(lieux, references, { includeDisabled: true })) {
+                if (REFERENCES_MIGRATED_TO_PLAN_QUARTIER.has(imp.referenceId)) continue;
+                addQty(imp.referenceId, 1);
+            }
+        }
+
+        // --- Compute quantities from lieux (familles hors catalogue) ---
         for (const lieu of lieux) {
             for (const module of lieu.modules) {
                 if (!isModuleInCurrentScope(module)) continue;
-
-                // DAT / P+R / ECA : un emplacement déclaré NotApplicable (non
-                // installé à cet endroit, cf. patrimoineIndex) n'est pas compté.
-                // Une référence simplement désactivée, elle, garde son comptage
-                // historique (cf. REFERENCES_MIGRATED_TO_PLAN_QUARTIER).
-                if (module.type === AuditModuleType.DAT && referencesReady) {
-                    const datAdhesives = getEffectiveAdhesives(references);
-                    for (const station of (module.data as ModeData).stations ?? []) {
-                        for (const direction of station.directions ?? []) {
-                            for (const dat of direction.dats ?? []) {
-                                datAdhesives.forEach(ad => {
-                                    if (!isDatAdhesiveInScope(ad.id, module.line)) return;
-                                    if (dat.adhesives?.[ad.id] === AdhesiveStatus.NotApplicable) return;
-                                    addQty(ad.id, 1);
-                                });
-                            }
-                        }
-                    }
-                }
-
-                if (module.type === AuditModuleType.PR && referencesReady) {
-                    for (const zone of (module.data as Pr).zones) {
-                        for (const equip of zone.equipments) {
-                            getEffectiveEquipmentAdhesives(references, equip.type, equip.adhesiveIds).forEach(ad => {
-                                // Une référence dont le patrimoine a été repris
-                                // par un autre référentiel n'a plus de quantité
-                                // ICI : elle est comptée là-bas, et l'additionner
-                                // des deux côtés compterait deux fois le même
-                                // objet. Une simple désactivation, elle, ne change
-                                // rien au comptage historique (cf. la distinction
-                                // dans data/signage_seed.ts).
-                                if (REFERENCES_MIGRATED_TO_PLAN_QUARTIER.has(ad.id)) return;
-                                if (equip.adhesives?.[ad.id] === AdhesiveStatus.NotApplicable) return;
-                                addQty(ad.id, 1);
-                            });
-                        }
-                    }
-                }
-
-                if (module.type === AuditModuleType.ECA && referencesReady) {
-                    for (const eca of (module.data as EcaData).ecas || []) {
-                        // ECA de sortie déclaré « sans adhésifs » (isNotApplicable,
-                        // cf. canEcaBeNotApplicable) : aucun exemplaire, comme dans
-                        // patrimoineIndex. Sans rapport avec isFuture.
-                        if (eca.isNotApplicable) continue;
-                        // Occurrences plutôt que simples ids : un ECA PMR d'entrée
-                        // ajoute eca-1 deux fois (zones ZH + ZB), un ECA d'entrée
-                        // standard une fois (ZH) — addQty regroupe naturellement
-                        // les deux occurrences sous la même référence catalogue.
-                        // Statut lu par occurrence (ZH/ZB, repli sur l'ancienne clé)
-                        // avec la même fonction que le formulaire terrain.
-                        const ecaForStatus = { ...eca, adhesives: eca.adhesives ?? {} };
-                        getEffectiveEcaAdhesiveOccurrences(references, eca.type).forEach(occ => {
-                            if (readEcaAdhesiveStatus(ecaForStatus, occ) === AdhesiveStatus.NotApplicable) return;
-                            addQty(occ.id, 1);
-                        });
-                    }
-                }
-
-                if (module.type === AuditModuleType.PLAN_QUARTIER && referencesReady) {
-                    // Quantité = nombre d'exemplaires réellement recensés (pas un
-                    // slot structurel comme DAT/PR/ECA) — seules les occurrences
-                    // CATALOGUÉES comptent ici ; les découvertes non cataloguées
-                    // (adHocLabel) n'ont pas de ligne de nomenclature tant qu'elles
-                    // ne sont pas intégrées au référentiel (cf. types.ts).
-                    for (const occ of (module.data as PlanQuartierData).occurrences ?? []) {
-                        if (!occ.modelId) continue;
-                        if (occ.status === AdhesiveStatus.NotApplicable) continue;
-                        addQty(occ.modelId, 1);
-                    }
-                }
 
                 if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
                     // Les matières sont des variantes du même adhésif : chaque

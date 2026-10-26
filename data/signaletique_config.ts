@@ -1,16 +1,40 @@
 
 import { SignaletiqueData, EquipmentStatus, EquipmentStatusType, TotemStatus, BivStatus, PlanReseauStatus, PlanQuartierStatus, HapStatus, BandeauStationStatus } from '../types';
 
+/**
+ * Cotes des équipements de station — source unique, reprise telle quelle par
+ * les emplacements créés ci-dessous, la Nomenclature (hooks/useStats.ts), le
+ * relevé d'audit (SignaletiqueAuditForm) et la correction des anciennes cotes
+ * T1 (store.ts). Les emplacements déjà enregistrés gardent la cote qu'ils
+ * portent ; les migrations historiques (db.ts, store.ts) gardent leurs
+ * littéraux, qui décrivent l'état de l'époque.
+ */
+export const STATION_EQUIPMENT_DIMENSIONS = {
+    totem: '61,6 x 91,6 cm',
+    bandeau: '80x29 cm',
+    planReseau: '80 x 100 cm',
+    // Plan de quartier : cote métier validée sur le Tram T1 ; Aéroport
+    // Express : 78 x 100 cm, cote encore à confirmer (cf. ci-dessous). Ces
+    // plans de quai LAE (ligne « Plan de quartier (Aéroport Express) » de la
+    // Nomenclature) sont distincts du plan recensé au module Plans de quartier
+    // de l'aéroport (pdq-adhesif, agence commerciale). Leur rattachement
+    // éventuel à un modèle du référentiel (pdq-78x100, plastifié) et leur
+    // matière (vinyle ou plastifié) restent à confirmer sur le terrain :
+    // comptage et matière inchangés en attendant.
+    planQuartierTram: '80 x 100 cm',
+    planQuartierAeroport: '78 x 100 cm',
+} as const;
+
 const createTotemStatus = (): TotemStatus => ({
     status: 'NotChecked' as const,
     comment: '',
-    dimensions: '61,6 x 91,6 cm'
+    dimensions: STATION_EQUIPMENT_DIMENSIONS.totem
 });
 
 const createBandeauStationStatus = (): BandeauStationStatus => ({
     status: 'NotChecked' as const,
     comment: '',
-    dimensions: '80x29 cm',
+    dimensions: STATION_EQUIPMENT_DIMENSIONS.bandeau,
     directionContent: 'NotChecked' as const,
     stationNameContent: 'NotChecked' as const
 });
@@ -33,7 +57,7 @@ const createInitialPlanReseauStatus = (count: number): PlanReseauStatus[] => {
     return Array.from({ length: count }, () => ({
         status: 'NotChecked' as const,
         comment: '',
-        dimensions: '80 x 100 cm',
+        dimensions: STATION_EQUIPMENT_DIMENSIONS.planReseau,
         bannerStationName: 'NotChecked' as const,
         hap: 'NotChecked' as const
     }));
@@ -49,7 +73,7 @@ const createInitialPlanReseauStatus = (count: number): PlanReseauStatus[] => {
 // L'affichage du relevé d'audit montre « 80 » quelle que soit la ligne
 // (PLAN_QUARTIER_DISPLAY_DIMENSIONS, SignaletiqueAuditForm.tsx).
 const createInitialPlanQuartierStatus = (count: number, line: 'TRAM' | 'AEROPORT'): PlanQuartierStatus[] => {
-    const dimensions = line === 'TRAM' ? '80 x 100 cm' : '78 x 100 cm';
+    const dimensions = line === 'TRAM' ? STATION_EQUIPMENT_DIMENSIONS.planQuartierTram : STATION_EQUIPMENT_DIMENSIONS.planQuartierAeroport;
     return Array.from({ length: count }, () => ({
         status: 'NotChecked' as const,
         comment: '',

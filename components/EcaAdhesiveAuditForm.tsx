@@ -60,6 +60,10 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
   const renderAdhesiveItem = (occurrence: EcaAdhesiveOccurrence) => {
     const currentStatus = readEcaAdhesiveStatus(eca, occurrence);
     const isPmrPictogram = occurrence.groupId === 'pmr-pictogram';
+    // Référence désactivée (ex. eca-r-1, non auditable) : affichée suspendue,
+    // sans saisie possible ni effet sur la progression — même traitement que
+    // le formulaire P+R. Un statut déjà enregistré reste visible.
+    const isDisabled = !!occurrence.isDisabled;
 
     const [dimensions, location] = useMemo(() => {
         if (!occurrence.description) return [null, null];
@@ -72,11 +76,12 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
     }, [occurrence.description]);
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between ${isDisabled ? 'opacity-60' : ''}`}>
             <div className="flex-1 min-w-0 flex items-start gap-3">
             <ReferenceVisual referenceId={occurrence.id} label={occurrence.name} />
             <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+                <div className="flex items-center gap-3 flex-wrap">
+                <h3 className={`text-lg font-semibold text-gray-900 dark:text-slate-100 ${isDisabled ? 'line-through' : ''}`}>
                     {occurrence.name}
                     {dimensions && (
                         <span className="text-base font-normal text-gray-500 dark:text-slate-400 ml-2">
@@ -84,6 +89,12 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
                         </span>
                     )}
                 </h3>
+                {isDisabled && (
+                    <span className="text-xs font-bold uppercase tracking-wider bg-yellow-200 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300 px-2 py-0.5 rounded-full">
+                      Suspendu
+                    </span>
+                )}
+                </div>
                 {occurrence.zoneLabel && (
                     <p className="text-sm mt-1">
                         <span className="font-medium text-gray-500 dark:text-slate-400">Emplacement : </span>
@@ -101,7 +112,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             <div className="grid grid-cols-2 gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex sm:flex-wrap sm:gap-3">
             <button
               onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.OK ? AdhesiveStatus.NotChecked : AdhesiveStatus.OK)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+              disabled={isDisabled}
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                 currentStatus === AdhesiveStatus.OK
                   ? 'bg-teal-700 text-white shadow-sm dark:bg-teal-700'
                   : 'bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -112,7 +124,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </button>
             <button
               onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.Absent ? AdhesiveStatus.NotChecked : AdhesiveStatus.Absent)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+              disabled={isDisabled}
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                 currentStatus === AdhesiveStatus.Absent
                   ? 'bg-red-600 text-white shadow-sm dark:bg-red-600'
                   : 'bg-white text-red-700 ring-1 ring-inset ring-red-600 hover:bg-red-50 dark:bg-slate-700/50 dark:text-red-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -123,7 +136,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             </button>
             <button
               onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.ToBeReplaced ? AdhesiveStatus.NotChecked : AdhesiveStatus.ToBeReplaced)}
-              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+              disabled={isDisabled}
+              className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                 currentStatus === AdhesiveStatus.ToBeReplaced
                   ? 'bg-amber-700 text-white shadow-sm'
                   : 'bg-white text-amber-700 ring-1 ring-inset ring-amber-500 hover:bg-amber-50 dark:bg-slate-700/50 dark:text-amber-300 dark:ring-slate-600 dark:hover:bg-slate-700'
@@ -135,7 +149,8 @@ const EcaAdhesiveAuditForm: React.FC<EcaAdhesiveAuditFormProps> = ({ module, eca
             {isPmrPictogram && (
               <button
                 onClick={() => onStatusChange(occurrence.statusKey, currentStatus === AdhesiveStatus.NotApplicable ? AdhesiveStatus.NotChecked : AdhesiveStatus.NotApplicable)}
-                className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
+                disabled={isDisabled}
+                className={`sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${
                   currentStatus === AdhesiveStatus.NotApplicable
                     ? 'bg-slate-500 text-white shadow-sm dark:bg-slate-600'
                     : 'bg-white text-slate-600 ring-1 ring-inset ring-slate-400 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500 dark:hover:bg-slate-700'

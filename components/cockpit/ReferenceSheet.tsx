@@ -15,7 +15,7 @@ import { ArrowLeft, Ruler, Link2, Flag, Radar } from 'lucide-react';
 import { SignageReference } from '../../types';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { ImplantationsTree, ImplantationsExportButton, PoseCsvExportButton } from './ImplantationsTree';
-import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope } from './labels';
+import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, displayReferenceName } from './labels';
 import { ReferenceVisual } from '../ReferenceVisual';
 
 // LineBadge vit avec l'arbre des implantations ; ré-exporté ici pour les
@@ -140,10 +140,10 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
-                <ReferenceVisual referenceId={reference.id} label={reference.name} size="lg" />
+                <ReferenceVisual referenceId={reference.id} label={displayReferenceName(reference)} size="lg" />
                 <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{reference.name}</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">{displayReferenceName(reference)}</h2>
                         {reference.isDisabled && <Pill tone="red">Désactivée</Pill>}
                     </div>
                     {/* Volumétrie d'abord : « combien, et à combien d'endroits »

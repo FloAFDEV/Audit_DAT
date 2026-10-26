@@ -1,9 +1,11 @@
 // utils/cockpit/exportStationOrder.ts
 // =================================================================
 // Ordre PHYSIQUE (réseau) des stations : feuilles de l'export Excel des
-// implantations et arbre des implantations (ImplantationsTree). Source canonique : les listes ordonnées de data/stations.ts
-// (déjà utilisées par hooks/useLieuList et utils/csvExporter), clé
-// lieuName || name ; P+R : l'ordre de data/pr_data.ts.
+// implantations, arbre des implantations (ImplantationsTree), export CSV
+// d'audit et galerie des pictogrammes cognitifs. Source canonique : les
+// listes ordonnées de data/stations.ts (déjà utilisées par
+// hooks/useLieuList), clé lieuName || name ; P+R : l'ordre de
+// data/pr_data.ts.
 // =================================================================
 import { Station } from '../../types';
 import {
@@ -31,6 +33,14 @@ const STATION_ORDER: Record<string, Map<string, number>> = {
     'P+R': new Map(PR_DATA.map((p, i) => [p.name, i])),
 };
 
+/** Rang physique d'une station sur sa ligne (clé lieuName || name), ou
+ *  undefined si la ligne ou la station n'est pas au registre. Chaque ligne a
+ *  son propre ordre : un même lieu sur deux lignes (Jean-Jaurès A / B) garde
+ *  deux rangs distincts. Partagé par l'export CSV d'audit, l'export Excel des
+ *  implantations et la galerie des pictogrammes cognitifs. */
+export const physicalStationIndex = (line: string, stationName: string): number | undefined =>
+    STATION_ORDER[line]?.get(stationName);
+
 /**
  * Trie (sans muter) les éléments d'UNE ligne dans l'ordre physique de ses
  * stations. Tri stable : à l'intérieur d'une station, l'ordre reçu (celui
@@ -38,8 +48,7 @@ const STATION_ORDER: Record<string, Map<string, number>> = {
  * absente du registre est placée en fin de feuille.
  */
 export const sortByPhysicalStationOrder = <T>(line: string, items: T[], stationOf: (item: T) => string): T[] => {
-    const order = STATION_ORDER[line];
-    const rank = (item: T) => order?.get(stationOf(item)) ?? Number.MAX_SAFE_INTEGER;
+    const rank = (item: T) => physicalStationIndex(line, stationOf(item)) ?? Number.MAX_SAFE_INTEGER;
     return items
         .map((item, i) => ({ item, i, r: rank(item) }))
         .sort((a, b) => a.r - b.r || a.i - b.i)

@@ -4,7 +4,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
 [
   {
     "auditType": "Bornes P+R",
-    "dimensions": "11x12,5cm",
+    "dimensions": "11 × 12,5 cm",
     "id": "adbe1",
     "material": "Adhésif « P+r-rustine-entree_2025-02-05 »",
     "name": ""cible" Information P+R",
@@ -13,7 +13,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "9x5cm",
+    "dimensions": "9 × 5 cm",
     "id": "adbe2",
     "material": "Adhésif « P+r-rustine-ticket-P+r_2025-02-12 »",
     "name": "Information Ticket",
@@ -22,7 +22,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "9x5cm",
+    "dimensions": "9 × 5 cm",
     "id": "adbs2",
     "material": "Adhésif « P+r-rustine-ticket-P+r_2025-02-12 »",
     "name": "Information Ticket",
@@ -31,7 +31,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "34x8cm",
+    "dimensions": "34 × 8 cm",
     "id": "adbe3",
     "material": "Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée ET sortie",
     "name": "Tarifs + coordonnées",
@@ -40,7 +40,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "34x8cm",
+    "dimensions": "34 × 8 cm",
     "id": "adbs3",
     "material": "Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée ET sortie",
     "name": "Tarifs + coordonnées",
@@ -49,7 +49,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "11x12,5cm",
+    "dimensions": "11 × 12,5 cm",
     "id": "adbs4",
     "material": "Adhésif « P+r-rustine-sortie-cible_2025-02-05 »",
     "name": ""cible" Information sortie",
@@ -58,7 +58,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "99x115mm",
+    "dimensions": "99 × 115 mm",
     "id": "adbs5",
     "material": "Adhésif borne sortie "Bulle" uniquement sur borne sortie",
     "name": "Adhésif borne sortie "Bulle"",
@@ -67,7 +67,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "99x115mm",
+    "dimensions": "99 × 115 mm",
     "id": "adca8",
     "material": "Adhésif "Bulle" (sortie gratuite avec la carte bancaire)",
     "name": "Adhésif caisse "Bulle"",
@@ -76,7 +76,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "10,5x12,9cm",
+    "dimensions": "10,5 × 12,9 cm",
     "id": "adca6",
     "material": "Adhésif « caisse-P+r-gauche-rustine _ 2025-02-05 »",
     "name": "Information caisse",
@@ -85,7 +85,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "8,2x5,5cm",
+    "dimensions": "8,2 × 5,5 cm",
     "id": "adca7",
     "material": "Adhésif « caisse-P+r-gauche-rustine-ticket-P+r_ 2025-02-14 »",
     "name": "Récupération ticket",
@@ -94,7 +94,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "34x8cm",
+    "dimensions": "34 × 8 cm",
     "id": "adca9",
     "material": "Adhésif « Tarifs + coordonnées Parc Relais » sur borne d’entrée",
     "name": "Adhésif « Tarifs + coordonnées Parc Relais »",
@@ -103,7 +103,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "32,8x45,1cm",
+    "dimensions": "32,8 × 45,1 cm",
     "id": "adbe10",
     "material": "Adhésif « Sticker-borne-P+R-entree-A3_ »",
     "name": "Information latérale",
@@ -112,7 +112,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Bornes P+R",
-    "dimensions": "32,8x45,1cm",
+    "dimensions": "32,8 × 45,1 cm",
     "id": "adbs11",
     "material": "Adhésif « Sticker-borne-P+R-sortie_A3_ »",
     "name": "Information latérale",
@@ -139,7 +139,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 95x5,8cm",
+    "dimensions": "95 × 5,8 cm",
     "id": "ad1",
     "material": "Localisation: En haut de la niche bleue, en butée basse avant le renfoncement.",
     "name": "Adhésif « Achat et rechargement »",
@@ -148,7 +148,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 2,5x2,5cm",
+    "dimensions": "2,5 × 2,5 cm",
     "id": "ad2",
     "material": "Localisation: Au dessus du bouton d’action lié, centré sur celui-ci.",
     "name": "Adhésif « bouton-audio »",
@@ -157,7 +157,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 25,3x22cm",
+    "dimensions": "25,3 × 22 cm",
     "id": "ad3",
     "material": "Localisation: Au dessus de la platine Carte Bancaire, en butée avec celle-ci.",
     "name": "Adhésif « Rechargement + paiement CB »",
@@ -166,7 +166,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 21,5x22cm",
+    "dimensions": "21,5 × 22 cm",
     "id": "ad4",
     "material": "Localisation: Au dessus de la platine insert monnaie, en butée avec celle-ci.",
     "name": "Adhésif « paiement monnaie »",
@@ -175,7 +175,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 12,2x10cm",
+    "dimensions": "12,2 × 10 cm",
     "id": "ad5",
     "material": "Localisation: A droite du lecteur sans contact, la flèche de l’adhésif doit pointer vers le lecteur.",
     "name": "Adhésif « paiement sans-contact »",
@@ -184,7 +184,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 20,5x16cm",
+    "dimensions": "20,5 × 16 cm",
     "id": "ad6",
     "material": "Localisation: Au dessus de la trappe rendu monnaie, en butée avec celle-ci et centrée par rapport à celle-ci.",
     "name": "Adhésif « tickets-reçus rendu-monnaie »",
@@ -193,7 +193,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 4,9x4,9cm",
+    "dimensions": "4,9 × 4,9 cm",
     "id": "ad7",
     "material": "Localisation: Sur le lecteur carte Pastel.",
     "name": "Adhésif « carte pastel »",
@@ -202,7 +202,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 36x15cm",
+    "dimensions": "36 × 15 cm",
     "id": "ad8",
     "material": "Localisation: Dans le support dédié (Voir focus page 7).",
     "name": "Fiche « Tarif »",
@@ -220,7 +220,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 24x52cm",
+    "dimensions": "24 × 52 cm",
     "id": "ad10",
     "material": "Localisation: A droite et au dessus de l’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Validation avec carte bancaire » + QR_Code",
@@ -229,7 +229,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 214x306mm",
+    "dimensions": "214 × 306 mm",
     "id": "ad11",
     "material": "Localisation: A droite, entoure le bouton d’appel d’urgence (focus en page 9).",
     "name": "Adhésif « Appel d’urgence. Tous abus sera puni »",
@@ -238,7 +238,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "DAT",
-    "dimensions": "Dimensions: 5,4x3,7cm",
+    "dimensions": "5,4 × 3,7 cm",
     "id": "ad12",
     "material": "Localisation: Immédiatement au dessus du bouton « Appel d’urgence » (focus en page 9).",
     "name": "Adhésif « Appel d’urgence + braille»",
@@ -247,7 +247,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Équipements",
-    "dimensions": "80 x 29 cm",
+    "dimensions": "80x29 cm",
     "id": "sign-bandeau",
     "material": "Aluminium + façade",
     "name": "Bandeau de station",
@@ -355,7 +355,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "120 x 80 cm",
+    "dimensions": "120 × 80 cm",
     "id": "pem3d-120x80",
     "material": "Plan Multimodal 3D géo-orienté (jamais un simple PDQ 2D), implanté aux Pôles d'échange multimodaux — support Dibond exclusivement.",
     "name": "PEM 3D — Plan Multimodal 3D géo-orienté (120×80)",
@@ -373,7 +373,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "78 x 100 cm",
+    "dimensions": "78 × 100 cm",
     "id": "pdq-78x100",
     "material": "Extérieur (édicule, totem ou sucette), cadre aluminium, sans header ni footer. Jamais en version adhésive.",
     "name": "Plan de quartier 78×100 (sans header ni footer)",
@@ -382,7 +382,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "78 x 120 cm",
+    "dimensions": "78 × 120 cm",
     "id": "pdq-adhesif",
     "material": "Version adhésive — même composition header + plan + footer que le 78×120, jamais encadrée (support adhésif direct), jamais confondue avec le 78×100.",
     "name": "Plan de quartier 78×120 (adhésif)",
@@ -391,7 +391,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "78 x 120 cm",
+    "dimensions": "78 × 120 cm",
     "id": "pdq-78x120",
     "material": "Header + plan + footer. Généralement sous cadre aluminium ; en agence commerciale, posé sans cadre.",
     "name": "Plan de quartier 78×120 (avec header et footer)",
@@ -400,7 +400,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Plans de quartier",
-    "dimensions": "78 x 120 cm",
+    "dimensions": "78 × 120 cm",
     "id": "pdq-78x120-dibond",
     "material": "Version dibond — même composition header + plan + footer que le 78×120, montée directement sur grillage en extérieur (ni cadre aluminium, ni adhésif).",
     "name": "Plan de quartier 78×120 (dibond)",
@@ -445,34 +445,34 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "59x59mm",
+    "dimensions": "59 × 59 mm",
     "id": "eca-1",
     "material": "Sur le support de validation. A la pose laisser la diode visible pour diagnostic.",
-    "name": "Adhesif valideur-billetique-metro-cible",
+    "name": "Adhésif valideur-billetterie-métro-cible",
     "quantity": 255,
     "repere": "1",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "164x170mm",
+    "dimensions": "164 × 170 mm",
     "id": "eca-2",
     "material": "Autour du support de validation, format carré.",
-    "name": "Adhesif gris valideur-billetique-metro-pastel",
+    "name": "Adhésif gris valideur-billetique-metro-pastel",
     "quantity": 209,
     "repere": "2",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "183x183mm",
+    "dimensions": "183 × 183 mm",
     "id": "eca-3",
     "material": "Sous la vitre en tête haute de l’ECA, vitrophanie.",
-    "name": "Adhesif valideur-openpayment-metro",
+    "name": "Adhésif valideur-openpayment-metro",
     "quantity": 209,
     "repere": "3",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "170x195mm",
+    "dimensions": "170 × 195 mm",
     "id": "eca-4",
     "material": "Sur platine jaune, autour du support de validation (spécifique PMR à bras).",
     "name": "Adhésif valideur-PMR-a-bras",
@@ -481,7 +481,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "195x185mm",
+    "dimensions": "195 × 185 mm",
     "id": "eca-5",
     "material": "Sur platine jaune, autour du support de validation (spécifique PMR à vantaux).",
     "name": "Adhésif valideur-PMRVantaux",
@@ -490,7 +490,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "8x8cm",
+    "dimensions": "8 × 8 cm",
     "id": "eca-6",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR à bras).",
     "name": "Adhésif valideur-portillon-PMR-bras",
@@ -499,7 +499,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "8x8cm",
+    "dimensions": "8 × 8 cm",
     "id": "eca-7",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR à vantaux).",
     "name": "Adhésif valideur-portillon-PMR-vantaux",
@@ -508,34 +508,34 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "19x19cm",
+    "dimensions": "19 × 19 cm",
     "id": "eca-8",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR à bras).",
-    "name": "Adhesif valideurPMR-metro-Bagages",
+    "name": "Adhésif valideurPMR-metro-Bagages",
     "quantity": 4,
     "repere": "8",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "19x19cm",
+    "dimensions": "19 × 19 cm",
     "id": "eca-9",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
-    "name": "Adhesif valideurPMR-metro-Poussette",
+    "name": "Adhésif valideurPMR-metro-Poussette",
     "quantity": 43,
     "repere": "9",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "19x19cm",
+    "dimensions": "19 × 19 cm",
     "id": "eca-10",
     "material": "Format carré bleu sur le bras de l’ECA (spécifique PMR).",
-    "name": "Adhesif valideurPMR-metro-UFR",
+    "name": "Adhésif valideurPMR-metro-UFR",
     "quantity": 42,
     "repere": "10",
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "Adhésif identifiant unique de l’équipement",
+    "dimensions": "",
     "id": "eca-11",
     "material": "Sur le capot supérieur ou latéral, visible par le personnel.",
     "name": "Adhésif identifiant (N° ECA)",
@@ -544,7 +544,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Valideurs (ECA)",
-    "dimensions": "Flèche verte / Croix rouge lumineuse",
+    "dimensions": "",
     "id": "eca-r-1",
     "material": "Sur les deux faces du vantail",
     "name": "Signalisation dynamique",
