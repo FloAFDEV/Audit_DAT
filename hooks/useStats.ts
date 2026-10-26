@@ -8,6 +8,7 @@ import { isPmrEcaType } from '../data/eca_data';
 import { getCognitivePictogramDimension, getCountedCognitivePictograms, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
 import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
+import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
@@ -15,18 +16,11 @@ import { EquipmentType, EcaEquipmentType } from '../types';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { splitLegacyPrDescription } from '../utils/effectiveAdhesives';
+import { parseAdhesiveName } from '../utils/adhesiveNames';
 import { formatDimensions, shortReferenceName } from '../components/cockpit/labels';
 import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
 import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
 
-const parseAdhesiveName = (name: string | undefined): { repere: string; name: string } => {
-    if (!name) return { repere: '', name: '' };
-    const repereMatch = name.match(/^Repère\s+([\w\d]+)\s*-\s*(.*)$/);
-    if (repereMatch) {
-        return { repere: repereMatch[1], name: repereMatch[2].trim() };
-    }
-    return { repere: '', name: name };
-};
 
 export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
 
@@ -364,12 +358,12 @@ export const computeAdhesiveInventory = (
             // 78cm Aéroport Express) — deux lignes de nomenclature séparées pour
             // rester exactes sur l'export/bon de commande (cf. signaletique_config.ts).
             const signItems = [
-                { id: 'sign-totem',                 name: 'Totem',                              dimensions: '61,6 x 91,6 cm', material: 'Aluminium + façade' },
+                { id: 'sign-totem',                 name: 'Totem',                              dimensions: STATION_EQUIPMENT_DIMENSIONS.totem, material: 'Aluminium + façade' },
                 { id: 'sign-biv',                   name: 'BIV (écran dynamique)',               dimensions: 'Variable',        material: 'Écran dynamique' },
-                { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: '80 x 100 cm',     material: 'Vinyle' },
-                { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: '78 x 100 cm',     material: 'Vinyle' },
+                { id: 'sign-plan-reseau',            name: 'Plan du réseau',                      dimensions: STATION_EQUIPMENT_DIMENSIONS.planReseau,     material: 'Vinyle' },
+                { id: 'sign-plan-quartier-aeroport', name: 'Plan de quartier (Aéroport Express)', dimensions: STATION_EQUIPMENT_DIMENSIONS.planQuartierAeroport,     material: 'Vinyle' },
                 { id: 'sign-hap',                   name: 'HAP (fiche horaire)',                 dimensions: 'Variable',        material: 'Papier' },
-                { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: '80 x 29 cm',      material: 'Aluminium + façade' },
+                { id: 'sign-bandeau',               name: 'Bandeau de station',                  dimensions: STATION_EQUIPMENT_DIMENSIONS.bandeau,      material: 'Aluminium + façade' },
             ];
             // Plan de quartier T1 : un seul exemplaire physique, audité dans
             // Équipements Station mais rangé dans la famille Plans de quartier
@@ -378,7 +372,7 @@ export const computeAdhesiveInventory = (
             inventoryMap.set(T1_PLAN_QUARTIER_ROW_ID, {
                 id: T1_PLAN_QUARTIER_ROW_ID, auditType: t1PlanFamily,
                 repere: '-', name: 'Plan de quartier (Tram)',
-                dimensions: '80 x 100 cm', material: 'Vinyle', quantity: 0,
+                dimensions: STATION_EQUIPMENT_DIMENSIONS.planQuartierTram, material: 'Vinyle', quantity: 0,
             });
             signItems.forEach(item => {
                 if (!inventoryMap.has(item.id)) {

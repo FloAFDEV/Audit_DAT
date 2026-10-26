@@ -7,7 +7,7 @@ import {
 import { db } from './db';
 import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
 import { LINE_A_STATIONS, LINE_B_STATIONS } from './data/stations';
-import { getInitialSignaletiqueData } from './data/signaletique_config';
+import { getInitialSignaletiqueData, STATION_EQUIPMENT_DIMENSIONS } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives, getDatAdhesivesForLine, isDatAdhesiveInScope } from './data/adhesives';
 import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
@@ -556,7 +556,7 @@ export const migratePrCaisseAutoPlansDeQuartier = (lieux: Lieu[]): boolean => {
 
 /** Ancienne cote des plans de quartier T1, remplacée par la cote validée. */
 const T1_PLAN_QUARTIER_LEGACY_DIMENSIONS = '83 x 100 cm';
-const T1_PLAN_QUARTIER_DIMENSIONS_VALUE = '80 x 100 cm';
+const T1_PLAN_QUARTIER_DIMENSIONS_VALUE = STATION_EQUIPMENT_DIMENSIONS.planQuartierTram;
 
 /**
  * Plans de quartier T1 créés avec l'ancienne cote (83 x 100 cm) → cote

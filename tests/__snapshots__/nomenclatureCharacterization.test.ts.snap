@@ -247,7 +247,7 @@ exports[`Nomenclature — caractérisation (non-régression signageReferences) >
   },
   {
     "auditType": "Équipements",
-    "dimensions": "80 x 29 cm",
+    "dimensions": "80x29 cm",
     "id": "sign-bandeau",
     "material": "Aluminium + façade",
     "name": "Bandeau de station",

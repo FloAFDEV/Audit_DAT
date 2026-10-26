@@ -7,22 +7,13 @@ import React, { useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { AUDIT_CATEGORIES } from '../../data/config';
-import { LINE_A_STATIONS, LINE_B_STATIONS } from '../../data/stations';
+import { physicalStationIndex } from '../../utils/cockpit/exportStationOrder';
+import { compareLines } from './labels';
 import { CategoryIcon } from '../CategoryIcon';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 import { CognitivePictogramStationEntry } from '../../utils/cockpit/cognitivePictogramSummary';
 
-const LINE_ORDER = ['A', 'B', 'C', 'AEROPORT'];
-const STATION_ORDER: Record<string, string[]> = {
-    A: LINE_A_STATIONS.map(s => s.lieuName ?? s.name ?? ''),
-    B: LINE_B_STATIONS.map(s => s.lieuName ?? s.name ?? ''),
-};
 const LINE_CATEGORY: Record<string, string> = { A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', AEROPORT: 'LAE' };
-
-const rank = (list: string[], value: string, fallback: number) => {
-    const i = list.indexOf(value);
-    return i === -1 ? fallback : i;
-};
 
 export const CognitivePictogramStationsModal: React.FC<{
     title: string;
@@ -35,10 +26,11 @@ export const CognitivePictogramStationsModal: React.FC<{
         return () => window.removeEventListener('keydown', onKey);
     }, [onClose]);
 
-    // Ordre physique des stations sur la ligne (A puis B).
+    // Ordre physique des stations sur la ligne (A puis B) — rang commun
+    // (utils/cockpit/exportStationOrder), ordre des lignes du cockpit.
     const sorted = useMemo(() => [...entries].sort((a, b) =>
-        rank(LINE_ORDER, a.line, 99) - rank(LINE_ORDER, b.line, 99)
-        || rank(STATION_ORDER[a.line] ?? [], a.lieuName, 999) - rank(STATION_ORDER[b.line] ?? [], b.lieuName, 999)
+        compareLines(a.line, b.line)
+        || (physicalStationIndex(a.line, a.lieuName) ?? 999) - (physicalStationIndex(b.line, b.lieuName) ?? 999)
         || a.lieuName.localeCompare(b.lieuName, 'fr')
         || (a.dimensions ?? '').localeCompare(b.dimensions ?? '')
     ), [entries]);

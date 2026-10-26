@@ -12,11 +12,12 @@
 // =================================================================
 import { AuditModuleType, EquipmentStatusType, Lieu, ModeData, PlanQuartierStatus, Station } from '../types';
 import { isModuleInCurrentScope } from './moduleScope';
+import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 import { dirKeyOf } from './signaletiqueDirections';
 import { isDefect } from './cockpit/signaletiqueStationIndex';
 
 /** Dimension du référentiel T1 (affichage de l'audit, données inchangées). */
-export const T1_PLAN_QUARTIER_DIMENSIONS = '80 × 100 cm';
+export const T1_PLAN_QUARTIER_DIMENSIONS = STATION_EQUIPMENT_DIMENSIONS.planQuartierTram.replace(' x ', ' × ');
 
 /** Arrêts T1 n'ayant qu'un plan de quartier attendu (règle patrimoine,
  *  indépendante du nombre de DAT) : Arènes → direction MEETT seulement. */
