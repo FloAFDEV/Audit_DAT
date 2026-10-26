@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesive, PMRFloorAdhesiveData } from '../types';
+import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
 import { CheckCircle2, XCircle, Clock, Camera, Trash2, Edit2, Edit, Ban } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
@@ -12,6 +12,8 @@ interface PMRFloorAdhesiveAuditFormProps {
   module: AuditModule;
   onStatusChange: (adhesiveId: string, status: FloorAdhesiveStatus) => void;
   onPhotoChange: (adhesiveId: string, photo_base64: string | null) => void;
+  /** Prise de vue : original conservé, copie annotée affichée (store). */
+  onPhotoCapture: (adhesiveId: string, file: File) => Promise<void>;
   onPhotoNoteChange: (adhesiveId: string, note: string) => void;
   onPhotoRotationChange: (adhesiveId: string, rotation: number) => void;
   onBack: () => void;
@@ -19,51 +21,14 @@ interface PMRFloorAdhesiveAuditFormProps {
   onCommentChange: (comment: string) => void;
 }
 
-const resizeImage = (file: File, maxSize: number): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        let { width, height } = img;
-
-        if (width > height) {
-          if (width > maxSize) {
-            height *= maxSize / width;
-            width = maxSize;
-          }
-        } else {
-          if (height > maxSize) {
-            width *= maxSize / height;
-            height = maxSize;
-          }
-        }
-        
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject(new Error('Impossible d\'obtenir le contexte du canvas.'));
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        resolve(canvas.toDataURL('image/jpeg', 0.8)); // Compression JPEG à 80%
-      };
-      img.onerror = reject;
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-};
-
-
 const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (props) => {
-  const { module, onStatusChange, onPhotoChange, onPhotoNoteChange, onPhotoRotationChange, onBack, onReset, onCommentChange } = props;
+  const { module, onStatusChange, onPhotoChange, onPhotoCapture, onPhotoNoteChange, onPhotoRotationChange, onBack, onReset, onCommentChange } = props;
   const pmrData = module.data as PMRFloorAdhesiveData;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentAdhesiveId = useRef<string | null>(null);
-  const [viewingPhoto, setViewingPhoto] = useState<PMRFloorAdhesive | null>(null);
+  // Visionneuse : lue dans le store (la rotation régénère la copie annotée).
+  const [viewingPhotoId, setViewingPhotoId] = useState<string | null>(null);
+  const viewingPhoto = viewingPhotoId ? pmrData.adhesives.find(a => a.id === viewingPhotoId && a.photo_base64) ?? null : null;
 
   const progress = useMemo(() => {
     if (pmrData.isNotApplicable) return 0;
@@ -85,16 +50,16 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
     if (file && currentAdhesiveId.current) {
       const adhesiveId = currentAdhesiveId.current;
 
-      const promise = resizeImage(file, 1024).then(base64 => {
-        onPhotoChange(adhesiveId, base64);
-      });
+      // Original conservé tel quel ; copie annotée (station · accès ·
+      // date/heure) générée et affichée à sa place.
+      const promise = onPhotoCapture(adhesiveId, file);
 
       showPromiseToast(
         promise,
         {
             icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>,
             title: "Traitement de l'image...",
-            message: "Compression en cours.",
+            message: "Annotation en cours.",
         },
         {
             icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-white" /></div>,
@@ -213,14 +178,14 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                                     ? 'p-2 rounded-full bg-white text-teal-700 ring-1 ring-inset ring-teal-500 hover:bg-teal-50 dark:bg-slate-700/50 dark:text-teal-300 dark:ring-slate-600 dark:hover:bg-slate-700'
                                     : 'px-3 py-1.5 rounded-md bg-teal-700 text-white shadow-sm hover:bg-teal-800 whitespace-nowrap'
                                 }`}
-                                title={adhesive.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
+                                title={adhesive.photo_base64 ? "Remplacer la photo" : "Prendre une photo"}
                             >
                                 {adhesive.photo_base64 ? (
                                     <Edit className="w-5 h-5" />
                                 ) : (
                                     <>
                                         <Camera className="w-5 h-5 mr-2" />
-                                        <span>Ajouter une photo</span>
+                                        <span>Prendre une photo</span>
                                     </>
                                 )}
                             </button>
@@ -237,7 +202,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         </div>
                         {adhesive.photo_base64 && (
                             <div className="flex items-start gap-4 w-full">
-                                <button onClick={() => setViewingPhoto(adhesive)} className="flex-shrink-0 relative group">
+                                <button onClick={() => setViewingPhotoId(adhesive.id)} className="flex-shrink-0 relative group">
                                     <img 
                                         src={adhesive.photo_base64} 
                                         alt="Aperçu de l'adhésif" 
@@ -267,16 +232,10 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
        {viewingPhoto && (
         <PhotoViewerModal
             isOpen={!!viewingPhoto}
-            onClose={() => setViewingPhoto(null)}
+            onClose={() => setViewingPhotoId(null)}
             photo={viewingPhoto}
-            onRotate={(newRotation) => {
-                onPhotoRotationChange(viewingPhoto.id, newRotation);
-                setViewingPhoto(prev => prev ? { ...prev, photo_rotation: newRotation } : null);
-            }}
-            onNoteChange={(newNote) => {
-                onPhotoNoteChange(viewingPhoto.id, newNote);
-                 setViewingPhoto(prev => prev ? { ...prev, photo_note: newNote } : null);
-            }}
+            onRotate={(newRotation) => onPhotoRotationChange(viewingPhoto.id, newRotation)}
+            onNoteChange={(newNote) => onPhotoNoteChange(viewingPhoto.id, newNote)}
         />
       )}
     </>

@@ -20,6 +20,7 @@ import { applyEcaEdit, applyEcaSourceAlignment, carryOverEcaFieldTraces, carryOv
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
+import { createPmrPhotoRecord, releasePmrPhotos, renderAnnotatedPhoto, requestPersistentStorage, savePmrPhoto } from './utils/fieldPhotos';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -138,6 +139,8 @@ interface AppState {
     handlePmrFloorAdhesiveCommentChange: (comment: string) => Promise<void>;
     handleResetPmrFloorAdhesive: () => Promise<void>;
     handlePmrFloorAdhesivePhotoChange: (adhesiveId: string, photo_base64: string | null) => Promise<void>;
+    /** Prise de vue : original conservé (table photos), copie annotée affichée. */
+    handlePmrFloorAdhesivePhotoCapture: (adhesiveId: string, file: File) => Promise<void>;
     handlePmrFloorAdhesivePhotoNoteChange: (adhesiveId: string, note: string) => Promise<void>;
     handlePmrFloorAdhesivePhotoRotationChange: (adhesiveId: string, rotation: number) => Promise<void>;
 
@@ -1848,10 +1851,14 @@ const useAuditStore = create<AppState>((set, get) => {
             delete adhesive.photo_base64;
             delete adhesive.photo_note;
             delete adhesive.photo_rotation;
+            delete adhesive.photo_id;
+            delete adhesive.photo_taken_at;
         });
 
         await db.lieux.put(lieuToUpdate);
         set({ lieux: newLieux });
+        // Originaux conservés (marqués 'removed'), jamais effacés.
+        await releasePmrPhotos(db, selectedModuleId);
 
         await saveHistoryEntry(
             `Audit Sol PMR - ${lieuToUpdate.name}`,
@@ -1876,8 +1883,42 @@ const useAuditStore = create<AppState>((set, get) => {
                     delete adhesive.photo_base64;
                     delete adhesive.photo_note;
                     delete adhesive.photo_rotation;
+                    delete adhesive.photo_id;
+                    delete adhesive.photo_taken_at;
                 }
             }
+        });
+        // Suppression : l'original reste enregistré, marqué 'removed'.
+        if (!photo_base64 && selectedModuleId) await releasePmrPhotos(db, selectedModuleId, adhesiveId);
+    },
+
+    handlePmrFloorAdhesivePhotoCapture: async (adhesiveId, file) => {
+        // Cible figée au moment de la prise de vue : l'agent peut changer
+        // d'écran pendant le traitement, la photo reste rattachée ici.
+        const { selectedLieuId, selectedModuleId, lieux } = get();
+        const lieu = lieux.find(l => l.id === selectedLieuId);
+        const module = lieu?.modules.find(m => m.id === selectedModuleId);
+        if (!lieu || !module || module.type !== AuditModuleType.PMR_FLOOR_ADHESIVE) return;
+        const data = module.data as PMRFloorAdhesiveData;
+        const adhesive = data.adhesives.find(a => a.id === adhesiveId);
+        if (!adhesive) return;
+
+        void requestPersistentStorage();
+        const photo = await createPmrPhotoRecord(file, {
+            lieuId: lieu.id, stationName: data.stationName, stationCode: data.stationCode,
+            moduleId: module.id, moduleName: module.name, itemId: adhesive.id, itemLabel: adhesive.name,
+        });
+        const annotated = await renderAnnotatedPhoto(photo);
+        await savePmrPhoto(db, photo);
+        await _updateLieuById({ mode: 'byId', id: lieu.id }, target => {
+            const targetModule = target.modules.find(m => m.id === module.id) as AuditModule & { data: PMRFloorAdhesiveData } | undefined;
+            const targetAdhesive = targetModule?.data.adhesives.find(a => a.id === adhesiveId);
+            if (!targetAdhesive) return;
+            targetAdhesive.photo_base64 = annotated;
+            targetAdhesive.photo_id = photo.id;
+            targetAdhesive.photo_taken_at = photo.takenAt;
+            // Rotation désormais portée par les pixels de la copie annotée.
+            delete targetAdhesive.photo_rotation;
         });
     },
 
@@ -1891,7 +1932,30 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handlePmrFloorAdhesivePhotoRotationChange: async (adhesiveId, rotation) => {
-        const { selectedModuleId } = get();
+        const { selectedModuleId, selectedLieuId, lieux } = get();
+        const current = (lieux.find(l => l.id === selectedLieuId)?.modules.find(m => m.id === selectedModuleId)?.data as PMRFloorAdhesiveData | undefined)
+            ?.adhesives.find(a => a.id === adhesiveId);
+        const photo = current?.photo_id ? await db.photos.get(current.photo_id) : undefined;
+        if (current && photo && selectedLieuId) {
+            // Original disponible : la copie annotée est régénérée avec la
+            // rotation dans les pixels (le bandeau reste lisible). `rotation`
+            // arrive de la visionneuse comme photo_rotation + 90.
+            const delta = rotation - (current.photo_rotation || 0);
+            const nextRotation = (((photo.rotation + delta) % 360) + 360) % 360;
+            const annotated = await renderAnnotatedPhoto({ ...photo, rotation: nextRotation });
+            await db.photos.update(photo.id, { rotation: nextRotation });
+            await _updateLieuById({ mode: 'byId', id: selectedLieuId }, lieu => {
+                const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
+                const adhesive = module?.data.adhesives.find(a => a.id === adhesiveId);
+                if (adhesive?.photo_id === photo.id) {
+                    adhesive.photo_base64 = annotated;
+                    delete adhesive.photo_rotation;
+                }
+            });
+            return;
+        }
+        // Photo historique, ou original resté sur l'appareil de prise de vue
+        // (sauvegarde importée) : rotation d'affichage, comme avant.
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
