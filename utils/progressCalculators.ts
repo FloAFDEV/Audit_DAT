@@ -108,7 +108,9 @@ export const getEcaProgress = (eca: ECA): EcaProgress => {
     // Occurrences plutôt que simples ids : un ECA PMR d'entrée compte pour 2
     // (zones ZH + ZB) sur l'adhésif cible eca-1, un ECA d'entrée standard
     // pour 1 (ZH) — cf. data/adhesives.ts::getEcaAdhesiveOccurrences.
-    const occurrences = getEcaAdhesiveOccurrences(eca.type);
+    // Une référence désactivée (eca-r-1, « non auditable ») n'est pas exigée,
+    // comme en P+R (getPrZoneProgress) ; son statut éventuel reste enregistré.
+    const occurrences = getEcaAdhesiveOccurrences(eca.type).filter(occ => !occ.isDisabled);
 
     if (occurrences.length === 0) {
         return { percentage: 100, label: 'Terminé', isComplete: true };
@@ -211,7 +213,8 @@ const getModuleProgressCounts = (module: AuditModule): { applicable: number; che
             if (ecas.length > 0) hasAuditableContent = true;
             for (const eca of ecas) {
                 if (eca.isNotApplicable) continue;
-                const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                // Références désactivées exclues, comme dans getEcaProgress.
+                const occurrences = getEcaAdhesiveOccurrences(eca.type).filter(occ => !occ.isDisabled);
                 for (const occ of occurrences) {
                     const status = readEcaAdhesiveStatus(eca, occ);
                     if (status !== AdhesiveStatus.NotApplicable) {
