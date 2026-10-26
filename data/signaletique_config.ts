@@ -14,7 +14,13 @@ export const STATION_EQUIPMENT_DIMENSIONS = {
     bandeau: '80x29 cm',
     planReseau: '80 x 100 cm',
     // Plan de quartier : cote métier validée sur le Tram T1 ; Aéroport
-    // Express : 78 x 100 cm, cote encore à confirmer (cf. ci-dessous).
+    // Express : 78 x 100 cm, cote encore à confirmer (cf. ci-dessous). Ces
+    // plans de quai LAE (ligne « Plan de quartier (Aéroport Express) » de la
+    // Nomenclature) sont distincts du plan recensé au module Plans de quartier
+    // de l'aéroport (pdq-adhesif, agence commerciale). Leur rattachement
+    // éventuel à un modèle du référentiel (pdq-78x100, plastifié) et leur
+    // matière (vinyle ou plastifié) restent à confirmer sur le terrain :
+    // comptage et matière inchangés en attendant.
     planQuartierTram: '80 x 100 cm',
     planQuartierAeroport: '78 x 100 cm',
 } as const;

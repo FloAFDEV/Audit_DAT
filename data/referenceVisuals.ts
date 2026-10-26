@@ -26,9 +26,14 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     'adbs4': 'adbs4',                     // cible de sortie (cartes, ticket ou smartphone)
     'adbs5': 'adbs5',                     // bulle de sortie (carte bancaire)
     'adbe3': 'adbe3', 'adbs3': 'adbe3',   // « Tarifs + coordonnées » 34x8, même visuel
+    // Caisse automatique : visuels des repères 6/7/8/9 identiques à ceux des
+    // bornes, confirmé terrain (commit 09b1ce3). Visuel partagé ≠ même
+    // référence : adca6 (10,5x12,9) et adca7 (8,2x5,5) sont imprimés à
+    // d'autres cotes que adbs4 (11x12,5) et adbe2 (9x5), depuis d'autres
+    // fichiers — références distinctes, conservées telles quelles.
     'adca6': 'adbs4',                     // caisse : même cible « cartes, ticket ou smartphone »
     'adca7': 'adbe2',                     // caisse : même visuel ticket P+R
-    'adca8': 'adbs5',                     // caisse : même bulle carte bancaire que la borne de sortie
+    'adca8': 'adbs5',                     // caisse : même bulle carte bancaire que la borne de sortie (même cote 99x115)
     'adca9': 'adbe3',                     // même adhésif « Tarifs + coordonnées Parc Relais » sur la caisse automatique
     'adbe10': 'adbe10', 'adbs11': 'adbs11',
     // Plans de repérage par type d'équipement (pas des références catalogue)
@@ -52,6 +57,10 @@ const REFERENCE_VISUAL_FILES: Readonly<Record<string, string>> = {
     'bandeau-t1-meett': 'bandeau-t1-meett',
     'bandeau-t1-pdj': 'bandeau-t1-pdj',
 };
+
+/** Ids illustrés (catalogue, plans de repérage, éléments hors catalogue) —
+ *  contrôle de cohérence avec le référentiel (tests). */
+export const REFERENCE_VISUAL_IDS: readonly string[] = Object.keys(REFERENCE_VISUAL_FILES);
 
 /** URL du visuel de référence d'un id catalogue, ou undefined. */
 export const getReferenceVisualUrl = (referenceId?: string): string | undefined => {
