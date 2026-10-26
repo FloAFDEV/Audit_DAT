@@ -1,7 +1,7 @@
 
 import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
-import { Lieu, HistoryEntry, SignageReference, AppEvent, EcaEquipmentType } from './types';
+import { Lieu, HistoryEntry, SignageReference, AppEvent, EcaEquipmentType, FieldPhoto } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
 
 export type AuditDb = Dexie & {
@@ -9,6 +9,7 @@ export type AuditDb = Dexie & {
     history: EntityTable<HistoryEntry, 'id'>;
     signageReferences: EntityTable<SignageReference, 'id'>;
     events: EntityTable<AppEvent, 'id'>;
+    photos: EntityTable<FieldPhoto, 'id'>;
 };
 
 // V24/V25 : fiche adca8 (bulle caisse) réécrite depuis le seed. Idempotente,
@@ -631,6 +632,17 @@ export const createAuditDb = (name: string): AuditDb => {
     signageReferences: 'id, auditType',
     events: '++id, date, type, entityType',
 }).upgrade(refreshAdca8FromSeed);
+
+// V26: table photos — originaux des photos des adhésifs PMR au sol et leur
+// rattachement (station, module, adhésif). Ajout pur : aucune table
+// existante modifiée, aucune donnée réécrite, pas d'upgrade.
+    instance.version(26).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+    photos: 'id, lieuId, moduleId, itemId, createdAt',
+});
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :
 // Dexie ne rejoue pas les .upgrade() — le seed passe alors par 'populate'.

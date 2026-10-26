@@ -76,6 +76,7 @@ interface AppRouterProps {
     handlePmrFloorAdhesiveStatusChange: any;
     handlePmrFloorAdhesiveCommentChange: any;
     handlePmrFloorAdhesivePhotoChange: any;
+    handlePmrFloorAdhesivePhotoCapture: any;
     handlePmrFloorAdhesivePhotoNoteChange: any;
     handlePmrFloorAdhesivePhotoRotationChange: any;
     handleResetPmrFloorAdhesiveRequest: any;
@@ -209,6 +210,7 @@ const AppRouter: React.FC<AppRouterProps> = (props) => {
             onStatusChange={handlers.handlePmrFloorAdhesiveStatusChange}
             onCommentChange={handlers.handlePmrFloorAdhesiveCommentChange}
             onPhotoChange={handlers.handlePmrFloorAdhesivePhotoChange}
+            onPhotoCapture={handlers.handlePmrFloorAdhesivePhotoCapture}
             onPhotoNoteChange={handlers.handlePmrFloorAdhesivePhotoNoteChange}
             onPhotoRotationChange={handlers.handlePmrFloorAdhesivePhotoRotationChange}
             onReset={handlers.handleResetPmrFloorAdhesiveRequest}

@@ -8,6 +8,7 @@ import { ModuleIcon } from './ModuleIcon';
 import { CognitivePictogramVisual } from './CognitivePictogramVisual';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { exportMaintenanceListToCsv } from '../utils/csvExporter';
+import { compareNatural } from '../utils/naturalSort';
 import toast from 'react-hot-toast';
 
 interface MaintenanceListModalProps {
@@ -94,7 +95,8 @@ const MaintenanceListModal: React.FC<MaintenanceListModalProps> = ({ isOpen, onC
             if (lieuCompare !== 0) return lieuCompare;
 
             // --- NIVEAU 3 : Tri par Nom de l'élément (Équipement) ---
-            return a.elementName.localeCompare(b.elementName);
+            // Tri naturel : « Valideur 9 » avant « Valideur 10 ».
+            return compareNatural(a.elementName, b.elementName);
         });
     }, [items, sortMode]);
 

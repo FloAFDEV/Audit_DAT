@@ -254,9 +254,55 @@ export interface PMRFloorAdhesive {
     id: string;
     name: string;
     status: FloorAdhesiveStatus;
+    /** Photo affichée : copie annotée (station · accès · date) pour une
+     *  photo prise depuis la version avec originaux, photo historique sinon. */
     photo_base64?: string;
     photo_note?: string;
     photo_rotation?: number;
+    /** Photo en cours dans la table `photos` (original conservé sur
+     *  l'appareil de prise de vue). Absent : photo historique. */
+    photo_id?: string;
+    /** Date/heure de prise de vue retenue (ISO). */
+    photo_taken_at?: string;
+}
+
+// =================================================================
+// PHOTOS TERRAIN (adhésifs PMR au sol) — table Dexie `photos`
+// =================================================================
+/** Origine de la date de prise de vue, par priorité décroissante. */
+export type PhotoTakenAtSource = 'exif' | 'file' | 'validation';
+
+/** Statut d'un enregistrement : la photo en cours d'un adhésif est
+ *  'current' ; un remplacement, une suppression ou une réinitialisation
+ *  conservent l'enregistrement (jamais d'effacement physique). */
+export type FieldPhotoStatus = 'current' | 'replaced' | 'removed';
+
+export interface FieldPhoto {
+    id: string;
+    // Rattachement
+    lieuId: string;
+    stationName: string;
+    stationCode: string;
+    moduleId: string;
+    moduleName: string;
+    /** Accès tiré du nom du module, vide pour un module sans accès. */
+    accessLabel: string;
+    itemId: string;
+    itemLabel: string;
+    // Original reçu de l'appareil photo, octet pour octet
+    original: ArrayBuffer;
+    originalName: string;
+    originalType: string;
+    originalSize: number;
+    originalSha256: string;
+    // Prise de vue
+    takenAt: string;
+    takenAtSource: PhotoTakenAtSource;
+    /** Rotation appliquée à l'original pour la copie annotée (0/90/180/270). */
+    rotation: number;
+    createdAt: string;
+    status: FieldPhotoStatus;
+    statusChangedAt?: string;
 }
 
 export interface PMRFloorAdhesiveData {
