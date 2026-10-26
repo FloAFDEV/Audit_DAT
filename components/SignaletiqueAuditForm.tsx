@@ -30,7 +30,8 @@ import { dirKeyOf, TERMINUS_STATIONS, TERMINUS_BANDEAU_TEXT } from '../utils/sig
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
-import { resizeImage } from '../utils/resizeImage';
+import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
+import type { SignaletiquePhotoLabels } from '../store';
 import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 
 type SignDir = 'meett' | 'pdj' | 'direction1' | 'direction2';
@@ -42,6 +43,8 @@ interface SignaletiqueAuditFormProps {
   onStatusChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, status: EquipmentStatusType | 'NotChecked') => void;
   onCommentChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, comment: string) => void;
   onPhotoChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, photo_base64: string | null) => void;
+  /** Prise de vue : original conservé, copie annotée affichée (store). */
+  onPhotoCapture: (category: keyof SignaletiqueData, direction: SignDir, index: number, file: File, labels: SignaletiquePhotoLabels) => Promise<void>;
   onPhotoNoteChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, note: string) => void;
   onPhotoRotationChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, rotation: number) => void;
   onFieldChange: (category: keyof SignaletiqueData, direction: SignDir, index: number, field: string, value: any) => void;
@@ -103,6 +106,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   onStatusChange,
   onCommentChange,
   onPhotoChange,
+  onPhotoCapture,
   onPhotoNoteChange,
   onPhotoRotationChange,
   onFieldChange,
@@ -114,7 +118,17 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const signaletique = station.signaletique;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentUploadRef = useRef<{ category: keyof SignaletiqueData; direction: SignDir; index: number } | null>(null);
-  const [viewingPhoto, setViewingPhoto] = useState<{ item: EquipmentStatus; category: keyof SignaletiqueData; direction: SignDir; index: number } | null>(null);
+  // Visionneuse et suppression : l'élément est relu dans les données à
+  // chaque rendu (la rotation régénère la photo annotée).
+  type PhotoSlot = { category: keyof SignaletiqueData; direction: SignDir; index: number };
+  const [viewingSlot, setViewingSlot] = useState<PhotoSlot | null>(null);
+  const [deletingSlot, setDeletingSlot] = useState<PhotoSlot | null>(null);
+  const itemAt = (slot: PhotoSlot | null): EquipmentStatus | undefined => {
+    if (!slot || !station.signaletique) return undefined;
+    const holder = (station.signaletique[slot.category] as any)?.[slot.direction];
+    return slot.category === 'totem' || slot.category === 'bandeauStation' ? holder : holder?.[slot.index];
+  };
+  const viewingItem = itemAt(viewingSlot);
 
   const isTerminus = TERMINUS_STATIONS.includes(station.name);
 
@@ -149,6 +163,18 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const endpoint1IsSelected = station.directions[0] ? dirKeyOf(station.directions[0].name) === primaryDirKey : true;
   const selectedDirKey: 'direction1' | 'direction2' = endpoint1IsSelected ? 'direction1' : 'direction2';
   const selectedEndpointLabel = endpoint1IsSelected ? endpointLabel1 : endpointLabel2;
+
+  /** Libellés de la photo d'un équipement : station, extrémité (totem,
+   *  bandeau) ou direction, nom affiché de l'équipement. */
+  const photoLabelsOf = ({ category, direction: dir, index }: PhotoSlot): SignaletiquePhotoLabels => {
+    const isEndpoint = dir === 'direction1' || dir === 'direction2';
+    const count = isEndpoint ? 1 : ((station.signaletique?.[category] as any)?.[dir]?.length ?? 1);
+    return {
+      stationName: station.name,
+      accessLabel: dir === 'direction1' ? endpointLabel1 : dir === 'direction2' ? endpointLabel2 : directionLabel,
+      itemLabel: count > 1 ? `${CATEGORY_LABELS[category]} #${index + 1}` : CATEGORY_LABELS[category],
+    };
+  };
 
   const BIV_CAISSON_FIELDS = ['ligneCaisson', 'destinationCaisson', 'attenteMinCaisson', 'dureeApproxCaisson'];
 
@@ -219,16 +245,16 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file && currentUploadRef.current) {
-      const { category, direction: dir, index } = currentUploadRef.current;
-      const promise = resizeImage(file, 1024).then(base64 => {
-        onPhotoChange(category, dir, index, base64);
-      });
+      const slot = currentUploadRef.current;
+      // Original conservé tel quel ; copie annotée (station · direction ·
+      // date/heure) générée et affichée à sa place.
+      const promise = onPhotoCapture(slot.category, slot.direction, slot.index, file, photoLabelsOf(slot));
       showPromiseToast(
         promise,
         {
           icon: <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-teal-500"></div>,
           title: "Traitement de l'image...",
-          message: "Compression en cours.",
+          message: "Annotation en cours.",
         },
         {
           icon: <div className="h-full w-full rounded-full bg-teal-500 flex items-center justify-center"><CheckCircle2 className="h-5 w-5 text-white" /></div>,
@@ -317,13 +343,13 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
               ? 'bg-teal-50 text-teal-700 ring-1 ring-teal-200 dark:bg-teal-900/20 dark:text-teal-400 dark:ring-teal-800'
               : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-slate-700 dark:text-slate-400 dark:hover:bg-slate-600'
           }`}
-          title={item.photo_base64 ? "Remplacer la photo" : "Ajouter une photo"}
+          title={item.photo_base64 ? "Remplacer la photo" : "Prendre une photo"}
         >
           {item.photo_base64 ? <Edit className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
         </button>
         {item.photo_base64 && (
           <button
-            onClick={() => onPhotoChange(category, dir, index, null)}
+            onClick={() => setDeletingSlot({ category, direction: dir, index })}
             className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
             aria-label="Supprimer la photo"
             title="Supprimer la photo"
@@ -344,7 +370,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
       </div>
       {item.photo_base64 && (
         <div className="flex items-start gap-4 w-full">
-          <button onClick={() => setViewingPhoto({ item, category, direction: dir, index })} className="flex-shrink-0 relative group">
+          <button onClick={() => setViewingSlot({ category, direction: dir, index })} className="flex-shrink-0 relative group">
             <img
               src={item.photo_base64}
               alt="Aperçu"
@@ -600,19 +626,24 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         </div>
       </AuditFormLayout>
 
-      {viewingPhoto && (
+      {viewingSlot && viewingItem?.photo_base64 && (
         <PhotoViewerModal
-          isOpen={!!viewingPhoto}
-          onClose={() => setViewingPhoto(null)}
+          isOpen
+          onClose={() => setViewingSlot(null)}
           photo={{
-            photo_base64: viewingPhoto.item.photo_base64 || '',
-            photo_note: viewingPhoto.item.photo_note,
-            photo_rotation: viewingPhoto.item.photo_rotation
+            photo_base64: viewingItem.photo_base64,
+            photo_note: viewingItem.photo_note,
+            photo_rotation: viewingItem.photo_rotation
           }}
-          onRotate={(rotation) => onPhotoRotationChange(viewingPhoto.category, viewingPhoto.direction, viewingPhoto.index, rotation)}
-          onNoteChange={(note) => onPhotoNoteChange(viewingPhoto.category, viewingPhoto.direction, viewingPhoto.index, note)}
+          onRotate={(rotation) => onPhotoRotationChange(viewingSlot.category, viewingSlot.direction, viewingSlot.index, rotation)}
+          onNoteChange={(note) => onPhotoNoteChange(viewingSlot.category, viewingSlot.direction, viewingSlot.index, note)}
         />
       )}
+      <ConfirmPhotoDeleteModal
+        label={deletingSlot ? `${photoLabelsOf(deletingSlot).itemLabel} — ${photoLabelsOf(deletingSlot).accessLabel}` : null}
+        onClose={() => setDeletingSlot(null)}
+        onConfirm={() => deletingSlot && onPhotoChange(deletingSlot.category, deletingSlot.direction, deletingSlot.index, null)}
+      />
     </>
   );
 };

@@ -41,14 +41,14 @@ vi.mock('../utils/resizeImage', async (importOriginal) => {
 });
 
 import { db, createAuditDb } from '../db';
-import useAuditStore from '../store';
+import useAuditStore, { signaletiquePhotoItemId } from '../store';
 import {
-    buildPhotoCaption, createPmrPhotoRecord, drawCaptionBanner, formatTakenAt, pmrAccessLabel,
-    readExifDateTime, resolveTakenAt, sha256Hex, PMR_PHOTO_MAX_SIZE,
+    buildPhotoCaption, createFieldPhotoRecord, drawCaptionBanner, formatTakenAt, pmrAccessLabel,
+    readExifDateTime, resolveTakenAt, sha256Hex, FIELD_PHOTO_MAX_SIZE,
 } from '../utils/fieldPhotos';
 import { computeResizeGeometry } from '../utils/resizeImage';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from '../utils/signageSerializer';
-import { AuditModule, AuditModuleType, Lieu, PMRFloorAdhesiveData } from '../types';
+import { AuditModule, AuditModuleType, Lieu, ModeData, PMRFloorAdhesiveData } from '../types';
 
 const fixture = (name: string): Buffer => readFileSync(join(__dirname, 'fixtures', name));
 const toArrayBuffer = (buf: Buffer): ArrayBuffer => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
@@ -112,10 +112,10 @@ describe('empreinte et légende', () => {
     });
 
     it('géométrie : rotation d\'un quart de tour = canevas inversé, côté le plus long borné', () => {
-        expect(computeResizeGeometry(4000, 3000, PMR_PHOTO_MAX_SIZE, 0).canvas).toEqual({ width: 1600, height: 1200 });
-        expect(computeResizeGeometry(4000, 3000, PMR_PHOTO_MAX_SIZE, 90).canvas).toEqual({ width: 1200, height: 1600 });
-        expect(computeResizeGeometry(4000, 3000, PMR_PHOTO_MAX_SIZE, 180).canvas).toEqual({ width: 1600, height: 1200 });
-        expect(computeResizeGeometry(800, 600, PMR_PHOTO_MAX_SIZE, 270).draw).toEqual({ width: 800, height: 600 });
+        expect(computeResizeGeometry(4000, 3000, FIELD_PHOTO_MAX_SIZE, 0).canvas).toEqual({ width: 1600, height: 1200 });
+        expect(computeResizeGeometry(4000, 3000, FIELD_PHOTO_MAX_SIZE, 90).canvas).toEqual({ width: 1200, height: 1600 });
+        expect(computeResizeGeometry(4000, 3000, FIELD_PHOTO_MAX_SIZE, 180).canvas).toEqual({ width: 1600, height: 1200 });
+        expect(computeResizeGeometry(800, 600, FIELD_PHOTO_MAX_SIZE, 270).draw).toEqual({ width: 800, height: 600 });
         // Sans option : comportement historique (1024, aucun changement).
         expect(computeResizeGeometry(2048, 1024, 1024).canvas).toEqual({ width: 1024, height: 512 });
     });
@@ -127,6 +127,7 @@ describe('empreinte et légende', () => {
 const CONTEXT = {
     lieuId: 'lieu-jj', stationName: 'Jean-Jaurès', stationCode: 'JJA',
     moduleId: 'module-pmr-a', moduleName: 'Adhésifs PMR au Sol (Accès Principal Ligne A)',
+    accessLabel: 'Accès Principal Ligne A',
     itemId: 'adh-1', itemLabel: "Présence et état de l'adhésif de signalisation au sol",
 };
 
@@ -135,16 +136,16 @@ beforeEach(async () => {
     localStorage.clear();
     await db.lieux.clear();
     await db.photos.clear();
-    useAuditStore.setState({ lieux: [], isLoading: true, initError: null, selectedLieuId: null, selectedModuleId: null });
+    useAuditStore.setState({ lieux: [], isLoading: true, initError: null, selectedLieuId: null, selectedModuleId: null, selectedStationId: null });
 });
 
 describe('enregistrement d\'une prise de vue', () => {
     it('original conservé octet pour octet (type, taille, nom, SHA-256), rattachement et date', async () => {
         const buf = fixture('pmr-photo-exif.jpg');
-        const record = await createPmrPhotoRecord(jpegFile('pmr-photo-exif.jpg'), CONTEXT, new Date(2026, 9, 26, 12, 0));
+        const record = await createFieldPhotoRecord(jpegFile('pmr-photo-exif.jpg'), CONTEXT, new Date(2026, 9, 26, 12, 0));
         expect(Buffer.from(record.original).equals(buf)).toBe(true);
         expect(record).toMatchObject({
-            ...CONTEXT, accessLabel: 'Accès Principal Ligne A',
+            ...CONTEXT,
             originalName: 'pmr-photo-exif.jpg', originalType: 'image/jpeg', originalSize: buf.length,
             originalSha256: sha(buf), takenAtSource: 'exif', rotation: 0, status: 'current',
         });
@@ -158,7 +159,7 @@ describe('enregistrement d\'une prise de vue', () => {
     });
 
     it('sans EXIF : date du fichier', async () => {
-        const record = await createPmrPhotoRecord(jpegFile('pmr-photo-sans-exif.jpg', Date.UTC(2026, 9, 26, 10, 30)), CONTEXT);
+        const record = await createFieldPhotoRecord(jpegFile('pmr-photo-sans-exif.jpg', Date.UTC(2026, 9, 26, 10, 30)), CONTEXT);
         expect(record.takenAtSource).toBe('file');
         expect(record.takenAt).toBe(new Date(Date.UTC(2026, 9, 26, 10, 30)).toISOString());
     });
@@ -291,6 +292,62 @@ describe('store : prise de vue d\'un adhésif PMR', () => {
 });
 
 // -----------------------------------------------------------------
+// Équipements Station (et plans de quartier T1) : même circuit
+// -----------------------------------------------------------------
+const seededSignaletique = async () => {
+    await useAuditStore.getState().init();
+    for (const lieu of useAuditStore.getState().lieux) {
+        for (const module of lieu.modules.filter(m => m.type === AuditModuleType.SIGNALETIQUE)) {
+            const station = (module.data as ModeData).stations?.find(s => (s.signaletique?.planReseau?.meett?.length ?? 0) > 0);
+            if (station) {
+                useAuditStore.setState({ selectedLieuId: lieu.id, selectedModuleId: module.id, selectedStationId: station.id });
+                return { lieu, module, station };
+            }
+        }
+    }
+    throw new Error('Aucune station avec Équipements Station dans le jeu initial');
+};
+const planReseauOf = (lieuId: string, moduleId: string, stationId: string) => {
+    const lieu = useAuditStore.getState().lieux.find(l => l.id === lieuId)!;
+    const station = (lieu.modules.find(m => m.id === moduleId)!.data as ModeData).stations.find(s => s.id === stationId)!;
+    return station.signaletique!.planReseau.meett[0];
+};
+const LABELS = { stationName: 'Arènes', accessLabel: 'MEETT / Aéroport', itemLabel: 'Plan du Réseau' };
+
+describe('store : photo d\'un équipement de station', () => {
+    it('prise de vue, rotation, suppression, réinitialisation : même circuit que le PMR', async () => {
+        const { lieu, module, station } = await seededSignaletique();
+        const { handleSignaletiquePhotoCapture } = useAuditStore.getState();
+        await handleSignaletiquePhotoCapture('planReseau', 'meett', 0, jpegFile('pmr-photo-exif.jpg'), LABELS);
+
+        const item = planReseauOf(lieu.id, module.id, station.id);
+        expect(item.photo_base64).toBe('data:image/jpeg;base64,annotee-r0');
+        expect(resizeCalls[0].caption).toBe('Arènes · MEETT / Aéroport · 2026-10-26 11:43');
+        const photo = await db.photos.get(item.photo_id!);
+        expect(photo).toMatchObject({
+            lieuId: lieu.id, moduleId: module.id, itemId: signaletiquePhotoItemId(station.id, 'planReseau', 'meett', 0),
+            itemLabel: 'Plan du Réseau', accessLabel: 'MEETT / Aéroport', status: 'current',
+            originalSha256: sha(fixture('pmr-photo-exif.jpg')),
+        });
+
+        await useAuditStore.getState().handleSignaletiquePhotoRotationChange('planReseau', 'meett', 0, 90);
+        expect(planReseauOf(lieu.id, module.id, station.id).photo_base64).toBe('data:image/jpeg;base64,annotee-r90');
+        expect((await db.photos.get(photo!.id))!.rotation).toBe(90);
+
+        await useAuditStore.getState().handleSignaletiquePhotoChange('planReseau', 'meett', 0, null);
+        expect(planReseauOf(lieu.id, module.id, station.id)).not.toHaveProperty('photo_id');
+        expect((await db.photos.get(photo!.id))!.status).toBe('removed');
+
+        await useAuditStore.getState().handleSignaletiquePhotoCapture('planReseau', 'meett', 0, jpegFile('pmr-photo-exif.jpg'), LABELS);
+        const second = planReseauOf(lieu.id, module.id, station.id).photo_id!;
+        await useAuditStore.getState().handleResetSignaletique();
+        expect(planReseauOf(lieu.id, module.id, station.id)).not.toHaveProperty('photo_base64');
+        expect((await db.photos.get(second))!.status).toBe('removed');
+        expect(await db.photos.count()).toBe(2);
+    }, 60000);
+});
+
+// -----------------------------------------------------------------
 // Migration Dexie
 // -----------------------------------------------------------------
 describe('Migration V25 → V26 (table photos)', () => {
@@ -319,7 +376,7 @@ describe('Migration V25 → V26 (table photos)', () => {
         expect(await upgraded.table('signageReferences').get('ad1')).toEqual({ id: 'ad1', name: 'Réf' });
         expect(await upgraded.table('events').count()).toBe(1);
         expect(await upgraded.photos.count()).toBe(0);
-        await upgraded.photos.add({ ...(await createPmrPhotoRecord(jpegFile('pmr-photo-exif.jpg'), CONTEXT)) });
+        await upgraded.photos.add({ ...(await createFieldPhotoRecord(jpegFile('pmr-photo-exif.jpg'), CONTEXT)) });
         expect(await upgraded.photos.where('moduleId').equals(CONTEXT.moduleId).count()).toBe(1);
 
         upgraded.close();

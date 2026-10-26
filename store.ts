@@ -2,7 +2,7 @@
 import { create } from 'zustand';
 import toast from 'react-hot-toast';
 import {
-    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, PlanQuartierStatus, MetroLine
+    Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, EquipmentStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, PlanQuartierStatus, MetroLine
 } from './types';
 import { db } from './db';
 import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
@@ -20,7 +20,7 @@ import { applyEcaEdit, applyEcaSourceAlignment, carryOverEcaFieldTraces, carryOv
 import { sanitizeDataForHistory, calculateComplianceScore } from './utils/historyHelpers';
 import { NAV_KEYS, resolveRestoredNavigation, saveNavigationSelection } from './utils/navigationPersistence';
 import { logEvent } from './utils/eventLog';
-import { createPmrPhotoRecord, releasePmrPhotos, renderAnnotatedPhoto, requestPersistentStorage, savePmrPhoto } from './utils/fieldPhotos';
+import { createFieldPhotoRecord, FieldPhotoContext, pmrAccessLabel, releaseFieldPhotos, renderAnnotatedPhoto, requestPersistentStorage, saveFieldPhoto } from './utils/fieldPhotos';
 
 // Helper to reset adhesive statuses for a given set of adhesives
 const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: AdhesiveStatus } => {
@@ -29,6 +29,13 @@ const createInitialAdhesiveStatus = (adhesives: any[]): { [key: string]: Adhesiv
 
 /** Emplacement Équipements Station visé explicitement par une action signalétique. */
 export interface SignaletiqueTarget { moduleId: string; stationId: string }
+/** Libellés affichés par le formulaire, repris dans le bandeau de la photo. */
+export interface SignaletiquePhotoLabels { stationName: string; accessLabel: string; itemLabel: string }
+
+/** Identifiant d'un équipement de station dans la table photos (unique dans
+ *  le module ; préfixe `stationId:` pour viser toute la station). */
+export const signaletiquePhotoItemId = (stationId: string, equipmentType: string, direction: string, index: number) =>
+    `${stationId}:${equipmentType}:${direction}:${index}`;
 
 interface AppState {
     // Data
@@ -173,6 +180,9 @@ interface AppState {
     handleSignaletiqueCommentChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, comment: string, target?: SignaletiqueTarget) => Promise<void>;
     handleSignaletiqueFieldChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, field: string, value: any, target?: SignaletiqueTarget) => Promise<void>;
     handleSignaletiquePhotoChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, photo_base64: string | null, target?: SignaletiqueTarget) => Promise<void>;
+    /** Prise de vue d'un équipement de station (Équipements Station, plans
+     *  de quartier T1) : même circuit que les adhésifs PMR au sol. */
+    handleSignaletiquePhotoCapture: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, file: File, labels: SignaletiquePhotoLabels, target?: SignaletiqueTarget) => Promise<void>;
     handleSignaletiquePhotoNoteChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, note: string, target?: SignaletiqueTarget) => Promise<void>;
     handleSignaletiquePhotoRotationChange: (equipmentType: keyof SignaletiqueData, direction: 'meett' | 'pdj' | 'direction1' | 'direction2', index: number, rotation: number, target?: SignaletiqueTarget) => Promise<void>;
     handleResetSignaletique: () => Promise<void>;
@@ -953,6 +963,78 @@ const useAuditStore = create<AppState>((set, get) => {
     /** Module/station Équipements Station visés : cible explicite, sinon la sélection courante. */
     const signaletiqueIds = (target?: SignaletiqueTarget) =>
         target ? { selectedModuleId: target.moduleId, selectedStationId: target.stationId } : get();
+
+    /** Équipement de station (totem/bandeau : un par extrémité ; autres
+     *  catégories : liste par sens). */
+    const signaletiqueEquipmentOf = (
+        lieu: Lieu, moduleId: string | null, stationId: string | null,
+        equipmentType: keyof SignaletiqueData, direction: string, index: number,
+    ): EquipmentStatus | undefined => {
+        const module = lieu.modules.find(m => m.id === moduleId) as AuditModule & { data: ModeData } | undefined;
+        const sig = module?.data.stations?.find(s => s.id === stationId)?.signaletique;
+        if (!sig) return undefined;
+        const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
+        return isSingle ? (sig[equipmentType] as any)[direction] : (sig[equipmentType] as any)[direction]?.[index];
+    };
+
+    // -----------------------------------------------------------------
+    // Photos terrain — même circuit pour tous les audits avec photos
+    // (utils/fieldPhotos.ts). L'élément photographié est retrouvé dans la
+    // station par `locate` ; la cible (lieu) est figée au moment de la prise
+    // de vue, l'agent pouvant changer d'écran pendant le traitement.
+    // -----------------------------------------------------------------
+    type PhotoHolder = { photo_base64?: string | null; photo_note?: string; photo_rotation?: number; photo_id?: string; photo_taken_at?: string };
+
+    const clearPhoto = (holder: PhotoHolder) => {
+        delete holder.photo_base64;
+        delete holder.photo_note;
+        delete holder.photo_rotation;
+        delete holder.photo_id;
+        delete holder.photo_taken_at;
+    };
+
+    /** Prise de vue : original conservé (table photos), copie annotée affichée. */
+    const _captureFieldPhoto = async (file: File, context: FieldPhotoContext, locate: (lieu: Lieu) => PhotoHolder | undefined) => {
+        void requestPersistentStorage();
+        const photo = await createFieldPhotoRecord(file, context);
+        const annotated = await renderAnnotatedPhoto(photo);
+        await saveFieldPhoto(db, photo);
+        await _updateLieuById({ mode: 'byId', id: context.lieuId }, lieu => {
+            const holder = locate(lieu);
+            if (!holder) return;
+            holder.photo_base64 = annotated;
+            holder.photo_id = photo.id;
+            holder.photo_taken_at = photo.takenAt;
+            // Rotation désormais portée par les pixels de la copie annotée.
+            delete holder.photo_rotation;
+        });
+    };
+
+    /** Rotation d'une photo dont l'original est présent sur cet appareil :
+     *  copie annotée régénérée avec la rotation dans les pixels (bandeau
+     *  lisible). `rotation` arrive comme photo_rotation + 90. Renvoie false
+     *  sans rien écrire si l'original est absent (photo historique ou
+     *  sauvegarde importée) : l'appelant garde la rotation d'affichage. */
+    const _rotateFieldPhoto = async (lieuId: string | null, rotation: number, locate: (lieu: Lieu) => PhotoHolder | undefined): Promise<boolean> => {
+        const lieu = get().lieux.find(l => l.id === lieuId);
+        const current = lieu ? locate(lieu) : undefined;
+        const photo = current?.photo_id ? await db.photos.get(current.photo_id) : undefined;
+        if (!lieu || !current || !photo) return false;
+        const delta = rotation - (current.photo_rotation || 0);
+        const nextRotation = (((photo.rotation + delta) % 360) + 360) % 360;
+        const annotated = await renderAnnotatedPhoto({ ...photo, rotation: nextRotation });
+        await db.photos.update(photo.id, { rotation: nextRotation });
+        await _updateLieuById({ mode: 'byId', id: lieu.id }, target => {
+            const holder = locate(target);
+            if (holder?.photo_id !== photo.id) return;
+            holder.photo_base64 = annotated;
+            delete holder.photo_rotation;
+        });
+        return true;
+    };
+
+    const pmrAdhesiveOf = (lieu: Lieu, moduleId: string | null, adhesiveId: string) =>
+        (lieu.modules.find(m => m.id === moduleId)?.data as PMRFloorAdhesiveData | undefined)?.adhesives?.find(a => a.id === adhesiveId);
 
 
     const applyTheme = (theme: 'light' | 'dark') => {
@@ -1848,17 +1930,13 @@ const useAuditStore = create<AppState>((set, get) => {
         delete currentData.completionDate;
         currentData.adhesives.forEach(adhesive => {
             adhesive.status = FloorAdhesiveStatus.NotChecked;
-            delete adhesive.photo_base64;
-            delete adhesive.photo_note;
-            delete adhesive.photo_rotation;
-            delete adhesive.photo_id;
-            delete adhesive.photo_taken_at;
+            clearPhoto(adhesive);
         });
 
         await db.lieux.put(lieuToUpdate);
         set({ lieux: newLieux });
         // Originaux conservés (marqués 'removed'), jamais effacés.
-        await releasePmrPhotos(db, selectedModuleId);
+        await releaseFieldPhotos(db, selectedModuleId);
 
         await saveHistoryEntry(
             `Audit Sol PMR - ${lieuToUpdate.name}`,
@@ -1879,17 +1957,11 @@ const useAuditStore = create<AppState>((set, get) => {
             const adhesive = module.data.adhesives.find(a => a.id === adhesiveId);
             if (adhesive) {
                 if (photo_base64) adhesive.photo_base64 = photo_base64;
-                else {
-                    delete adhesive.photo_base64;
-                    delete adhesive.photo_note;
-                    delete adhesive.photo_rotation;
-                    delete adhesive.photo_id;
-                    delete adhesive.photo_taken_at;
-                }
+                else clearPhoto(adhesive);
             }
         });
         // Suppression : l'original reste enregistré, marqué 'removed'.
-        if (!photo_base64 && selectedModuleId) await releasePmrPhotos(db, selectedModuleId, adhesiveId);
+        if (!photo_base64 && selectedModuleId) await releaseFieldPhotos(db, selectedModuleId, adhesiveId);
     },
 
     handlePmrFloorAdhesivePhotoCapture: async (adhesiveId, file) => {
@@ -1903,23 +1975,11 @@ const useAuditStore = create<AppState>((set, get) => {
         const adhesive = data.adhesives.find(a => a.id === adhesiveId);
         if (!adhesive) return;
 
-        void requestPersistentStorage();
-        const photo = await createPmrPhotoRecord(file, {
+        await _captureFieldPhoto(file, {
             lieuId: lieu.id, stationName: data.stationName, stationCode: data.stationCode,
-            moduleId: module.id, moduleName: module.name, itemId: adhesive.id, itemLabel: adhesive.name,
-        });
-        const annotated = await renderAnnotatedPhoto(photo);
-        await savePmrPhoto(db, photo);
-        await _updateLieuById({ mode: 'byId', id: lieu.id }, target => {
-            const targetModule = target.modules.find(m => m.id === module.id) as AuditModule & { data: PMRFloorAdhesiveData } | undefined;
-            const targetAdhesive = targetModule?.data.adhesives.find(a => a.id === adhesiveId);
-            if (!targetAdhesive) return;
-            targetAdhesive.photo_base64 = annotated;
-            targetAdhesive.photo_id = photo.id;
-            targetAdhesive.photo_taken_at = photo.takenAt;
-            // Rotation désormais portée par les pixels de la copie annotée.
-            delete targetAdhesive.photo_rotation;
-        });
+            moduleId: module.id, moduleName: module.name, accessLabel: pmrAccessLabel(module.name),
+            itemId: adhesive.id, itemLabel: adhesive.name,
+        }, target => pmrAdhesiveOf(target, module.id, adhesiveId));
     },
 
     handlePmrFloorAdhesivePhotoNoteChange: async (adhesiveId, note) => {
@@ -1932,28 +1992,8 @@ const useAuditStore = create<AppState>((set, get) => {
     },
 
     handlePmrFloorAdhesivePhotoRotationChange: async (adhesiveId, rotation) => {
-        const { selectedModuleId, selectedLieuId, lieux } = get();
-        const current = (lieux.find(l => l.id === selectedLieuId)?.modules.find(m => m.id === selectedModuleId)?.data as PMRFloorAdhesiveData | undefined)
-            ?.adhesives.find(a => a.id === adhesiveId);
-        const photo = current?.photo_id ? await db.photos.get(current.photo_id) : undefined;
-        if (current && photo && selectedLieuId) {
-            // Original disponible : la copie annotée est régénérée avec la
-            // rotation dans les pixels (le bandeau reste lisible). `rotation`
-            // arrive de la visionneuse comme photo_rotation + 90.
-            const delta = rotation - (current.photo_rotation || 0);
-            const nextRotation = (((photo.rotation + delta) % 360) + 360) % 360;
-            const annotated = await renderAnnotatedPhoto({ ...photo, rotation: nextRotation });
-            await db.photos.update(photo.id, { rotation: nextRotation });
-            await _updateLieuById({ mode: 'byId', id: selectedLieuId }, lieu => {
-                const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: PMRFloorAdhesiveData };
-                const adhesive = module?.data.adhesives.find(a => a.id === adhesiveId);
-                if (adhesive?.photo_id === photo.id) {
-                    adhesive.photo_base64 = annotated;
-                    delete adhesive.photo_rotation;
-                }
-            });
-            return;
-        }
+        const { selectedModuleId, selectedLieuId } = get();
+        if (await _rotateFieldPhoto(selectedLieuId, rotation, lieu => pmrAdhesiveOf(lieu, selectedModuleId, adhesiveId))) return;
         // Photo historique, ou original resté sur l'appareil de prise de vue
         // (sauvegarde importée) : rotation d'affichage, comme avant.
         await _updateLieu(lieu => {
@@ -2296,24 +2336,30 @@ const useAuditStore = create<AppState>((set, get) => {
     handleSignaletiquePhotoChange: async (equipmentType, direction, index, photo_base64, target) => {
         const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
         await _updateLieu(lieu => {
-            const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
-            const station = module.data.stations.find(s => s.id === selectedStationId);
-            if (station?.signaletique) {
-                const isSingle = equipmentType === 'totem' || equipmentType === 'bandeauStation';
-                const equipment = isSingle
-                    ? (station.signaletique[equipmentType] as any)[direction]
-                    : (station.signaletique[equipmentType] as any)[direction][index];
-                if (equipment) {
-                    if (photo_base64) {
-                        equipment.photo_base64 = photo_base64;
-                    } else {
-                        delete equipment.photo_base64;
-                        delete equipment.photo_note;
-                        delete equipment.photo_rotation;
-                    }
-                }
+            const equipment = signaletiqueEquipmentOf(lieu, selectedModuleId, selectedStationId, equipmentType, direction, index);
+            if (equipment) {
+                if (photo_base64) equipment.photo_base64 = photo_base64;
+                else clearPhoto(equipment);
             }
         });
+        // Suppression : l'original reste enregistré, marqué 'removed'.
+        if (!photo_base64 && selectedModuleId && selectedStationId) {
+            await releaseFieldPhotos(db, selectedModuleId, signaletiquePhotoItemId(selectedStationId, equipmentType, direction, index));
+        }
+    },
+
+    handleSignaletiquePhotoCapture: async (equipmentType, direction, index, file, labels, target) => {
+        const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
+        const { selectedLieuId, lieux } = get();
+        const lieu = lieux.find(l => l.id === selectedLieuId);
+        const module = lieu?.modules.find(m => m.id === selectedModuleId);
+        const station = (module?.data as ModeData | undefined)?.stations?.find(s => s.id === selectedStationId);
+        if (!lieu || !module || !station || !signaletiqueEquipmentOf(lieu, module.id, station.id, equipmentType, direction, index)) return;
+        await _captureFieldPhoto(file, {
+            lieuId: lieu.id, stationName: labels.stationName, stationCode: station.code ?? '',
+            moduleId: module.id, moduleName: module.name, accessLabel: labels.accessLabel,
+            itemId: signaletiquePhotoItemId(station.id, equipmentType, direction, index), itemLabel: labels.itemLabel,
+        }, target => signaletiqueEquipmentOf(target, module.id, station.id, equipmentType, direction, index));
     },
 
     handleSignaletiquePhotoNoteChange: async (equipmentType, direction, index, note, target) => {
@@ -2333,6 +2379,10 @@ const useAuditStore = create<AppState>((set, get) => {
 
     handleSignaletiquePhotoRotationChange: async (equipmentType, direction, index, rotation, target) => {
         const { selectedModuleId, selectedStationId } = signaletiqueIds(target);
+        const locate = (lieu: Lieu) => signaletiqueEquipmentOf(lieu, selectedModuleId, selectedStationId, equipmentType, direction, index);
+        if (await _rotateFieldPhoto(get().selectedLieuId, rotation, locate)) return;
+        // Photo historique, ou original resté sur l'appareil de prise de vue :
+        // rotation d'affichage, comme avant.
         await _updateLieu(lieu => {
             const module = lieu.modules.find(m => m.id === selectedModuleId) as AuditModule & { data: ModeData };
             const station = module.data.stations.find(s => s.id === selectedStationId);
@@ -2367,9 +2417,7 @@ const useAuditStore = create<AppState>((set, get) => {
                 const resetBase = (eq: any) => {
                     eq.status = 'NotChecked';
                     eq.comment = '';
-                    delete eq.photo_base64;
-                    delete eq.photo_note;
-                    delete eq.photo_rotation;
+                    clearPhoto(eq);
                 };
 
                 // totem — single objects per direction
@@ -2412,6 +2460,10 @@ const useAuditStore = create<AppState>((set, get) => {
                 station.comment = '';
             }
         });
+        // Originaux de la station conservés (marqués 'removed'), jamais effacés.
+        if (selectedModuleId && selectedStationId) {
+            await releaseFieldPhotos(db, selectedModuleId, { prefix: `${selectedStationId}:` });
+        }
     },
 
     handleResetCategory: async (category) => {
