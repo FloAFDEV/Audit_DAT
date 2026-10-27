@@ -120,21 +120,7 @@ const HomeHero: React.FC<{ login: HomeLoginProps }> = ({ login }) => {
                             />
                         </motion.div>
 
-                        {/* Trajet du constat : du repère qualifié sur le terrain à sa priorité. */}
-                        <svg aria-hidden="true" className="pointer-events-none absolute inset-0 hidden h-full w-full sm:block" viewBox="0 0 100 100" preserveAspectRatio="none">
-                            <motion.path
-                                d="M 27 61 C 45 61, 55 74, 71 74"
-                                fill="none"
-                                stroke="#0f766e"
-                                strokeWidth="0.5"
-                                strokeDasharray="1.4 1.2"
-                                vectorEffect="non-scaling-stroke"
-                                style={{ strokeWidth: 2 }}
-                                initial={reduce ? false : { pathLength: 0 }}
-                                animate={{ pathLength: 1 }}
-                                transition={{ duration: 0.9, delay: 0.8, ease: EASE }}
-                            />
-                        </svg>
+                        {/* Le trajet du constat : qualifié sur le terrain, il devient une priorité. */}
                         <motion.span
                             className="absolute left-[14%] top-[57%] hidden sm:inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-lg ring-1 ring-amber-300"
                             initial={reduce ? false : { opacity: 0, scale: 0.9 }}
@@ -147,9 +133,9 @@ const HomeHero: React.FC<{ login: HomeLoginProps }> = ({ login }) => {
                             className="absolute left-[71%] top-[71%] hidden sm:inline-flex items-center gap-1.5 rounded-full bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white shadow-lg"
                             initial={reduce ? false : { opacity: 0, scale: 0.9 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            transition={{ duration: 0.4, delay: 1.6 }}
+                            transition={{ duration: 0.4, delay: 1.1 }}
                         >
-                            Priorité · À planifier
+                            <span aria-hidden="true" className="text-teal-300">↳</span> Priorité · À planifier
                         </motion.span>
                     </div>
                     <figcaption className="mt-4 text-xs text-slate-500 dark:text-slate-400">
