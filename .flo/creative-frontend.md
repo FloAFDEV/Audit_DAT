@@ -6,6 +6,8 @@
 ## Statut
 Couche créative : **active — page d'accueil publique uniquement**
 Stack : Vite + React 19 (SPA, pas de Next.js → `flo-nextjs` ne s'applique pas)
+Contrainte : rester dans la SPA Vite + React existante — aucune migration (Next.js ou autre),
+aucune réorganisation de l'architecture, aucune dépendance de framework ajoutée.
 
 ## Périmètre
 - Surface concernée : page d'accueil publique = écran non connecté (`components/Login.tsx`)
