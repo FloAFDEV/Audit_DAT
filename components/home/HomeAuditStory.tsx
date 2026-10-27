@@ -15,6 +15,7 @@ import { ArrowRight, Check, WifiOff } from 'lucide-react';
 import { Logo } from '../Logo';
 import { AUDIT_STORY_STEPS as STEPS } from './auditStorySteps';
 import { StoryScreen } from './StoryScreen';
+import HomeAuditDemo from './HomeAuditDemo';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 /** Distance de scroll par étape (en svh) — assez pour lire, sans tunnel. */
@@ -251,7 +252,9 @@ const HomeAuditStory: React.FC = () => {
                     </div>
                 )}
 
-                <div className="mx-auto mt-20 max-w-3xl px-5 sm:px-8">
+                <HomeAuditDemo />
+
+                <div className="mx-auto mt-24 max-w-3xl px-5 sm:px-8">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900 sm:p-10">
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">Prêt pour le terrain.</p>
                         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">

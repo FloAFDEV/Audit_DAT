@@ -37,3 +37,6 @@ Jamais de mockup inventé : les écrans viennent de `scripts/capture-home-story.
 - `components/Logo.tsx` — logo.
 - `components/home/StoryScreen.tsx` — vrai écran + zone de focus.
 - `components/home/auditStorySteps.ts` — étapes réelles et zones de focus.
+- `components/home/HomeAuditDemo.tsx` — démo interactive : VRAIS composants InApp consommés tels quels,
+  sans modification (`AdhesiveAuditForm`, `cockpit/primitives` › `AnomalySummaryCard`), état local,
+  référentiel issu du seed pur (`buildSignageReferencesSeed`) — jamais le store ni Dexie.
