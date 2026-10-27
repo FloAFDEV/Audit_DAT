@@ -40,6 +40,14 @@ const NEUTRALIZE_CSS = `
 .home-demo button[title*="dictée"] { display: none; }
 `;
 
+// Mobile et tablette : les repères déjà contrôlés « OK » sont repliés (lignes
+// réelles masquées par portée CSS, dépliables) pour garder la démo courte.
+const COMPACT_CSS = `
+@media (max-width: 1023.98px) {
+  .home-demo-compact ul.divide-y > li${OPEN_INDEXES.map((i) => `:not(:nth-child(${i + 1}))`).join('')} { display: none; }
+}
+`;
+
 interface HomeAuditDemoProps {
     /** Scène sombre (défaut) ou claire, selon la direction de la page. */
     tone?: 'dark' | 'light';
@@ -56,6 +64,7 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, fr
     const [dat, setDat] = useState(initialDat);
     const [touched, setTouched] = useState(false);
     const [listOpen, setListOpen] = useState(false);
+    const [showChecked, setShowChecked] = useState(false);
     const { signageReferences, direction, station, module, actions, interventionItems, counts } = useAuditOutcome(dat);
 
     const { checked, absent, toReplace, total } = counts;
@@ -73,9 +82,9 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, fr
         <section
             id={HOME_DEMO_ID}
             aria-labelledby="home-demo-title"
-            className={`home-demo scroll-mt-4 px-4 py-20 sm:px-8 lg:py-28 ${dark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 dark:bg-slate-950 dark:text-white'}`}
+            className={`home-demo scroll-mt-4 px-4 py-16 sm:px-8 sm:py-20 lg:py-28 ${dark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 dark:bg-slate-950 dark:text-white'}`}
         >
-            <style>{NEUTRALIZE_CSS}</style>
+            <style>{NEUTRALIZE_CSS + COMPACT_CSS}</style>
             <div className="mx-auto max-w-7xl">
                 {header ?? (
                     <header className="mx-auto max-w-3xl text-center">
@@ -88,8 +97,8 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, fr
                     </header>
                 )}
 
-                <div className={`mt-12 grid gap-8 lg:grid-cols-12 lg:items-start ${frameClassName}`}>
-                    <div className="lg:col-span-8">
+                <div className={`mt-10 grid gap-6 lg:mt-12 lg:grid-cols-12 lg:gap-8 lg:items-start ${frameClassName}`}>
+                    <div className={`lg:col-span-8 ${showChecked ? '' : 'home-demo-compact'}`}>
                         <AdhesiveAuditForm
                             module={module}
                             dat={dat}
@@ -104,6 +113,14 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, fr
                             onReset={() => setDat(initialDat())}
                             onBack={() => undefined}
                         />
+                        <button
+                            type="button"
+                            onClick={() => setShowChecked((v) => !v)}
+                            aria-expanded={showChecked}
+                            className={`mt-3 w-full rounded-lg px-4 py-2.5 text-sm font-medium ring-1 ring-inset lg:hidden ${dark ? 'text-slate-200 ring-white/15' : 'text-slate-700 ring-slate-300 dark:text-slate-200 dark:ring-slate-700'}`}
+                        >
+                            {showChecked ? 'Replier les repères déjà contrôlés' : `Afficher les ${total - OPEN_INDEXES.length} repères déjà contrôlés « OK »`}
+                        </button>
                         {/* Mobile : rappel du résultat après le premier geste ; barre opaque
                             qui finit à sa place, sous le formulaire, sans rien recouvrir. */}
                         {touched && (

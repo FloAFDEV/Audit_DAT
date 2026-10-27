@@ -1,5 +1,5 @@
 // components/home/TerrainSection.tsx
-// Direction « Ligne » — temps 01 : situer le contexte. Un panneau de station
+// Temps 01 : situer le contexte. Un panneau de station
 // (données réelles : lignes et modules d'Arènes dans le référentiel de l'app),
 // les deux gestes du terrain sur de vrais écrans, et l'échelle du périmètre.
 import React, { useMemo } from 'react';
@@ -9,7 +9,7 @@ import { isModuleInCurrentScope } from '../../utils/moduleScope';
 import type { AuditCategoryConfig } from '../../types';
 import { FRAME_BY_ID } from './auditStorySteps';
 import { useNetworkFigures } from './HomeNetworkScale';
-import { LineDiagram } from './LineDiagram';
+import { Callout, SectionHeading } from './editorial';
 
 const STATION = 'Arènes';
 const lieuShot = FRAME_BY_ID['01-lieu'].mobile;
@@ -38,68 +38,53 @@ const TerrainSection: React.FC = () => {
     }, [lieux]);
 
     return (
-        <section id="temps-terrain" aria-labelledby="temps-terrain-title" className="scroll-mt-4 bg-white py-24 dark:bg-slate-950 lg:py-32">
+        <section id="temps-terrain" aria-labelledby="temps-terrain-title" className="scroll-mt-4 bg-white py-16 dark:bg-slate-950 sm:py-24 lg:py-28">
             <div className="mx-auto max-w-[88rem] px-5 sm:px-8 xl:px-12">
-                <LineDiagram reached={0} size="sm" className="max-w-xl" />
-
-                <div className="mt-14 grid gap-14 lg:grid-cols-12 lg:items-center">
+                <div className="grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-10">
                     <div className="lg:col-span-5">
-                        <p className="font-mono text-sm font-semibold text-teal-700 dark:text-teal-400">01</p>
-                        <h2 id="temps-terrain-title" className="mt-2 text-4xl font-semibold tracking-[-0.03em] text-slate-950 sm:text-5xl dark:text-white">
-                            Sur le terrain
-                        </h2>
-                        <p className="mt-4 max-w-md text-lg leading-relaxed text-slate-600 dark:text-slate-300">
-                            En station, l'agent retrouve le lieu puis l'équipement à contrôler. Même sans réseau.
+                        <SectionHeading id="temps-terrain-title" index="01 · TERRAIN" light="Sur le terrain," strong="même sans réseau." />
+                        <p className="mt-5 max-w-md text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                            En station, l'agent retrouve le lieu, ouvre l'équipement à contrôler et déroule ses repères.
                         </p>
-
-                        {/* Panneau de station : composition promotionnelle, données du référentiel. */}
-                        <div className="mt-10 max-w-md rounded-2xl bg-slate-950 p-6 text-white shadow-[0_24px_60px_-28px_rgba(15,23,42,0.8)] dark:ring-1 dark:ring-white/10">
-                            <div className="flex items-center gap-2">
-                                {station?.lines.map((config) => <CategoryIcon key={config.key} categoryConfig={config} size="md" asDiv />)}
-                            </div>
-                            <p className="mt-5 text-5xl font-semibold tracking-[-0.03em]">{STATION}</p>
-                            <p className="mt-1 font-mono text-sm tracking-[0.2em] text-slate-400">ARE</p>
-                            <div className="mt-5 flex items-baseline justify-between border-t border-white/15 pt-4 text-sm">
-                                <span className="text-slate-300">Modules à auditer</span>
-                                <span className="text-2xl font-semibold tabular-nums">{station ? station.modules : '—'}</span>
-                            </div>
-                        </div>
+                        {/* Périmètre : calculé depuis le référentiel de l'application. */}
+                        <dl className="mt-10 grid max-w-md grid-cols-4 gap-3 border-t border-slate-200 pt-5 dark:border-slate-800 lg:grid-cols-2 lg:gap-x-8 lg:gap-y-6">
+                            {figures.map(({ value, label }) => (
+                                <div key={label} className="flex flex-col-reverse">
+                                    <dt className="mt-1 text-[11px] leading-tight text-slate-600 sm:text-sm dark:text-slate-400">{label}</dt>
+                                    <dd className="text-2xl font-semibold tabular-nums tracking-[-0.03em] text-slate-950 sm:text-4xl dark:text-white">{ready ? value : '—'}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">Périmètre suivi dans AuditRef, calculé depuis le référentiel de l'application.</p>
                     </div>
 
                     <figure className="relative lg:col-span-7">
-                        <div className="relative mx-auto grid max-w-2xl grid-cols-2 items-start gap-6 sm:gap-10">
-                            <div>
-                                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-xs text-white">1</span>
-                                    Retrouver le lieu
-                                </p>
-                                <Phone {...lieuShot} alt={FRAME_BY_ID['01-lieu'].alt} />
+                        <div className="relative mx-auto max-w-[22rem] pb-10 sm:max-w-xl sm:pb-14">
+                            <div className="grid grid-cols-2 items-start gap-4 sm:gap-10">
+                                <div>
+                                    <p className="mb-3"><Callout n={1}>Retrouver le lieu</Callout></p>
+                                    <Phone {...lieuShot} alt={FRAME_BY_ID['01-lieu'].alt} />
+                                </div>
+                                <div className="pt-14 sm:pt-24">
+                                    <p className="mb-3"><Callout n={2}>Ouvrir le module</Callout></p>
+                                    <Phone {...moduleShot} alt={FRAME_BY_ID['02-module'].alt} />
+                                </div>
                             </div>
-                            <div className="pt-16 sm:pt-24">
-                                <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
-                                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-teal-700 text-xs text-white">2</span>
-                                    Ouvrir le module
-                                </p>
-                                <Phone {...moduleShot} alt={FRAME_BY_ID['02-module'].alt} />
+
+                            {/* Plaque de station : composition promotionnelle, données du référentiel. */}
+                            <div className="absolute bottom-0 left-[-3%] w-[64%] rounded-2xl bg-slate-950 p-4 text-white shadow-[0_30px_60px_-24px_rgba(15,23,42,0.8)] ring-1 ring-white/10 sm:left-[-6%] sm:w-[50%] sm:p-6">
+                                <div className="flex items-center gap-2">
+                                    {station?.lines.map((config) => <CategoryIcon key={config.key} categoryConfig={config} size="md" asDiv />)}
+                                </div>
+                                <p className="mt-3 text-3xl font-semibold tracking-[-0.03em] sm:mt-4 sm:text-5xl">{STATION}</p>
+                                <div className="mt-3 flex items-baseline justify-between border-t border-white/15 pt-3 text-xs sm:mt-4 sm:text-sm">
+                                    <span className="text-slate-300">Modules à auditer</span>
+                                    <span className="text-xl font-semibold tabular-nums sm:text-2xl">{station ? station.modules : '—'}</span>
+                                </div>
                             </div>
                         </div>
-                        <figcaption className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">Écrans réels de l'application, sur téléphone.</figcaption>
+                        <figcaption className="mt-5 text-center text-xs text-slate-500 dark:text-slate-400">Écrans réels de l'application, sur téléphone · plaque de station composée pour la page.</figcaption>
                     </figure>
-                </div>
-
-                <div className="mt-20 border-t border-slate-200 pt-8 dark:border-slate-800">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Périmètre suivi dans AuditRef</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Calculé depuis le référentiel de l'application.</p>
-                    </div>
-                    <dl className="mt-6 grid grid-cols-2 gap-y-8 sm:grid-cols-4">
-                        {figures.map(({ value, label }, i) => (
-                            <div key={label} className={`flex flex-col-reverse ${i > 0 ? 'sm:border-l sm:border-slate-200 sm:pl-8 dark:sm:border-slate-800' : ''}`}>
-                                <dt className="mt-1 text-sm text-slate-600 dark:text-slate-400">{label}</dt>
-                                <dd className="text-5xl font-semibold tabular-nums tracking-[-0.03em] text-slate-950 dark:text-white">{ready ? value : '—'}</dd>
-                            </div>
-                        ))}
-                    </dl>
                 </div>
             </div>
         </section>
