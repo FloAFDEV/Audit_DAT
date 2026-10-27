@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { Suspense, lazy, useState } from "react";
 import { motion } from "motion/react";
 import {
   Eye,
@@ -13,9 +13,14 @@ import {
   BookOpenCheck,
   AlertTriangle,
   Archive,
+  ArrowDown,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { pageVariants } from "../hooks/motion/transitions";
+
+/** Storytelling « comment se déroule un audit », sous le premier écran :
+ *  chargé à part pour ne pas alourdir l'affichage du formulaire. */
+const HomeAuditStory = lazy(() => import("./home/HomeAuditStory"));
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -64,6 +69,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
+    <div className="bg-white dark:bg-slate-950">
     <div className="min-h-screen flex flex-col lg:flex-row bg-white dark:bg-slate-950">
       {/* ============ Hero — identité de marque, adaptée au thème
           clair/sombre de l'app (cf. store.ts::applyTheme / classe .dark
@@ -149,6 +155,14 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <p className="relative mt-6 lg:mt-8 text-sm italic text-slate-500 dark:text-slate-400">
           Plus qu'un outil, une solution terrain.
         </p>
+
+        <a
+          href="#comment-ca-marche"
+          className="relative mt-4 inline-flex w-fit items-center gap-2 rounded-md text-sm font-semibold text-teal-700 hover:text-teal-800 dark:text-teal-400 dark:hover:text-teal-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+        >
+          Voir comment se déroule un audit
+          <ArrowDown className="h-4 w-4" aria-hidden="true" />
+        </a>
       </div>
 
       {/* ============ Formulaire de connexion — logique inchangée. Texture
@@ -243,6 +257,11 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           </p>
         </motion.div>
       </div>
+    </div>
+
+    <Suspense fallback={null}>
+      <HomeAuditStory />
+    </Suspense>
     </div>
   );
 };
