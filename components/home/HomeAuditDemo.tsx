@@ -43,14 +43,16 @@ const NEUTRALIZE_CSS = `
 interface HomeAuditDemoProps {
     /** Scène sombre (défaut) ou claire, selon la direction de la page. */
     tone?: 'dark' | 'light';
-    /** Remplace l'en-tête par défaut (mise en scène propre à la page). */
+    /** Remplace l'en-tête par défaut (mise en scène propre à la page) ; doit porter id="home-demo-title". */
     header?: React.ReactNode;
+    /** Cadre autour de l'interface réelle (formulaire + résultat). */
+    frameClassName?: string;
 }
 
 export const DEMO_INSTRUCTIONS = "Cliquez sur les repères pour simuler un contrôle. Rien n'est enregistré.";
 export const DEMO_REMAINING = `7 repères sont déjà contrôlés : il reste ${OPEN_NAMES.slice(0, -1).join(', ')} et ${OPEN_NAMES.at(-1)}.`;
 
-const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header }) => {
+const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, frameClassName = '' }) => {
     const [dat, setDat] = useState(initialDat);
     const [touched, setTouched] = useState(false);
     const [listOpen, setListOpen] = useState(false);
@@ -86,7 +88,7 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header }) 
                     </header>
                 )}
 
-                <div className="mt-12 grid gap-8 lg:grid-cols-12 lg:items-start">
+                <div className={`mt-12 grid gap-8 lg:grid-cols-12 lg:items-start ${frameClassName}`}>
                     <div className="lg:col-span-8">
                         <AdhesiveAuditForm
                             module={module}
