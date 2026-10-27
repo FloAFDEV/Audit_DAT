@@ -10,23 +10,32 @@ import type { Lieu, SignageReference } from '../../types';
 
 const NO_REFERENCES: SignageReference[] = [];
 
-const HomeNetworkScale: React.FC = () => {
+/** Référentiel initial de l'application (celui d'une première installation), en lecture seule. */
+export const useInitialLieux = (): Lieu[] => {
     const [lieux, setLieux] = useState<Lieu[]>([]);
     useEffect(() => {
         let alive = true;
         generateInitialLieuxDataAsync().then((l) => alive && setLieux(l)).catch(() => undefined);
         return () => { alive = false; };
     }, []);
-    const { globalCounts } = useStats(lieux, NO_REFERENCES);
+    return lieux;
+};
 
+/** Périmètre suivi, calculé par le hook du cockpit (useStats). */
+export const useNetworkFigures = () => {
+    const lieux = useInitialLieux();
+    const { globalCounts } = useStats(lieux, NO_REFERENCES);
     const figures = useMemo(() => [
         { value: globalCounts.stationCountTotal, label: 'stations' },
         { value: globalCounts.datCount, label: 'distributeurs (DAT)' },
         { value: globalCounts.ecaCount, label: 'valideurs (ECA)' },
         { value: globalCounts.prCount, label: 'parcs relais' },
     ], [globalCounts]);
+    return { lieux, figures, ready: lieux.length > 0 };
+};
 
-    const ready = lieux.length > 0;
+const HomeNetworkScale: React.FC = () => {
+    const { figures, ready } = useNetworkFigures();
 
     return (
         <div className="mx-auto mt-10 max-w-4xl px-5 sm:px-8">

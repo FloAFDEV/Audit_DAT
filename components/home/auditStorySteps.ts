@@ -124,3 +124,8 @@ export const AUDIT_STORY_STEPS: AuditStoryStep[] = [
         ],
     },
 ];
+
+/** Écrans du récit par identifiant (compositions qui en réutilisent des zones). */
+export const FRAME_BY_ID: Record<string, StoryFrame> = Object.fromEntries(
+    AUDIT_STORY_STEPS.flatMap((step) => step.frames).map((frame) => [frame.id, frame]),
+);
