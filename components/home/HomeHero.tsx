@@ -71,7 +71,7 @@ const HomeHero: React.FC<{ login: HomeLoginProps }> = ({ login }) => (
                         </div>
                     ))}
                 </div>
-                <figcaption className="mt-6 text-xs text-slate-500">Écrans réels de l'application · un même contrôle, de la station à l'intervention.</figcaption>
+                <figcaption className="mt-6 text-xs text-slate-500 sm:mt-28">Écrans réels de l'application · un même contrôle, de la station à l'intervention.</figcaption>
             </figure>
         </div>
     </header>
