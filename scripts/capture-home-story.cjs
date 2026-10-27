@@ -30,7 +30,12 @@ const union = (bs, pad) => {
   return { x, y, width: r - x, height: btm - y };
 };
 
-async function shoot(page, fmt, id, focusLocs, anchorLocs = focusLocs) {
+/**
+ * Capture pleine page puis recadrage autour des zones `anchorLocs` ; `focusLocs`
+ * = zone mise en évidence. `clipLoc` (optionnel) recadre en plus sur un élément
+ * (ex. le panneau d'une modale, sans son fond), au même ratio que le format.
+ */
+async function shoot(page, fmt, id, focusLocs, anchorLocs = focusLocs, clipLoc) {
   await page.mouse.move(1, 1); // aucun état hover parasite dans la capture
   await page.waitForTimeout(900);
   const { width, cropH } = FORMATS[fmt];
@@ -40,16 +45,23 @@ async function shoot(page, fmt, id, focusLocs, anchorLocs = focusLocs) {
   // Coordonnées absolues (page entière) : boundingBox est relatif au viewport.
   const scrollY = await page.evaluate(() => window.scrollY);
   focus.y += scrollY; anchor.y += scrollY;
-  const top = Math.max(0, Math.min(pageH - cropH, Math.round(anchor.y + anchor.height / 2 - cropH / 2)));
+  let area;
+  if (clipLoc) {
+    const c = await box(clipLoc);
+    area = { x: c.x, y: c.y + scrollY, w: c.width, h: Math.round((c.width * cropH) / width) };
+  } else {
+    const top = Math.max(0, Math.min(pageH - cropH, Math.round(anchor.y + anchor.height / 2 - cropH / 2)));
+    area = { x: 0, y: top, w: width, h: cropH };
+  }
   const png = path.join(TMP, `${id}-${fmt}.png`);
   await page.screenshot({ path: png, fullPage: true });
   const webp = path.join(OUT, `${id}-${fmt}.webp`);
   execFileSync('python3', ['-I', '-c',
-    'import sys;from PIL import Image;im=Image.open(sys.argv[1]);s=2;t=int(sys.argv[3]);h=int(sys.argv[4]);'
-    + 'im.crop((0,t*s,im.width,(t+h)*s)).save(sys.argv[2],"WEBP",quality=82,method=6)',
-    png, webp, String(top), String(cropH)]);
+    'import sys;from PIL import Image;im=Image.open(sys.argv[1]);s=2;x,y,w,h,W,H=map(float,sys.argv[3:9]);'
+    + 'im.crop((int(x*s),int(y*s),int((x+w)*s),int((y+h)*s))).resize((int(W*s),int(H*s)),Image.LANCZOS).save(sys.argv[2],"WEBP",quality=82,method=6)',
+    png, webp, ...[area.x, area.y, area.w, area.h, width, cropH].map(String)]);
   const pct = (v, d) => +(100 * v / d).toFixed(1);
-  console.log(`${id} ${fmt}: focus { x: ${pct(focus.x, width)}, y: ${pct(focus.y - top, cropH)}, w: ${pct(focus.width, width)}, h: ${pct(focus.height, cropH)} }`);
+  console.log(`${id} ${fmt}: focus { x: ${pct(focus.x - area.x, area.w)}, y: ${pct(focus.y - area.y, area.h)}, w: ${pct(focus.width, area.w)}, h: ${pct(focus.height, area.h)} }`);
 }
 
 async function run(fmt) {
@@ -75,8 +87,6 @@ async function run(fmt) {
   await datModule.click();
   await page.waitForTimeout(800);
   await page.getByText('DAT 01').click();
-  const firstRow = page.locator('main ul > li').first();
-  await shoot(page, fmt, '03-controle', [firstRow]);
 
   // Un vrai contrôle : 7 repères conformes, 1 à remplacer, 1 absent.
   const rows = page.locator('main ul > li');
@@ -103,6 +113,15 @@ async function run(fmt) {
   await page.getByText(/^urgent$/i).waitFor({ timeout: 10000 });
   const prio = [page.getByText(/^urgent$/i), page.getByText(/^unité$/i).nth(1), page.getByRole('button', { name: /Voir la fiche référence/ }).nth(1)];
   await shoot(page, fmt, '06-priorite', prio, [cockpitTitle, ...prio]);
+
+  // Liste d'intervention réelle (MaintenanceListModal), exportable en CSV.
+  await page.getByRole('button', { name: /Voir en liste/ }).click();
+  const dialog = page.getByRole('dialog');
+  // Zone : des badges de ligne aux libellés des repères ; cadrage : de l'en-tête à l'export.
+  const listRows = [dialog.getByText('Arènes', { exact: true }).first(), dialog.getByText(/Repère 6 - Adhésif/), dialog.getByText(/Repère 9 - « Numéro »/)];
+  await listRows[2].waitFor();
+  const firstBadge = dialog.getByText('A', { exact: true }).first();
+  await shoot(page, fmt, '07-liste', [firstBadge, ...listRows], undefined, dialog.locator(':scope > div').first());
   await browser.close();
 }
 

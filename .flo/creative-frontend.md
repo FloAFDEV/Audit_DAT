@@ -32,11 +32,14 @@ Jamais de mockup inventé : les écrans viennent de `scripts/capture-home-story.
 - Niveau : narratif sur la section storytelling, discret ailleurs.
 - Librairie : `motion` (règle d'or des animations, `index.css`) — pas de GSAP sur la page d'accueil.
 - Moment fort autorisé : scène sticky ≥ lg ; séquence verticale sur mobile et en reduced motion.
+- Seul mouvement « fort » : le recadrage d'un écran sur la zone racontée (lisibilité). Pas de zoom décoratif.
 
 ## Composants à réutiliser en priorité
 - `components/Logo.tsx` — logo.
 - `components/home/StoryScreen.tsx` — vrai écran + zone de focus.
 - `components/home/auditStorySteps.ts` — étapes réelles et zones de focus.
-- `components/home/HomeAuditDemo.tsx` — démo interactive : VRAIS composants InApp consommés tels quels,
-  sans modification (`AdhesiveAuditForm`, `cockpit/primitives` › `AnomalySummaryCard`), état local,
-  référentiel issu du seed pur (`buildSignageReferencesSeed`) — jamais le store ni Dexie.
+- `components/home/HomeAuditDemo.tsx` — démo-climax : VRAIS composants InApp consommés tels quels,
+  sans modification (`AdhesiveAuditForm`, `AnomalySummaryCard`, `MaintenanceListModal`), priorisation par
+  le moteur du cockpit (`buildPatrimoineIndex` → `buildMaintenanceActions`), état local, référentiel issu
+  du seed pur — jamais le store ni Dexie. Commandes InApp (retour, reset, dictée) masquées par portée CSS.
+- `components/home/HomeNetworkScale.tsx` — chiffres calculés (référentiel initial + `useStats`), jamais saisis.
