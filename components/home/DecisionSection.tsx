@@ -1,0 +1,388 @@
+// components/home/DecisionSection.tsx
+// Temps 03, climax du récit. Les deux mêmes repères
+// changent d'état sous les yeux : constat → anomalie qualifiée → priorité →
+// intervention. Représentation éditoriale, mais chaque valeur (statut,
+// gravité, bande d'urgence, liste) sort du MOTEUR de l'app (useAuditOutcome).
+// Desktop : scène sticky, une phase par segment de scroll, l'écran réel
+// correspondant en regard. Mobile, tablette, reduced motion : le trajet de
+// chaque constat sur une mini-ligne, puis la liste d'intervention — statique.
+import React, { useMemo, useRef, useState } from 'react';
+import { AnimatePresence, LayoutGroup, motion, useMotionValueEvent, useReducedMotion, useScroll, useTransform } from 'motion/react';
+import { Download, MapPin } from 'lucide-react';
+import { URGENCY_BAND_LABELS, UrgencyBand } from '../../utils/cockpit/maintenanceActions';
+import { FRAME_BY_ID } from './auditStorySteps';
+import { DEMO_ADHESIVES, STORY_DAT, repereInfo, useAuditOutcome } from './auditOutcome';
+import { ShotCrop } from './ShotCrop';
+import { LINE_STOPS, LineDiagram } from './LineDiagram';
+import { BLUEPRINT, Cartouche, EASE_IN_OUT, Reveal, SURFACE, SectionHeading, useMotionAmplitude } from './editorial';
+import type { StoryFocus, StoryShot } from './auditStorySteps';
+
+const listShot = FRAME_BY_ID['07-liste'].desktop;
+
+/** L'écran réel qui correspond à chaque phase (la représentation éditoriale en regard). */
+const PROOFS: { shot: StoryShot; rect: StoryFocus; caption: string; alt: string }[] = [
+    { shot: FRAME_BY_ID['04-anomalie'].mobile, rect: FRAME_BY_ID['04-anomalie'].mobile.focus, caption: 'Écran réel · formulaire terrain', alt: 'Formulaire d’audit sur téléphone : repère 6 à remplacer.' },
+    { shot: FRAME_BY_ID['04-anomalie'].mobile, rect: FRAME_BY_ID['04-anomalie'].mobile.focus, caption: 'Écran réel · formulaire terrain', alt: 'Formulaire d’audit sur téléphone : repère 6 à remplacer.' },
+    { shot: FRAME_BY_ID['06-priorite'].desktop, rect: FRAME_BY_ID['06-priorite'].desktop.focus, caption: 'Écran réel · analyse des anomalies', alt: 'Cockpit : repère 9 urgent, repère 6 à planifier.' },
+    { shot: listShot, rect: { x: 0, y: 0, w: 70, h: 62 }, caption: 'Écran réel · liste d’intervention', alt: 'Liste des anomalies constatées, exportable en CSV.' },
+];
+
+const PHASES = [
+    { stop: 1, title: 'Deux repères relevés en station.', text: "Le constat est enregistré sur place, même sans réseau." },
+    { stop: 2, title: 'Chaque constat est qualifié.', text: 'Absent ou à remplacer : la qualification donne sa gravité à l’anomalie.' },
+    { stop: 3, title: 'Le cockpit classe les anomalies.', text: 'Urgent ou à planifier, selon des règles explicites, pas un score opaque.' },
+    { stop: 4, title: 'Une liste d’intervention, prête à partir.', text: 'Regroupée par lieu et par équipement, exportable en CSV.' },
+] as const;
+
+interface Item {
+    key: string;
+    number: string;
+    title: string;
+    visual?: string;
+    status: 'absent' | 'remplacer';
+    severity: number;
+    band: UrgencyBand;
+    place: string;
+}
+
+const STATUS = {
+    absent: { label: 'Absent', chip: 'bg-red-600 text-white' },
+    remplacer: { label: 'À remplacer', chip: 'bg-amber-600 text-white' },
+} as const;
+
+const BAND_TONE: Record<UrgencyBand, string> = {
+    urgent: 'text-red-300 ring-red-400/40',
+    a_planifier: 'text-amber-200 ring-amber-300/40',
+    surveillance: 'text-slate-300 ring-white/20',
+};
+
+const useDecisionItems = (): Item[] => {
+    const { actions } = useAuditOutcome(STORY_DAT);
+    return useMemo(() => actions.map((action) => {
+        const adhesive = DEMO_ADHESIVES.find((a) => a.id === action.key);
+        const info = adhesive ? repereInfo(adhesive) : { number: action.label, title: action.label, visual: undefined };
+        const first = action.items[0];
+        return {
+            key: action.key,
+            number: info.number,
+            title: info.title,
+            visual: info.visual,
+            status: action.absentCount > 0 ? 'absent' : 'remplacer',
+            severity: action.priority.severity,
+            band: action.band,
+            place: `${first?.lieuName ?? ''} · ${first?.context ?? ''} · ${first?.equipmentLabel ?? ''}`,
+        };
+    }), [actions]);
+};
+
+const MORPH = { duration: 0.9, ease: EASE_IN_OUT } as const;
+
+/** Pastille d'état : l'ancien état sort par le haut, le nouveau entre par le bas. */
+const StateChip: React.FC<{ id: string; className: string; children: React.ReactNode }> = ({ id, className, children }) => (
+    <span className="relative inline-flex overflow-hidden rounded-md">
+        <AnimatePresence mode="popLayout" initial={false}>
+            <motion.span
+                key={id}
+                className={`inline-flex rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${className}`}
+                initial={{ y: '110%' }}
+                animate={{ y: '0%' }}
+                exit={{ y: '-110%' }}
+                transition={{ duration: 0.55, ease: EASE_IN_OUT }}
+            >
+                {children}
+            </motion.span>
+        </AnimatePresence>
+    </span>
+);
+
+/** Une fiche, dans l'état de la phase. `layoutId` relie ses formes d'une phase à l'autre. */
+const Card: React.FC<{ item: Item; phase: number; animated: boolean }> = ({ item, phase, animated }) => {
+    const status = STATUS[item.status];
+    const layoutId = animated ? `decision-${item.key}` : undefined;
+
+    if (phase === 3) {
+        return (
+            <motion.li layoutId={layoutId} transition={MORPH} className="flex items-center gap-4 border-t border-slate-100 px-6 py-4 first:border-t-0">
+                {item.visual && <img src={item.visual} alt="" loading="lazy" className="hidden h-9 w-9 flex-shrink-0 object-contain sm:block" />}
+                <span className={`flex-shrink-0 rounded px-2 py-0.5 text-xs font-bold uppercase ${item.status === 'absent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-800'}`}>{status.label}</span>
+                <span className="min-w-0 truncate text-sm text-slate-700 sm:text-base">{item.number} · {item.title}</span>
+            </motion.li>
+        );
+    }
+
+    return (
+        <motion.li
+            layoutId={layoutId}
+            transition={MORPH}
+            className={`overflow-hidden rounded-2xl bg-white text-slate-900 shadow-[0_2px_4px_rgba(0,0,0,0.2),0_30px_60px_-24px_rgba(0,0,0,0.8)] ${phase === 2 ? 'p-4' : 'p-6'}`}
+        >
+            <motion.div layout="position" transition={MORPH} className="flex gap-4">
+                {phase < 2 && item.visual && (
+                    <div className="flex h-24 w-24 flex-shrink-0 items-center justify-center rounded-xl bg-slate-50 p-2">
+                        <img src={item.visual} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+                    </div>
+                )}
+                <div className="min-w-0 flex-1">
+                    <p className="font-mono text-xs font-semibold text-slate-500">{item.number}</p>
+                    <p className={`mt-1 font-semibold leading-snug ${phase < 2 ? 'text-lg' : 'text-sm'}`}>{item.title}</p>
+                    {phase < 2 && <p className="mt-2 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3 w-3" aria-hidden="true" />{item.place}</p>}
+                </div>
+            </motion.div>
+            <motion.div layout="position" transition={MORPH} className="mt-4 flex items-center justify-between gap-3">
+                {phase === 0 ? (
+                    <StateChip id="releve" className="bg-slate-100 text-slate-600">Relevé terrain</StateChip>
+                ) : (
+                    <StateChip id={item.status} className={status.chip}>{status.label}</StateChip>
+                )}
+                <span className={`flex items-center gap-2 text-[11px] font-medium text-slate-500 transition-opacity duration-500 ${phase >= 1 ? 'opacity-100' : 'opacity-0'}`}>
+                    Gravité
+                    <span className="relative h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
+                        <motion.span
+                            className={`absolute inset-y-0 left-0 w-full origin-left rounded-full ${item.status === 'absent' ? 'bg-red-600' : 'bg-amber-500'}`}
+                            initial={false}
+                            animate={{ scaleX: phase >= 1 ? item.severity : 0 }}
+                            transition={{ duration: 0.9, delay: 0.3, ease: EASE_IN_OUT }}
+                        />
+                    </span>
+                </span>
+            </motion.div>
+        </motion.li>
+    );
+};
+
+/** La scène d'une phase. */
+const Stage: React.FC<{ items: Item[]; phase: number; animated: boolean }> = ({ items, phase, animated }) => {
+    if (phase === 3) {
+        return (
+            <motion.div
+                className="mx-auto w-full max-w-2xl overflow-hidden rounded-2xl bg-white text-slate-900 shadow-[0_2px_4px_rgba(0,0,0,0.2),0_40px_90px_-30px_rgba(0,0,0,0.85)]"
+                // La liste se déplie de haut en bas, les fiches viennent s'y ranger.
+                initial={animated ? { clipPath: 'inset(0% 0% 100% 0% round 1rem)' } : false}
+                animate={{ clipPath: 'inset(0% 0% 0% 0% round 1rem)' }}
+                transition={{ duration: 0.8, ease: EASE_IN_OUT }}
+            >
+                <div className="flex items-center justify-between bg-slate-50 px-6 py-4">
+                    <div>
+                        <p className="text-base font-semibold">Liste d’intervention</p>
+                        <p className="text-xs text-slate-500">{items[0]?.place.split(' · ').slice(0, 2).join(' · ')}</p>
+                    </div>
+                    <span className="font-mono text-xs text-slate-500">{items.length} actions</span>
+                </div>
+                <ul>{items.map((item) => <Card key={item.key} item={item} phase={3} animated={animated} />)}</ul>
+                <div className="flex justify-end border-t border-slate-100 bg-slate-50 px-6 py-3">
+                    <motion.span
+                        className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-3 py-1.5 text-xs font-semibold text-white"
+                        initial={animated ? { opacity: 0, y: 8 } : false}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.8, ease: EASE_IN_OUT }}
+                    >
+                        <Download className="h-3.5 w-3.5" aria-hidden="true" />Exporter (CSV)
+                    </motion.span>
+                </div>
+            </motion.div>
+        );
+    }
+    if (phase === 2) {
+        const bands: UrgencyBand[] = ['urgent', 'a_planifier', 'surveillance'];
+        return (
+            <div className="grid gap-4 sm:grid-cols-3">
+                {bands.map((band, i) => {
+                    const inBand = items.filter((it) => it.band === band);
+                    return (
+                        <motion.div
+                            key={band}
+                            className={`rounded-2xl p-3 ring-1 ring-inset ${inBand.length ? 'bg-white/[0.06] ring-white/15' : 'ring-white/5'}`}
+                            initial={animated ? { opacity: 0, y: 24 } : false}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.7, delay: i * 0.1, ease: EASE_IN_OUT }}
+                        >
+                            <p className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide ring-1 ring-inset ${BAND_TONE[band]} ${inBand.length ? '' : 'opacity-40'}`}>{URGENCY_BAND_LABELS[band]}</p>
+                            {inBand.length ? (
+                                <ul className="mt-3 space-y-3">{inBand.map((item) => <Card key={item.key} item={item} phase={2} animated={animated} />)}</ul>
+                            ) : (
+                                <p className="mt-3 text-xs text-slate-500">Aucune action</p>
+                            )}
+                        </motion.div>
+                    );
+                })}
+            </div>
+        );
+    }
+    return <ul className="grid gap-5 sm:grid-cols-2">{items.map((item) => <Card key={item.key} item={item} phase={phase} animated={animated} />)}</ul>;
+};
+
+const Proof: React.FC<{ phase: number; className?: string }> = ({ phase, className = '' }) => {
+    const proof = PROOFS[phase];
+    return (
+        <figure className={`overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-white/10 ${className}`}>
+            <div className="max-h-44 overflow-hidden">
+                <ShotCrop shot={proof.shot} rect={proof.rect} alt={proof.alt} />
+            </div>
+            <figcaption className="border-t border-slate-100 px-3 py-2 text-[11px] font-medium text-slate-600">{proof.caption}</figcaption>
+        </figure>
+    );
+};
+
+/** Mobile : le trajet d'UN constat, sur une mini-ligne à quatre arrêts qui se trace à l'arrivée. */
+const Trajectory: React.FC<{ item: Item }> = ({ item }) => {
+    const reduce = useReducedMotion();
+    const status = STATUS[item.status];
+    const stops = [
+        { label: 'Constat', value: <span className="text-slate-300">Relevé</span> },
+        { label: 'Qualifié', value: <span className={`rounded px-1.5 py-0.5 font-bold uppercase ${status.chip}`}>{status.label}</span> },
+        { label: 'Priorité', value: <span className={`rounded px-1.5 py-0.5 font-bold uppercase ring-1 ring-inset ${BAND_TONE[item.band]}`}>{URGENCY_BAND_LABELS[item.band]}</span> },
+        { label: 'Intervention', value: <span className="text-teal-300">En liste</span> },
+    ];
+    return (
+        <motion.li
+            className="rounded-2xl bg-white/[0.05] p-4 ring-1 ring-white/10"
+            initial={reduce ? false : 'hidden'}
+            whileInView="shown"
+            viewport={{ once: true, amount: 0.7 }}
+        >
+            <div className="flex items-center gap-3">
+                {item.visual && (
+                    <span className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-white p-1.5">
+                        <img src={item.visual} alt="" loading="lazy" className="max-h-full max-w-full object-contain" />
+                    </span>
+                )}
+                <p className="min-w-0 text-sm font-semibold leading-snug"><span className="font-mono text-xs font-medium text-slate-400">{item.number}</span><br />{item.title}</p>
+            </div>
+            <ol className="relative mt-4 grid grid-cols-4">
+                <motion.span
+                    aria-hidden="true"
+                    className="absolute left-[12.5%] right-[12.5%] top-[5px] h-[2px] origin-left rounded-full bg-teal-500"
+                    variants={{ hidden: { scaleX: 0 }, shown: { scaleX: 1 } }}
+                    transition={{ duration: 1.2, ease: EASE_IN_OUT }}
+                />
+                {stops.map((stop, i) => (
+                    <motion.li
+                        key={stop.label}
+                        className="relative text-center"
+                        variants={{ hidden: { opacity: 0.25 }, shown: { opacity: 1 } }}
+                        transition={{ duration: 0.4, delay: 0.1 + i * 0.3 }}
+                    >
+                        <span aria-hidden="true" className="mx-auto block h-3 w-3 rounded-full border-2 border-teal-400 bg-teal-400" />
+                        <span className="mt-1.5 block font-mono text-[9px] uppercase tracking-wider text-slate-400">{stop.label}</span>
+                        <span className="mt-1 block whitespace-nowrap text-[9px] leading-tight sm:text-[10px] [&>span]:inline-block">{stop.value}</span>
+                    </motion.li>
+                ))}
+            </ol>
+        </motion.li>
+    );
+};
+
+const DecisionSection: React.FC = () => {
+    const reduce = useReducedMotion();
+    const items = useDecisionItems();
+    const sectionRef = useRef<HTMLElement>(null);
+    const trackRef = useRef<HTMLDivElement>(null);
+    const [phase, setPhase] = useState(0);
+    const { scrollYProgress } = useScroll({ target: trackRef, offset: ['start start', 'end end'] });
+    useMotionValueEvent(scrollYProgress, 'change', (p) => {
+        const next = Math.min(PHASES.length - 1, Math.floor(p * PHASES.length));
+        setPhase((current) => (current === next ? current : next));
+    });
+
+    // Entrée de scène : la nuit s'ouvre depuis un cadre arrondi jusqu'au plein écran.
+    const amplitude = useMotionAmplitude();
+    const { scrollYProgress: enter } = useScroll({ target: sectionRef, offset: ['start end', 'start 15%'] });
+    const clipPath = useTransform(enter, (v) => {
+        const k = (1 - v) * amplitude;
+        if (k <= 0.001) return 'none';
+        return `inset(${k * 5}% ${k * 4}% 0% ${k * 4}% round ${k * 40}px ${k * 40}px 0px 0px)`;
+    });
+
+    const heading = <SectionHeading id="temps-decision-title" index="03 · DÉCISION" light="Du constat" strong="à la décision." tone="dark" />;
+    const caption = (
+        <p className="text-xs text-slate-400">Représentation éditoriale · statuts, gravité, priorités et liste calculés par le moteur d’AuditRef.</p>
+    );
+
+    return (
+        <section ref={sectionRef} id="temps-decision" aria-labelledby="temps-decision-title" className={`relative scroll-mt-4 ${SURFACE.paper}`}>
+        <motion.div className={`relative text-white ${SURFACE.night}`} style={{ ...BLUEPRINT, clipPath }}>
+            {/* Desktop, mouvement autorisé : scène sticky. */}
+            <div ref={trackRef} className={`relative hidden ${reduce ? '' : 'lg:block'}`} style={{ height: `calc(100svh + ${PHASES.length * 70}svh)` }}>
+                <div className="sticky top-0 flex h-[100svh] flex-col justify-center overflow-hidden">
+                    <div className="relative mx-auto grid w-full max-w-[88rem] grid-cols-12 items-center gap-12 px-8 xl:px-12">
+                        <div className="col-span-4">
+                            {heading}
+                            <div className="mt-8 min-h-[8rem]" aria-live="polite">
+                                <p className="font-mono text-xs text-slate-500">{String(phase + 1).padStart(2, '0')} / {String(PHASES.length).padStart(2, '0')}</p>
+                                <div className="mt-2 overflow-hidden">
+                                    <motion.p key={`t-${phase}`} initial={{ y: '100%', opacity: 0 }} animate={{ y: '0%', opacity: 1 }} transition={{ duration: 0.7, ease: EASE_IN_OUT }} className="text-2xl font-medium leading-snug">
+                                        {PHASES[phase].title}
+                                    </motion.p>
+                                </div>
+                                <motion.p key={`x-${phase}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 0.2 }} className="mt-3 text-base leading-relaxed text-slate-300">
+                                    {PHASES[phase].text}
+                                </motion.p>
+                            </div>
+                            <div className="mt-6 w-64">
+                                <AnimatePresence mode="wait" initial={false}>
+                                    <motion.div key={PROOFS[phase].caption} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.5, ease: EASE_IN_OUT }}>
+                                        <Proof phase={phase} />
+                                    </motion.div>
+                                </AnimatePresence>
+                            </div>
+                        </div>
+                        <div className="col-span-8">
+                            <LineDiagram reached={PHASES[phase].stop} tone="dark" className="mb-12" />
+                            <div className="relative flex min-h-[24rem] flex-col justify-center">
+                                {/* L'état en cours, en filigrane derrière la scène : la transformation se lit aussi à distance. */}
+                                <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-1/2 -z-0 -translate-y-1/2 overflow-hidden text-center">
+                                    <AnimatePresence initial={false}>
+                                        <motion.p
+                                            key={`w-${phase}`}
+                                            className="select-none whitespace-nowrap text-[clamp(4rem,9vw,9rem)] font-semibold leading-none tracking-[-0.04em] text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.08)]"
+                                            initial={{ opacity: 0, y: 60 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -60, position: 'absolute', left: 0, right: 0, top: 0 }}
+                                            transition={{ duration: 0.9, ease: EASE_IN_OUT }}
+                                        >
+                                            {LINE_STOPS[PHASES[phase].stop].label}
+                                        </motion.p>
+                                    </AnimatePresence>
+                                </div>
+                                <div className="relative">
+                                    <LayoutGroup>
+                                        <Stage items={items} phase={phase} animated />
+                                    </LayoutGroup>
+                                </div>
+                            </div>
+                            <div className="mt-8 flex items-baseline justify-between gap-4">
+                                {caption}
+                                <Cartouche tone="dark">Pl. 03 · Décision</Cartouche>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Mobile, tablette, reduced motion : le trajet de chaque constat, puis la liste. */}
+            <div className={`px-5 py-16 sm:px-8 sm:py-24 xl:px-12 ${reduce ? '' : 'lg:hidden'}`}>
+                <div className="mx-auto max-w-3xl lg:max-w-[88rem]">
+                    {heading}
+                    <Reveal delay={0.2}>
+                        <p className="mt-5 max-w-md text-base leading-relaxed text-slate-300">
+                            Chaque constat est qualifié, classé par le cockpit puis versé à la liste d’intervention.
+                        </p>
+                    </Reveal>
+                    <div className="mt-10 grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+                        <ul className="min-w-0 space-y-4">{items.map((item) => <Trajectory key={item.key} item={item} />)}</ul>
+                        <Reveal className="min-w-0" y={40}>
+                            <Stage items={items} phase={3} animated={false} />
+                        </Reveal>
+                    </div>
+                    <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                        {caption}
+                        <Proof phase={3} className="w-56 flex-shrink-0" />
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+        </section>
+    );
+};
+
+export default DecisionSection;
