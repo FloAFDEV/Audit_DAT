@@ -4,6 +4,7 @@
 // (« vous êtes ici ») dans tout le récit.
 import React from 'react';
 import { motion } from 'motion/react';
+import { EASE_IN_OUT } from './editorial';
 
 export const LINE_STOPS = [
     { id: 'terrain', label: 'Terrain', anchor: '#temps-terrain' },
@@ -23,8 +24,6 @@ interface LineDiagramProps {
     className?: string;
 }
 
-const EASE = [0.22, 1, 0.36, 1] as const;
-
 export const LineDiagram: React.FC<LineDiagramProps> = ({ reached = LINE_STOPS.length - 1, tone = 'light', size = 'lg', interactive = false, className = '' }) => {
     const dark = tone === 'dark';
     const progress = LINE_STOPS.length > 1 ? Math.max(0, reached) / (LINE_STOPS.length - 1) : 1;
@@ -41,7 +40,7 @@ export const LineDiagram: React.FC<LineDiagramProps> = ({ reached = LINE_STOPS.l
                 style={{ left: `${50 / LINE_STOPS.length}%`, right: `${50 / LINE_STOPS.length}%` }}
                 initial={false}
                 animate={{ scaleX: reached < 0 ? 0 : progress }}
-                transition={{ duration: 0.6, ease: EASE }}
+                transition={{ duration: 0.7, ease: EASE_IN_OUT }}
             />
             {LINE_STOPS.map((stop, i) => {
                 const on = i <= reached;
@@ -50,7 +49,7 @@ export const LineDiagram: React.FC<LineDiagramProps> = ({ reached = LINE_STOPS.l
                     <>
                         <span
                             aria-hidden="true"
-                            className={`relative z-10 mx-auto block rounded-full transition-colors duration-300 ${dot} ${
+                            className={`relative z-10 mx-auto block rounded-full transition-[background-color,border-color,box-shadow] duration-500 ${dot} ${
                                 on ? 'border-teal-600 bg-teal-600 dark:border-teal-400 dark:bg-teal-400' : dark ? 'border-white/30 bg-slate-950' : 'border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-950'
                             } ${current ? 'ring-4 ring-teal-600/20' : ''}`}
                         />

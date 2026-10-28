@@ -55,12 +55,14 @@ interface HomeAuditDemoProps {
     header?: React.ReactNode;
     /** Cadre autour de l'interface réelle (formulaire + résultat). */
     frameClassName?: string;
+    /** Fond de la scène claire (défaut : blanc). */
+    surfaceClassName?: string;
 }
 
 export const DEMO_INSTRUCTIONS = "Cliquez sur les repères pour simuler un contrôle. Rien n'est enregistré.";
 export const DEMO_REMAINING = `7 repères sont déjà contrôlés : il reste ${OPEN_NAMES.slice(0, -1).join(', ')} et ${OPEN_NAMES.at(-1)}.`;
 
-const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, frameClassName = '' }) => {
+const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, frameClassName = '', surfaceClassName = 'bg-white dark:bg-slate-950' }) => {
     const [dat, setDat] = useState(initialDat);
     const [touched, setTouched] = useState(false);
     const [listOpen, setListOpen] = useState(false);
@@ -82,7 +84,7 @@ const HomeAuditDemo: React.FC<HomeAuditDemoProps> = ({ tone = 'dark', header, fr
         <section
             id={HOME_DEMO_ID}
             aria-labelledby="home-demo-title"
-            className={`home-demo scroll-mt-4 px-4 py-16 sm:px-8 sm:py-20 lg:py-28 ${dark ? 'bg-slate-900 text-white' : 'bg-white text-slate-900 dark:bg-slate-950 dark:text-white'}`}
+            className={`home-demo scroll-mt-4 px-4 py-16 sm:px-8 sm:py-20 lg:py-28 ${dark ? 'bg-slate-900 text-white' : `${surfaceClassName} text-slate-900 dark:text-white`}`}
         >
             <style>{NEUTRALIZE_CSS + COMPACT_CSS}</style>
             <div className="mx-auto max-w-7xl">

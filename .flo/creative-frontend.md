@@ -25,6 +25,9 @@ Jamais de mockup inventé : les écrans viennent de `scripts/capture-home-story.
 - Ton : sobre, professionnel, crédible — identité InApp conservée.
 - Tokens existants : palette slate + teal-700 (CTA), Inter, `rounded-2xl` pour les surfaces,
   `ring-1 ring-slate-900/10` + `shadow-2xl` pour les écrans présentés, texture à points du hero.
+- Surfaces de scène (`components/home/editorial.tsx`, `SURFACE`) : papier blanc cassé / brume
+  ardoise-teal en alternance, nuit + trame pour le temps 03 ; ombres en trois niveaux (`SHADOW`) ;
+  détails de dessin technique (repères de coupe, cotes, cartouches, annotations numérotées).
 - Clair et sombre (classe `.dark`).
 - À éviter : dégradés décoratifs, faux navigateur chromé, chiffres ou fonctionnalités non réels.
 
@@ -32,11 +35,15 @@ Jamais de mockup inventé : les écrans viennent de `scripts/capture-home-story.
 - Niveau : narratif sur la section storytelling, discret ailleurs.
 - Librairie : `motion` (règle d'or des animations, `index.css`) — pas de GSAP sur la page d'accueil.
 - Moment fort autorisé : scène sticky ≥ lg ; séquence verticale sur mobile et en reduced motion.
-- Seul mouvement « fort » : le recadrage d'un écran sur la zone racontée (lisibilité). Pas de zoom décoratif.
+- Chorégraphie au scroll : titres révélés par masque, entrées en ease-in-out (`EASE_IN_OUT`),
+  parallaxe discrète entre couches (`useParallax`, amplitude réduite < lg, nulle en reduced motion),
+  ouverture de la scène 03 et transformations d'état des fiches. Pas de zoom décoratif.
+- Texte LCP (accroche du premier écran) jamais en fondu depuis 0.
 
 ## Composants à réutiliser en priorité
 - `components/Logo.tsx` — logo.
-- `components/home/StoryScreen.tsx` — vrai écran + zone de focus.
+- `components/home/ShotCrop.tsx` — gros plan sur une zone d'une vraie capture.
+- `components/home/editorial.tsx` — surfaces, ombres, titres, annotations, `Reveal`, `useParallax`.
 - `components/home/auditStorySteps.ts` — étapes réelles et zones de focus.
 - `components/home/HomeAuditDemo.tsx` — démo-climax : VRAIS composants InApp consommés tels quels,
   sans modification (`AdhesiveAuditForm`, `AnomalySummaryCard`, `MaintenanceListModal`), priorisation par
