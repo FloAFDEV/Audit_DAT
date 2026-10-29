@@ -13,6 +13,9 @@ import { AUDIT_CATEGORIES } from './data/config';
 import { PLAN_QUARTIER_INITIAL_INVENTORY, PLAN_QUARTIER_INITIAL_STATUS } from './data/planQuartierInitialInventory';
 import { v4 as uuidv4 } from 'uuid';
 import { buildFullExportPayload, parseImportPayload, applyImportPayload } from './utils/signageSerializer';
+import { recordLocalChanges, setLocalAgentName, buildLocalExchangeFile, previewExchangeFiles, consolidateExchangeFiles, ConsolidationOutcome } from './utils/exchange/observationLog';
+import type { AuditExchangeFile } from './utils/exchange/format';
+import type { ConsolidationPlan } from './utils/exchange/consolidate';
 import { ARENES_COGNITIVE_ACCESS_NAMES, ARENES_LEGACY_COGNITIVE_ACCESS_NAME, COGNITIVE_ACCESS_NAME_RENAMES } from './data/cognitive_pictograms';
 import { isPmrEcaType, ECA_DEFINITIONS } from './data/eca_data';
 import { getEcaProgress } from './utils/progressCalculators';
@@ -197,6 +200,11 @@ interface AppState {
     // Import action
     handleImportJsonData: (jsonString: string) => Promise<void>;
     hardResetApplication: () => Promise<void>;
+
+    // Échange multi-agents (utils/exchange/) — n'écrase jamais rien.
+    handleBuildExchangeExport: (agentName: string) => Promise<AuditExchangeFile>;
+    handlePreviewExchange: (files: { name: string; content: string }[]) => Promise<ConsolidationPlan>;
+    handleConsolidateExchange: (files: { name: string; content: string }[]) => Promise<ConsolidationOutcome>;
 }
 
 export const DATA_VERSION = 'v13.2';
@@ -901,6 +909,17 @@ const useAuditStore = create<AppState>((set, get) => {
      *  - `mode: 'byId'` : la station DOIT exister (id choisi explicitement) —
      *    une absence lève une erreur explicite plutôt que d'échouer en silence.
      */
+    /** Journal d'observations (échange multi-agents, utils/exchange/) —
+     *  best-effort : un échec de journalisation n'invalide jamais une
+     *  écriture terrain déjà persistée. */
+    const _recordChanges = async (before: Lieu[], after: Lieu[]) => {
+        try {
+            await recordLocalChanges(before, after);
+        } catch (error) {
+            console.warn("Journal d'observations non mis à jour :", error);
+        }
+    };
+
     const _updateLieuById = async (
         target: { mode: 'selected' } | { mode: 'byId'; id: string },
         updateFn: (lieu: Lieu) => void,
@@ -954,6 +973,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
         const updatedLieux = lieux.map(l => l.id === id ? clonedLieu : l);
         set({ lieux: updatedLieux });
+        await _recordChanges([lieuToUpdate], [clonedLieu]);
         return clonedLieu;
     };
 
@@ -1935,6 +1955,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
         await db.lieux.put(lieuToUpdate);
         set({ lieux: newLieux });
+        await _recordChanges(lieux.filter(l => l.id === selectedLieuId), [lieuToUpdate]);
         // Originaux conservés (marqués 'removed'), jamais effacés.
         await releaseFieldPhotos(db, selectedModuleId);
 
@@ -2159,6 +2180,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
         await db.lieux.put(lieuToUpdate);
         set({ lieux: newLieux });
+        await _recordChanges(lieux.filter(l => l.id === selectedLieuId), [lieuToUpdate]);
 
         await saveHistoryEntry(
             `${moduleToUpdate.name} - ${lieuToUpdate.name}`,
@@ -2500,6 +2522,7 @@ const useAuditStore = create<AppState>((set, get) => {
             // Écriture réelle D'ABORD : l'archive ci-dessous ne doit jamais
             // affirmer qu'une réinitialisation a eu lieu si bulkPut a échoué.
             await db.lieux.bulkPut(updatedLieux);
+            await _recordChanges(currentLieux, updatedLieux);
             set({
                 lieux: updatedLieux,
                 activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
@@ -2550,6 +2573,7 @@ const useAuditStore = create<AppState>((set, get) => {
 
             // Écriture réelle D'ABORD (même raison que handleResetCategory).
             await db.lieux.bulkPut(updatedLieux);
+            await _recordChanges(currentLieux, updatedLieux);
             set({ lieux: updatedLieux });
 
             await saveHistoryEntry(
@@ -2597,6 +2621,7 @@ const useAuditStore = create<AppState>((set, get) => {
             const ecaCarry = carryOverEcaFieldTracesForLieux(currentLieux, initialData);
             await db.lieux.clear();
             await db.lieux.bulkPut(initialData);
+            await _recordChanges(currentLieux, initialData);
             set({
                 lieux: initialData,
                 activeFilter: 'ALL', activeAuditFilters: [], selectedLieuId: null, selectedModuleId: null, selectedStationId: null, selectedDirectionId: null, selectedDatId: null, selectedEquipmentId: null, selectedEcaId: null,
@@ -2618,6 +2643,34 @@ const useAuditStore = create<AppState>((set, get) => {
             console.error("Failed to reset all data:", error);
             throw error;
         }
+    },
+
+    handleBuildExchangeExport: async (agentName) => {
+        setLocalAgentName(agentName);
+        const file = await buildLocalExchangeFile(get().lieux, DATA_VERSION);
+        await logEvent({
+            type: 'EXPORT', entityType: 'exchange', entityId: file.exportId, entityLabel: agentName,
+            summary: `Export des relevés — ${agentName} (${file.observations.length} observation${file.observations.length > 1 ? 's' : ''})`,
+            metadata: { observations: file.observations.length, referentiel: file.referentiel.version },
+        });
+        return file;
+    },
+
+    handlePreviewExchange: (files) => previewExchangeFiles(files),
+
+    handleConsolidateExchange: async (files) => {
+        // Sauvegarde complète préalable dès que l'import apporte du nouveau :
+        // l'historique est conservé, mais l'état courant peut changer.
+        const preview = await previewExchangeFiles(files);
+        if (preview.added.length) await _backupBeforeReset('pre-consolidation');
+        const outcome = await consolidateExchangeFiles(get().lieux, files);
+        if (outcome.apply.changedLieuIds.size) set({ lieux: outcome.lieux });
+        await logEvent({
+            type: 'IMPORT', entityType: 'exchange',
+            summary: `Consolidation multi-agents — ${files.length} fichier${files.length > 1 ? 's' : ''}, ${outcome.plan.added.length} observation(s) nouvelle(s), ${outcome.apply.updated} état(s) mis à jour`,
+            metadata: { fichiers: files.length, nouvelles: outcome.plan.added.length, connues: outcome.plan.alreadyKnown, misesAJour: outcome.apply.updated },
+        });
+        return outcome;
     },
 
     handleImportJsonData: async (jsonString: string) => {

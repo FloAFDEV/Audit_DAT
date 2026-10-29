@@ -370,7 +370,7 @@ describe('Migration V25 → V26 (table photos)', () => {
 
         const upgraded = createAuditDb(name);
         await upgraded.open();
-        expect(upgraded.verno).toBe(26);
+        expect(upgraded.verno).toBeGreaterThanOrEqual(26); // versions ultérieures : ajouts purs (V27 observations)
         expect(await upgraded.table('lieux').get('lieu-v25')).toEqual(lieu);
         expect(await upgraded.table('history').count()).toBe(1);
         expect(await upgraded.table('signageReferences').get('ad1')).toEqual({ id: 'ad1', name: 'Réf' });
