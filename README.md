@@ -119,6 +119,13 @@ AuditRef dispose de mécanismes d'import et d'export permettant notamment :
 * l'exploitation des données hors de l'application ;
 * l'export de données pour des opérations terrain ou de production.
 
+### Relevés multi-agents
+
+Plusieurs agents peuvent auditer hors connexion puis exporter leurs relevés (JSON `auditref.exchange`).
+Un appareil de consolidation importe N fichiers : le constat le plus récent devient l'état courant,
+l'historique (qui, quand, quel référentiel, quel résultat) est conservé, les doublons sont ignorés.
+Format et règles : [`docs/MULTI_AGENT.md`](docs/MULTI_AGENT.md).
+
 Les exports peuvent notamment être structurés par ligne et par implantation afin d'être directement exploitables par des équipes opérationnelles ou des prestataires.
 
 ---
