@@ -1,4 +1,8 @@
-# AuditRef
+# AuditRef Tisséo (`auditref-tisseo`)
+
+> Dépôt de l'instance **Tisséo** d'AuditRef — volontairement spécifique au réseau Tisséo,
+> laboratoire réel du futur moteur générique (dépôt séparé `auditref`).
+> Voir [`docs/MULTI_AGENT.md`](docs/MULTI_AGENT.md) pour l'échange multi-agents.
 
 **AuditRef** est une application web **offline-first** dédiée à l'audit, au contrôle et au suivi du patrimoine de signalétique et d'équipements sur le réseau de transport.
 
@@ -114,6 +118,13 @@ AuditRef dispose de mécanismes d'import et d'export permettant notamment :
 * l'échange de référentiels ;
 * l'exploitation des données hors de l'application ;
 * l'export de données pour des opérations terrain ou de production.
+
+### Relevés multi-agents
+
+Plusieurs agents peuvent auditer hors connexion puis exporter leurs relevés (JSON `auditref.exchange`).
+Un appareil de consolidation importe N fichiers : le constat le plus récent devient l'état courant,
+l'historique (qui, quand, quel référentiel, quel résultat) est conservé, les doublons sont ignorés.
+Format et règles : [`docs/MULTI_AGENT.md`](docs/MULTI_AGENT.md).
 
 Les exports peuvent notamment être structurés par ligne et par implantation afin d'être directement exploitables par des équipes opérationnelles ou des prestataires.
 
@@ -250,8 +261,8 @@ Les trois niveaux doivent rester propres avant intégration.
 Cloner le dépôt puis installer les dépendances :
 
 ```bash
-git clone <repository-url>
-cd Audit_DAT
+git clone https://github.com/FloAFDEV/auditref-tisseo.git
+cd auditref-tisseo
 npm install
 ```
 
