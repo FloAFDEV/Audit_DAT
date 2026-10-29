@@ -516,3 +516,18 @@ describe('Store : la saisie terrain alimente le journal, la consolidation met à
         expect((await db.observations.toArray()).filter(o => o.agentName === 'Flo')).toHaveLength(1);
     });
 });
+
+describe('États hérités du seed', () => {
+    it('les « non applicable » posés par le seed ECA, identiques sur chaque appareil, ne sont comptés qu\'une fois', async () => {
+        const [a, b, c] = await Promise.all([generateInitialLieuxDataAsync(), generateInitialLieuxDataAsync(), generateInitialLieuxDataAsync()]);
+        const fileA = exportOf(device('A', a));
+        const fileB = exportOf(device('B', b));
+        const seeded = JSON.parse(fileA).observations.length;
+        expect(seeded).toBeGreaterThan(0);
+        const central = device('Central', c);
+        const { plan, apply } = importInto(central, [{ name: 'a', content: fileA }, { name: 'b', content: fileB }]);
+        expect(plan.added).toHaveLength(0);
+        expect(plan.alreadyKnown).toBe(2 * seeded);
+        expect(apply.updated).toBe(0);
+    });
+});

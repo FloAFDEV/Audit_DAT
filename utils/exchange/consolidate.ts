@@ -101,7 +101,8 @@ const toObservation = (
  * Constats présents dans l'arbre mais absents du journal (saisis avant le
  * journal d'observations, ou restaurés depuis une sauvegarde) : convertis en
  * observations datées au mieux (`inferred`) ou à l'horodatage sentinelle
- * (`unknown`). Identifiant déterministe : réexporter ne duplique rien.
+ * (`unknown`). Identifiant déterministe et indépendant de l'appareil :
+ * réexporter, ou recevoir le même état de plusieurs appareils, ne duplique rien.
  */
 export const buildBaselineObservations = (
     lieux: Lieu[], knownControls: ReadonlySet<string>, agent: AgentIdentity, referentielVersion: string,
@@ -112,7 +113,10 @@ export const buildBaselineObservations = (
         if (control.status === NOT_CHECKED || knownControls.has(control.key)) return;
         if (onlyKeys && !onlyKeys.has(control.key)) return;
         const at = control.knownDate ? new Date(control.knownDate).toISOString() : UNKNOWN_TIME;
-        const fingerprint = `${control.key}|${at}|${agent.id}|${control.status}`;
+        // Sans l'agent : l'appareil qui exporte n'est pas forcément l'auteur du
+        // constat, et un même état (ex. « non applicable » posé par le seed)
+        // présent sur plusieurs appareils doit se dédoublonner.
+        const fingerprint = `${control.key}|${at}|${control.status}`;
         baseline.push(toObservation(control, control.status, at, control.knownDate ? 'inferred' : 'unknown', agent, referentielVersion, `inf-${hash(fingerprint)}`));
     });
     return baseline;
