@@ -307,11 +307,17 @@ const createEcaModule = (
 /**
  * Accès portant un adhésif PMR au sol SANS valideur PMR (relevé terrain) :
  * la règle « un module par accès équipé d'un ECA PMR » ne les voit pas.
- * Esquirol et Capitole : un adhésif à l'entrée ascenseur (ASC, où se trouve
- * le valideur PMR) ET un à l'accès principal (PRI).
+ * Esquirol : un adhésif à l'entrée ascenseur (ASC, où se trouve le valideur
+ * PMR) ET un à l'accès principal (PRI). Capitole : entrée ascenseur seulement
+ * (relevé terrain, cf. PMR_FLOOR_REMOVED_ACCESS_POINTS).
  */
 export const PMR_FLOOR_EXTRA_ACCESS_POINTS: Readonly<Record<string, readonly string[]>> = {
     ESQ: ['Accès Haut (PRI)'],
+};
+
+/** Accès déclarés à tort comme portant un adhésif PMR au sol (relevé
+ *  terrain) : retirés des bases existantes par migrateRemovedPmrFloorAccessPoints. */
+export const PMR_FLOOR_REMOVED_ACCESS_POINTS: Readonly<Record<string, readonly string[]>> = {
     CAP: ['Accès Haut (PRI)'],
 };
 

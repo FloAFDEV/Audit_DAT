@@ -12,7 +12,9 @@ import { generateInitialLieuxDataAsync } from '../data/builder';
 import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AuditModuleType, FloorAdhesiveStatus, Lieu, PMRFloorAdhesiveData } from '../types';
-import { migratePmrFloorExtraAccessPoints } from '../store';
+import { migratePmrFloorExtraAccessPoints, migrateRemovedPmrFloorAccessPoints } from '../store';
+import { createSpecificPmrFloorAdhesiveModule } from '../data/builder';
+import { LINE_A_STATIONS } from '../data/stations';
 
 const pmrRows = (lieux: Lieu[]) =>
     computeAdhesiveInventory(lieux, buildSignageReferencesSeed()).filter(i => i.id.startsWith('pmr-sol-'));
@@ -22,21 +24,21 @@ const pmrModules = (lieux: Lieu[]) =>
     lieux.flatMap(l => l.modules).filter(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE);
 
 describe('Inventaire détaillé — PMR au sol', () => {
-    it('47 modules, 1 sans objet (Jean-Jaurès) → 46 adhésifs au total, une seule fois chacun', async () => {
+    it('46 modules, 1 sans objet (Jean-Jaurès) → 45 adhésifs au total, une seule fois chacun', async () => {
         const lieux = await generateInitialLieuxDataAsync();
         const modules = pmrModules(lieux);
-        expect(modules).toHaveLength(47);
+        expect(modules).toHaveLength(46);
         const notApplicable = modules.filter(m => (m.data as PMRFloorAdhesiveData).isNotApplicable);
         expect(notApplicable.map(m => [(m.data as PMRFloorAdhesiveData).stationName, m.name]))
             .toEqual([['Jean-Jaurès', 'Adhésifs PMR au Sol (Accès Historique)']]);
 
         const rows = pmrRows(lieux);
-        expect(rows.reduce((sum, r) => sum + r.quantity, 0)).toBe(46);
+        expect(rows.reduce((sum, r) => sum + r.quantity, 0)).toBe(45);
     });
 
-    it('répartition par matière réelle (relevé terrain) : 13 / 27 / 4 / 2 matière non renseignée (PTC, Labège)', async () => {
+    it('répartition par matière réelle (relevé terrain) : 12 / 27 / 4 / 2 matière non renseignée (PTC, Labège)', async () => {
         const rows = pmrRows(await generateInitialLieuxDataAsync());
-        expect(qtyOf(rows, 'Vinyle WALL colle renforcée + plastification sol Ultra Protect')).toBe(13);
+        expect(qtyOf(rows, 'Vinyle WALL colle renforcée + plastification sol Ultra Protect')).toBe(12);
         expect(qtyOf(rows, 'Vinyle WALL colle renforcée + plastification sol traditionnelle')).toBe(27);
         expect(qtyOf(rows, 'Adhésif renforcé bitume')).toBe(4);
         expect(qtyOf(rows, PMR_UNKNOWN_MATERIAL_LABEL)).toBe(2);
@@ -65,21 +67,24 @@ describe('Inventaire détaillé — PMR au sol', () => {
         const basso = pmrModules(lieux).find(m => (m.data as PMRFloorAdhesiveData).stationName === 'Basso Cambo')!;
         (basso.data as PMRFloorAdhesiveData).isNotApplicable = true;
         const rows = pmrRows(lieux);
-        expect(rows.reduce((sum, r) => sum + r.quantity, 0)).toBe(45);
-        expect(qtyOf(rows, 'Vinyle WALL colle renforcée + plastification sol Ultra Protect')).toBe(12);
+        expect(rows.reduce((sum, r) => sum + r.quantity, 0)).toBe(44);
+        expect(qtyOf(rows, 'Vinyle WALL colle renforcée + plastification sol Ultra Protect')).toBe(11);
 
         const known = lieux.filter(l => l.name === 'Arènes');
         expect(pmrRows(known).some(r => r.material === PMR_UNKNOWN_MATERIAL_LABEL)).toBe(false);
     });
 
-    it('Esquirol et Capitole : entrée ascenseur (ASC) + accès principal (PRI), toutes deux en Ultra Protect', async () => {
+    it('Esquirol : entrée ascenseur (ASC) + accès principal (PRI) ; Capitole : entrée ascenseur seulement — Ultra Protect', async () => {
         const lieux = await generateInitialLieuxDataAsync();
-        for (const station of ['Esquirol', 'Capitole']) {
-            const names = pmrModules(lieux).filter(m => (m.data as PMRFloorAdhesiveData).stationName === station).map(m => m.name);
-            expect(names).toEqual(['Adhésifs PMR au Sol (Accès Bas (ASC))', 'Adhésifs PMR au Sol (Accès Haut (PRI))']);
+        const expected: Record<string, string[]> = {
+            Esquirol: ['Adhésifs PMR au Sol (Accès Bas (ASC))', 'Adhésifs PMR au Sol (Accès Haut (PRI))'],
+            Capitole: ['Adhésifs PMR au Sol'],
+        };
+        for (const [station, names] of Object.entries(expected)) {
+            expect(pmrModules(lieux).filter(m => (m.data as PMRFloorAdhesiveData).stationName === station).map(m => m.name)).toEqual(names);
             const rows = pmrRows(lieux.filter(l => l.modules.some(m => (m.data as PMRFloorAdhesiveData)?.stationName === station
                 && m.type === AuditModuleType.PMR_FLOOR_ADHESIVE))).filter(r => r.quantity > 0);
-            expect(rows).toEqual([expect.objectContaining({ material: 'Vinyle WALL colle renforcée + plastification sol Ultra Protect', quantity: 2 })]);
+            expect(rows).toEqual([expect.objectContaining({ material: 'Vinyle WALL colle renforcée + plastification sol Ultra Protect', quantity: names.length })]);
         }
     });
 });
@@ -106,5 +111,44 @@ describe('migratePmrFloorExtraAccessPoints — base existante', () => {
 
         expect(migratePmrFloorExtraAccessPoints(lieux)).toBe(false);
         expect(pmrModules(lieux).filter(m => (m.data as PMRFloorAdhesiveData).stationCode === 'ESQ')).toHaveLength(2);
+    });
+});
+
+describe('migrateRemovedPmrFloorAccessPoints — Capitole, accès haut retiré', () => {
+    /** Base d'avant : Capitole porte l'entrée ascenseur (ASC, auditée) ET l'accès principal (PRI). */
+    const legacyCapitole = async () => {
+        const lieux = await generateInitialLieuxDataAsync();
+        const lieu = lieux.find(l => l.modules.some(m => (m.data as PMRFloorAdhesiveData)?.stationCode === 'CAP'
+            && m.type === AuditModuleType.PMR_FLOOR_ADHESIVE))!;
+        const asc = lieu.modules.find(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (m.data as PMRFloorAdhesiveData).stationCode === 'CAP')!;
+        asc.name = 'Adhésifs PMR au Sol (Accès Bas (ASC))';
+        (asc.data as PMRFloorAdhesiveData).adhesives[0].status = FloorAdhesiveStatus.OK;
+        const station = LINE_A_STATIONS.find(s => s.code === 'CAP')!;
+        lieu.modules.push(createSpecificPmrFloorAdhesiveModule('Adhésifs PMR au Sol (Accès Haut (PRI))', station, 'A'));
+        const capModules = () => pmrModules(lieux).filter(m => (m.data as PMRFloorAdhesiveData).stationCode === 'CAP');
+        return { lieux, asc, capModules };
+    };
+
+    it('retire l\'accès haut vierge, l\'entrée ascenseur garde son id et son statut, idempotente', async () => {
+        const { lieux, asc, capModules } = await legacyCapitole();
+        expect(capModules()).toHaveLength(2);
+        expect(migrateRemovedPmrFloorAccessPoints(lieux)).toEqual({ changed: true, keptAudited: [] });
+        expect(capModules().map(m => m.name)).toEqual(['Adhésifs PMR au Sol']);
+        expect(capModules()[0].id).toBe(asc.id);
+        expect((capModules()[0].data as PMRFloorAdhesiveData).adhesives[0].status).toBe(FloorAdhesiveStatus.OK);
+        expect(migrateRemovedPmrFloorAccessPoints(lieux)).toEqual({ changed: false, keptAudited: [] });
+        // La migration des accès supplémentaires ne le recrée pas.
+        expect(migratePmrFloorExtraAccessPoints(lieux)).toBe(false);
+        expect(capModules()).toHaveLength(1);
+    });
+
+    it('accès haut déjà audité : rien n\'est touché, signalé', async () => {
+        const { lieux, capModules } = await legacyCapitole();
+        const pri = capModules().find(m => m.name.includes('PRI'))!;
+        (pri.data as PMRFloorAdhesiveData).adhesives[0].status = FloorAdhesiveStatus.ToBeReplaced;
+        const result = migrateRemovedPmrFloorAccessPoints(lieux);
+        expect(result.changed).toBe(false);
+        expect(result.keptAudited).toEqual(['Capitole — Accès Haut (PRI)']);
+        expect(capModules()).toHaveLength(2);
     });
 });

@@ -16,9 +16,7 @@ const materialMap: Record<string, string> = {
     'Esquirol': "Vinyle WALL colle renforcée + plastification sol Ultra Protect", // relevé terrain : accès principal + entrée ascenseur, même matière
     'Esquirol|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
     'Esquirol|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Capitole': "Vinyle WALL colle renforcée + plastification sol Ultra Protect", // relevé terrain : accès principal + entrée ascenseur, même matière
-    'Capitole|Adhésifs PMR au Sol (Accès Haut)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
-    'Capitole|Adhésifs PMR au Sol (Accès Bas)': "Vinyle WALL colle renforcée + plastification sol Ultra Protect",
+    'Capitole': "Vinyle WALL colle renforcée + plastification sol Ultra Protect", // relevé terrain : entrée ascenseur (accès bas) seulement
     'Jean-Jaurès|Adhésifs PMR au Sol (Accès Principal Ligne A)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Accès Principal Ligne B)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
     'Jean-Jaurès|Adhésifs PMR au Sol (Liaison A→B)': "Adhésif renforcé bitume dos aluminium + plastification sol Ultra Protect",
