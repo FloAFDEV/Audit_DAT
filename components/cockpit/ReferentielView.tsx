@@ -129,6 +129,27 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                             {f === 'ALL' ? 'Toutes familles' : AUDIT_TYPE_LABELS[f]}
                         </button>
                     ))}
+                    {/* Familles sans référence catalogue : ajoutées à la
+                        sélection (implantations, CSV de pose), pas un filtre. */}
+                    <span className="self-center mx-1 h-4 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
+                    {([
+                        ['+ Pictogrammes cognitifs', includeCognitive, onToggleCognitive],
+                        ['+ Adhésifs PMR au sol', includePmrFloor, onTogglePmrFloor],
+                    ] as const).map(([label, active, onToggle]) => (
+                        <button
+                            key={label}
+                            type="button"
+                            onClick={onToggle}
+                            aria-pressed={active}
+                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                                active
+                                    ? 'bg-teal-700 text-white'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                            }`}
+                        >
+                            {label}
+                        </button>
+                    ))}
                 </div>
                 <select
                     value={support}
@@ -149,24 +170,6 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                     {selectedIds.size > 0
                         ? `${selectedIds.size} référence${selectedIds.size > 1 ? 's' : ''} sélectionnée${selectedIds.size > 1 ? 's' : ''}`
                         : ''}
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={includeCognitive}
-                            onChange={onToggleCognitive}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
-                        />
-                        + Pictogrammes cognitifs
-                    </label>
-                    <label className="inline-flex items-center gap-2 cursor-pointer">
-                        <input
-                            type="checkbox"
-                            checked={includePmrFloor}
-                            onChange={onTogglePmrFloor}
-                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
-                        />
-                        + Adhésifs PMR au sol
-                    </label>
                 </span>
                 <button
                     type="button"
