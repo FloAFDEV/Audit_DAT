@@ -8,6 +8,7 @@ import { useFlipReflow, useBadgePulse } from '../hooks/gsap';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
 import ConfirmationModal from './ConfirmationModal';
+import MultiAgentExchangeModal from './MultiAgentExchangeModal';
 import { ExportMenu, SyncMenu } from './ActionsMenu';
 import toast from 'react-hot-toast';
 import ThemeSelector from './ThemeSelector';
@@ -91,6 +92,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
     const [resetTarget, setResetTarget] = useState<ResetTarget | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [importFileContent, setImportFileContent] = useState<string | null>(null);
+    const [isMultiAgentOpen, setIsMultiAgentOpen] = useState(false);
 
     // ── Backup auto ──────────────────────────────────────────────────────────
     const [lastBackupDate, setLastBackupDate] = useState<string | null>(() => {
@@ -419,8 +421,9 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                         <SyncMenu
                             onExportJson={onExportJson}
                             onImportJson={handleImportClick}
+                            onOpenMultiAgent={() => setIsMultiAgentOpen(true)}
                             onResetRequest={handleResetRequest}
-                            isModalOpen={!!resetTarget || !!importFileContent}
+                            isModalOpen={!!resetTarget || !!importFileContent || isMultiAgentOpen}
                             lastBackupDate={lastBackupDate}
                             onDownloadLastBackup={handleDownloadLastBackup}
                             onRestoreFromLastBackup={handleRestoreFromLastBackup}
@@ -459,6 +462,7 @@ const LieuSelector: React.FC<LieuSelectorProps> = (props) => {
                 icon={resetModalProps.icon} 
                 isDestructive 
             />
+            <MultiAgentExchangeModal isOpen={isMultiAgentOpen} onClose={() => setIsMultiAgentOpen(false)} />
             <ConfirmationModal isOpen={!!importFileContent} onClose={() => setImportFileContent(null)} onConfirm={handleConfirmImport} title="Importer les données" message="Êtes-vous sûr ? Toutes les données actuelles seront remplacées par les données importées." mainIcon={<div className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-sky-100 sm:mx-0 sm:h-10 sm:w-10"><Upload className="h-6 w-6 text-sky-600" aria-hidden="true" /></div>} confirmButtonClass="inline-flex w-full justify-center rounded-md bg-sky-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-sky-800 sm:ml-3 sm:w-auto" icon={<Upload className="h-5 w-5 text-sky-600" />} isDestructive />
         </div>
     );

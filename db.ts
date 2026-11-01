@@ -3,6 +3,7 @@ import Dexie, { type EntityTable } from 'dexie';
 import { v4 as uuidv4 } from 'uuid';
 import { Lieu, HistoryEntry, SignageReference, AppEvent, EcaEquipmentType, FieldPhoto } from './types';
 import { buildSignageReferencesSeed } from './data/signage_seed';
+import type { StoredObservation } from './utils/exchange/consolidate';
 
 export type AuditDb = Dexie & {
     lieux: EntityTable<Lieu, 'id'>;
@@ -10,6 +11,7 @@ export type AuditDb = Dexie & {
     signageReferences: EntityTable<SignageReference, 'id'>;
     events: EntityTable<AppEvent, 'id'>;
     photos: EntityTable<FieldPhoto, 'id'>;
+    observations: EntityTable<StoredObservation, 'id'>;
 };
 
 // V24/V25 : fiche adca8 (bulle caisse) réécrite depuis le seed. Idempotente,
@@ -643,6 +645,18 @@ export const createAuditDb = (name: string): AuditDb => {
     signageReferences: 'id, auditType',
     events: '++id, date, type, entityType',
     photos: 'id, lieuId, moduleId, itemId, createdAt',
+});
+
+// V27: table observations — journal horodaté des constats (local + importés
+// par consolidation multi-agents, cf. utils/exchange/). Ajout pur : aucune
+// table existante modifiée, pas d'upgrade.
+    instance.version(27).stores({
+    lieux: 'id, name',
+    history: '++id, date, type, categoryKey',
+    signageReferences: 'id, auditType',
+    events: '++id, date, type, entityType',
+    photos: 'id, lieuId, moduleId, itemId, createdAt',
+    observations: 'id, control, observedAt, agent',
 });
 
 // Base neuve (création directe en v12, sans passer par l'upgrade ci-dessus) :

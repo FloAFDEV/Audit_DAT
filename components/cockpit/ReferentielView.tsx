@@ -34,6 +34,7 @@ import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, compareLines, disp
 import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { CognitivePictogramPoseItem, cognitivePictogramPoseItems } from '../../utils/cockpit/cognitivePictogramSummary';
+import { PmrFloorPoseItem, pmrFloorPoseItems } from '../../utils/cockpit/pmrFloorPose';
 import { buildPoseRows } from './implantationsExportRows';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 import { ReferenceNamePreview } from '../ReferenceVisual';
@@ -52,11 +53,15 @@ interface ReferencesListProps {
      *  référence catalogue, servie par son propre module). */
     includeCognitive: boolean;
     onToggleCognitive: () => void;
+    /** Adhésifs PMR au sol ajoutés à la sélection (même cas : pas de
+     *  référence catalogue, module dédié). */
+    includePmrFloor: boolean;
+    onTogglePmrFloor: () => void;
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
     references, usageOf, onOpen, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
-    includeCognitive, onToggleCognitive,
+    includeCognitive, onToggleCognitive, includePmrFloor, onTogglePmrFloor,
 }) => {
     const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
     const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
@@ -153,15 +158,28 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                         />
                         + Pictogrammes cognitifs
                     </label>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                            type="checkbox"
+                            checked={includePmrFloor}
+                            onChange={onTogglePmrFloor}
+                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
+                        />
+                        + Adhésifs PMR au sol
+                    </label>
                 </span>
                 <button
                     type="button"
                     onClick={onViewSelectedImplantations}
-                    disabled={selectedIds.size === 0 && !includeCognitive}
+                    disabled={selectedIds.size === 0 && !includeCognitive && !includePmrFloor}
                     className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                 >
                     <MapPinned className="w-4 h-4" />
-                    Voir les implantations {selectedIds.size > 0 ? `(${selectedIds.size}${includeCognitive ? ' + pictos' : ''})` : includeCognitive ? '(pictos)' : ''}
+                    Voir les implantations {(() => {
+                        const extras = [includeCognitive && 'pictos', includePmrFloor && 'PMR sol'].filter(Boolean);
+                        if (selectedIds.size > 0) return `(${[selectedIds.size, ...extras].join(' + ')})`;
+                        return extras.length ? `(${extras.join(' + ')})` : '';
+                    })()}
                 </button>
             </div>
 
@@ -390,6 +408,8 @@ interface SelectedImplantationsViewProps {
     selection: Selection;
     /** Pictogrammes cognitifs inclus dans la sélection (vide sinon). */
     cognitive: CognitivePictogramPoseItem[];
+    /** Adhésifs PMR au sol inclus dans la sélection (vide sinon). */
+    pmrFloor: PmrFloorPoseItem[];
     index: PatrimoineIndex;
     references: SignageReference[];
     onBack: () => void;
@@ -397,15 +417,15 @@ interface SelectedImplantationsViewProps {
 }
 
 const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
-    selection, cognitive, index, references, onBack, onOpenReference,
+    selection, cognitive, pmrFloor, index, references, onBack, onOpenReference,
 }) => {
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
 
     // Lignes de la sélection : toutes cochées par défaut ; décocher une
     // ligne la retire de l'affichage ET des exports (même périmètre).
     const lines = useMemo(
-        () => [...new Set([...selection.items.map(i => i.line), ...cognitive.map(c => c.line)])].sort(compareLines),
-        [selection, cognitive],
+        () => [...new Set([...selection.items.map(i => i.line), ...cognitive.map(c => c.line), ...pmrFloor.map(p => p.line)])].sort(compareLines),
+        [selection, cognitive, pmrFloor],
     );
     const [excludedLines, setExcludedLines] = useState<Set<string>>(new Set());
     const toggleLine = (line: string) => setExcludedLines(prev => {
@@ -420,6 +440,11 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
     const cognitiveRows = useMemo(
         () => buildPoseRows([], refById, cognitiveItems).map((row, i) => ({ row, key: i })),
         [refById, cognitiveItems],
+    );
+    const pmrFloorItems = useMemo(() => pmrFloor.filter(p => !excludedLines.has(p.line)), [pmrFloor, excludedLines]);
+    const pmrFloorRows = useMemo(
+        () => buildPoseRows([], refById, [], pmrFloorItems).map((row, i) => ({ row, key: i })),
+        [refById, pmrFloorItems],
     );
     const stationCodeByName = useMemo(() => new Map(cognitive.map(c => [`${c.line}|${c.lieuName}`, c.stationCode])), [cognitive]);
 
@@ -450,11 +475,19 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                                 </span>
                             </>
                         )}
+                        {pmrFloor.length > 0 && (
+                            <>
+                                <span className="text-slate-300 dark:text-slate-600">·</span>
+                                <span className="text-slate-600 dark:text-slate-300">
+                                    {pmrFloorItems.length} adhésif{pmrFloorItems.length > 1 ? 's' : ''} PMR au sol
+                                </span>
+                            </>
+                        )}
                     </p>
                 </div>
                 <div className="flex flex-wrap justify-end gap-2">
                     <ImplantationsExportButton items={items} index={index} refById={refById} />
-                    <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} />
+                    <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} pmrFloor={pmrFloorItems} />
                 </div>
             </div>
 
@@ -484,7 +517,7 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                 </div>
             )}
 
-            {selection.items.length === 0 && cognitive.length === 0 && (
+            {selection.items.length === 0 && cognitive.length === 0 && pmrFloor.length === 0 && (
                 <p className="text-sm text-slate-500 dark:text-slate-400 italic">
                     Aucune implantation connue pour cette sélection (références désactivées, hors scope, ou partout non applicable).
                 </p>
@@ -506,6 +539,27 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                                 <span className="min-w-0 flex-1">
                                     <span className="block truncate font-medium text-slate-800 dark:text-slate-100">{row.station}</span>
                                     <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.location}</span>
+                                </span>
+                                <span className="flex-shrink-0 text-xs text-slate-600 dark:text-slate-300">{row.dimensions}</span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            )}
+
+            {pmrFloorRows.length > 0 && (
+                <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Adhésifs PMR au sol</span>
+                        <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{pmrFloorRows.length}</span>
+                    </div>
+                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                        {pmrFloorRows.map(({ row, key }) => (
+                            <li key={key} className="flex items-center gap-3 px-4 py-2 text-sm">
+                                <LineBadge line={row.line} size="xs" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block truncate font-medium text-slate-800 dark:text-slate-100">{row.station}{row.location ? ` · ${row.location}` : ''}</span>
+                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.designation}</span>
                                 </span>
                                 <span className="flex-shrink-0 text-xs text-slate-600 dark:text-slate-300">{row.dimensions}</span>
                             </li>
@@ -546,6 +600,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const [activeSelection, setActiveSelection] = useState<Selection | null>(null);
     const [includeCognitive, setIncludeCognitive] = useState(false);
     const cognitivePose = useMemo(() => (includeCognitive ? cognitivePictogramPoseItems(lieux) : []), [includeCognitive, lieux]);
+    const [includePmrFloor, setIncludePmrFloor] = useState(false);
+    const pmrFloorPose = useMemo(() => (includePmrFloor ? pmrFloorPoseItems(lieux) : []), [includePmrFloor, lieux]);
 
     const toggleSelectReference = (id: string) => {
         setSelectedReferenceIds(prev => {
@@ -559,13 +615,14 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     // (même arbre, même export) — pas de vue intermédiaire.
     const handleViewSelectedImplantations = () => {
         const ids = [...selectedReferenceIds];
-        if (ids.length === 1 && !includeCognitive) {
+        if (ids.length === 1 && !includeCognitive && !includePmrFloor) {
             setOpenReferenceId(ids[0]);
             return;
         }
-        const label = ids.length > 0
-            ? `${ids.length} référence${ids.length > 1 ? 's' : ''} sélectionnée${ids.length > 1 ? 's' : ''}${includeCognitive ? ' + pictogrammes cognitifs' : ''}`
-            : 'Pictogrammes cognitifs';
+        const extras = [includeCognitive && 'pictogrammes cognitifs', includePmrFloor && 'adhésifs PMR au sol'].filter(Boolean) as string[];
+        const base = ids.length > 0 ? `${ids.length} référence${ids.length > 1 ? 's' : ''} sélectionnée${ids.length > 1 ? 's' : ''}` : '';
+        const joined = [base, ...extras].filter(Boolean).join(' + ');
+        const label = joined.charAt(0).toUpperCase() + joined.slice(1);
         setActiveSelection(selectionFromReferences(index, ids, label));
     };
 
@@ -619,6 +676,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
             <SelectedImplantationsView
                 selection={activeSelection}
                 cognitive={cognitivePose}
+                pmrFloor={pmrFloorPose}
                 index={index}
                 references={references}
                 onBack={() => setActiveSelection(null)}
@@ -658,6 +716,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     onViewSelectedImplantations={handleViewSelectedImplantations}
                     includeCognitive={includeCognitive}
                     onToggleCognitive={() => setIncludeCognitive(v => !v)}
+                    includePmrFloor={includePmrFloor}
+                    onTogglePmrFloor={() => setIncludePmrFloor(v => !v)}
                 />
             )}
             {subSection === 'implantations' && (
