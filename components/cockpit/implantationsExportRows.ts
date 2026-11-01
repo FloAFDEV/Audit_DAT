@@ -15,6 +15,7 @@ import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrd
 import { ImplantationExportRow, SyntheseExportRow } from '../../utils/cockpit/implantationsExporter';
 import { PoseRow, poseVisualPath } from '../../utils/cockpit/poseExport';
 import { CognitivePictogramPoseItem } from '../../utils/cockpit/cognitivePictogramSummary';
+import { PmrFloorPoseItem, PMR_FLOOR_DIMENSIONS } from '../../utils/cockpit/pmrFloorPose';
 import { getReferenceVisualUrl } from '../../data/referenceVisuals';
 import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
 import {
@@ -98,14 +99,17 @@ const FAMILY_LABELS: Record<SignageReference['auditType'], string> = {
 };
 
 export const COGNITIVE_POSE_FAMILY = 'Pictogramme cognitif';
+export const PMR_FLOOR_POSE_FAMILY = 'Adhésif PMR au sol';
 
 /** Lignes du CSV de pose : les implantations dans l'ordre exact des onglets
- *  Excel, puis — ligne par ligne — les pictogrammes cognitifs dans l'ordre
- *  physique des stations. Quantité 1 par ligne. */
+ *  Excel, puis — ligne par ligne — les pictogrammes cognitifs et les
+ *  adhésifs PMR au sol dans l'ordre physique des stations. Quantité 1 par
+ *  ligne. */
 export const buildPoseRows = (
     sheets: ImplantationLineSheet[],
     refById: Map<string, SignageReference>,
     cognitive: CognitivePictogramPoseItem[] = [],
+    pmrFloor: PmrFloorPoseItem[] = [],
 ): PoseRow[] => {
     const implantationRowsByLine = new Map<string, PoseRow[]>();
     for (const sheet of sheets) {
@@ -127,7 +131,7 @@ export const buildPoseRows = (
             };
         }));
     }
-    const lines = [...new Set([...sheets.map(s => s.line), ...cognitive.map(c => c.line)])].sort(compareLines);
+    const lines = [...new Set([...sheets.map(s => s.line), ...cognitive.map(c => c.line), ...pmrFloor.map(p => p.line)])].sort(compareLines);
     return lines.flatMap(line => [
         ...(implantationRowsByLine.get(line) ?? []),
         ...sortByPhysicalStationOrder(line, cognitive.filter(c => c.line === line), c => c.lieuName)
@@ -143,6 +147,20 @@ export const buildPoseRows = (
                 dimensions: c.dimensions,
                 quantity: 1,
                 visual: poseVisualPath(getCognitivePictogramVisualUrl(c.stationCode)),
+            })),
+        ...sortByPhysicalStationOrder(line, pmrFloor.filter(p => p.line === line), p => p.lieuName)
+            .map((p): PoseRow => ({
+                line,
+                station: p.lieuName,
+                family: PMR_FLOOR_POSE_FAMILY,
+                equipment: '',
+                location: p.accessLabel,
+                zone: '',
+                reference: '',
+                designation: p.material ? `Adhésif de signalisation PMR au sol — ${p.material}` : 'Adhésif de signalisation PMR au sol',
+                dimensions: PMR_FLOOR_DIMENSIONS,
+                quantity: 1,
+                visual: poseVisualPath(getReferenceVisualUrl('pmr-sol')),
             })),
     ]);
 };

@@ -20,6 +20,7 @@ import { downloadImplantationsWorkbook } from '../../utils/cockpit/implantations
 import { buildImplantationLineSheets, buildImplantationSyntheseRows, buildPoseRows } from './implantationsExportRows';
 import { buildPoseCsv } from '../../utils/cockpit/poseExport';
 import { CognitivePictogramPoseItem } from '../../utils/cockpit/cognitivePictogramSummary';
+import { PmrFloorPoseItem } from '../../utils/cockpit/pmrFloorPose';
 import { downloadFile } from '../../utils/csvExporter';
 import {
     STATUS_LABELS, compareLines, displayReferenceName, implantationEquipmentLabel, implantationZoneLabel,
@@ -216,18 +217,20 @@ export const ImplantationsExportButton: React.FC<ImplantationsExportButtonProps>
 /* ================= CSV de pose (référentiel transmis au SAE) ================= */
 // Mêmes implantations, même ordre et mêmes quantités que l'export .xlsx
 // (source commune : ./implantationsExportRows), plus les pictogrammes
-// cognitifs éventuellement inclus dans la sélection. Sans statut d'audit.
+// cognitifs et adhésifs PMR au sol éventuellement inclus dans la
+// sélection. Sans statut d'audit.
 
 interface PoseCsvExportButtonProps {
     items: ImplantationRef[];
     refById: Map<string, SignageReference>;
     cognitive?: CognitivePictogramPoseItem[];
+    pmrFloor?: PmrFloorPoseItem[];
 }
 
-export const PoseCsvExportButton: React.FC<PoseCsvExportButtonProps> = ({ items, refById, cognitive = [] }) => {
-    const total = items.length + cognitive.length;
+export const PoseCsvExportButton: React.FC<PoseCsvExportButtonProps> = ({ items, refById, cognitive = [], pmrFloor = [] }) => {
+    const total = items.length + cognitive.length + pmrFloor.length;
     const handleExport = () => {
-        const rows = buildPoseRows(buildImplantationLineSheets(items, refById), refById, cognitive);
+        const rows = buildPoseRows(buildImplantationLineSheets(items, refById), refById, cognitive, pmrFloor);
         downloadFile(buildPoseCsv(rows), `pose-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8;');
         toast.success(`CSV de pose téléchargé (${rows.length} élément${rows.length > 1 ? 's' : ''}).`);
     };
