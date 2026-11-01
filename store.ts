@@ -5,7 +5,7 @@ import {
     Lieu, AuditModule, AuditModuleType, Station, Direction, DAT, AdhesiveStatus, EquipmentStatus, AuditCategory, Pr, Equipment, EquipmentType, EcaData, ECA, PMRFloorAdhesiveData, FloorAdhesiveStatus, ModeData, EcaEquipmentType, CognitivePictogramData, CognitivePictogram, PrZone, SignaletiqueData, EquipmentStatusType, SignageReference, SignageDimensions, SignageSupport, PlanQuartierData, PlanQuartierOccurrence, PlanQuartierConstat, PlanQuartierStatus, MetroLine
 } from './types';
 import { db } from './db';
-import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
+import { generateInitialLieuxDataAsync, TRAM_DIRECTION_MEETT, TRAM_DIRECTION_PDJ, TRAM_SINGLE_DIRECTION_DATS, PMR_FLOOR_EXTRA_ACCESS_POINTS, PMR_FLOOR_REMOVED_ACCESS_POINTS, createSpecificPmrFloorAdhesiveModule } from './data/builder';
 import { LINE_A_STATIONS, LINE_B_STATIONS } from './data/stations';
 import { getInitialSignaletiqueData, STATION_EQUIPMENT_DIMENSIONS } from './data/signaletique_config';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getEquipmentAdhesives, getDatAdhesivesForLine, isDatAdhesiveInScope } from './data/adhesives';
@@ -280,7 +280,7 @@ export const migrateDatAdhesiveScope = (lieux: Lieu[]): boolean => {
 
 /**
  * Adhésifs PMR au sol des accès sans valideur PMR (PMR_FLOOR_EXTRA_ACCESS_POINTS :
- * accès principal d'Esquirol et de Capitole). Sur une base existante, la
+ * accès principal d'Esquirol). Sur une base existante, la
  * station n'a qu'un module générique « Adhésifs PMR au Sol », issu du
  * valideur PMR de l'entrée ascenseur : il est renommé avec cet accès
  * (même objet : identifiant, statut, photos et commentaire conservés) et
@@ -673,6 +673,42 @@ const logArenesT1PlanQuartierMigration = async (result: { removed: number; keptA
             });
         }
     }
+};
+
+/**
+ * Adhésifs PMR au sol déclarés à tort (PMR_FLOOR_REMOVED_ACCESS_POINTS :
+ * accès principal de Capitole). Le module de l'accès retiré est supprimé
+ * s'il n'a jamais été audité (statut, photo, commentaire, date, « sans
+ * objet ») ; l'accès restant reprend le nom générique « Adhésifs PMR au
+ * Sol » d'une station à un seul accès (même objet : id, statut, photos
+ * conservés). Module audité : rien n'est touché, signalé (`keptAudited`).
+ * Idempotente. Mute `lieux` en place.
+ */
+export const migrateRemovedPmrFloorAccessPoints = (lieux: Lieu[]): { changed: boolean; keptAudited: string[] } => {
+    let changed = false;
+    const keptAudited: string[] = [];
+    for (const [code, removedAccessPoints] of Object.entries(PMR_FLOOR_REMOVED_ACCESS_POINTS)) {
+        for (const lieu of lieux) {
+            const ofStation = () => lieu.modules.filter(m =>
+                m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (m.data as PMRFloorAdhesiveData).stationCode === code);
+            for (const accessPoint of removedAccessPoints) {
+                const target = ofStation().find(m => m.name === `Adhésifs PMR au Sol (${accessPoint})`);
+                if (!target) continue;
+                const data = target.data as PMRFloorAdhesiveData;
+                const audited = !!data.comment || !!data.completionDate || !!data.isNotApplicable
+                    || (data.adhesives ?? []).some(a => a.status !== FloorAdhesiveStatus.NotChecked || a.photo_base64 || a.photo_id);
+                if (audited) { keptAudited.push(`${data.stationName} — ${accessPoint}`); continue; }
+                lieu.modules = lieu.modules.filter(m => m !== target);
+                changed = true;
+            }
+            const remaining = ofStation();
+            if (keptAudited.length === 0 && remaining.length === 1 && remaining[0].name !== 'Adhésifs PMR au Sol') {
+                remaining[0].name = 'Adhésifs PMR au Sol';
+                changed = true;
+            }
+        }
+    }
+    return { changed, keptAudited };
 };
 
 /**
@@ -1340,6 +1376,20 @@ const useAuditStore = create<AppState>((set, get) => {
                 if (migrateStationRenames(data)) dataChanged = true;
                 if (migrateTramSingleDirectionDats(data)) dataChanged = true;
                 if (migratePmrFloorExtraAccessPoints(data)) dataChanged = true;
+                const removedPmr = migrateRemovedPmrFloorAccessPoints(data);
+                if (removedPmr.changed) {
+                    dataChanged = true;
+                    await logEvent({
+                        type: 'DATA_MIGRATION', entityType: 'pmrFloor', entityId: 'capitole-pmr-pri',
+                        summary: 'Capitole : adhésif PMR au sol de l\'accès haut (PRI) retiré — entrée ascenseur seulement (relevé terrain)',
+                    });
+                }
+                if (removedPmr.keptAudited.length > 0 && !(await db.events.toArray()).some(e => e.entityId === 'capitole-pmr-pri-audite')) {
+                    await logEvent({
+                        type: 'DATA_MIGRATION', entityType: 'pmrFloor', entityId: 'capitole-pmr-pri-audite',
+                        summary: `Adhésif PMR au sol CONSERVÉ (données d'audit présentes) — à vérifier : ${removedPmr.keptAudited.join(', ')}`,
+                    });
+                }
                 if (migrateDatAdhesiveScope(data)) dataChanged = true;
 
                 // Plans de quartier (+ PEM 3D) : ajoute les modules manquants et

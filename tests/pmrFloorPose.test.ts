@@ -40,7 +40,7 @@ describe('Adhésifs PMR au sol dans la sélection du Référentiel', () => {
         expect(rows).toHaveLength(lineA.length);
         expect(rows.every(r => r.family === PMR_FLOOR_POSE_FAMILY && r.reference === '' && r.dimensions === PMR_FLOOR_DIMENSIONS && r.quantity === 1)).toBe(true);
         const capitole = rows.filter(r => r.station === 'Capitole');
-        expect(capitole.map(r => r.location).sort()).toEqual(['Accès Bas (ASC)', 'Accès Haut (PRI)']);
+        expect(capitole.map(r => r.location)).toEqual(['']); // un seul accès : module générique
         expect(capitole[0].designation).toContain('Ultra Protect');
         expect(rows[0].visual).toContain(getReferenceVisualUrl('pmr-sol')!.split('/').pop()!);
     });
