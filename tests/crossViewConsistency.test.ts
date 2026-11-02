@@ -208,7 +208,7 @@ describe('Équipements de station — quantités et statuts', () => {
         expect(buildSignaletiqueStationIndex([blagnac]).items).toHaveLength(0);
     });
 
-    it.fails('ÉCART CONNU (décision 5) : l\'inventaire suit les emplacements décrits, pas « 2 totems par station » d\'office', () => {
+    it('décision 5 : l\'inventaire suit les emplacements décrits, pas « 2 totems par station » d\'office', () => {
         const sig = moduleOf(lieuNamed('Arènes'), AuditModuleType.SIGNALETIQUE);
         delete (sig.data as ModeData).stations[0].signaletique!.totem!.direction2;
         const row = computeAdhesiveInventory(lieux, references).find(r => r.id === STATION_EQUIPMENT_ROW_IDS.totem);

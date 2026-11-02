@@ -17,7 +17,8 @@
 // par plan physique et par direction ; dimension propre au module (jamais
 // assimilée à une autre ligne).
 // =================================================================
-import { AuditModuleType, EquipmentStatusType, Lieu, ModeData } from '../../types';
+import { AuditModuleType, EquipmentStatusType, Lieu } from '../../types';
+import { readStationEquipmentModule } from './stationEquipmentReader';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { isDefect } from './signaletiqueStationIndex';
 import { dirKeyOf } from '../signaletiqueDirections';
@@ -41,21 +42,16 @@ export const collectSignaletiquePlansQuartier = (lieux: Lieu[]): SignaletiquePla
         for (const module of lieu.modules) {
             if (module.type !== AuditModuleType.SIGNALETIQUE || !isModuleInCurrentScope(module)) continue;
             const line = module.line || '?';
-            for (const station of (module.data as ModeData).stations ?? []) {
-                const sig = station.signaletique;
-                if (!sig || !isModuleInCurrentScope(station)) continue;
-                (['meett', 'pdj'] as const).forEach(dir => {
-                    const direction = station.directions?.find(d => dirKeyOf(d.name) === dir)?.name;
-                    for (const p of sig.planQuartier?.[dir] ?? []) {
-                        const status = p.status ?? 'NotChecked';
-                        if (status === EquipmentStatusType.NOT_APPLICABLE) continue;
-                        plans.push({
-                            lieuName: lieu.name, line, stationName: station.name,
-                            direction,
-                            dimensions: p.dimensions ?? '',
-                            isDefect: isDefect(status),
-                        });
-                    }
+            // Parcours unique (utils/cockpit/stationEquipmentReader.ts).
+            for (const { station, stationInService, kind, position, holder } of readStationEquipmentModule(lieu, module)) {
+                if (kind !== 'planQuartier' || !stationInService) continue;
+                const status = (holder.status ?? 'NotChecked') as EquipmentStatusType | 'NotChecked';
+                if (status === EquipmentStatusType.NOT_APPLICABLE) continue;
+                plans.push({
+                    lieuName: lieu.name, line, stationName: station.name,
+                    direction: station.directions?.find(d => dirKeyOf(d.name) === position)?.name,
+                    dimensions: holder.dimensions ?? '',
+                    isDefect: isDefect(status),
                 });
             }
         }
