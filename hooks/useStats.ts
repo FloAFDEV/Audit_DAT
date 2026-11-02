@@ -1,12 +1,12 @@
 
 import { useMemo } from 'react';
 import {
-    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem, CognitivePictogramData,
-    SignageReference, PMRFloorAdhesiveData,
+    Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, AdhesiveInventoryItem,
+    SignageReference,
 } from '../types';
 import { isPmrEcaType } from '../data/eca_data';
-import { getCognitivePictogramDimension, getCountedCognitivePictograms, COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
-import { getAllPmrMaterials, getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
+import { COGNITIVE_PICTOGRAM_DIMENSIONS } from '../data/cognitive_pictograms';
+import { getAllPmrMaterials, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
 import { AUDIT_MODULES_CONFIG } from '../data/config';
 import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
 import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
@@ -21,6 +21,7 @@ import { formatDimensions, shortReferenceName } from '../components/cockpit/labe
 import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
 import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
 import { isCountedPmrFloorAdhesive, readPmrFloorModule } from '../utils/cockpit/pmrFloorPose';
+import { readCognitivePictogramModule } from '../utils/cockpit/cognitivePictogramSummary';
 
 
 export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
@@ -94,7 +95,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
                         ecaPmrCount += ecas.filter(e => isPmrEcaType(e.type)).length;
                         break;
                     case AuditModuleType.COGNITIVE_PICTOGRAMS: {
-                        const pictoCount = getCountedCognitivePictograms(module).length;
+                        const pictoCount = readCognitivePictogramModule(lieu, module).filter(p => p.counted).length;
                         cogPictoCount += pictoCount;
                         if (module.line === 'A') cogPictoCountA += pictoCount;
                         else if (module.line === 'B') cogPictoCountB += pictoCount;
@@ -416,10 +417,9 @@ export const computeAdhesiveInventory = (
                 }
 
                 if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) {
-                    const cogData = module.data as CognitivePictogramData;
-                    for (const picto of getCountedCognitivePictograms(module)) {
-                        const dim = getCognitivePictogramDimension(cogData.stationCode, picto.accessPointName);
-                        addQty(`cog-picto-${dim}`, 1);
+                    // Parcours unique (utils/cockpit/cognitivePictogramSummary.ts).
+                    for (const picto of readCognitivePictogramModule(lieu, module)) {
+                        if (picto.counted) addQty(`cog-picto-${picto.dimensions}`, 1);
                     }
                 }
 
