@@ -31,6 +31,7 @@ import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_R
 import { buildSignaletiqueStationIndex, isDefect as isStationEquipmentDefect } from '../utils/cockpit/signaletiqueStationIndex';
 import { buildStationPatrimoine, linesOfLieu } from '../utils/cockpit/stationPatrimoine';
 import { getLieuDefectCount } from '../utils/anomalyDetector';
+import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { buildMaintenanceActions } from '../utils/cockpit/maintenanceActions';
 import { buildPoseRows } from '../components/cockpit/implantationsExportRows';
 import { buildImplantationLineSheets } from '../components/cockpit/implantationsExportRows';
@@ -292,5 +293,25 @@ describe('Exports', () => {
         for (const ad of staticAdhesives) {
             expect(refById.get(ad.id)?.name, ad.id).toBe(ad.name);
         }
+    });
+});
+
+// =================================================================
+describe('Constats et archives conservés', () => {
+    it('les constats exclus des vues opérationnelles restent listés dans l\'analyse d\'une archive', () => {
+        const na = lieuNamed('Jean-Jaurès').modules.find(m =>
+            m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (m.data as PMRFloorAdhesiveData).isNotApplicable)!;
+        (na.data as PMRFloorAdhesiveData).adhesives[0].status = FloorAdhesiveStatus.ToBeReplaced;
+        const picto = (moduleOf(lieuNamed('Basso Cambo'), AuditModuleType.COGNITIVE_PICTOGRAMS).data as CognitivePictogramData)
+            .pictograms.find(isProvisionalCognitivePictogram)!;
+        picto.status = FloorAdhesiveStatus.ToBeReplaced;
+        // Vues opérationnelles : exclus.
+        expect(stats().maintenanceSummary.allDefects.count).toBe(0);
+        // Archives (HistoriqueView) : tous les constats, tels qu'enregistrés.
+        const archive = generateMaintenanceSummary(lieux).allDefects.items;
+        expect(archive.filter(i => i.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE)).toHaveLength(1);
+        expect(archive.filter(i => i.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS)).toHaveLength(1);
+        // Les constats eux-mêmes ne sont jamais modifiés.
+        expect(picto.status).toBe(FloorAdhesiveStatus.ToBeReplaced);
     });
 });

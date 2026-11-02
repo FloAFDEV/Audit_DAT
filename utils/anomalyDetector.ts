@@ -18,6 +18,6 @@ import { currentExploitationLieux, floorFamilyDefects, generateMaintenanceSummar
 export const getLieuDefectCount = (lieu: Lieu, references: SignageReference[]): number => {
     const catalogue = buildPatrimoineIndex([lieu], references).totals.defectCount;
     const stationEquipment = buildSignaletiqueStationIndex([lieu]).totals.defectCount;
-    const { pmrFloor, cognitive } = floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux([lieu])));
+    const { pmrFloor, cognitive } = floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux([lieu]), { operational: true }));
     return catalogue + stationEquipment + pmrFloor.length + cognitive.length;
 };

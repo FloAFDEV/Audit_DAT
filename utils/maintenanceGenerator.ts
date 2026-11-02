@@ -28,7 +28,18 @@ const getCategoryForModule = (module: AuditModule): AuditCategory | undefined =>
     return undefined;
 };
 
-export const generateMaintenanceSummary = (lieux: Lieu[]) => {
+/**
+ * Synthèse de maintenance.
+ *  - `operational: true` (cockpit : Synthèse, Analyse des anomalies, badges)
+ *    — anomalies opérationnelles : un module PMR « sans objet » et un
+ *    pictogramme non compté (« Accès à définir », ligne non comptée) n'en
+ *    génèrent pas (décisions validées 1 et 2).
+ *  - par défaut (Archives) : TOUS les constats enregistrés, tels quels — un
+ *    historique n'est jamais relu à travers une règle postérieure.
+ */
+export const generateMaintenanceSummary = (lieux: Lieu[], options: { operational?: boolean } = {}) => {
+    const keepPmr = options.operational ? isCountedPmrFloorAdhesive : () => true;
+    const keepPictogram = options.operational ? (p: { counted: boolean }) => p.counted : () => true;
     const toBeReplaced: MaintenanceItem[] = [];
     const absent: MaintenanceItem[] = [];
     let okCount = 0;
@@ -127,9 +138,9 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     }
 
                     // Parcours unique PMR (utils/cockpit/pmrFloorPose.ts).
-                    // Décision validée : un module « sans objet » ne génère
-                    // aucune anomalie (même règle que le comptage).
-                    readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive).forEach(({ adhesive: ad }) => {
+                    // Décision validée (vues opérationnelles) : un module
+                    // « sans objet » ne génère aucune anomalie.
+                    readPmrFloorModule(lieu, module).filter(keepPmr).forEach(({ adhesive: ad }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Adhésif au sol",
@@ -145,10 +156,9 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     break;
                 case AuditModuleType.COGNITIVE_PICTOGRAMS:
                         // Parcours unique (utils/cockpit/cognitivePictogramSummary.ts).
-                        // Décision validée : un pictogramme non compté (« Accès à
-                        // définir », ligne non comptée) n'est pas un équipement
-                        // installé — aucune anomalie de maintenance.
-                        readCognitivePictogramModule(lieu, module).filter(p => p.counted).forEach(({ pictogram: p, stationCode }) => {
+                        // Décision validée (vues opérationnelles) : un
+                        // pictogramme non compté n'est pas un équipement installé.
+                        readCognitivePictogramModule(lieu, module).filter(keepPictogram).forEach(({ pictogram: p, stationCode }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Pictogramme cognitif",
