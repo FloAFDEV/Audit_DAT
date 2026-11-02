@@ -27,8 +27,9 @@
 //                      un HS, jamais réinterprété en Absent ou À
 //                      remplacer)
 // =================================================================
-import { Lieu, AuditModuleType, ModeData, EquipmentStatusType, MaintenanceItem, AuditCategory } from '../../types';
+import { Lieu, AuditModuleType, EquipmentStatusType, MaintenanceItem, AuditCategory } from '../../types';
 import { isModuleInCurrentScope } from '../moduleScope';
+import { readStationEquipmentModule } from './stationEquipmentReader';
 
 // Ligne -> catégorie : même correspondance que getCategoryForModule
 // (utils/maintenanceGenerator.ts, signature différente — opère sur un
@@ -85,8 +86,6 @@ const CATEGORY_LABELS = {
     bandeauStation: 'Bandeau Station',
 } as const;
 
-const DIRECTIONS = ['direction1', 'direction2'] as const;
-const SIGN_DIRS = ['meett', 'pdj'] as const;
 
 export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStationIndex => {
     const items: SignaletiqueStationItemRef[] = [];
@@ -109,6 +108,10 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
         });
     };
 
+    // Parcours unique (utils/cockpit/stationEquipmentReader.ts). Règles
+    // propres à cette projection : un point de contrôle par équipement et
+    // par sous-statut prévu au formulaire (même non renseigné : « non
+    // contrôlé »), « non installé » exclu.
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
             // Exploitation actuelle uniquement (cf. utils/moduleScope.ts) : un
@@ -121,54 +124,50 @@ export const buildSignaletiqueStationIndex = (lieux: Lieu[]): SignaletiqueStatio
                 moduleId: module.id, moduleName: module.name,
             };
 
-            for (const station of (module.data as ModeData).stations ?? []) {
-                const sig = station.signaletique;
-                if (!sig) continue;
-
-                DIRECTIONS.forEach(dir => {
-                    const t = sig.totem?.[dir];
-                    if (t) push({ ...base, category: CATEGORY_LABELS.totem, label: `Totem — ${station.name} (${dir})` }, t.status, t);
-
-                    const bd = sig.bandeauStation?.[dir];
-                    if (bd) {
+            for (const { station, kind, position: dir, rank, holder: h } of readStationEquipmentModule(lieu, module)) {
+                const s = (field: string) => h[field] as EquipmentStatusType | 'NotChecked' | undefined;
+                const photo = h as { photo_base64?: string | null; photo_rotation?: number };
+                switch (kind) {
+                    case 'totem':
+                        push({ ...base, category: CATEGORY_LABELS.totem, label: `Totem — ${station.name} (${dir})` }, s('status'), photo);
+                        break;
+                    case 'bandeau': {
                         const label = `Bandeau Station — ${station.name} (${dir})`;
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label }, bd.status, bd);
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · contenu direction` }, bd.directionContent, bd);
-                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · nom station` }, bd.stationNameContent, bd);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label }, s('status'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · contenu direction` }, s('directionContent'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.bandeauStation, label: `${label} · nom station` }, s('stationNameContent'), photo);
+                        break;
                     }
-                });
-
-                SIGN_DIRS.forEach(dir => {
-                    (sig.biv?.[dir] ?? []).forEach((b, i) => {
-                        const label = `BIV ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.biv, label }, b.status, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · fonctionnement écran` }, b.screenFunctioning, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · adhésifs blancs` }, b.whiteTextAdhesives, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · ligne caisson` }, b.ligneCaisson, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · destination caisson` }, b.destinationCaisson, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · attente min. caisson` }, b.attenteMinCaisson, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · durée approx. caisson` }, b.dureeApproxCaisson, b);
-                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · quai caisson` }, b.quaiCaisson, b);
-                    });
-
-                    (sig.planReseau?.[dir] ?? []).forEach((p, i) => {
-                        const label = `Plan Réseau ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label }, p.status, p);
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · nom station bannière` }, p.bannerStationName, p);
-                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · HAP` }, p.hap, p);
-                    });
-
-                    (sig.planQuartier?.[dir] ?? []).forEach((p, i) => {
-                        const label = `Plan Quartier ${dir} #${i + 1} — ${station.name}`;
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label }, p.status, p);
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · direction bannière` }, p.bannerDirection, p);
-                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · HAP` }, p.hap, p);
-                    });
-
-                    (sig.hap?.[dir] ?? []).forEach((h, i) => {
-                        push({ ...base, category: CATEGORY_LABELS.hap, label: `HAP ${dir} #${i + 1} — ${station.name}` }, h.status, h);
-                    });
-                });
+                    case 'biv': {
+                        const label = `BIV ${dir} #${rank} — ${station.name}`;
+                        push({ ...base, category: CATEGORY_LABELS.biv, label }, s('status'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · fonctionnement écran` }, s('screenFunctioning'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · adhésifs blancs` }, s('whiteTextAdhesives'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · ligne caisson` }, s('ligneCaisson'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · destination caisson` }, s('destinationCaisson'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · attente min. caisson` }, s('attenteMinCaisson'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · durée approx. caisson` }, s('dureeApproxCaisson'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.biv, label: `${label} · quai caisson` }, s('quaiCaisson'), photo);
+                        break;
+                    }
+                    case 'planReseau': {
+                        const label = `Plan Réseau ${dir} #${rank} — ${station.name}`;
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label }, s('status'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · nom station bannière` }, s('bannerStationName'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.planReseau, label: `${label} · HAP` }, s('hap'), photo);
+                        break;
+                    }
+                    case 'planQuartier': {
+                        const label = `Plan Quartier ${dir} #${rank} — ${station.name}`;
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label }, s('status'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · direction bannière` }, s('bannerDirection'), photo);
+                        push({ ...base, category: CATEGORY_LABELS.planQuartier, label: `${label} · HAP` }, s('hap'), photo);
+                        break;
+                    }
+                    case 'hap':
+                        push({ ...base, category: CATEGORY_LABELS.hap, label: `HAP ${dir} #${rank} — ${station.name}` }, s('status'), photo);
+                        break;
+                }
             }
         }
     }

@@ -18,7 +18,7 @@ import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { parseAdhesiveName } from '../utils/adhesiveNames';
 import { formatDimensions, shortReferenceName } from '../components/cockpit/labels';
-import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
+import { STATION_EQUIPMENT_ROW_IDS, stationEquipmentItems } from '../utils/cockpit/stationEquipment';
 import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
 import { isCountedPmrFloorAdhesive, readPmrFloorModule } from '../utils/cockpit/pmrFloorPose';
 import { readCognitivePictogramModule } from '../utils/cockpit/cognitivePictogramSummary';
@@ -422,26 +422,16 @@ export const computeAdhesiveInventory = (
                         if (picto.counted) addQty(`cog-picto-${picto.dimensions}`, 1);
                     }
                 }
-
-                if (module.type === AuditModuleType.SIGNALETIQUE) {
-                    for (const station of (module.data as ModeData).stations) {
-                        const sig = station.signaletique;
-                        if (!sig) continue;
-                        addQty('sign-totem', 2); // direction1 + direction2
-                        addQty('sign-biv', (sig.biv?.meett?.length || 0) + (sig.biv?.pdj?.length || 0));
-                        addQty('sign-plan-reseau', (sig.planReseau?.meett?.length || 0) + (sig.planReseau?.pdj?.length || 0));
-                        // Plans T1 : comptés plus bas, avec la même règle que le cockpit.
-                        if (module.line === 'AEROPORT') addQty('sign-plan-quartier-aeroport', (sig.planQuartier?.meett?.length || 0) + (sig.planQuartier?.pdj?.length || 0));
-                        addQty('sign-hap', (sig.hap?.meett?.length || 0) + (sig.hap?.pdj?.length || 0));
-                        addQty('sign-bandeau', 2); // direction1 + direction2
-                    }
-                }
             }
         }
 
-        // Plans de quartier T1 : exactement les plans du cockpit (même
-        // fonction : exploitation actuelle, « non installé » exclu).
-        addQty(T1_PLAN_QUARTIER_ROW_ID, collectSignaletiquePlansQuartier(lieux).filter(p => p.line === 'TRAM').length);
+        // Équipements de station : emplacements DÉCRITS dans les données,
+        // type par type (parcours unique, utils/cockpit/stationEquipment.ts :
+        // périmètre d'exploitation, plans T1 d'une station en exploitation
+        // hors « non installé »). La quantité théorique (2 totems et 2
+        // bandeaux par station) est documentée à part
+        // (theoreticalStationEquipment), jamais ajoutée ici.
+        for (const item of stationEquipmentItems(lieux)) addQty(STATION_EQUIPMENT_ROW_IDS[item.kind], 1);
 
         // Ligne « matière non renseignée » : uniquement si des implantations
         // PMR n'ont pas de matière connue (aucune ligne vide permanente).

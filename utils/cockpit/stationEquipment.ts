@@ -19,7 +19,8 @@
 //    futureStationEquipmentItems, jamais additionnés aux quantités.
 // Hors exports CSV / Excel (validation exploitant).
 // =================================================================
-import { AuditModuleType, EquipmentStatusType, Lieu, ModeData, SignaletiqueData, Station } from '../../types';
+import { AuditModuleType, EquipmentStatusType, Lieu } from '../../types';
+import { readStationEquipmentModule } from './stationEquipmentReader';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { dirKeyOf } from '../signaletiqueDirections';
 import { MULTI_QUAI_STATIONS, STATION_EQUIPMENT_DIMENSIONS } from '../../data/signaletique_config';
@@ -67,65 +68,62 @@ const sub = (holder: Holder, defs: [string, string, string?][]): StationEquipmen
 
 const stripDirectionPrefix = (name: string) => name.replace(/^Direction\s+/i, '');
 
-/** Parcours commun ; `future` choisit les modules hors exploitation actuelle
- *  (consultation seule) au lieu des modules comptés. */
+const BIV_SUB_ELEMENTS: [string, string, string?][] = [
+    ['screenFunctioning', 'Fonctionnement écran'],
+    ['whiteTextAdhesives', 'Adhésifs blancs'],
+    ['ligneCaisson', 'Caisson — ligne', '6,7 × 2 cm'],
+    ['destinationCaisson', 'Caisson — destination', '15,2 × 2 cm'],
+    ['attenteMinCaisson', 'Caisson — attente en min', '18,2 × 2 cm'],
+    ['dureeApproxCaisson', 'Caisson — durée approximative', '22,4 × 1,5 cm'],
+];
+const QUAI_SUB_ELEMENT: [string, string, string] = ['quaiCaisson', 'Caisson — quai', '6 × 2 cm'];
+
+/** Projection « emplacements » du parcours unique
+ *  (utils/cockpit/stationEquipmentReader.ts) ; `future` choisit les modules
+ *  hors exploitation actuelle (consultation seule) au lieu des modules
+ *  comptés. Règles propres à cette projection : sous-éléments décrits
+ *  seulement, quai pour les stations multi-quais, plans T1 d'une station en
+ *  exploitation hors « non installé ». */
 const collectStationEquipment = (lieux: Lieu[], future: boolean): StationEquipmentItem[] => {
     const items: StationEquipmentItem[] = [];
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
             if (module.type !== AuditModuleType.SIGNALETIQUE || isModuleInCurrentScope(module) === future) continue;
             const line = module.line || '?';
-            for (const station of (module.data as ModeData).stations ?? []) {
-                const sig: SignaletiqueData | undefined = station.signaletique;
-                if (!sig) continue;
-                const inService = isModuleInCurrentScope(station as Station);
-                const base = { line, lieuName: lieu.name, stationName: station.name, inService };
-                const push = (kind: StationEquipmentKind, holder: Holder, direction: string | undefined, rank: number | undefined, count: number, subElements: StationEquipmentSubElement[]) => {
+            for (const described of readStationEquipmentModule(lieu, module)) {
+                const { station, stationInService: inService, position, rank, count } = described;
+                const h = described.holder as Holder;
+                // Extrémités physiques (totem, bandeau) : libellés du formulaire ;
+                // autres types : direction réelle de la station.
+                const end = position === 'direction1' ? 0 : position === 'direction2' ? 1 : -1;
+                const direction = end >= 0
+                    ? (station.directions[end]?.name ? stripDirectionPrefix(station.directions[end].name) : (end === 0 ? 'Extrémité A' : 'Extrémité B'))
+                    : station.directions.find(d => dirKeyOf(d.name) === position)?.name;
+                const push = (kind: StationEquipmentKind, subElements: StationEquipmentSubElement[]) => {
                     items.push({
-                        ...base, kind, direction, ...(count > 1 && rank ? { rank } : {}),
-                        dimensions: holder.dimensions, status: holder.status ?? 'NotChecked', subElements,
-                        ...(holder.comment ? { comment: holder.comment } : {}),
+                        line, lieuName: lieu.name, stationName: station.name, inService,
+                        kind, direction, ...(count > 1 && rank ? { rank } : {}),
+                        dimensions: h.dimensions, status: h.status ?? 'NotChecked', subElements,
+                        ...(h.comment ? { comment: h.comment } : {}),
                     });
                 };
-
-                // Extrémités physiques (totem, bandeau) : libellés du formulaire.
-                (['direction1', 'direction2'] as const).forEach((dir, i) => {
-                    const endpoint = station.directions[i]?.name ? stripDirectionPrefix(station.directions[i].name) : (i === 0 ? 'Extrémité A' : 'Extrémité B');
-                    const totem = sig.totem?.[dir] as unknown as Holder | undefined;
-                    if (totem) push('totem', totem, endpoint, undefined, 1, []);
-                    const bandeau = sig.bandeauStation?.[dir] as unknown as Holder | undefined;
-                    if (bandeau) push('bandeau', bandeau, endpoint, undefined, 1, sub(bandeau, [
-                        ['directionContent', 'Contenu direction'], ['stationNameContent', 'Nom de station'],
-                    ]));
-                });
-
-                (['meett', 'pdj'] as const).forEach(dir => {
-                    const direction = station.directions.find(d => dirKeyOf(d.name) === dir)?.name;
-                    const each = (list: unknown[] | undefined, fn: (h: Holder, rank: number, count: number) => void) =>
-                        (list ?? []).forEach((h, i, all) => fn(h as Holder, i + 1, all.length));
-                    each(sig.biv?.[dir], (h, rank, count) => push('biv', h, direction, rank, count, sub(h, [
-                        ['screenFunctioning', 'Fonctionnement écran'],
-                        ['whiteTextAdhesives', 'Adhésifs blancs'],
-                        ['ligneCaisson', 'Caisson — ligne', '6,7 × 2 cm'],
-                        ['destinationCaisson', 'Caisson — destination', '15,2 × 2 cm'],
-                        ['attenteMinCaisson', 'Caisson — attente en min', '18,2 × 2 cm'],
-                        ['dureeApproxCaisson', 'Caisson — durée approximative', '22,4 × 1,5 cm'],
-                        ...(MULTI_QUAI_STATIONS.includes(station.name) ? [['quaiCaisson', 'Caisson — quai', '6 × 2 cm'] as [string, string, string]] : []),
-                    ])));
-                    each(sig.planReseau?.[dir], (h, rank, count) => push('planReseau', h, direction, rank, count, sub(h, [
-                        ['bannerStationName', 'Bannière nom de station'], ['hap', 'HAP'],
-                    ])));
-                    each(sig.planQuartier?.[dir], (h, rank, count) => {
+                switch (described.kind) {
+                    case 'totem': push('totem', []); break;
+                    case 'bandeau': push('bandeau', sub(h, [['directionContent', 'Contenu direction'], ['stationNameContent', 'Nom de station']])); break;
+                    case 'biv': push('biv', sub(h, MULTI_QUAI_STATIONS.includes(station.name) ? [...BIV_SUB_ELEMENTS, QUAI_SUB_ELEMENT] : BIV_SUB_ELEMENTS)); break;
+                    case 'planReseau': push('planReseau', sub(h, [['bannerStationName', 'Bannière nom de station'], ['hap', 'HAP']])); break;
+                    case 'planQuartier': {
                         const subElements = sub(h, [['bannerDirection', 'Bandeau direction'], ['hap', 'HAP']]);
-                        if (line === 'AEROPORT') { push('planQuartierAeroport', h, direction, rank, count, subElements); return; }
+                        if (line === 'AEROPORT') { push('planQuartierAeroport', subElements); break; }
                         // Plans T1 : même règle que collectSignaletiquePlansQuartier
                         // (station en exploitation, « non installé » exclu) ;
                         // station future : consultée telle quelle.
-                        if (!future && (!inService || (h.status ?? 'NotChecked') === EquipmentStatusType.NOT_APPLICABLE)) return;
-                        push('planQuartierTram', h, direction, rank, count, subElements);
-                    });
-                    each(sig.hap?.[dir], (h, rank, count) => push('hap', h, direction, rank, count, []));
-                });
+                        if (!future && (!inService || (h.status ?? 'NotChecked') === EquipmentStatusType.NOT_APPLICABLE)) break;
+                        push('planQuartierTram', subElements);
+                        break;
+                    }
+                    case 'hap': push('hap', []); break;
+                }
             }
         }
     }
@@ -162,6 +160,23 @@ export const stationEquipmentPresence = (items: StationEquipmentItem[]): Station
         }
     }
     return p;
+};
+
+/** Quantité THÉORIQUE de la règle historique de l'inventaire : une par
+ *  extrémité de station (2 totems, 2 bandeaux), que l'équipement soit
+ *  décrit ou non dans les données. Conservée et documentée séparément :
+ *  l'inventaire et les vues comptent les emplacements DÉCRITS, jamais
+ *  cette quantité théorique. */
+export const STATION_EQUIPMENT_THEORETICAL_PER_STATION: Partial<Record<StationEquipmentKind, number>> = { totem: 2, bandeau: 2 };
+
+/** Quantité théorique par type pour les stations décrites du périmètre
+ *  d'exploitation (stations portant des données d'équipements). */
+export const theoreticalStationEquipment = (lieux: Lieu[]): Partial<Record<StationEquipmentKind, number>> => {
+    const stations = lieux.flatMap(lieu => lieu.modules
+        .filter(m => m.type === AuditModuleType.SIGNALETIQUE && isModuleInCurrentScope(m))
+        .flatMap(m => (m.data as { stations?: { signaletique?: unknown }[] }).stations ?? []))
+        .filter(st => st.signaletique).length;
+    return Object.fromEntries(Object.entries(STATION_EQUIPMENT_THEORETICAL_PER_STATION).map(([kind, n]) => [kind, n * stations]));
 };
 
 /** Dimension affichée d'un type quand l'exemplaire n'en porte pas. */
