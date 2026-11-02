@@ -207,7 +207,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
     const maintenanceSummary = useMemo(() => {
         // Exploitation actuelle uniquement : les données de préparation des
         // modules futurs (C, AEROPORT) ne génèrent pas de maintenance.
-        return generateMaintenanceSummary(currentExploitationLieux(lieux));
+        return generateMaintenanceSummary(currentExploitationLieux(lieux), { operational: true });
     }, [lieux]);
 
     const adhesiveInventory = useMemo(

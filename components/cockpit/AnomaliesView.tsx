@@ -171,7 +171,7 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
     // (maintenance du périmètre d'exploitation ; « sans objet » et
     // pictogrammes non comptés exclus) — aucun second moteur de détection.
     const floorDefects = useMemo(
-        () => floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux(lieux))), [lieux]);
+        () => floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux(lieux), { operational: true })), [lieux]);
     const [floorListModal, setFloorListModal] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
 
     if (isLoading) {
