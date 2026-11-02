@@ -28,7 +28,7 @@ export { LineBadge } from './ImplantationsTree';
  *  cercle teal clair + icône teal, jamais une icône nue. Cercle réduit
  *  (w-8 au lieu de w-12) pour rester à l'échelle d'un h3, mais mêmes
  *  classes de couleur — aucune nouvelle variante. */
-const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
+export const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
@@ -44,7 +44,7 @@ const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: R
  *  l'affiche pas du tout. Un « Matière — » sous un « Support : Dibond » se lit
  *  comme une contradiction, alors que la matière n'a simplement pas de valeur
  *  distincte du support pour ce modèle. */
-const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => {
+export const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => {
     if (value === undefined || value === null || value === '') return null;
     return (
         <div className="flex flex-col gap-0.5">

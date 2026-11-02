@@ -243,8 +243,8 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
  * Quantités : dérivées de getEffective*Adhesives (utils/effectiveAdhesives.ts,
  * déjà utilisé par les formulaires terrain) au lieu des listes statiques.
  */
-const pmrInventoryRowId = (material: string) => `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
-const PMR_UNKNOWN_MATERIAL_ROW_ID = 'pmr-sol-matiere-non-renseignee';
+export const pmrInventoryRowId = (material: string) => `pmr-sol-${material.replace(/[^a-zA-Z0-9]/g, '-')}`;
+export const PMR_UNKNOWN_MATERIAL_ROW_ID = 'pmr-sol-matiere-non-renseignee';
 const T1_PLAN_QUARTIER_ROW_ID = 'sign-plan-quartier-tram';
 
 export const computeAdhesiveInventory = (
