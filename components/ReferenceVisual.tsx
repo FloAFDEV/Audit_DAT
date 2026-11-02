@@ -4,7 +4,7 @@ import { X, Map as MapIcon, Image as ImageIcon } from 'lucide-react';
 import { getReferenceVisualUrl } from '../data/referenceVisuals';
 
 /** Agrandissement plein écran d'un visuel (Échap, clic ou bouton pour fermer). */
-const ReferenceZoom: React.FC<{ url: string; label: string; referenceId?: string; onClose: () => void }> = ({ url, label, referenceId, onClose }) => {
+export const ReferenceZoom: React.FC<{ url: string; label: string; referenceId?: string; onClose: () => void }> = ({ url, label, referenceId, onClose }) => {
     const [failed, setFailed] = useState(false);
     useEffect(() => {
         const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -116,7 +116,8 @@ export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: strin
                 onClick={(e) => { e.stopPropagation(); hide(); setIsZoomOpen(true); }}
                 onFocus={() => show(true)}
                 onBlur={hide}
-                className="flex-shrink-0 rounded p-0.5 text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                // Zone tactile 46 × 46 px (pseudo-élément), icône inchangée.
+                className="relative flex-shrink-0 rounded p-0.5 text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 after:absolute after:-inset-3.5"
                 aria-label={`Voir le visuel — ${label}`}
                 title="Voir le visuel"
             >

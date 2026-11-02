@@ -32,6 +32,22 @@ import {
 const LINE_CATEGORY_KEY: Record<string, string> = {
     A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE', 'P+R': 'PR',
 };
+/** « Tout déplier / Tout replier » d'un arbre ligne → station : grandes
+ *  sélections repliées par défaut, dépliage complet à la demande. */
+export const ExpandAllButton: React.FC<{ allOpen: boolean; onToggle: () => void }> = ({ allOpen, onToggle }) => (
+    <div className="flex justify-end">
+        <button
+            type="button"
+            onClick={onToggle}
+            aria-expanded={allOpen}
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-xs font-semibold text-teal-700 hover:bg-teal-50 dark:text-teal-300 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+        >
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${allOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            {allOpen ? 'Tout replier' : 'Tout déplier'}
+        </button>
+    </div>
+);
+
 /** Libellé court d'une ligne (AEROPORT → « LAE »), même source que le badge. */
 export const lineShortLabel = (line: string): string =>
     AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line])?.shortLabel ?? line;
@@ -81,8 +97,17 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
         setSet(next);
     };
 
+    const allLineKeys = groupedLines.map(l => l.line);
+    const allStationKeys = groupedLines.flatMap(l => l.stations.map(st => `${l.line}__${st.stationName}`));
+    const allOpen = allLineKeys.length > 0 && allLineKeys.every(k => openLines.has(k)) && allStationKeys.every(k => openStations.has(k));
+    const toggleAll = () => {
+        setOpenLines(allOpen ? new Set() : new Set(allLineKeys));
+        setOpenStations(allOpen ? new Set() : new Set(allStationKeys));
+    };
+
     return (
         <div className="space-y-3">
+            {groupedLines.length > 0 && <ExpandAllButton allOpen={allOpen} onToggle={toggleAll} />}
             {groupedLines.map(({ line, stations, total: lineTotal }) => {
                 const isLineOpen = openLines.has(line);
                 return (

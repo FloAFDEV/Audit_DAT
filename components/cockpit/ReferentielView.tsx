@@ -46,6 +46,7 @@ import {
 } from '../../utils/cockpit/familyElements';
 import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
 import FamilyElementSheet from './FamilyElementSheet';
+import { ViewScope, resolveViewScope, viewScopeButtonLabel } from '../../utils/cockpit/viewScope';
 import StationEquipmentSheet, { preparationParts } from './StationEquipmentSheet';
 import { countLineBExtension, isLineBExtension } from '../../data/lineBExtension';
 import { PoseRowsTree } from './PoseRowsTree';
@@ -89,11 +90,13 @@ interface ReferencesListProps {
     selectedIds: Set<string>;
     onToggleSelect: (id: string) => void;
     onSetSelection: (ids: string[]) => void;
-    onViewSelectedImplantations: () => void;
+    /** Ouvre « Implantations sélectionnées » sur un périmètre explicite
+     *  (sélection, sinon lignes affichées) et sa description lisible. */
+    onViewImplantations: (scope: ViewScope, perimeter: string) => void;
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
-    filter, onFilterChange, lineBExtensionCountOf, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
+    filter, onFilterChange, lineBExtensionCountOf, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewImplantations,
 }) => {
     const { family, support, query } = filter;
     const setFamily = (value: FamilyFilter) => onFilterChange({ ...filter, family: value });
@@ -148,6 +151,17 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
         }
     };
     const familyLabel = FAMILY_FILTERS.find(f => f.key === family)?.label ?? '';
+    // Bouton : toujours la même vue ; sélection si elle existe, sinon lignes
+    // affichées. La sélection explicite n'est jamais modifiée ici.
+    const viewScope = resolveViewScope(selectedIds, visibleIds);
+    const filterDescription = [
+        `filtre « ${familyLabel} »`,
+        support !== 'ALL' && `support « ${SUPPORT_LABELS[support]} »`,
+        query.trim() && `recherche « ${query.trim()} »`,
+    ].filter(Boolean).join(', ');
+    const perimeterOf = (scope: ViewScope) => scope.source === 'selection'
+        ? `Sélection explicite (${scope.ids.length} ligne${scope.ids.length > 1 ? 's' : ''})`
+        : `Liste affichée (${scope.ids.length} ligne${scope.ids.length > 1 ? 's' : ''}) — ${filterDescription}`;
     const selectAllLabel = family === 'ALL' ? 'Sélectionner toutes les lignes visibles' : `Sélectionner toute la famille ${familyLabel} (lignes visibles)`;
 
     const { referenceIds: selectedReferenceIds, elementIds: selectedElementIds } = splitSelection(selectedIds);
@@ -233,12 +247,15 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                 </span>
                 <button
                     type="button"
-                    onClick={onViewSelectedImplantations}
-                    disabled={selectedIds.size === 0}
+                    onClick={() => viewScope && onViewImplantations(viewScope, perimeterOf(viewScope))}
+                    disabled={!viewScope}
+                    title={viewScope
+                        ? `${perimeterOf(viewScope)} — nombre de références ou d'éléments, pas d'implantations`
+                        : 'Aucune ligne affichée'}
                     className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                 >
                     <MapPinned className="w-4 h-4" />
-                    Voir les implantations{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
+                    {viewScopeButtonLabel(viewScope)}
                 </button>
             </div>
 
@@ -503,6 +520,10 @@ const SelectionCount: React.FC<{ value: number; label: string }> = ({ value, lab
 
 interface SelectedImplantationsViewProps {
     selection: Selection;
+    /** Origine du périmètre et sa description — les exports portent
+     *  exactement sur ce qui est affiché. */
+    source: ViewScope['source'];
+    perimeter: string;
     /** Pictogrammes cognitifs inclus dans la sélection (vide sinon). */
     cognitive: CognitivePictogramPoseItem[];
     /** Adhésifs PMR au sol inclus dans la sélection (vide sinon). */
@@ -514,7 +535,7 @@ interface SelectedImplantationsViewProps {
 }
 
 const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
-    selection, cognitive, pmrFloor, index, references, onBack, onOpenReference,
+    selection, source, perimeter, cognitive, pmrFloor, index, references, onBack, onOpenReference,
 }) => {
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
 
@@ -557,8 +578,13 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                         <ArrowLeft className="w-5 h-5" />
                     </button>
                     <div className="min-w-0 flex-1">
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">
+                            {source === 'selection' ? 'Implantations sélectionnées' : 'Implantations de la liste affichée'}
+                        </h2>
                         <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300 break-words">{selection.label}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 break-words">
+                            Périmètre : {perimeter}. Les exports portent exactement sur ce périmètre, lignes de transport décochées exclues.
+                        </p>
                     </div>
                 </div>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -627,7 +653,8 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                     </h3>
                     <PoseRowsTree
                         rows={cognitiveRows}
-                        renderVisual={row => <CognitivePictogramVisual stationCode={stationCodeByName.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field />}
+                        renderVisual={row => <CognitivePictogramVisual stationCode={stationCodeByName.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field zoomable />}
+                        visualKey={row => stationCodeByName.get(`${row.line}|${row.station}`)}
                     />
                 </section>
             )}
@@ -674,7 +701,9 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     // les libellés affichés — cf. utils/cockpit/selection.ts. Mêle références
     // catalogue et éléments hors catalogue (ids de lignes d'inventaire).
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-    const [activeSelection, setActiveSelection] = useState<Selection | null>(null);
+    // Vue ouverte : son propre périmètre (ids figés à l'ouverture), distinct
+    // de la sélection explicite qui reste intacte.
+    const [activeView, setActiveView] = useState<{ selection: Selection; ids: ReadonlySet<string>; source: ViewScope['source']; perimeter: string } | null>(null);
 
     // Familles hors catalogue : exemplaires lus par chaque référentiel
     // autonome, quantités de l'Inventaire détaillé (aucun calcul nouveau).
@@ -699,8 +728,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     }, [index, pmrFloorAll, cognitiveAll]);
 
     const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
-        () => selectFamilyPose(selectedIds, pmrFloorAll, cognitiveAll),
-        [selectedIds, pmrFloorAll, cognitiveAll],
+        () => selectFamilyPose(activeView?.ids ?? new Set(), pmrFloorAll, cognitiveAll),
+        [activeView, pmrFloorAll, cognitiveAll],
     );
 
     const toggleSelectReference = (id: string) => {
@@ -711,13 +740,15 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         });
     };
 
-    // Une seule ligne cochée : sa fiche montre déjà ses implantations
-    // (même arbre, même export) — pas de vue intermédiaire.
-    const handleViewSelectedImplantations = () => {
-        const { referenceIds, elementIds } = splitSelection(selectedIds);
-        if (referenceIds.length === 1 && elementIds.length === 0) { setOpenReferenceId(referenceIds[0]); return; }
-        if (referenceIds.length === 0 && elementIds.length === 1) { setOpenElementId(elementIds[0]); return; }
-        setActiveSelection(selectionFromReferences(index, referenceIds, selectionLabel(selectedIds, familyElements)));
+    // Toujours la même vue (jamais une fiche, même pour une seule ligne) :
+    // la fiche s'ouvre par un clic sur la ligne du tableau.
+    const handleViewImplantations = (scope: ViewScope, perimeter: string) => {
+        const ids = new Set(scope.ids);
+        const { referenceIds } = splitSelection(ids);
+        setActiveView({
+            selection: selectionFromReferences(index, referenceIds, selectionLabel(ids, familyElements)),
+            ids, source: scope.source, perimeter,
+        });
     };
 
     // Navigation transverse : une autre section peut demander l'ouverture
@@ -790,15 +821,17 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
     // Vue Implantations sélectionnées — même priorité que la fiche de vie
     // (au-dessus des sous-sections), tant qu'une sélection est active.
-    if (activeSelection) {
+    if (activeView) {
         return (
             <SelectedImplantationsView
-                selection={activeSelection}
+                selection={activeView.selection}
+                source={activeView.source}
+                perimeter={activeView.perimeter}
                 cognitive={cognitivePose}
                 pmrFloor={pmrFloorPose}
                 index={index}
                 references={references}
-                onBack={() => setActiveSelection(null)}
+                onBack={() => setActiveView(null)}
                 onOpenReference={setOpenReferenceId}
             />
         );
@@ -837,7 +870,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     selectedIds={selectedIds}
                     onToggleSelect={toggleSelectReference}
                     onSetSelection={(ids) => setSelectedIds(new Set(ids))}
-                    onViewSelectedImplantations={handleViewSelectedImplantations}
+                    onViewImplantations={handleViewImplantations}
                 />
             )}
             {subSection === 'implantations' && (
