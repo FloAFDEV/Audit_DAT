@@ -27,7 +27,7 @@ const STATUS: Record<string, { label: string; tone: string }> = {
     [EquipmentStatusType.NOT_APPLICABLE]: { label: 'Non installé', tone: 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400' },
 };
 
-const StatusBadge: React.FC<{ status: EquipmentStatus }> = ({ status }) => {
+export const StatusBadge: React.FC<{ status: EquipmentStatus }> = ({ status }) => {
     const s = STATUS[status] ?? STATUS.NotChecked;
     return <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${s.tone}`}>{s.label}</span>;
 };
@@ -53,6 +53,36 @@ export const preparationParts = (element: FamilyElement): { line: string; label:
 const orderItems = (items: StationEquipmentItem[]) => [...new Set(items.map(i => i.line))].sort(compareLines)
     .flatMap(line => sortByPhysicalStationOrder(line, items.filter(i => i.line === line), i => i.stationName));
 
+/** Un emplacement d'équipement de station : direction · rang, dimensions,
+ *  statut, sous-éléments, commentaire. Partagé par la fiche et le
+ *  patrimoine d'une station. */
+export const EquipmentItemCard: React.FC<{ item: StationEquipmentItem }> = ({ item }) => (
+    <li className="ml-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+        <div className="flex items-start justify-between gap-3">
+            <span className="min-w-0">
+                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">
+                    {item.direction ?? 'Direction non précisée'}{item.rank ? ` · n°${item.rank}` : ''}
+                </span>
+                {item.dimensions && <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDimensionText(item.dimensions)}</span>}
+            </span>
+            <StatusBadge status={item.status} />
+        </div>
+        {item.subElements.length > 0 && (
+            <ul className="mt-2 space-y-1 border-l border-slate-200 dark:border-slate-700 pl-2">
+                {item.subElements.map(subElement => (
+                    <li key={subElement.label} className="flex items-baseline justify-between gap-3 text-xs">
+                        <span className="min-w-0 text-slate-600 dark:text-slate-300 break-words">
+                            {subElement.label}{subElement.dimensions ? ` · ${subElement.dimensions}` : ''}
+                        </span>
+                        <StatusBadge status={subElement.status} />
+                    </li>
+                ))}
+            </ul>
+        )}
+        {item.comment && <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400 break-words">{item.comment}</p>}
+    </li>
+);
+
 const EquipmentTree: React.FC<{ items: StationEquipmentItem[]; tag: string }> = ({ items, tag }) => (
     <LineStationTree
         items={items}
@@ -63,32 +93,7 @@ const EquipmentTree: React.FC<{ items: StationEquipmentItem[]; tag: string }> = 
         )}
         renderStation={stationItems => (
             <ul className="space-y-2">
-                {stationItems.map((item, i) => (
-                    <li key={i} className="ml-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
-                        <div className="flex items-start justify-between gap-3">
-                            <span className="min-w-0">
-                                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">
-                                    {item.direction ?? 'Direction non précisée'}{item.rank ? ` · n°${item.rank}` : ''}
-                                </span>
-                                {item.dimensions && <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDimensionText(item.dimensions)}</span>}
-                            </span>
-                            <StatusBadge status={item.status} />
-                        </div>
-                        {item.subElements.length > 0 && (
-                            <ul className="mt-2 space-y-1 border-l border-slate-200 dark:border-slate-700 pl-2">
-                                {item.subElements.map(subElement => (
-                                    <li key={subElement.label} className="flex items-baseline justify-between gap-3 text-xs">
-                                        <span className="min-w-0 text-slate-600 dark:text-slate-300 break-words">
-                                            {subElement.label}{subElement.dimensions ? ` · ${subElement.dimensions}` : ''}
-                                        </span>
-                                        <StatusBadge status={subElement.status} />
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                        {item.comment && <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400 break-words">{item.comment}</p>}
-                    </li>
-                ))}
+                {stationItems.map((item, i) => <EquipmentItemCard key={i} item={item} />)}
             </ul>
         )}
     />

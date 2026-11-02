@@ -44,7 +44,9 @@ import {
     ElementFamily, ELEMENT_FAMILY_LABELS, FamilyElement, buildFamilyElements, splitSelection, selectFamilyPose,
     selectionLabel, pmrElementIdOf, cognitiveElementIdOf, isSelectableFamily, buildStationEquipmentElements,
 } from '../../utils/cockpit/familyElements';
-import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
+import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS, StationEquipmentKind } from '../../utils/cockpit/stationEquipment';
+import { buildStationPatrimoine, StationKey } from '../../utils/cockpit/stationPatrimoine';
+import StationPatrimoineView from './StationPatrimoineView';
 import FamilyElementSheet from './FamilyElementSheet';
 import { ViewScope, resolveViewScope, viewScopeButtonLabel } from '../../utils/cockpit/viewScope';
 import StationEquipmentSheet, { preparationParts } from './StationEquipmentSheet';
@@ -372,24 +374,36 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
 
 /* ================= Implantations : le parc sur le terrain ================= */
 
+/** Filtres de l'explorateur, conservés par le conteneur : on les retrouve
+ *  au retour d'une fiche ou du patrimoine complet d'une station. */
+export interface ImplantationsFilter {
+    line: string;
+    status: string;
+    query: string;
+    /** Matières sélectionnées (cards) — vide = toutes les matières. */
+    supports: ReadonlySet<SignageSupport>;
+}
+export const DEFAULT_IMPLANTATIONS_FILTER: ImplantationsFilter = { line: 'ALL', status: 'ALL', query: '', supports: new Set() };
+
 interface ImplantationsExplorerProps {
     references: SignageReference[];
     index: ReturnType<typeof usePatrimoineIndex>;
     onOpenReference: (id: string) => void;
+    filter: ImplantationsFilter;
+    onFilterChange: (filter: ImplantationsFilter) => void;
+    onOpenStation: (station: StationKey) => void;
 }
 
-const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ references, index, onOpenReference }) => {
-    const [line, setLine] = useState<string>('ALL');
-    const [status, setStatus] = useState<string>('ALL');
-    const [query, setQuery] = useState('');
-    // Matières sélectionnées (cards) — vide = toutes les matières.
-    const [supports, setSupports] = useState<Set<SignageSupport>>(new Set());
+const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ references, index, onOpenReference, filter, onFilterChange, onOpenStation }) => {
+    const { line, status, query, supports } = filter;
+    const setLine = (value: string) => onFilterChange({ ...filter, line: value });
+    const setStatus = (value: string) => onFilterChange({ ...filter, status: value });
+    const setQuery = (value: string) => onFilterChange({ ...filter, query: value });
+    const setSupports = (value: ReadonlySet<SignageSupport>) => onFilterChange({ ...filter, supports: value });
     const toggleSupport = (support: SignageSupport) => {
-        setSupports(prev => {
-            const next = new Set(prev);
-            if (next.has(support)) next.delete(support); else next.add(support);
-            return next;
-        });
+        const next = new Set(supports);
+        if (next.has(support)) next.delete(support); else next.add(support);
+        setSupports(next);
     };
 
     const refById = useMemo(() => new Map(references.map(r => [r.id, r])), [references]);
@@ -490,7 +504,7 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 
             {/* Arbre des implantations — même rendu que « Implantations
                 sélectionnées », aucune implantation tronquée. */}
-            <ImplantationsTree items={filtered} refById={refById} onOpenReference={onOpenReference} />
+            <ImplantationsTree items={filtered} refById={refById} onOpenReference={onOpenReference} onOpenStation={onOpenStation} />
             {filtered.length === 0 && (
                 <p className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                     Aucune implantation ne correspond aux filtres.
@@ -697,6 +711,10 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
     const [openElementId, setOpenElementId] = useState<string | null>(null);
     const [referencesFilter, setReferencesFilter] = useState<ReferencesFilter>({ family: 'ALL', support: 'ALL', query: '' });
+    const [implantationsFilter, setImplantationsFilter] = useState<ImplantationsFilter>(DEFAULT_IMPLANTATIONS_FILTER);
+    // Patrimoine complet d'une station (lieu + ligne) ouvert depuis
+    // l'explorateur — au-dessus de lui, sous la fiche de vie.
+    const [openStation, setOpenStation] = useState<StationKey | null>(null);
     // Sélection multiple (Référentiel → Implantations) : ids réels, jamais
     // les libellés affichés — cf. utils/cockpit/selection.ts. Mêle références
     // catalogue et éléments hors catalogue (ids de lignes d'inventaire).
@@ -726,6 +744,13 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         for (const i of cognitiveAll) if (isLineBExtension(i.line, i.lieuName)) add(cognitiveElementIdOf(i));
         return counts;
     }, [index, pmrFloorAll, cognitiveAll]);
+
+    const stationPatrimoine = useMemo(() => openStation && buildStationPatrimoine({
+        lieux, implantations: index.implantations, pmrFloor: pmrFloorAll, cognitive: cognitiveAll,
+        stationEquipment: stationEquipmentAll, futureStationEquipment: stationEquipmentFuture,
+    }, openStation), [openStation, lieux, index, pmrFloorAll, cognitiveAll, stationEquipmentAll, stationEquipmentFuture]);
+    const equipmentLabel = (kind: StationEquipmentKind) =>
+        familyElements.find(e => e.id === STATION_EQUIPMENT_ROW_IDS[kind])?.name ?? kind;
 
     const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
         () => selectFamilyPose(activeView?.ids ?? new Set(), pmrFloorAll, cognitiveAll),
@@ -819,6 +844,20 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         }
     }
 
+    // Patrimoine complet d'une station — sous la fiche de vie (qui s'ouvre
+    // depuis lui et y revient), au-dessus de l'explorateur.
+    if (subSection === 'implantations' && stationPatrimoine) {
+        return (
+            <StationPatrimoineView
+                patrimoine={stationPatrimoine}
+                refById={new Map(references.map(r => [r.id, r]))}
+                equipmentLabel={equipmentLabel}
+                onBack={() => setOpenStation(null)}
+                onOpenReference={setOpenReferenceId}
+            />
+        );
+    }
+
     // Vue Implantations sélectionnées — même priorité que la fiche de vie
     // (au-dessus des sous-sections), tant qu'une sélection est active.
     if (activeView) {
@@ -878,6 +917,9 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
                     references={references}
                     index={index}
                     onOpenReference={setOpenReferenceId}
+                    filter={implantationsFilter}
+                    onFilterChange={setImplantationsFilter}
+                    onOpenStation={setOpenStation}
                 />
             )}
             {subSection === 'baches' && <BachesView />}

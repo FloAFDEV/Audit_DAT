@@ -4,7 +4,8 @@
 // pictogrammes cognitifs). Mêmes règles que l'inventaire (hooks/useStats.ts) :
 // périmètre d'exploitation, module « sans objet » exclu, un élément par
 // adhésif, matière attribuée par getPmrMaterial (jamais déduite).
-import { AuditModuleType, Lieu, PMRFloorAdhesiveData } from '../../types';
+import { AuditModuleType, FloorAdhesiveStatus, Lieu, PMRFloorAdhesiveData } from '../../types';
+import { readFloorAdhesiveStatus } from './floorAdhesiveStatus';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { getPmrMaterial } from '../../data/pmr_materials';
 import { pmrAccessLabel } from '../fieldPhotos';
@@ -13,10 +14,15 @@ export const PMR_FLOOR_DIMENSIONS = '920x370mm';
 
 export interface PmrFloorPoseItem {
     line: string;
+    lieuId: string;
     lieuName: string;
     /** Accès porté par le nom du module (« Accès Haut (PRI) »), vide sinon. */
     accessLabel: string;
     material: string | null;
+    /** Statut constaté sur CET adhésif (lecture seule) ; absent = statut
+     *  indisponible, jamais « Non contrôlé » par défaut. N'intervient ni
+     *  dans les quantités ni dans les exports. */
+    status?: FloorAdhesiveStatus;
 }
 
 export const pmrFloorPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorPoseItem[] => {
@@ -29,8 +35,13 @@ export const pmrFloorPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): P
             const line = module.line ?? '';
             if (lines && !lines.has(line)) continue;
             const material = getPmrMaterial(data.stationName, module.name);
-            for (let i = 0; i < (data.adhesives ?? []).length; i++) {
-                items.push({ line, lieuName: lieu.name, accessLabel: pmrAccessLabel(module.name), material });
+            // Un élément par adhésif, lu sur l'adhésif lui-même : le statut
+            // correspond toujours au constat de cet exemplaire.
+            for (const adhesive of data.adhesives ?? []) {
+                items.push({
+                    line, lieuId: lieu.id, lieuName: lieu.name, accessLabel: pmrAccessLabel(module.name), material,
+                    status: readFloorAdhesiveStatus(adhesive?.status),
+                });
             }
         }
     }
