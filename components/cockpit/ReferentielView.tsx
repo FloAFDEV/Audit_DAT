@@ -30,7 +30,7 @@ import ReferenceSheet from './ReferenceSheet';
 import { ImplantationsTree, ImplantationsExportButton, LineBadge, PoseCsvExportButton } from './ImplantationsTree';
 import BachesView from './BachesView';
 import { useCockpitNav } from './cockpitNav';
-import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, compareLines, displayReferenceName } from './labels';
+import { SUPPORT_LABELS, AUDIT_TYPE_LABELS, formatDimensions, formatDimensionText, compareLines, displayReferenceName } from './labels';
 import { Selection, selectionFromReferences, filterImplantationsBySupports } from '../../utils/cockpit/selection';
 import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { CognitivePictogramPoseItem, cognitivePictogramPoseItems } from '../../utils/cockpit/cognitivePictogramSummary';
@@ -38,34 +38,67 @@ import { PmrFloorPoseItem, pmrFloorPoseItems } from '../../utils/cockpit/pmrFloo
 import { buildPoseRows } from './implantationsExportRows';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
 import { ReferenceNamePreview } from '../ReferenceVisual';
+import { getInventoryVisualReferenceId } from '../../data/referenceVisuals';
+import { computeAdhesiveInventory } from '../../hooks/useStats';
+import {
+    ElementFamily, ELEMENT_FAMILY_LABELS, FamilyElement, buildFamilyElements, splitSelection, selectFamilyPose,
+    selectionLabel, pmrElementIdOf, cognitiveElementIdOf, isSelectableFamily, buildStationEquipmentElements,
+} from '../../utils/cockpit/familyElements';
+import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
+import FamilyElementSheet from './FamilyElementSheet';
+import StationEquipmentSheet, { preparationParts } from './StationEquipmentSheet';
+import { countLineBExtension, isLineBExtension } from '../../data/lineBExtension';
+import { PoseRowsTree } from './PoseRowsTree';
 
 /* ================= Références : liste filtrable ================= */
+// Familles du catalogue (DAT, P+R, ECA, Plans de quartier) et familles hors
+// catalogue (PMR au sol par matière, Pictogrammes cognitifs par dimension)
+// dans une même liste : même lecture famille → élément → quantités →
+// implantations. Le filtre de famille ne sert qu'à la CONSULTATION ; la
+// sélection (export, implantations) est indépendante et survit aux
+// changements de filtre — elle peut mêler plusieurs familles.
+
+type FamilyFilter = 'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ' | ElementFamily;
+
+const FAMILY_FILTERS: { key: FamilyFilter; label: string }[] = [
+    { key: 'ALL', label: 'Toutes familles' },
+    ...(['DAT', 'PR', 'ECA', 'PDQ'] as const).map(f => ({ key: f, label: AUDIT_TYPE_LABELS[f] })),
+    ...(['PMR', 'COG', 'SIG'] as const).map(f => ({ key: f, label: ELEMENT_FAMILY_LABELS[f] })),
+];
+
+/** Filtre de consultation — conservé par le conteneur : revenir d'une fiche
+ *  retrouve la liste telle qu'on l'a quittée. */
+export interface ReferencesFilter { family: FamilyFilter; support: 'ALL' | SignageSupport; query: string }
+
+/** Sous-libellé d'une quantité : composante non confirmée comme posée.
+ *  Retour à la ligne autorisé sous sm (petits écrans), insécable au-delà. */
+const QtyNote: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <span className="block text-[11px] leading-tight font-normal text-slate-500 dark:text-slate-400 sm:whitespace-nowrap">{children}</span>
+);
 
 interface ReferencesListProps {
+    filter: ReferencesFilter;
+    /** Emplacements situés sur l'extension B (comptés, pose non confirmée). */
+    lineBExtensionCountOf: (id: string) => number;
+    onFilterChange: (filter: ReferencesFilter) => void;
     references: SignageReference[];
+    elements: FamilyElement[];
     usageOf: (id: string) => { installedCount: number; lieuCount: number; lines: string[] } | undefined;
     onOpen: (id: string) => void;
+    onOpenElement: (id: string) => void;
     selectedIds: Set<string>;
     onToggleSelect: (id: string) => void;
     onSetSelection: (ids: string[]) => void;
     onViewSelectedImplantations: () => void;
-    /** Pictogrammes cognitifs ajoutés à la sélection (famille sans
-     *  référence catalogue, servie par son propre module). */
-    includeCognitive: boolean;
-    onToggleCognitive: () => void;
-    /** Adhésifs PMR au sol ajoutés à la sélection (même cas : pas de
-     *  référence catalogue, module dédié). */
-    includePmrFloor: boolean;
-    onTogglePmrFloor: () => void;
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
-    references, usageOf, onOpen, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
-    includeCognitive, onToggleCognitive, includePmrFloor, onTogglePmrFloor,
+    filter, onFilterChange, lineBExtensionCountOf, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
 }) => {
-    const [family, setFamily] = useState<'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ'>('ALL');
-    const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
-    const [query, setQuery] = useState('');
+    const { family, support, query } = filter;
+    const setFamily = (value: FamilyFilter) => onFilterChange({ ...filter, family: value });
+    const setSupport = (value: 'ALL' | SignageSupport) => onFilterChange({ ...filter, support: value });
+    const setQuery = (value: string) => onFilterChange({ ...filter, query: value });
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -83,9 +116,25 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
         });
     }, [references, family, support, query]);
 
-    // Sélection portée par l'id réel (référence.id), jamais par le libellé
-    // affiché — cf. contrat de sélection (utils/cockpit/selection.ts).
-    const visibleIds = useMemo(() => filtered.map(r => r.id), [filtered]);
+    // Éléments hors catalogue : pas de support catalogué — un filtre de
+    // support les écarte (jamais un support supposé).
+    const filteredElements = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        return elements.filter(e => {
+            if (family !== 'ALL' && e.family !== family) return false;
+            if (support !== 'ALL') return false;
+            if (q && !`${e.name} ${e.material ?? ''} ${e.dimensions} ${ELEMENT_FAMILY_LABELS[e.family]}`.toLowerCase().includes(q)) return false;
+            return true;
+        });
+    }, [elements, family, support, query]);
+
+    // Sélection portée par l'id réel (référence.id, ligne d'inventaire de
+    // l'élément), jamais par le libellé affiché — cf. utils/cockpit/selection.ts.
+    // Équipements station : consultation seule, jamais dans une sélection d'export.
+    const visibleIds = useMemo(
+        () => [...filtered.map(r => r.id), ...filteredElements.filter(e => isSelectableFamily(e.family)).map(e => e.id)],
+        [filtered, filteredElements],
+    );
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
     const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
     const toggleSelectAllVisible = () => {
@@ -98,10 +147,32 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
             onSetSelection([...new Set([...selectedIds, ...visibleIds])]);
         }
     };
+    const familyLabel = FAMILY_FILTERS.find(f => f.key === family)?.label ?? '';
+    const selectAllLabel = family === 'ALL' ? 'Sélectionner toutes les lignes visibles' : `Sélectionner toute la famille ${familyLabel} (lignes visibles)`;
+
+    const { referenceIds: selectedReferenceIds, elementIds: selectedElementIds } = splitSelection(selectedIds);
+    const selectionSummary = [
+        selectedReferenceIds.length > 0 && `${selectedReferenceIds.length} référence${selectedReferenceIds.length > 1 ? 's' : ''}`,
+        selectedElementIds.length > 0 && `${selectedElementIds.length} élément${selectedElementIds.length > 1 ? 's' : ''} hors catalogue`,
+    ].filter(Boolean).join(' + ');
+
+    const rowClass = (isSelected: boolean, idx: number) =>
+        `cursor-pointer hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-teal-50/70 dark:bg-teal-900/20' : idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`;
+    const checkbox = (id: string, label: string) => (
+        <td className="p-3" onClick={e => e.stopPropagation()}>
+            <input
+                type="checkbox"
+                checked={selectedIds.has(id)}
+                onChange={() => onToggleSelect(id)}
+                aria-label={`Sélectionner ${label}`}
+                className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
+            />
+        </td>
+    );
 
     return (
         <div className="space-y-4">
-            {/* Filtres */}
+            {/* Filtres de consultation */}
             <div className="flex flex-col sm:flex-row gap-3 sm:items-center flex-wrap">
                 <div className="relative flex-1 min-w-[220px]">
                     <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -115,34 +186,15 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                         className="block w-full rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-700 py-2 pl-10 pr-3 text-slate-900 dark:text-slate-50 placeholder:text-slate-500 focus:ring-2 focus:ring-inset focus:ring-teal-600 sm:text-sm dark:placeholder:text-slate-400"
                     />
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                    {(['ALL', 'DAT', 'PR', 'ECA', 'PDQ'] as const).map(f => (
+                <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Famille consultée">
+                    {FAMILY_FILTERS.map(({ key, label }) => (
                         <button
-                            key={f}
-                            onClick={() => setFamily(f)}
-                            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                family === f
-                                    ? 'bg-teal-700 text-white'
-                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
-                            }`}
-                        >
-                            {f === 'ALL' ? 'Toutes familles' : AUDIT_TYPE_LABELS[f]}
-                        </button>
-                    ))}
-                    {/* Familles sans référence catalogue : ajoutées à la
-                        sélection (implantations, CSV de pose), pas un filtre. */}
-                    <span className="self-center mx-1 h-4 w-px bg-slate-300 dark:bg-slate-600" aria-hidden="true" />
-                    {([
-                        ['+ Pictogrammes cognitifs', includeCognitive, onToggleCognitive],
-                        ['+ Adhésifs PMR au sol', includePmrFloor, onTogglePmrFloor],
-                    ] as const).map(([label, active, onToggle]) => (
-                        <button
-                            key={label}
+                            key={key}
                             type="button"
-                            onClick={onToggle}
-                            aria-pressed={active}
+                            onClick={() => setFamily(key)}
+                            aria-pressed={family === key}
                             className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
-                                active
+                                family === key
                                     ? 'bg-teal-700 text-white'
                                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
                             }`}
@@ -163,26 +215,30 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                 </select>
             </div>
 
-            {/* Barre de sélection — n'apparaît que si au moins une référence est
-                cochée, pour ne pas alourdir la vue par défaut. */}
-            <div className="flex items-center justify-between gap-3 flex-wrap min-h-[2.25rem]">
-                <span className="flex items-center gap-3 flex-wrap text-sm font-medium text-slate-600 dark:text-slate-300">
-                    {selectedIds.size > 0
-                        ? `${selectedIds.size} référence${selectedIds.size > 1 ? 's' : ''} sélectionnée${selectedIds.size > 1 ? 's' : ''}`
-                        : ''}
+            {/* Barre de sélection (indépendante du filtre) */}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between min-h-[2.25rem]">
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                    {selectedIds.size > 0 && (
+                        <>
+                            {selectionSummary} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                            <button
+                                type="button"
+                                onClick={() => onSetSelection([])}
+                                className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 text-xs font-semibold"
+                            >
+                                <X className="w-3 h-3" aria-hidden="true" /> Vider
+                            </button>
+                        </>
+                    )}
                 </span>
                 <button
                     type="button"
                     onClick={onViewSelectedImplantations}
-                    disabled={selectedIds.size === 0 && !includeCognitive && !includePmrFloor}
-                    className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
+                    disabled={selectedIds.size === 0}
+                    className="inline-flex items-center justify-center gap-2 rounded-full px-4 py-1.5 text-sm font-semibold transition-colors bg-teal-700 text-white hover:bg-teal-800 disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-slate-700 dark:disabled:text-slate-500"
                 >
                     <MapPinned className="w-4 h-4" />
-                    Voir les implantations {(() => {
-                        const extras = [includeCognitive && 'pictos', includePmrFloor && 'PMR sol'].filter(Boolean);
-                        if (selectedIds.size > 0) return `(${[selectedIds.size, ...extras].join(' + ')})`;
-                        return extras.length ? `(${extras.join(' + ')})` : '';
-                    })()}
+                    Voir les implantations{selectedIds.size > 0 ? ` (${selectedIds.size})` : ''}
                 </button>
             </div>
 
@@ -191,45 +247,35 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                 <table className="min-w-full text-sm">
                     <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
-                            <th className="p-3 w-8">
+                            <th className="p-2 sm:p-3 w-8">
                                 <input
                                     type="checkbox"
                                     checked={allVisibleSelected}
                                     ref={el => { if (el) el.indeterminate = !allVisibleSelected && someVisibleSelected; }}
                                     onChange={toggleSelectAllVisible}
-                                    aria-label="Sélectionner toutes les références visibles"
+                                    aria-label={selectAllLabel}
+                                    title={selectAllLabel}
                                     className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
                                 />
                             </th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Posés</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider">Référence / élément</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
+                            {/* Emplacements référencés (tous statuts d'audit confondus),
+                                jamais un nombre d'objets constatés posés. */}
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center" title="Emplacements référencés, contrôlés ou non — pas un nombre d'équipements constatés sur place"><span className="sm:hidden">Qté réf.</span><span className="hidden sm:inline">Qté référencée</span></th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {filtered.map((ref, idx) => {
                             const usage = usageOf(ref.id);
-                            const isSelected = selectedIds.has(ref.id);
                             return (
-                                <tr
-                                    key={ref.id}
-                                    onClick={() => onOpen(ref.id)}
-                                    className={`cursor-pointer hover:bg-teal-50/50 dark:hover:bg-slate-700/50 transition-colors ${isSelected ? 'bg-teal-50/70 dark:bg-teal-900/20' : idx % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-slate-50 dark:bg-slate-800'}`}
-                                >
-                                    <td className="p-3" onClick={e => e.stopPropagation()}>
-                                        <input
-                                            type="checkbox"
-                                            checked={isSelected}
-                                            onChange={() => onToggleSelect(ref.id)}
-                                            aria-label={`Sélectionner ${ref.name}`}
-                                            className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
-                                        />
-                                    </td>
-                                    <td className="p-3">
+                                <tr key={ref.id} onClick={() => onOpen(ref.id)} className={rowClass(selectedIds.has(ref.id), idx)}>
+                                    {checkbox(ref.id, ref.name)}
+                                    <td className="p-2 sm:p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             {/* Aperçu du visuel au survol : même composant et même
                                                 identifiant que l'Inventaire détaillé (Synthèse). */}
@@ -242,16 +288,54 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                             {ref.code ? `${ref.code} · ` : ''}{ref.id}
                                         </span>
                                     </td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
-                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}</td>
-                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
-                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
+                                    <td className="p-2 sm:p-3 sm:whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
+                                    <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
+                                    <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
+                                    <td className="p-2 sm:p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                        {usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
+                                        {lineBExtensionCountOf(ref.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(ref.id)} ext. B 2027</QtyNote>}
+                                    </td>
+                                    <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
+                                    <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                 </tr>
                             );
                         })}
-                        {filtered.length === 0 && (
+                        {filteredElements.map((element, i) => (
+                            <tr key={element.id} onClick={() => onOpenElement(element.id)} className={rowClass(selectedIds.has(element.id), filtered.length + i)}>
+                                {isSelectableFamily(element.family)
+                                    ? checkbox(element.id, `${element.name} ${element.material ?? element.dimensions}`)
+                                    : <td className="p-2 sm:p-3" title="Consultation seule — hors exports" />}
+                                <td className="p-2 sm:p-3">
+                                    <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(element.id)} label={element.name}>
+                                        <span className="font-medium text-slate-800 dark:text-slate-100">{element.name}</span>
+                                    </ReferenceNamePreview>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                        {element.family === 'SIG'
+                                            ? 'consultation seule · hors exports'
+                                            : `${element.material ?? formatDimensionText(element.dimensions)} · hors catalogue`}
+                                    </span>
+                                </td>
+                                <td className="p-2 sm:p-3 sm:whitespace-nowrap text-slate-600 dark:text-slate-300">{ELEMENT_FAMILY_LABELS[element.family]}</td>
+                                <td className="p-2 sm:p-3 whitespace-nowrap text-slate-500 dark:text-slate-400 hidden sm:table-cell">—</td>
+                                <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
+                                <td className="p-2 sm:p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                    {element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
+                                    {/* Équipements station : exploitation + préparation (comptées),
+                                        stations futures à part (hors quantité) — jamais confondues. */}
+                                    {preparationParts(element).length > 0 && (
+                                        <>
+                                            <QtyNote>{element.inService} en exploitation</QtyNote>
+                                            {preparationParts(element).map(p => <QtyNote key={p.line}>+ {p.count} {p.label} en prép.</QtyNote>)}
+                                        </>
+                                    )}
+                                    {!!element.futureCount && <QtyNote>(+ {element.futureCount} futur{element.futureCount > 1 ? 's' : ''}, hors qté)</QtyNote>}
+                                    {lineBExtensionCountOf(element.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(element.id)} ext. B 2027</QtyNote>}
+                                </td>
+                                <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
+                                <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
+                            </tr>
+                        ))}
+                        {filtered.length === 0 && filteredElements.length === 0 && (
                             <tr>
                                 <td colSpan={8} className="p-6 text-center text-base text-slate-500 dark:text-slate-400">
                                     Aucune référence ne correspond aux filtres.
@@ -262,7 +346,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                 </table>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-                {filtered.length} référence{filtered.length > 1 ? 's' : ''} affichée{filtered.length > 1 ? 's' : ''} · quantités, stations et lignes calculées par le moteur d'index du patrimoine.
+                {filtered.length} référence{filtered.length > 1 ? 's' : ''}
+                {filteredElements.length > 0 && ` + ${filteredElements.length} élément${filteredElements.length > 1 ? 's' : ''} hors catalogue`} affiché{filtered.length + filteredElements.length > 1 ? 's' : ''} · quantités des références : moteur d'index du patrimoine ; éléments hors catalogue : Inventaire détaillé.
             </p>
         </div>
     );
@@ -402,6 +487,15 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 };
 
 /* ================= Implantations d'une sélection de références ================= */
+
+/** Indicateur de quantité de la sélection : nombre + libellé sur une ligne,
+ *  jamais coupé au milieu (mobile). */
+const SelectionCount: React.FC<{ value: number; label: string }> = ({ value, label }) => (
+    <li className="inline-flex items-baseline gap-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 px-3 py-1 whitespace-nowrap">
+        <span className="text-base font-bold text-teal-700 dark:text-teal-300 tabular-nums">{value}</span>
+        <span className="text-sm text-slate-700 dark:text-slate-200">{label}</span>
+    </li>
+);
 // Vue de CONSULTATION/EXTRACTION : ne fait que regrouper pour l'affichage
 // (utils/cockpit/implantationsGrouping.ts) des implantations déjà calculées
 // par le moteur d'index — aucun second calcul, aucune notion de campagne/
@@ -438,59 +532,56 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
     });
     const items = useMemo(() => selection.items.filter(i => !excludedLines.has(i.line)), [selection, excludedLines]);
     const cognitiveItems = useMemo(() => cognitive.filter(c => !excludedLines.has(c.line)), [cognitive, excludedLines]);
-    // Pictogrammes affichés exactement comme exportés (même construction,
-    // même ordre que le CSV de pose) : une ligne par pictogramme.
-    const cognitiveRows = useMemo(
-        () => buildPoseRows([], refById, cognitiveItems).map((row, i) => ({ row, key: i })),
-        [refById, cognitiveItems],
-    );
+    // Familles hors catalogue affichées exactement comme exportées (même
+    // construction, même ordre que le CSV de pose), regroupées ligne →
+    // station → accès.
+    const cognitiveRows = useMemo(() => buildPoseRows([], refById, cognitiveItems), [refById, cognitiveItems]);
     const pmrFloorItems = useMemo(() => pmrFloor.filter(p => !excludedLines.has(p.line)), [pmrFloor, excludedLines]);
-    const pmrFloorRows = useMemo(
-        () => buildPoseRows([], refById, [], pmrFloorItems).map((row, i) => ({ row, key: i })),
-        [refById, pmrFloorItems],
-    );
+    const pmrFloorRows = useMemo(() => buildPoseRows([], refById, [], pmrFloorItems), [refById, pmrFloorItems]);
     const stationCodeByName = useMemo(() => new Map(cognitive.map(c => [`${c.line}|${c.lieuName}`, c.stationCode])), [cognitive]);
 
     const total = items.length;
+    const lineBExtensionCount = countLineBExtension([...items, ...cognitiveItems, ...pmrFloorItems]);
 
     return (
         <div className="space-y-5">
-            <div className="flex items-start gap-3">
-                <button
-                    onClick={onBack}
-                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-                    aria-label="Retour aux références"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
-                    <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
-                        <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{total}</span>
-                        <span className="text-slate-600 dark:text-slate-300">implantation{total > 1 ? 's' : ''}</span>
-                        <span className="text-slate-300 dark:text-slate-600">·</span>
-                        <span className="text-slate-600 dark:text-slate-300">{selection.label}</span>
+            {/* Mobile : titre → indicateurs → actions (empilés) ; à partir de
+                sm, indicateurs et actions partagent une ligne. */}
+            <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                    <button
+                        onClick={onBack}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                        aria-label="Retour aux références"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
+                        <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300 break-words">{selection.label}</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <ul className="flex flex-wrap gap-2" aria-label="Quantités de la sélection">
+                        {(selection.items.length > 0 || (cognitive.length === 0 && pmrFloor.length === 0)) && (
+                            <SelectionCount value={total} label={`implantation${total > 1 ? 's' : ''}`} />
+                        )}
                         {cognitive.length > 0 && (
-                            <>
-                                <span className="text-slate-300 dark:text-slate-600">·</span>
-                                <span className="text-slate-600 dark:text-slate-300">
-                                    {cognitiveItems.length} pictogramme{cognitiveItems.length > 1 ? 's' : ''} cognitif{cognitiveItems.length > 1 ? 's' : ''}
-                                </span>
-                            </>
+                            <SelectionCount value={cognitiveItems.length} label={`pictogramme${cognitiveItems.length > 1 ? 's' : ''} cognitif${cognitiveItems.length > 1 ? 's' : ''}`} />
                         )}
                         {pmrFloor.length > 0 && (
-                            <>
-                                <span className="text-slate-300 dark:text-slate-600">·</span>
-                                <span className="text-slate-600 dark:text-slate-300">
-                                    {pmrFloorItems.length} adhésif{pmrFloorItems.length > 1 ? 's' : ''} PMR au sol
-                                </span>
-                            </>
+                            <SelectionCount value={pmrFloorItems.length} label={`adhésif${pmrFloorItems.length > 1 ? 's' : ''} PMR au sol`} />
                         )}
-                    </p>
-                </div>
-                <div className="flex flex-wrap justify-end gap-2">
-                    <ImplantationsExportButton items={items} index={index} refById={refById} />
-                    <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} pmrFloor={pmrFloorItems} />
+                        {lineBExtensionCount > 0 && (
+                            <li className="inline-flex items-baseline gap-1.5 rounded-full bg-sky-50 dark:bg-sky-900/30 px-3 py-1 whitespace-nowrap" title="Extension B — mise en service prévue début 2027 : emplacements référencés, pose non confirmée">
+                                <span className="text-sm text-sky-800 dark:text-sky-300">dont <span className="font-bold tabular-nums">{lineBExtensionCount}</span> ext. B 2027</span>
+                            </li>
+                        )}
+                    </ul>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end *:w-full *:justify-center sm:*:w-auto">
+                        <ImplantationsExportButton items={items} index={index} refById={refById} />
+                        <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} pmrFloor={pmrFloorItems} />
+                    </div>
                 </div>
             </div>
 
@@ -529,46 +620,26 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
             <ImplantationsTree items={items} refById={refById} onOpenReference={onOpenReference} />
 
             {cognitiveRows.length > 0 && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Pictogrammes cognitifs</span>
-                        <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{cognitiveRows.length}</span>
-                    </div>
-                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {cognitiveRows.map(({ row, key }) => (
-                            <li key={key} className="flex items-center gap-3 px-4 py-2 text-sm">
-                                <LineBadge line={row.line} size="xs" />
-                                <CognitivePictogramVisual stationCode={stationCodeByName.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field />
-                                <span className="min-w-0 flex-1">
-                                    <span className="block truncate font-medium text-slate-800 dark:text-slate-100">{row.station}</span>
-                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.location}</span>
-                                </span>
-                                <span className="flex-shrink-0 text-xs text-slate-600 dark:text-slate-300">{row.dimensions}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <section className="space-y-2">
+                    <h3 className="flex items-center justify-between gap-3 text-sm font-bold text-slate-800 dark:text-slate-100">
+                        Pictogrammes cognitifs
+                        <span className="text-lg text-teal-700 dark:text-teal-300 tabular-nums">{cognitiveRows.length}</span>
+                    </h3>
+                    <PoseRowsTree
+                        rows={cognitiveRows}
+                        renderVisual={row => <CognitivePictogramVisual stationCode={stationCodeByName.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field />}
+                    />
+                </section>
             )}
 
             {pmrFloorRows.length > 0 && (
-                <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-                    <div className="flex items-center justify-between gap-3 px-4 py-3 bg-slate-50 dark:bg-slate-800/60">
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">Adhésifs PMR au sol</span>
-                        <span className="text-lg font-bold text-teal-700 dark:text-teal-300 tabular-nums">{pmrFloorRows.length}</span>
-                    </div>
-                    <ul className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {pmrFloorRows.map(({ row, key }) => (
-                            <li key={key} className="flex items-center gap-3 px-4 py-2 text-sm">
-                                <LineBadge line={row.line} size="xs" />
-                                <span className="min-w-0 flex-1">
-                                    <span className="block truncate font-medium text-slate-800 dark:text-slate-100">{row.station}{row.location ? ` · ${row.location}` : ''}</span>
-                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{row.designation}</span>
-                                </span>
-                                <span className="flex-shrink-0 text-xs text-slate-600 dark:text-slate-300">{row.dimensions}</span>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <section className="space-y-2">
+                    <h3 className="flex items-center justify-between gap-3 text-sm font-bold text-slate-800 dark:text-slate-100">
+                        Adhésifs PMR au sol
+                        <span className="text-lg text-teal-700 dark:text-teal-300 tabular-nums">{pmrFloorRows.length}</span>
+                    </h3>
+                    <PoseRowsTree rows={pmrFloorRows} />
+                </section>
             )}
         </div>
     );
@@ -597,36 +668,56 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const nav = useCockpitNav();
     const [subSection, setSubSection] = useState<ReferentielSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
+    const [openElementId, setOpenElementId] = useState<string | null>(null);
+    const [referencesFilter, setReferencesFilter] = useState<ReferencesFilter>({ family: 'ALL', support: 'ALL', query: '' });
     // Sélection multiple (Référentiel → Implantations) : ids réels, jamais
-    // les libellés affichés — cf. utils/cockpit/selection.ts.
-    const [selectedReferenceIds, setSelectedReferenceIds] = useState<Set<string>>(new Set());
+    // les libellés affichés — cf. utils/cockpit/selection.ts. Mêle références
+    // catalogue et éléments hors catalogue (ids de lignes d'inventaire).
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
     const [activeSelection, setActiveSelection] = useState<Selection | null>(null);
-    const [includeCognitive, setIncludeCognitive] = useState(false);
-    const cognitivePose = useMemo(() => (includeCognitive ? cognitivePictogramPoseItems(lieux) : []), [includeCognitive, lieux]);
-    const [includePmrFloor, setIncludePmrFloor] = useState(false);
-    const pmrFloorPose = useMemo(() => (includePmrFloor ? pmrFloorPoseItems(lieux) : []), [includePmrFloor, lieux]);
+
+    // Familles hors catalogue : exemplaires lus par chaque référentiel
+    // autonome, quantités de l'Inventaire détaillé (aucun calcul nouveau).
+    const pmrFloorAll = useMemo(() => pmrFloorPoseItems(lieux), [lieux]);
+    const cognitiveAll = useMemo(() => cognitivePictogramPoseItems(lieux), [lieux]);
+    const stationEquipmentAll = useMemo(() => stationEquipmentItems(lieux), [lieux]);
+    const stationEquipmentFuture = useMemo(() => futureStationEquipmentItems(lieux), [lieux]);
+    const familyElements = useMemo(() => {
+        if (isLoading) return [];
+        const inventory = computeAdhesiveInventory(lieux, references);
+        return [...buildFamilyElements(inventory, pmrFloorAll, cognitiveAll), ...buildStationEquipmentElements(inventory, stationEquipmentAll, stationEquipmentFuture)];
+    }, [isLoading, lieux, references, pmrFloorAll, cognitiveAll, stationEquipmentAll, stationEquipmentFuture]);
+    // Extension B : emplacements comptés (règles actuelles), signalés pour ne
+    // jamais être lus comme des poses confirmées.
+    const lineBExtensionCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        const add = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
+        for (const imp of index.implantations) if (isLineBExtension(imp.line, imp.lieuName)) add(imp.referenceId);
+        for (const i of pmrFloorAll) if (isLineBExtension(i.line, i.lieuName)) add(pmrElementIdOf(i));
+        for (const i of cognitiveAll) if (isLineBExtension(i.line, i.lieuName)) add(cognitiveElementIdOf(i));
+        return counts;
+    }, [index, pmrFloorAll, cognitiveAll]);
+
+    const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
+        () => selectFamilyPose(selectedIds, pmrFloorAll, cognitiveAll),
+        [selectedIds, pmrFloorAll, cognitiveAll],
+    );
 
     const toggleSelectReference = (id: string) => {
-        setSelectedReferenceIds(prev => {
+        setSelectedIds(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id); else next.add(id);
             return next;
         });
     };
 
-    // Une seule référence cochée : sa fiche montre déjà ses implantations
+    // Une seule ligne cochée : sa fiche montre déjà ses implantations
     // (même arbre, même export) — pas de vue intermédiaire.
     const handleViewSelectedImplantations = () => {
-        const ids = [...selectedReferenceIds];
-        if (ids.length === 1 && !includeCognitive && !includePmrFloor) {
-            setOpenReferenceId(ids[0]);
-            return;
-        }
-        const extras = [includeCognitive && 'pictogrammes cognitifs', includePmrFloor && 'adhésifs PMR au sol'].filter(Boolean) as string[];
-        const base = ids.length > 0 ? `${ids.length} référence${ids.length > 1 ? 's' : ''} sélectionnée${ids.length > 1 ? 's' : ''}` : '';
-        const joined = [base, ...extras].filter(Boolean).join(' + ');
-        const label = joined.charAt(0).toUpperCase() + joined.slice(1);
-        setActiveSelection(selectionFromReferences(index, ids, label));
+        const { referenceIds, elementIds } = splitSelection(selectedIds);
+        if (referenceIds.length === 1 && elementIds.length === 0) { setOpenReferenceId(referenceIds[0]); return; }
+        if (referenceIds.length === 0 && elementIds.length === 1) { setOpenElementId(elementIds[0]); return; }
+        setActiveSelection(selectionFromReferences(index, referenceIds, selectionLabel(selectedIds, familyElements)));
     };
 
     // Navigation transverse : une autre section peut demander l'ouverture
@@ -648,6 +739,31 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
     if (isLoading) {
         return <div className="py-16 text-center text-slate-500 dark:text-slate-400">Chargement du référentiel…</div>;
+    }
+
+    // Fiche d'un élément hors catalogue — même niveau que la fiche de vie.
+    const openElement = openElementId ? familyElements.find(e => e.id === openElementId) : undefined;
+    if (openElement?.family === 'SIG') {
+        const kind = Object.entries(STATION_EQUIPMENT_ROW_IDS).find(([, rowId]) => rowId === openElement.id)?.[0];
+        return (
+            <StationEquipmentSheet
+                element={openElement}
+                items={stationEquipmentAll.filter(i => i.kind === kind)}
+                futureItems={stationEquipmentFuture.filter(i => i.kind === kind)}
+                onBack={() => setOpenElementId(null)}
+            />
+        );
+    }
+    if (openElement) {
+        return (
+            <FamilyElementSheet
+                element={openElement}
+                pmrFloor={pmrFloorAll.filter(i => pmrElementIdOf(i) === openElement.id)}
+                cognitive={cognitiveAll.filter(i => cognitiveElementIdOf(i) === openElement.id)}
+                refById={new Map(references.map(r => [r.id, r]))}
+                onBack={() => setOpenElementId(null)}
+            />
+        );
     }
 
     // Fiche de vie (règle 2 : LA fiche unique) — prioritaire sur les sous-vues.
@@ -710,17 +826,18 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
             {subSection === 'references' && (
                 <ReferencesList
+                    lineBExtensionCountOf={(id) => lineBExtensionCounts.get(id) ?? 0}
+                    filter={referencesFilter}
+                    onFilterChange={setReferencesFilter}
                     references={references}
+                    elements={familyElements}
                     usageOf={(id) => index.byReference.get(id)}
                     onOpen={setOpenReferenceId}
-                    selectedIds={selectedReferenceIds}
+                    onOpenElement={setOpenElementId}
+                    selectedIds={selectedIds}
                     onToggleSelect={toggleSelectReference}
-                    onSetSelection={(ids) => setSelectedReferenceIds(new Set(ids))}
+                    onSetSelection={(ids) => setSelectedIds(new Set(ids))}
                     onViewSelectedImplantations={handleViewSelectedImplantations}
-                    includeCognitive={includeCognitive}
-                    onToggleCognitive={() => setIncludeCognitive(v => !v)}
-                    includePmrFloor={includePmrFloor}
-                    onTogglePmrFloor={() => setIncludePmrFloor(v => !v)}
                 />
             )}
             {subSection === 'implantations' && (

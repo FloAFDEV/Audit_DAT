@@ -17,6 +17,7 @@ import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { ImplantationsTree, ImplantationsExportButton, PoseCsvExportButton } from './ImplantationsTree';
 import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, displayReferenceName } from './labels';
 import { ReferenceVisual } from '../ReferenceVisual';
+import { countLineBExtension, LINE_B_EXTENSION } from '../../data/lineBExtension';
 
 // LineBadge vit avec l'arbre des implantations ; ré-exporté ici pour les
 // vues qui l'importaient déjà depuis la fiche.
@@ -28,7 +29,7 @@ export { LineBadge } from './ImplantationsTree';
  *  cercle teal clair + icône teal, jamais une icône nue. Cercle réduit
  *  (w-8 au lieu de w-12) pour rester à l'échelle d'un h3, mais mêmes
  *  classes de couleur — aucune nouvelle variante. */
-const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
+export const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-5">
         <h3 className="flex items-center gap-3 text-sm font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-4">
             <div className="w-8 h-8 flex items-center justify-center rounded-full bg-teal-50 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
@@ -44,7 +45,7 @@ const SheetSection: React.FC<{ title: string; icon: React.ReactNode; children: R
  *  l'affiche pas du tout. Un « Matière — » sous un « Support : Dibond » se lit
  *  comme une contradiction, alors que la matière n'a simplement pas de valeur
  *  distincte du support pour ce modèle. */
-const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => {
+export const Field: React.FC<{ label: string; value?: React.ReactNode }> = ({ label, value }) => {
     if (value === undefined || value === null || value === '') return null;
     return (
         <div className="flex flex-col gap-0.5">
@@ -98,7 +99,7 @@ const UsageSection: React.FC<{
                     <Field label="Types d'équipements" value={usage.equipmentTypes.join(', ')} />
                 </div>
             )}
-            <div className="flex flex-wrap justify-end gap-2 mb-3">
+            <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:flex-wrap sm:justify-end *:w-full *:justify-center sm:*:w-auto">
                 <ImplantationsExportButton items={items} index={index} refById={refById} />
                 <PoseCsvExportButton items={items} refById={refById} />
             </div>
@@ -118,6 +119,10 @@ interface ReferenceSheetProps {
 
 const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference }) => {
     const usage = index.byReference.get(reference.id);
+    const lineBExtensionCount = useMemo(
+        () => countLineBExtension(index.implantations.filter(i => i.referenceId === reference.id)),
+        [index, reference.id],
+    );
     const refName = (id: string) => references.find(r => r.id === id)?.name ?? id;
     const linked = (id: string) => (
         <button
@@ -151,10 +156,17 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                     {usage && (
                         <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.installedCount}</span>
-                            <span className="text-slate-600 dark:text-slate-300">exemplaire{usage.installedCount > 1 ? 's' : ''}</span>
+                            <span className="text-slate-600 dark:text-slate-300">emplacement{usage.installedCount > 1 ? 's' : ''} référencé{usage.installedCount > 1 ? 's' : ''}</span>
                             <span className="text-slate-300 dark:text-slate-600">·</span>
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
                             <span className="text-slate-600 dark:text-slate-300">lieu{usage.lieuCount > 1 ? 'x' : ''}</span>
+                        </p>
+                    )}
+                    {/* Extension B : comptée selon les règles actuelles, pose non
+                        confirmée avant la mise en service. */}
+                    {lineBExtensionCount > 0 && (
+                        <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+                            Dont {lineBExtensionCount} sur l'{LINE_B_EXTENSION.label.charAt(0).toLowerCase() + LINE_B_EXTENSION.label.slice(1)} ({LINE_B_EXTENSION.commissioning}) : référencé{lineBExtensionCount > 1 ? 's' : ''}, pose non confirmée.
                         </p>
                     )}
                     {/* L'identifiant technique reste consultable, mais il ne
