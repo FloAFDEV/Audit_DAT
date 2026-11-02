@@ -6,6 +6,7 @@ import { AuditModuleType, CognitivePictogramData, FloorAdhesiveStatus, Lieu } fr
 import { isModuleInCurrentScope } from '../moduleScope';
 import { getCognitivePictogramVisualUrl } from '../../data/cognitivePictogramVisuals';
 import { getCognitivePictogramDimension, getCountedCognitivePictograms } from '../../data/cognitive_pictograms';
+import { readFloorAdhesiveStatus } from './floorAdhesiveStatus';
 
 export interface CognitivePictogramSummary {
     /** Code station dont le visuel est connu (sinon le premier module). */
@@ -76,11 +77,16 @@ export const cognitivePictogramStationsByInventoryRow = (lieux: Lieu[]): Map<str
 
 export interface CognitivePictogramPoseItem {
     line: string;
+    lieuId: string;
     lieuName: string;
     stationCode: string;
     /** Accès / emplacement du pictogramme (libellé saisi au module). */
     accessPointName: string;
     dimensions: string;
+    /** Statut constaté sur CE pictogramme (lecture seule) ; absent = statut
+     *  indisponible, jamais « Non contrôlé » par défaut. N'intervient ni
+     *  dans les quantités ni dans les exports. */
+    status?: FloorAdhesiveStatus;
 }
 
 /** Un élément par pictogramme cognitif compté (mêmes règles que les totaux
@@ -98,10 +104,12 @@ export const cognitivePictogramPoseItems = (lieux: Lieu[], lines?: ReadonlySet<s
             for (const picto of getCountedCognitivePictograms(module)) {
                 items.push({
                     line,
+                    lieuId: lieu.id,
                     lieuName: lieu.name,
                     stationCode: data.stationCode,
                     accessPointName: picto.accessPointName,
                     dimensions: getCognitivePictogramDimension(data.stationCode, picto.accessPointName),
+                    status: readFloorAdhesiveStatus(picto.status),
                 });
             }
         }
