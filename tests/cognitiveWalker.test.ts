@@ -61,7 +61,7 @@ describe('collectCognitivePictograms et dérivés', () => {
         (module.data as CognitivePictogramData).pictograms[0].status = FloorAdhesiveStatus.NotChecked;
     });
 
-    it('maintenance (comportement inchangé à cette étape) : lue via le parcours unique', () => {
+    it('maintenance : lue via le parcours unique (pictogrammes comptés)', () => {
         const { lieu, module } = cogModule('Capitole');
         (module.data as CognitivePictogramData).pictograms[1].status = FloorAdhesiveStatus.ToBeReplaced;
         const items = generateMaintenanceSummary([lieu]).allDefects.items.filter(i => i.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS);

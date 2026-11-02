@@ -18,6 +18,7 @@ import {
 } from '../utils/ecaFieldCorrection';
 import { getEcaProgress } from '../utils/progressCalculators';
 import { getLieuDefectCount } from '../utils/anomalyDetector';
+import { buildSignageReferencesSeed } from '../data/signage_seed';
 import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { parseImportPayload, applyImportPayload } from '../utils/signageSerializer';
 
@@ -178,7 +179,7 @@ describe('changement de type sur le terrain (règle pure)', () => {
         } as Lieu;
         expect(getEcaAdhesiveOccurrences(TS)).toHaveLength(1);
         expect(getEcaProgress(sortie).isComplete).toBe(true);
-        expect(getLieuDefectCount(lieu)).toBe(1); // eca-11 Absent, pas eca-2 archivé
+        expect(getLieuDefectCount(lieu, buildSignageReferencesSeed())).toBe(1); // eca-11 Absent, pas eca-2 archivé
         const summary = generateMaintenanceSummary([lieu]);
         expect(summary.toBeReplaced.count).toBe(0);
         expect(summary.absent.count).toBe(1);

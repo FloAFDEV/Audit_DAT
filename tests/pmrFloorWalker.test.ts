@@ -51,7 +51,7 @@ describe('collectPmrFloorAdhesives', () => {
     });
 });
 
-describe('maintenance (comportement inchangé à cette étape)', () => {
+describe('maintenance', () => {
     it('lit les adhésifs via le parcours unique, même contexte et même statut', () => {
         const lieu = lieux.find(l => l.name === 'Capitole')!;
         const module = lieu.modules.find(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE)!;

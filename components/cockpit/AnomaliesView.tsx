@@ -30,7 +30,7 @@
 // fabrication ni de commande — seulement item + quantité + localisation.
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download, Layout } from 'lucide-react';
+import { AlertTriangle, CalendarClock, Eye, ChevronRight, Download, Footprints, Layout, ScanEye } from 'lucide-react';
 import { Lieu, MaintenanceItem, AuditModuleType, AdhesiveStatus } from '../../types';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
@@ -42,6 +42,7 @@ import {
 } from '../../utils/cockpit/maintenanceActions';
 import { useCockpitNav } from './cockpitNav';
 import MaintenanceListModal from '../MaintenanceListModal';
+import { currentExploitationLieux, floorFamilyDefects, generateMaintenanceSummary } from '../../utils/maintenanceGenerator';
 import { SectionTitle, AnomalySummaryCard } from './primitives';
 
 // Adaptateur minimal ImplantationRef → MaintenanceItem, pour réutiliser
@@ -165,6 +166,14 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
         signaletiqueStationDefectsToMaintenanceItems(signaletiqueStationIndex.items)
     ), [signaletiqueStationIndex]);
 
+    // PMR au sol et pictogrammes cognitifs : référentiels autonomes, mêmes
+    // données et mêmes règles que la Synthèse et les badges des cartes
+    // (maintenance du périmètre d'exploitation ; « sans objet » et
+    // pictogrammes non comptés exclus) — aucun second moteur de détection.
+    const floorDefects = useMemo(
+        () => floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux(lieux))), [lieux]);
+    const [floorListModal, setFloorListModal] = useState<{ title: string; items: MaintenanceItem[] } | null>(null);
+
     if (isLoading) {
         return <div className="py-16 text-center text-slate-500 dark:text-slate-400">Chargement…</div>;
     }
@@ -263,6 +272,41 @@ const AnomaliesView: React.FC<AnomaliesViewProps> = ({ lieux }) => {
                 </div>
             </section>
 
+            <hr className="border-dashed border-slate-200 dark:border-slate-700" />
+
+            {/* PMR au sol et pictogrammes cognitifs — deux référentiels
+                autonomes (règle 7), chacun son compteur et sa liste. */}
+            <section className="space-y-3">
+                <SectionTitle>PMR au sol et pictogrammes cognitifs</SectionTitle>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                    <AnomalySummaryCard
+                        icon={<Footprints className="w-4 h-4" />}
+                        title="Adhésifs PMR au sol"
+                        count={floorDefects.pmrFloor.length}
+                        detailLabel="Voir en liste / Exporter"
+                        detailDisabled={floorDefects.pmrFloor.length === 0}
+                        onDetail={() => setFloorListModal({ title: 'Anomalies PMR sol', items: floorDefects.pmrFloor })}
+                    />
+                    <AnomalySummaryCard
+                        icon={<ScanEye className="w-4 h-4" />}
+                        title="Pictogrammes cognitifs"
+                        count={floorDefects.cognitive.length}
+                        detailLabel="Voir en liste / Exporter"
+                        detailDisabled={floorDefects.cognitive.length === 0}
+                        onDetail={() => setFloorListModal({ title: 'Anomalies Pictogrammes cognitifs', items: floorDefects.cognitive })}
+                    />
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Équipements comptés du périmètre d'exploitation : les modules PMR « sans objet » et les pictogrammes non comptés (« Accès à définir ») ne génèrent pas d'anomalie.
+                </p>
+            </section>
+
+            <MaintenanceListModal
+                isOpen={floorListModal !== null}
+                onClose={() => setFloorListModal(null)}
+                title={floorListModal?.title ?? ''}
+                items={floorListModal?.items ?? []}
+            />
             <MaintenanceListModal
                 isOpen={showListModal}
                 onClose={() => setShowListModal(false)}

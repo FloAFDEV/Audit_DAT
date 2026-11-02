@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'motion/react';
 import { Lieu, AuditCategory, AuditModuleType, ModeData } from '../types';
 import { LieuBadges } from './Icons';
@@ -17,9 +17,10 @@ interface LieuCardProps {
 }
 
 export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter }) => {
-    const { activeAuditFilters } = useAuditStore();
+    const { activeAuditFilters, signageReferences } = useAuditStore();
     const progress = getLieuProgress(lieu, activeAuditFilters, activeFilter);
-    const defectCount = getLieuDefectCount(lieu);
+    // Anomalies opérationnelles du cockpit pour ce lieu (même périmètre).
+    const defectCount = useMemo(() => getLieuDefectCount(lieu, signageReferences), [lieu, signageReferences]);
     const hasAnomaly = defectCount > 0;
     const isInProgress = progress > 0 && progress < 100;
 

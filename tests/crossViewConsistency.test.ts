@@ -123,10 +123,10 @@ describe('PMR au sol — une seule quantité partout', () => {
         (moduleOf(lieu, AuditModuleType.PMR_FLOOR_ADHESIVE).data as PMRFloorAdhesiveData).adhesives[0].status = FloorAdhesiveStatus.ToBeReplaced;
         expect(maintenanceFloorDefects(AuditModuleType.PMR_FLOOR_ADHESIVE).filter(i => i.lieuName === 'Capitole')).toHaveLength(1);
         expect(pmrFloorPoseItems([lieu])[0].status).toBe(FloorAdhesiveStatus.ToBeReplaced);
-        expect(getLieuDefectCount(lieu)).toBe(cockpitOperationalAnomalies(lieu));
+        expect(getLieuDefectCount(lieu, references)).toBe(cockpitOperationalAnomalies(lieu));
     });
 
-    it.fails('ÉCART CONNU (décision 2) : un module « sans objet » ne génère aucune anomalie de maintenance', () => {
+    it('décision 2 : un module « sans objet » ne génère aucune anomalie de maintenance', () => {
         const na = lieuNamed('Jean-Jaurès').modules.find(m =>
             m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && (m.data as PMRFloorAdhesiveData).isNotApplicable)!;
         (na.data as PMRFloorAdhesiveData).adhesives[0].status = FloorAdhesiveStatus.ToBeReplaced;
@@ -165,10 +165,10 @@ describe('Pictogrammes cognitifs — une seule quantité partout', () => {
         const lieu = lieuNamed('Capitole');
         (moduleOf(lieu, AuditModuleType.COGNITIVE_PICTOGRAMS).data as CognitivePictogramData).pictograms[0].status = FloorAdhesiveStatus.ToBeReplaced;
         expect(maintenanceFloorDefects(AuditModuleType.COGNITIVE_PICTOGRAMS).filter(i => i.lieuName === 'Capitole')).toHaveLength(1);
-        expect(getLieuDefectCount(lieu)).toBe(cockpitOperationalAnomalies(lieu));
+        expect(getLieuDefectCount(lieu, references)).toBe(cockpitOperationalAnomalies(lieu));
     });
 
-    it.fails('ÉCART CONNU (décision 1) : un pictogramme « Accès à définir » ne génère aucune anomalie de maintenance', () => {
+    it('décision 1 : un pictogramme « Accès à définir » ne génère aucune anomalie de maintenance', () => {
         const picto = (moduleOf(lieuNamed('Basso Cambo'), AuditModuleType.COGNITIVE_PICTOGRAMS).data as CognitivePictogramData)
             .pictograms.find(isProvisionalCognitivePictogram)!;
         picto.status = FloorAdhesiveStatus.ToBeReplaced;
@@ -236,7 +236,7 @@ describe('Signalétique IV — totaux par station et par ligne', () => {
         const index = buildPatrimoineIndex(lieux, references);
         expect(index.totals.toReplaceCount).toBe(1);
         expect(buildMaintenanceActions(index, references, 'reference').reduce((s, a) => s + a.absentCount + a.toReplaceCount, 0)).toBe(1);
-        expect(getLieuDefectCount(lieu)).toBe(cockpitOperationalAnomalies(lieu));
+        expect(getLieuDefectCount(lieu, references)).toBe(cockpitOperationalAnomalies(lieu));
     });
 });
 
@@ -250,24 +250,24 @@ describe('Périmètre d\'exploitation', () => {
         expect(stats().maintenanceSummary.allDefects.count).toBe(0);
     });
 
-    it.fails('ÉCART CONNU (décision 4) : le badge d\'un lieu ignore les modules futurs, comme le cockpit', () => {
+    it('décision 4 : le badge d\'un lieu ignore les modules futurs, comme le cockpit', () => {
         const blagnac = lieuNamed('Blagnac');
         addFuturePlanQuartierDefect(blagnac);
-        expect(getLieuDefectCount(blagnac)).toBe(cockpitOperationalAnomalies(blagnac));
+        expect(getLieuDefectCount(blagnac, references)).toBe(cockpitOperationalAnomalies(blagnac));
     });
 
-    it.fails('ÉCART CONNU (décision 4) : le badge d\'un lieu inclut les anomalies des équipements de station', () => {
+    it('décision 4 : le badge d\'un lieu inclut les anomalies des équipements de station', () => {
         const arenes = lieuNamed('Arènes');
         const st = (moduleOf(arenes, AuditModuleType.SIGNALETIQUE).data as ModeData).stations[0];
         st.signaletique!.totem!.direction1.status = EquipmentStatusType.ABSENT;
-        expect(getLieuDefectCount(arenes)).toBe(cockpitOperationalAnomalies(arenes));
+        expect(getLieuDefectCount(arenes, references)).toBe(cockpitOperationalAnomalies(arenes));
     });
 
-    it.fails('ÉCART CONNU (décision 4) : le badge ne compte pas un statut hors portée du référentiel (R10)', () => {
+    it('décision 4 : le badge ne compte pas un statut hors portée du référentiel (R10)', () => {
         const lieu = lieuNamed('Capitole');
         const dat = firstDat(moduleOf(lieu, AuditModuleType.DAT));
         (dat.adhesives as Record<string, AdhesiveStatus>)['reference-inconnue'] = AdhesiveStatus.Absent;
-        expect(getLieuDefectCount(lieu)).toBe(cockpitOperationalAnomalies(lieu));
+        expect(getLieuDefectCount(lieu, references)).toBe(cockpitOperationalAnomalies(lieu));
     });
 });
 
