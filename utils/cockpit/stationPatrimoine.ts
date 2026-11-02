@@ -18,15 +18,12 @@
 // Les résumés ne font que dénombrer ces listes, chaque famille dans sa
 // propre unité (appareils ≠ références ≠ repères ≠ adhésifs).
 // =================================================================
-import { AuditModuleType, CognitivePictogramData, FloorAdhesiveStatus, Lieu } from '../../types';
-import { isModuleInCurrentScope } from '../moduleScope';
-import { COGNITIVE_PICTOGRAM_ACTIVE_LINES, isProvisionalCognitivePictogram } from '../../data/cognitive_pictograms';
+import { AuditModuleType, FloorAdhesiveStatus, Lieu } from '../../types';
 import { ImplantationRef } from './patrimoineIndex';
 import { PmrFloorPoseItem } from './pmrFloorPose';
-import { CognitivePictogramPoseItem } from './cognitivePictogramSummary';
+import { CognitivePictogramPoseItem, collectCognitivePictograms } from './cognitivePictogramSummary';
 import { StationEquipmentItem, StationEquipmentKind } from './stationEquipment';
 import { BacheRow, getBachesForLieu } from './baches';
-import { readFloorAdhesiveStatus } from './floorAdhesiveStatus';
 
 export interface StationKey { lieuId: string; line: string }
 
@@ -92,22 +89,15 @@ const CATALOGUE_TYPES = new Map<AuditModuleType, 'dat' | 'eca' | 'pdq'>([
     [AuditModuleType.PLAN_QUARTIER, 'pdq'],
 ]);
 
-/** Pictogrammes d'une station non comptés par getCountedCognitivePictograms
- *  (même périmètre d'exploitation que le comptage). */
+/** Pictogrammes d'une station non comptés par la règle unique de
+ *  comptage (parcours unique, même périmètre d'exploitation). */
 const uncountedCognitive = (lieu: Lieu, line: string): UncountedCognitivePictogram[] =>
-    lieu.modules
-        .filter(m => m.type === AuditModuleType.COGNITIVE_PICTOGRAMS && (m.line ?? '') === line && isModuleInCurrentScope(m))
-        .flatMap(m => {
-            const data = m.data as CognitivePictogramData;
-            const activeLine = COGNITIVE_PICTOGRAM_ACTIVE_LINES.has(line);
-            return (data.pictograms ?? [])
-                .filter(p => !activeLine || isProvisionalCognitivePictogram(p))
-                .map(p => ({
-                    line, lieuName: lieu.name, stationCode: data.stationCode, accessPointName: p.accessPointName,
-                    status: readFloorAdhesiveStatus(p.status),
-                    reason: activeLine ? 'provisional' as const : 'inactiveLine' as const,
-                }));
-        });
+    collectCognitivePictograms([lieu], { lines: new Set([line]), includeUncounted: true })
+        .filter(p => !p.counted)
+        .map(p => ({
+            line, lieuName: p.lieuName, stationCode: p.stationCode, accessPointName: p.accessPointName,
+            status: p.status, reason: p.uncountedReason ?? 'provisional',
+        }));
 
 /** Lignes desservies par un lieu (modules de ligne, P+R exclu). */
 export const linesOfLieu = (lieu: Lieu): string[] =>

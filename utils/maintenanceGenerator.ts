@@ -1,8 +1,9 @@
 
-import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
+import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getEcaProgress } from './progressCalculators';
 import { readPmrFloorModule } from './cockpit/pmrFloorPose';
+import { readCognitivePictogramModule } from './cockpit/cognitivePictogramSummary';
 
 /** Description courte des 4 modèles figés (data/signage_seed.ts) — même
  *  liste que csvExporter.ts, chacun avec sa propre présentation locale
@@ -140,12 +141,13 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     });
                     break;
                 case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                        ((module.data as CognitivePictogramData).pictograms || []).forEach(p => {
+                        // Parcours unique (utils/cockpit/cognitivePictogramSummary.ts).
+                        readCognitivePictogramModule(lieu, module).forEach(({ pictogram: p, stationCode }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Pictogramme cognitif",
                             context: p.accessPointName,
-                            stationCode: (module.data as CognitivePictogramData).stationCode,
+                            stationCode,
                             adhesiveName: "Pictogramme",
                             status: p.status as string,
                         };
