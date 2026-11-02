@@ -29,7 +29,7 @@ beforeAll(async () => {
 
 describe('Quantités des éléments hors catalogue', () => {
     it('un élément par ligne d\'inventaire PMR / pictogramme, même quantité que l\'Inventaire détaillé', () => {
-        const inventory = computeAdhesiveInventory(lieux, refs).filter(r => elementFamilyOf(r.id));
+        const inventory = computeAdhesiveInventory(lieux, refs).filter(r => ['PMR', 'COG'].includes(elementFamilyOf(r.id) ?? ''));
         expect(elements.map(e => [e.id, e.quantity])).toEqual(inventory.map(r => [r.id, r.quantity]));
         expect(elements.some(e => e.family === 'PMR')).toBe(true);
         expect(elements.some(e => e.family === 'COG')).toBe(true);

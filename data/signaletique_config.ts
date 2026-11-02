@@ -150,3 +150,7 @@ export const getInitialSignaletiqueData = (stationName: string, line: 'TRAM' | '
         }
     };
 };
+
+/** Stations à plusieurs quais : le BIV y porte l'adhésif « Quai » sur le
+ *  caisson (même liste que le formulaire Équipements Station). */
+export const MULTI_QUAI_STATIONS: readonly string[] = ['Arènes', 'Odyssud'];

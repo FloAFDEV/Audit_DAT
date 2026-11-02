@@ -42,9 +42,11 @@ import { getInventoryVisualReferenceId } from '../../data/referenceVisuals';
 import { computeAdhesiveInventory } from '../../hooks/useStats';
 import {
     ElementFamily, ELEMENT_FAMILY_LABELS, FamilyElement, buildFamilyElements, splitSelection, selectFamilyPose,
-    selectionLabel, pmrElementIdOf, cognitiveElementIdOf,
+    selectionLabel, pmrElementIdOf, cognitiveElementIdOf, isSelectableFamily, buildStationEquipmentElements,
 } from '../../utils/cockpit/familyElements';
+import { stationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
 import FamilyElementSheet from './FamilyElementSheet';
+import StationEquipmentSheet from './StationEquipmentSheet';
 import { PoseRowsTree } from './PoseRowsTree';
 
 /* ================= Références : liste filtrable ================= */
@@ -60,10 +62,16 @@ type FamilyFilter = 'ALL' | 'DAT' | 'PR' | 'ECA' | 'PDQ' | ElementFamily;
 const FAMILY_FILTERS: { key: FamilyFilter; label: string }[] = [
     { key: 'ALL', label: 'Toutes familles' },
     ...(['DAT', 'PR', 'ECA', 'PDQ'] as const).map(f => ({ key: f, label: AUDIT_TYPE_LABELS[f] })),
-    ...(['PMR', 'COG'] as const).map(f => ({ key: f, label: ELEMENT_FAMILY_LABELS[f] })),
+    ...(['PMR', 'COG', 'SIG'] as const).map(f => ({ key: f, label: ELEMENT_FAMILY_LABELS[f] })),
 ];
 
+/** Filtre de consultation — conservé par le conteneur : revenir d'une fiche
+ *  retrouve la liste telle qu'on l'a quittée. */
+export interface ReferencesFilter { family: FamilyFilter; support: 'ALL' | SignageSupport; query: string }
+
 interface ReferencesListProps {
+    filter: ReferencesFilter;
+    onFilterChange: (filter: ReferencesFilter) => void;
     references: SignageReference[];
     elements: FamilyElement[];
     usageOf: (id: string) => { installedCount: number; lieuCount: number; lines: string[] } | undefined;
@@ -76,11 +84,12 @@ interface ReferencesListProps {
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
-    references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
+    filter, onFilterChange, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
 }) => {
-    const [family, setFamily] = useState<FamilyFilter>('ALL');
-    const [support, setSupport] = useState<'ALL' | SignageSupport>('ALL');
-    const [query, setQuery] = useState('');
+    const { family, support, query } = filter;
+    const setFamily = (value: FamilyFilter) => onFilterChange({ ...filter, family: value });
+    const setSupport = (value: 'ALL' | SignageSupport) => onFilterChange({ ...filter, support: value });
+    const setQuery = (value: string) => onFilterChange({ ...filter, query: value });
 
     const filtered = useMemo(() => {
         const q = query.trim().toLowerCase();
@@ -112,7 +121,11 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
 
     // Sélection portée par l'id réel (référence.id, ligne d'inventaire de
     // l'élément), jamais par le libellé affiché — cf. utils/cockpit/selection.ts.
-    const visibleIds = useMemo(() => [...filtered.map(r => r.id), ...filteredElements.map(e => e.id)], [filtered, filteredElements]);
+    // Équipements station : consultation seule, jamais dans une sélection d'export.
+    const visibleIds = useMemo(
+        () => [...filtered.map(r => r.id), ...filteredElements.filter(e => isSelectableFamily(e.family)).map(e => e.id)],
+        [filtered, filteredElements],
+    );
     const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
     const someVisibleSelected = visibleIds.some(id => selectedIds.has(id));
     const toggleSelectAllVisible = () => {
@@ -275,19 +288,27 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                         })}
                         {filteredElements.map((element, i) => (
                             <tr key={element.id} onClick={() => onOpenElement(element.id)} className={rowClass(selectedIds.has(element.id), filtered.length + i)}>
-                                {checkbox(element.id, `${element.name} ${element.material ?? element.dimensions}`)}
+                                {isSelectableFamily(element.family)
+                                    ? checkbox(element.id, `${element.name} ${element.material ?? element.dimensions}`)
+                                    : <td className="p-3" title="Consultation seule — hors exports" />}
                                 <td className="p-3">
                                     <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(element.id)} label={element.name}>
                                         <span className="font-medium text-slate-800 dark:text-slate-100">{element.name}</span>
                                     </ReferenceNamePreview>
                                     <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                        {element.material ?? formatDimensionText(element.dimensions)} · hors catalogue
+                                        {element.family === 'SIG'
+                                            ? 'consultation seule · hors exports'
+                                            : `${element.material ?? formatDimensionText(element.dimensions)} · hors catalogue`}
                                     </span>
                                 </td>
                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{ELEMENT_FAMILY_LABELS[element.family]}</td>
                                 <td className="p-3 whitespace-nowrap text-slate-500 dark:text-slate-400 hidden sm:table-cell">—</td>
                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
-                                <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}</td>
+                                <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                    {element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
+                                    {/* Équipements station : emplacements prévus, pas un constat de pose. */}
+                                    {element.family === 'SIG' && element.quantity > 0 && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">prévus</span>}
+                                </td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
                             </tr>
@@ -620,6 +641,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const [subSection, setSubSection] = useState<ReferentielSubKey>('references');
     const [openReferenceId, setOpenReferenceId] = useState<string | null>(null);
     const [openElementId, setOpenElementId] = useState<string | null>(null);
+    const [referencesFilter, setReferencesFilter] = useState<ReferencesFilter>({ family: 'ALL', support: 'ALL', query: '' });
     // Sélection multiple (Référentiel → Implantations) : ids réels, jamais
     // les libellés affichés — cf. utils/cockpit/selection.ts. Mêle références
     // catalogue et éléments hors catalogue (ids de lignes d'inventaire).
@@ -630,10 +652,12 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     // autonome, quantités de l'Inventaire détaillé (aucun calcul nouveau).
     const pmrFloorAll = useMemo(() => pmrFloorPoseItems(lieux), [lieux]);
     const cognitiveAll = useMemo(() => cognitivePictogramPoseItems(lieux), [lieux]);
-    const familyElements = useMemo(
-        () => (isLoading ? [] : buildFamilyElements(computeAdhesiveInventory(lieux, references), pmrFloorAll, cognitiveAll)),
-        [isLoading, lieux, references, pmrFloorAll, cognitiveAll],
-    );
+    const stationEquipmentAll = useMemo(() => stationEquipmentItems(lieux), [lieux]);
+    const familyElements = useMemo(() => {
+        if (isLoading) return [];
+        const inventory = computeAdhesiveInventory(lieux, references);
+        return [...buildFamilyElements(inventory, pmrFloorAll, cognitiveAll), ...buildStationEquipmentElements(inventory, stationEquipmentAll)];
+    }, [isLoading, lieux, references, pmrFloorAll, cognitiveAll, stationEquipmentAll]);
     const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
         () => selectFamilyPose(selectedIds, pmrFloorAll, cognitiveAll),
         [selectedIds, pmrFloorAll, cognitiveAll],
@@ -679,6 +703,16 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
     // Fiche d'un élément hors catalogue — même niveau que la fiche de vie.
     const openElement = openElementId ? familyElements.find(e => e.id === openElementId) : undefined;
+    if (openElement?.family === 'SIG') {
+        const kind = Object.entries(STATION_EQUIPMENT_ROW_IDS).find(([, rowId]) => rowId === openElement.id)?.[0];
+        return (
+            <StationEquipmentSheet
+                element={openElement}
+                items={stationEquipmentAll.filter(i => i.kind === kind)}
+                onBack={() => setOpenElementId(null)}
+            />
+        );
+    }
     if (openElement) {
         return (
             <FamilyElementSheet
@@ -751,6 +785,8 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
             {subSection === 'references' && (
                 <ReferencesList
+                    filter={referencesFilter}
+                    onFilterChange={setReferencesFilter}
                     references={references}
                     elements={familyElements}
                     usageOf={(id) => index.byReference.get(id)}

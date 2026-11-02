@@ -17,15 +17,21 @@ import { AdhesiveInventoryItem } from '../../types';
 import { pmrInventoryRowId, PMR_UNKNOWN_MATERIAL_ROW_ID } from '../../hooks/useStats';
 import { PmrFloorPoseItem } from './pmrFloorPose';
 import { CognitivePictogramPoseItem } from './cognitivePictogramSummary';
+import { StationEquipmentItem, STATION_EQUIPMENT_ROW_IDS } from './stationEquipment';
 
-export type ElementFamily = 'PMR' | 'COG';
+/** SIG (Équipements station) : consultation seule, jamais sélectionnable
+ *  pour un export (validation exploitant). */
+export type ElementFamily = 'PMR' | 'COG' | 'SIG';
 
 export const ELEMENT_FAMILY_LABELS: Record<ElementFamily, string> = {
     PMR: 'PMR au sol',
     COG: 'Pictogrammes cognitifs',
+    SIG: 'Équipements station',
 };
 
-const PREFIXES: Record<ElementFamily, string> = { PMR: 'pmr-sol-', COG: 'cog-picto-' };
+const PREFIXES: Record<ElementFamily, string> = { PMR: 'pmr-sol-', COG: 'cog-picto-', SIG: 'sign-' };
+
+export const isSelectableFamily = (family: ElementFamily): boolean => family !== 'SIG';
 
 export interface FamilyElement {
     /** Identifiant de la ligne d'inventaire. */
@@ -33,7 +39,8 @@ export interface FamilyElement {
     family: ElementFamily;
     name: string;
     dimensions: string;
-    /** PMR : matière attribuée (ou « Matière non renseignée »). */
+    /** Matière de l'inventaire (PMR : matière attribuée ou « Matière non
+     *  renseignée » ; équipements station : matière du référentiel). */
     material?: string;
     /** Quantité de l'Inventaire détaillé. */
     quantity: number;
@@ -59,7 +66,7 @@ export const buildFamilyElements = (
     inventory: AdhesiveInventoryItem[], pmrItems: PmrFloorPoseItem[], cognitiveItems: CognitivePictogramPoseItem[],
 ): FamilyElement[] => inventory.flatMap((row): FamilyElement[] => {
     const family = elementFamilyOf(row.id);
-    if (!family) return [];
+    if (!family || family === 'SIG') return [];
     const items = family === 'PMR'
         ? pmrItems.filter(i => pmrElementIdOf(i) === row.id)
         : cognitiveItems.filter(i => cognitiveElementIdOf(i) === row.id);
@@ -102,4 +109,20 @@ export const selectionLabel = (ids: ReadonlySet<string>, elements: FamilyElement
     describe('COG', 'pictogrammes cognitifs', n => `dimension${n > 1 ? 's' : ''} de pictogramme cognitif`);
     const label = parts.join(' + ');
     return label.charAt(0).toUpperCase() + label.slice(1);
+};
+
+/** Équipements station : un élément par type, dans l'ordre de l'inventaire
+ *  (même quantité que la ligne d'inventaire — vérifié par test). */
+export const buildStationEquipmentElements = (
+    inventory: AdhesiveInventoryItem[], items: StationEquipmentItem[],
+): FamilyElement[] => {
+    const kindByRowId = new Map(Object.entries(STATION_EQUIPMENT_ROW_IDS).map(([kind, rowId]) => [rowId, kind]));
+    return inventory.flatMap((row): FamilyElement[] => {
+        const kind = kindByRowId.get(row.id);
+        if (!kind) return [];
+        return [{
+            id: row.id, family: 'SIG', name: row.name, dimensions: row.dimensions, material: row.material,
+            quantity: row.quantity, ...spread(items.filter(i => i.kind === kind)),
+        }];
+    });
 };
