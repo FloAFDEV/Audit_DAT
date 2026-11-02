@@ -10,8 +10,9 @@ import { PoseRow } from '../../utils/cockpit/poseExport';
 import { LineBadge, ExtensionBTag, ExpandAllButton } from './ImplantationsTree';
 import { isLineBExtension } from '../../data/lineBExtension';
 import { formatDimensionText } from './labels';
+import { isDetailCountRedundant } from '../../utils/cockpit/implantationsGrouping';
 
-interface AccessGroup { key: string; location: string; designation: string; dimensions: string; count: number; first: PoseRow }
+export interface AccessGroup { key: string; location: string; designation: string; dimensions: string; count: number; first: PoseRow }
 
 /** Arbre générique ligne → station, replié par défaut. Ne retrie rien :
  *  l'appelant fournit les éléments dans l'ordre voulu (lignes, ordre
@@ -119,7 +120,7 @@ const stationOfRow = (row: PoseRow) => row.station;
 
 /** Exemplaires d'une station regroupés par accès (même désignation et
  *  même dimension = une ligne avec sa quantité). */
-const groupAccesses = (rows: PoseRow[]): AccessGroup[] => {
+export const groupAccesses = (rows: PoseRow[]): AccessGroup[] => {
     const groups: AccessGroup[] = [];
     for (const row of rows) {
         const key = `${row.location}|${row.designation}|${row.dimensions}`;
@@ -152,21 +153,26 @@ export const PoseRowsTree: React.FC<{
         stationOf={stationOfRow}
         stationTag={stationRows => isLineBExtension(stationRows[0].line, stationRows[0].station) && <ExtensionBTag />}
         stationLead={stationRows => renderVisual && visualKey && sharedVisualKey(stationRows, visualKey) ? renderVisual(stationRows[0]) : null}
-        renderStation={stationRows => (
-            <ul className="space-y-2">
-                {groupAccesses(stationRows).map(access => (
-                    <li key={access.key} className="ml-3 flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
-                        {!(visualKey && sharedVisualKey(stationRows, visualKey)) && renderVisual?.(access.first)}
-                        <span className="min-w-0 flex-1">
-                            <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">{access.location || 'Emplacement non précisé'}</span>
-                            <span className="block text-xs text-slate-500 dark:text-slate-400 break-words">
-                                {access.designation}{access.dimensions ? ` · ${formatDimensionText(access.dimensions)}` : ''}
+        renderStation={stationRows => {
+            const accesses = groupAccesses(stationRows);
+            // Accès unique : sa quantité est celle de la station, déjà affichée.
+            const showCount = !isDetailCountRedundant(accesses.length);
+            return (
+                <ul className="space-y-2">
+                    {accesses.map(access => (
+                        <li key={access.key} className="ml-3 flex items-center gap-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                            {!(visualKey && sharedVisualKey(stationRows, visualKey)) && renderVisual?.(access.first)}
+                            <span className="min-w-0 flex-1">
+                                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">{access.location || 'Emplacement non précisé'}</span>
+                                <span className="block text-xs text-slate-500 dark:text-slate-400 break-words">
+                                    {access.designation}{access.dimensions ? ` · ${formatDimensionText(access.dimensions)}` : ''}
+                                </span>
                             </span>
-                        </span>
-                        <span className="flex-shrink-0 text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{access.count}</span>
-                    </li>
-                ))}
-            </ul>
-        )}
+                            {showCount && <span className="flex-shrink-0 text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums">{access.count}</span>}
+                        </li>
+                    ))}
+                </ul>
+            );
+        }}
     />
 );

@@ -74,3 +74,12 @@ export const groupImplantationsByLocation = (items: ImplantationRef[]): GroupedL
     }
     return lines;
 };
+
+/**
+ * Compteur d'un niveau détaillé (accès d'une station, emplacement d'une
+ * station…) : redondant quand ce niveau est le seul de son parent — il
+ * répète alors exactement le compteur du parent (agrégation, pas un
+ * doublon). Plusieurs niveaux frères : chaque compteur dit la répartition,
+ * il est conservé. Affichage seulement, aucun calcul.
+ */
+export const isDetailCountRedundant = (siblingCount: number): boolean => siblingCount <= 1;
