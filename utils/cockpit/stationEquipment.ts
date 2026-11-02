@@ -14,6 +14,9 @@
 //    sans objet ; non contrôlé = inconnu ; non installé = exclu.
 //  - Aéroport Express : stations en préparation (ligne pas en service) —
 //    comptées par l'inventaire, signalées comme telles, jamais « posées ».
+//  - modules futurs (ex. Blagnac côté T1) : hors périmètre d'exploitation,
+//    donc hors quantités ; restent CONSULTABLES via
+//    futureStationEquipmentItems, jamais additionnés aux quantités.
 // Hors exports CSV / Excel (validation exploitant).
 // =================================================================
 import { AuditModuleType, EquipmentStatusType, Lieu, ModeData, SignaletiqueData, Station } from '../../types';
@@ -64,11 +67,13 @@ const sub = (holder: Holder, defs: [string, string, string?][]): StationEquipmen
 
 const stripDirectionPrefix = (name: string) => name.replace(/^Direction\s+/i, '');
 
-export const stationEquipmentItems = (lieux: Lieu[]): StationEquipmentItem[] => {
+/** Parcours commun ; `future` choisit les modules hors exploitation actuelle
+ *  (consultation seule) au lieu des modules comptés. */
+const collectStationEquipment = (lieux: Lieu[], future: boolean): StationEquipmentItem[] => {
     const items: StationEquipmentItem[] = [];
     for (const lieu of lieux) {
         for (const module of lieu.modules) {
-            if (module.type !== AuditModuleType.SIGNALETIQUE || !isModuleInCurrentScope(module)) continue;
+            if (module.type !== AuditModuleType.SIGNALETIQUE || isModuleInCurrentScope(module) === future) continue;
             const line = module.line || '?';
             for (const station of (module.data as ModeData).stations ?? []) {
                 const sig: SignaletiqueData | undefined = station.signaletique;
@@ -114,8 +119,9 @@ export const stationEquipmentItems = (lieux: Lieu[]): StationEquipmentItem[] => 
                         const subElements = sub(h, [['bannerDirection', 'Bandeau direction'], ['hap', 'HAP']]);
                         if (line === 'AEROPORT') { push('planQuartierAeroport', h, direction, rank, count, subElements); return; }
                         // Plans T1 : même règle que collectSignaletiquePlansQuartier
-                        // (station en exploitation, « non installé » exclu).
-                        if (!inService || (h.status ?? 'NotChecked') === EquipmentStatusType.NOT_APPLICABLE) return;
+                        // (station en exploitation, « non installé » exclu) ;
+                        // station future : consultée telle quelle.
+                        if (!future && (!inService || (h.status ?? 'NotChecked') === EquipmentStatusType.NOT_APPLICABLE)) return;
                         push('planQuartierTram', h, direction, rank, count, subElements);
                     });
                     each(sig.hap?.[dir], (h, rank, count) => push('hap', h, direction, rank, count, []));
@@ -125,6 +131,12 @@ export const stationEquipmentItems = (lieux: Lieu[]): StationEquipmentItem[] => 
     }
     return items;
 };
+
+/** Emplacements comptés par l'inventaire (périmètre d'exploitation). */
+export const stationEquipmentItems = (lieux: Lieu[]): StationEquipmentItem[] => collectStationEquipment(lieux, false);
+
+/** Emplacements des modules futurs : consultables, jamais comptés. */
+export const futureStationEquipmentItems = (lieux: Lieu[]): StationEquipmentItem[] => collectStationEquipment(lieux, true);
 
 export interface StationEquipmentPresence {
     /** Emplacements déclarés (= quantité d'inventaire). */

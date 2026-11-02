@@ -44,7 +44,7 @@ import {
     ElementFamily, ELEMENT_FAMILY_LABELS, FamilyElement, buildFamilyElements, splitSelection, selectFamilyPose,
     selectionLabel, pmrElementIdOf, cognitiveElementIdOf, isSelectableFamily, buildStationEquipmentElements,
 } from '../../utils/cockpit/familyElements';
-import { stationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
+import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
 import FamilyElementSheet from './FamilyElementSheet';
 import StationEquipmentSheet from './StationEquipmentSheet';
 import { PoseRowsTree } from './PoseRowsTree';
@@ -253,7 +253,9 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                             <th className="p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center">Posés</th>
+                            {/* Emplacements référencés (tous statuts d'audit confondus),
+                                jamais un nombre d'objets constatés posés. */}
+                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center" title="Emplacements référencés, contrôlés ou non — pas un nombre d'équipements constatés sur place">Qté référencée</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
                             <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                         </tr>
@@ -306,8 +308,10 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
                                 <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                     {element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
-                                    {/* Équipements station : emplacements prévus, pas un constat de pose. */}
-                                    {element.family === 'SIG' && element.quantity > 0 && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400">prévus</span>}
+                                    {/* Équipements station : stations en préparation (comptées)
+                                        et stations futures (hors quantité), jamais confondues. */}
+                                    {!!element.inPreparation && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">dont {element.inPreparation} en préparation</span>}
+                                    {!!element.futureCount && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">+ {element.futureCount} futur{element.futureCount > 1 ? 's' : ''}, hors qté</span>}
                                 </td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
@@ -653,11 +657,12 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
     const pmrFloorAll = useMemo(() => pmrFloorPoseItems(lieux), [lieux]);
     const cognitiveAll = useMemo(() => cognitivePictogramPoseItems(lieux), [lieux]);
     const stationEquipmentAll = useMemo(() => stationEquipmentItems(lieux), [lieux]);
+    const stationEquipmentFuture = useMemo(() => futureStationEquipmentItems(lieux), [lieux]);
     const familyElements = useMemo(() => {
         if (isLoading) return [];
         const inventory = computeAdhesiveInventory(lieux, references);
-        return [...buildFamilyElements(inventory, pmrFloorAll, cognitiveAll), ...buildStationEquipmentElements(inventory, stationEquipmentAll)];
-    }, [isLoading, lieux, references, pmrFloorAll, cognitiveAll, stationEquipmentAll]);
+        return [...buildFamilyElements(inventory, pmrFloorAll, cognitiveAll), ...buildStationEquipmentElements(inventory, stationEquipmentAll, stationEquipmentFuture)];
+    }, [isLoading, lieux, references, pmrFloorAll, cognitiveAll, stationEquipmentAll, stationEquipmentFuture]);
     const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
         () => selectFamilyPose(selectedIds, pmrFloorAll, cognitiveAll),
         [selectedIds, pmrFloorAll, cognitiveAll],
@@ -709,6 +714,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
             <StationEquipmentSheet
                 element={openElement}
                 items={stationEquipmentAll.filter(i => i.kind === kind)}
+                futureItems={stationEquipmentFuture.filter(i => i.kind === kind)}
                 onBack={() => setOpenElementId(null)}
             />
         );

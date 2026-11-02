@@ -151,7 +151,7 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                     {usage && (
                         <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.installedCount}</span>
-                            <span className="text-slate-600 dark:text-slate-300">exemplaire{usage.installedCount > 1 ? 's' : ''}</span>
+                            <span className="text-slate-600 dark:text-slate-300">emplacement{usage.installedCount > 1 ? 's' : ''} référencé{usage.installedCount > 1 ? 's' : ''}</span>
                             <span className="text-slate-300 dark:text-slate-600">·</span>
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
                             <span className="text-slate-600 dark:text-slate-300">lieu{usage.lieuCount > 1 ? 'x' : ''}</span>

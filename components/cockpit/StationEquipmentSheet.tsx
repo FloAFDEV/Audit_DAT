@@ -41,17 +41,63 @@ const Count: React.FC<{ value: number; label: string; tone?: string }> = ({ valu
 const lineOf = (i: StationEquipmentItem) => i.line;
 const stationOf = (i: StationEquipmentItem) => i.stationName;
 
+/** Ordre des lignes du cockpit, puis ordre physique des stations. */
+const orderItems = (items: StationEquipmentItem[]) => [...new Set(items.map(i => i.line))].sort(compareLines)
+    .flatMap(line => sortByPhysicalStationOrder(line, items.filter(i => i.line === line), i => i.stationName));
+
+const EquipmentTree: React.FC<{ items: StationEquipmentItem[]; tag: string }> = ({ items, tag }) => (
+    <LineStationTree
+        items={items}
+        lineOf={lineOf}
+        stationOf={stationOf}
+        stationTag={stationItems => stationItems.some(i => !i.inService) && (
+            <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">{tag}</span>
+        )}
+        renderStation={stationItems => (
+            <ul className="space-y-2">
+                {stationItems.map((item, i) => (
+                    <li key={i} className="ml-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
+                        <div className="flex items-start justify-between gap-3">
+                            <span className="min-w-0">
+                                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">
+                                    {item.direction ?? 'Direction non précisée'}{item.rank ? ` · n°${item.rank}` : ''}
+                                </span>
+                                {item.dimensions && <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDimensionText(item.dimensions)}</span>}
+                            </span>
+                            <StatusBadge status={item.status} />
+                        </div>
+                        {item.subElements.length > 0 && (
+                            <ul className="mt-2 space-y-1 border-l border-slate-200 dark:border-slate-700 pl-2">
+                                {item.subElements.map(subElement => (
+                                    <li key={subElement.label} className="flex items-baseline justify-between gap-3 text-xs">
+                                        <span className="min-w-0 text-slate-600 dark:text-slate-300 break-words">
+                                            {subElement.label}{subElement.dimensions ? ` · ${subElement.dimensions}` : ''}
+                                        </span>
+                                        <StatusBadge status={subElement.status} />
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        {item.comment && <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400 break-words">{item.comment}</p>}
+                    </li>
+                ))}
+            </ul>
+        )}
+    />
+);
+
 interface StationEquipmentSheetProps {
     element: FamilyElement;
     items: StationEquipmentItem[];
+    /** Stations futures : consultables, hors quantités. */
+    futureItems: StationEquipmentItem[];
     onBack: () => void;
 }
 
-const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, items, onBack }) => {
+const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, items, futureItems, onBack }) => {
     const presence = useMemo(() => stationEquipmentPresence(items), [items]);
-    // Ordre des lignes du cockpit, puis ordre physique des stations.
-    const ordered = useMemo(() => [...new Set(items.map(i => i.line))].sort(compareLines)
-        .flatMap(line => sortByPhysicalStationOrder(line, items.filter(i => i.line === line), i => i.stationName)), [items]);
+    const ordered = useMemo(() => orderItems(items), [items]);
+    const orderedFuture = useMemo(() => orderItems(futureItems), [futureItems]);
     const lines = [...element.lines].sort(compareLines).map(l => `Ligne ${l}`).join(', ');
 
     return (
@@ -68,7 +114,7 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
                     <div className="min-w-0 flex-1">
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100 break-words">{element.name}</h2>
                         <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
-                            <span className="font-bold text-teal-700 dark:text-teal-400 tabular-nums">{element.quantity}</span> emplacement{element.quantity > 1 ? 's' : ''} prévu{element.quantity > 1 ? 's' : ''} (inventaire) · {element.lieuCount} lieu{element.lieuCount > 1 ? 'x' : ''}
+                            <span className="font-bold text-teal-700 dark:text-teal-400 tabular-nums">{element.quantity}</span> emplacement{element.quantity > 1 ? 's' : ''} référencé{element.quantity > 1 ? 's' : ''} (inventaire) · {element.lieuCount} lieu{element.lieuCount > 1 ? 'x' : ''}
                         </p>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Équipements station · consultation seule, hors exports</p>
                     </div>
@@ -83,7 +129,7 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
                 </ul>
                 {presence.inPreparation > 0 && (
                     <p className="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
-                        Dont {presence.inPreparation} emplacement{presence.inPreparation > 1 ? 's' : ''} sur des stations en préparation (ligne pas encore en service) : prévus, pas posés.
+                        Dont {presence.inPreparation} emplacement{presence.inPreparation > 1 ? 's' : ''} sur des stations en préparation (ligne pas encore en service) : comptés dans la quantité référencée, pas encore posés.
                     </p>
                 )}
             </div>
@@ -100,46 +146,20 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
                 {ordered.length === 0 ? (
                     <p className="text-sm text-slate-500 dark:text-slate-400 italic">Aucun emplacement sur le périmètre actuel.</p>
                 ) : (
-                    <LineStationTree
-                        items={ordered}
-                        lineOf={lineOf}
-                        stationOf={stationOf}
-                        stationTag={stationItems => stationItems.some(i => !i.inService) && (
-                            <span className="inline-flex px-1.5 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">en préparation</span>
-                        )}
-                        renderStation={stationItems => (
-                            <ul className="space-y-2">
-                                {stationItems.map((item, i) => (
-                                    <li key={i} className="ml-3 rounded-lg border border-slate-200 dark:border-slate-700 p-2.5">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <span className="min-w-0">
-                                                <span className="block text-sm font-medium text-slate-800 dark:text-slate-100 break-words">
-                                                    {item.direction ?? 'Direction non précisée'}{item.rank ? ` · n°${item.rank}` : ''}
-                                                </span>
-                                                {item.dimensions && <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDimensionText(item.dimensions)}</span>}
-                                            </span>
-                                            <StatusBadge status={item.status} />
-                                        </div>
-                                        {item.subElements.length > 0 && (
-                                            <ul className="mt-2 space-y-1 border-l border-slate-200 dark:border-slate-700 pl-2">
-                                                {item.subElements.map(subElement => (
-                                                    <li key={subElement.label} className="flex items-baseline justify-between gap-3 text-xs">
-                                                        <span className="min-w-0 text-slate-600 dark:text-slate-300 break-words">
-                                                            {subElement.label}{subElement.dimensions ? ` · ${subElement.dimensions}` : ''}
-                                                        </span>
-                                                        <StatusBadge status={subElement.status} />
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                        {item.comment && <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400 break-words">{item.comment}</p>}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    />
+                    <EquipmentTree items={ordered} tag="en préparation" />
                 )}
             </SheetSection>
+
+            {/* Stations futures (hors périmètre d'exploitation) : visibles pour
+                préparer, jamais comptées ni présentées comme installées. */}
+            {orderedFuture.length > 0 && (
+                <SheetSection title="Stations futures — hors quantités" icon={<Radar className="w-4 h-4" />}>
+                    <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
+                        {orderedFuture.length} emplacement{orderedFuture.length > 1 ? 's' : ''} déjà décrit{orderedFuture.length > 1 ? 's' : ''} dans les données, non compté{orderedFuture.length > 1 ? 's' : ''} dans la quantité référencée.
+                    </p>
+                    <EquipmentTree items={orderedFuture} tag="station future" />
+                </SheetSection>
+            )}
         </div>
     );
 };

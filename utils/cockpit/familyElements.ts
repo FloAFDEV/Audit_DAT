@@ -46,6 +46,12 @@ export interface FamilyElement {
     quantity: number;
     lieuCount: number;
     lines: string[];
+    /** Équipements station : emplacements comptés sur des stations en
+     *  préparation (ligne pas encore en service). */
+    inPreparation?: number;
+    /** Équipements station : emplacements de stations futures, consultables
+     *  mais HORS quantité. */
+    futureCount?: number;
 }
 
 export const elementFamilyOf = (id: string): ElementFamily | null =>
@@ -114,15 +120,18 @@ export const selectionLabel = (ids: ReadonlySet<string>, elements: FamilyElement
 /** Équipements station : un élément par type, dans l'ordre de l'inventaire
  *  (même quantité que la ligne d'inventaire — vérifié par test). */
 export const buildStationEquipmentElements = (
-    inventory: AdhesiveInventoryItem[], items: StationEquipmentItem[],
+    inventory: AdhesiveInventoryItem[], items: StationEquipmentItem[], futureItems: StationEquipmentItem[] = [],
 ): FamilyElement[] => {
     const kindByRowId = new Map(Object.entries(STATION_EQUIPMENT_ROW_IDS).map(([kind, rowId]) => [rowId, kind]));
     return inventory.flatMap((row): FamilyElement[] => {
         const kind = kindByRowId.get(row.id);
         if (!kind) return [];
+        const ofKind = items.filter(i => i.kind === kind);
         return [{
             id: row.id, family: 'SIG', name: row.name, dimensions: row.dimensions, material: row.material,
-            quantity: row.quantity, ...spread(items.filter(i => i.kind === kind)),
+            quantity: row.quantity, ...spread(ofKind),
+            inPreparation: ofKind.filter(i => !i.inService).length,
+            futureCount: futureItems.filter(i => i.kind === kind).length,
         }];
     });
 };

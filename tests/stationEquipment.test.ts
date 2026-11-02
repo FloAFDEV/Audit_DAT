@@ -89,3 +89,21 @@ describe('Équipements station — hors exports', () => {
         expect(pose).toEqual({ pmrFloor: [], cognitive: [] });
     });
 });
+
+describe('Équipements station — stations futures', () => {
+    it('modules futurs (Blagnac côté T1) consultables, jamais additionnés aux quantités', async () => {
+        const { futureStationEquipmentItems } = await import('../utils/cockpit/stationEquipment');
+        const future = futureStationEquipmentItems(lieux);
+        expect(future.length).toBeGreaterThan(0);
+        expect(future.every(i => !i.inService && i.line === 'TRAM')).toBe(true);
+        expect([...new Set(future.map(i => i.stationName))]).toEqual(['Blagnac']);
+        expect(new Set(future.map(i => i.kind))).toEqual(new Set(['totem', 'bandeau', 'biv', 'planReseau', 'planQuartierTram', 'hap']));
+        const counted = stationEquipmentItems(lieux);
+        expect(counted.some(i => i.stationName === 'Blagnac' && i.line === 'TRAM')).toBe(false);
+        const elements = buildStationEquipmentElements(computeAdhesiveInventory(lieux, buildSignageReferencesSeed()), counted, future);
+        const totem = elements.find(e => e.id === 'sign-totem')!;
+        expect(totem.quantity).toBe(inventoryQty(lieux, 'sign-totem'));
+        expect(totem.futureCount).toBe(future.filter(i => i.kind === 'totem').length);
+        expect(totem.inPreparation).toBe(counted.filter(i => i.kind === 'totem' && !i.inService).length);
+    });
+});
