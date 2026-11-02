@@ -68,7 +68,8 @@ export const useAppHandlers = () => {
             const icon = React.createElement('div', { className: "h-full w-full rounded-full bg-sky-500 flex items-center justify-center" }, React.createElement(Download, { className: "h-6 w-6 text-white" }));
             showInfoToast({ icon, title: 'Rappel pour les photos', message: "Cet export contient des photos. N'oubliez pas d'exporter le JSON pour une sauvegarde complète." });
         }
-        const result = exportLieuxToCsv(lieux, fileName);
+        // Libellés du catalogue IndexedDB (référentiel chargé dans le store).
+        const result = exportLieuxToCsv(lieux, useAuditStore.getState().signageReferences, fileName);
 
         if (result.success) {
             showExportSuccessToast(successMessage, categoryConfig?.key);

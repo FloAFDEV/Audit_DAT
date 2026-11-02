@@ -40,7 +40,7 @@ const captureCsv = async (lieux: Lieu[]): Promise<string> => {
     URL.createObjectURL = (b: Blob) => { blob = b; return 'blob:test'; };
     URL.revokeObjectURL = () => {};
     try {
-        expect(exportLieuxToCsv(lieux, 'test.csv').success).toBe(true);
+        expect(exportLieuxToCsv(lieux, buildSignageReferencesSeed(), 'test.csv').success).toBe(true);
     } finally {
         g.document = previousDocument;
         URL.createObjectURL = createObjectURL;

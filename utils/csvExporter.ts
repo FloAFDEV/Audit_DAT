@@ -3,13 +3,13 @@
 
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData,
-    PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem
+    PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, EquipmentType, EcaEquipmentType, MaintenanceItem, SignageReference,
 } from '../types';
-import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import { getPmrMaterial } from '../data/pmr_materials';
 import { physicalStationIndex } from './cockpit/exportStationOrder';
 import { parseAdhesiveName } from './adhesiveNames';
+import { buildExportCatalogue } from './effectiveAdhesives';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { buildFullExportPayload, validateLieuxData } from './signageSerializer';
 
@@ -405,8 +405,19 @@ function buildGroupedCsvRows(
 // autres lignes restent triées par ordre alphabétique, comme avant.
 const CSV_PHYSICAL_ORDER_LINES: ReadonlySet<string> = new Set(['A', 'B', 'C', 'TRAM', 'TELEO']);
 
-export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: boolean; error?: string } => {
-    try {
+/** Libellé explicite d'une référence introuvable dans le catalogue
+ *  IndexedDB comme dans le catalogue historique (donnée incohérente) :
+ *  jamais une ligne silencieusement vide. */
+export const missingReferenceLabel = (id: string): string => `Référence introuvable dans le catalogue (${id})`;
+
+/**
+ * Contenu du CSV global (export complet des audits). Les libellés des
+ * adhésifs DAT, P+R et ECA viennent du catalogue IndexedDB
+ * (signageReferences, via buildExportCatalogue) ; colonnes, identifiants,
+ * quantités et ordre inchangés.
+ */
+export const buildLieuxCsvContent = (lieux: Lieu[], references: SignageReference[]): string | null => {
+        const catalogue = buildExportCatalogue(references);
         const rows: CsvRow[] = [];
         const exportDate = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
         
@@ -449,7 +460,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             for (const direction of station.directions) {
                                 for (const dat of direction.dats) {
                                     for (const [adhesiveId, status] of Object.entries(dat.adhesives)) {
-                                        const adhesive = ADHESIVES.find(a => a.id === adhesiveId);
+                                        const adhesive = catalogue.datAdhesive(adhesiveId);
                                         const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                                         
                                         let description = '';
@@ -467,7 +478,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                             'Élément': dat.name,
                                             'Statut': statusTranslations[status as string] || status,
                                             'Repère': repere,
-                                            'Description Adhésif': `${parsedAdhesiveName} | ${description}`,
+                                            'Description Adhésif': adhesive ? `${parsedAdhesiveName} | ${description}` : missingReferenceLabel(adhesiveId),
                                             'Localisation Adhésif': location,
                                             'Commentaire': dat.comment,
                                         });
@@ -481,9 +492,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                         const data = module.data as Pr;
                         for (const zone of data.zones) {
                             for (const equipment of zone.equipments) {
-                                const adhesives = getPrAdhesives(equipment.type);
                                 for (const [adhesiveId, status] of Object.entries(equipment.adhesives)) {
-                                    const adhesive = adhesives.find(a => a.id === adhesiveId);
+                                    const adhesive = catalogue.prAdhesive(equipment.type, adhesiveId);
                                     const { repere, name: parsedAdhesiveName } = parseAdhesiveName(adhesive?.name);
                                     
                                     let description = adhesive?.description || '';
@@ -501,6 +511,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                                     if (dimensions) {
                                         finalDescription += ` | ${dimensions}`;
                                     }
+                                    if (!adhesive) finalDescription = missingReferenceLabel(adhesiveId);
 
                                     rows.push({
                                         ...baseRow,
@@ -539,7 +550,7 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
                             // un type PMR, ambigu : cf. getEcaAdhesiveOccurrences).
                             // Une clé qui ne correspond plus à rien est ignorée, comme
                             // dans maintenanceGenerator.ts.
-                            const occurrences = getEcaAdhesiveOccurrences(eca.type);
+                            const occurrences = catalogue.ecaOccurrences(eca.type);
                             for (const [statusKey, status] of Object.entries(eca.adhesives)) {
                                 const occurrence = occurrences.find(
                                     occ => occ.statusKey === statusKey || occ.legacyStatusKey === statusKey
@@ -759,9 +770,8 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
             }
         }
         
-        if (rows.length === 0) {
-            return { success: true };
-        }
+        // Aucune ligne : rien à télécharger (comportement inchangé).
+        if (rows.length === 0) return null;
 
         // --- TRI : Ligne → Station (physique) → Direction → Élément ---
         //
@@ -822,12 +832,16 @@ export const exportLieuxToCsv = (lieux: Lieu[], fileName: string): { success: bo
 
         const finalCsvRowsForStringify = buildGroupedCsvRows(rows, headerKeys);
 
-        const csvContent = [
+        return [
             '\uFEFF' + headerKeys.join(','), // BOM for UTF-8
             ...finalCsvRowsForStringify.map(row => headerKeys.map(fieldName => escapeCsv(row ? row[fieldName] : '')).join(','))
         ].join('\n') + '\n\n"Généré avec AuditRef, créé par Florent PEREZ"';
+};
 
-        downloadFile(csvContent, fileName, 'text/csv;charset=utf-8;');
+export const exportLieuxToCsv = (lieux: Lieu[], references: SignageReference[], fileName: string): { success: boolean; error?: string } => {
+    try {
+        const content = buildLieuxCsvContent(lieux, references);
+        if (content !== null) downloadFile(content, fileName, 'text/csv;charset=utf-8;');
         return { success: true };
     } catch (error) {
         console.error("Failed to export to CSV:", error);

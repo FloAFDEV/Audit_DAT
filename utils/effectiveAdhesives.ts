@@ -207,3 +207,60 @@ export const getEffectiveEquipmentAdhesives = (
         .map(additionToPrAdhesive);
     return [...historical, ...additions];
 };
+
+// -----------------------------------------------------------------
+// Libellés des EXPORTS — résolus depuis le catalogue IndexedDB
+// (signageReferences), sans jamais interrompre un export. Contrairement
+// aux listes du terrain ci-dessus (resolve() lève si un id historique
+// manque), un export doit toujours aboutir : chaque libellé indique sa
+// provenance, explicitement.
+//   - 'catalogue' : référence présente dans signageReferences ;
+//   - 'legacy'    : absente du catalogue → libellé du catalogue historique
+//                   (data/adhesives.ts), à défaut de mieux ;
+//   - absent (undefined) : introuvable partout — l'appelant l'indique.
+// Identifiants, ordre et appartenance : ceux du catalogue historique,
+// comme pour le terrain.
+// -----------------------------------------------------------------
+export type CatalogueLabelSource = 'catalogue' | 'legacy';
+export type ExportAdhesive = Adhesive & { source: CatalogueLabelSource };
+export type ExportPrAdhesive = PrAdhesive & { source: CatalogueLabelSource };
+export type ExportEcaOccurrence = EcaAdhesiveOccurrence & { source: CatalogueLabelSource };
+
+export const buildExportCatalogue = (references: SignageReference[]) => {
+    const byId = new Map(references.map(r => [r.id, r]));
+    const datLegacy = new Map(ADHESIVES.map(a => [a.id, a]));
+
+    /** Adhésif DAT par id (historique ou addition du catalogue). */
+    const datAdhesive = (id: string): ExportAdhesive | undefined => {
+        const ref = byId.get(id);
+        const legacy = datLegacy.get(id);
+        if (ref) return { ...(legacy ? toAdhesive(legacy, ref) : additionToAdhesive(ref)), source: 'catalogue' };
+        return legacy ? { ...legacy, source: 'legacy' } : undefined;
+    };
+
+    /** Adhésif P+R par id pour un type de borne (historique du type, ou
+     *  toute référence du catalogue — surcharges locales comprises). */
+    const prAdhesive = (type: EquipmentType, id: string): ExportPrAdhesive | undefined => {
+        const ref = byId.get(id);
+        const legacy = getPrAdhesives(type).find(a => a.id === id);
+        if (ref) return { ...(legacy ? toPrAdhesive(legacy, ref) : additionToPrAdhesive(ref)), source: 'catalogue' };
+        return legacy ? { ...legacy, source: 'legacy' } : undefined;
+    };
+
+    /** Occurrences ECA d'un type (zones comprises) + additions du catalogue. */
+    const ecaOccurrences = (type: EcaEquipmentType): ExportEcaOccurrence[] => {
+        const legacyById = new Map(getEcaAdhesives(type).map(a => [a.id, a]));
+        const historical = getEcaAdhesiveOccurrences(type).map((occ): ExportEcaOccurrence => {
+            const ref = byId.get(occ.id);
+            return ref
+                ? { ...occ, ...toAdhesive(legacyById.get(occ.id)!, ref), source: 'catalogue' }
+                : { ...occ, source: 'legacy' };
+        });
+        const additions = resolveReferencesForEquipment(references, 'ECA', type)
+            .filter(ref => !legacyById.has(ref.id))
+            .map((ref): ExportEcaOccurrence => ({ ...additionToAdhesive(ref), statusKey: ref.id, source: 'catalogue' }));
+        return [...historical, ...additions];
+    };
+
+    return { datAdhesive, prAdhesive, ecaOccurrences };
+};
