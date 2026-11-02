@@ -98,7 +98,7 @@ const UsageSection: React.FC<{
                     <Field label="Types d'équipements" value={usage.equipmentTypes.join(', ')} />
                 </div>
             )}
-            <div className="flex flex-wrap justify-end gap-2 mb-3">
+            <div className="flex flex-col gap-2 mb-3 sm:flex-row sm:flex-wrap sm:justify-end *:w-full *:justify-center sm:*:w-auto">
                 <ImplantationsExportButton items={items} index={index} refById={refById} />
                 <PoseCsvExportButton items={items} refById={refById} />
             </div>

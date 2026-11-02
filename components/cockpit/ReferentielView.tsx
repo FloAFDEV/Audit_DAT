@@ -402,6 +402,15 @@ const ImplantationsExplorer: React.FC<ImplantationsExplorerProps> = ({ reference
 };
 
 /* ================= Implantations d'une sélection de références ================= */
+
+/** Indicateur de quantité de la sélection : nombre + libellé sur une ligne,
+ *  jamais coupé au milieu (mobile). */
+const SelectionCount: React.FC<{ value: number; label: string }> = ({ value, label }) => (
+    <li className="inline-flex items-baseline gap-1.5 rounded-full bg-teal-50 dark:bg-teal-900/30 px-3 py-1 whitespace-nowrap">
+        <span className="text-base font-bold text-teal-700 dark:text-teal-300 tabular-nums">{value}</span>
+        <span className="text-sm text-slate-700 dark:text-slate-200">{label}</span>
+    </li>
+);
 // Vue de CONSULTATION/EXTRACTION : ne fait que regrouper pour l'affichage
 // (utils/cockpit/implantationsGrouping.ts) des implantations déjà calculées
 // par le moteur d'index — aucun second calcul, aucune notion de campagne/
@@ -455,42 +464,38 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
 
     return (
         <div className="space-y-5">
-            <div className="flex items-start gap-3">
-                <button
-                    onClick={onBack}
-                    className="p-2 mt-1 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
-                    aria-label="Retour aux références"
-                >
-                    <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="min-w-0 flex-1">
-                    <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
-                    <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-sm">
-                        <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{total}</span>
-                        <span className="text-slate-600 dark:text-slate-300">implantation{total > 1 ? 's' : ''}</span>
-                        <span className="text-slate-300 dark:text-slate-600">·</span>
-                        <span className="text-slate-600 dark:text-slate-300">{selection.label}</span>
+            {/* Mobile : titre → indicateurs → actions (empilés) ; à partir de
+                sm, indicateurs et actions partagent une ligne. */}
+            <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                    <button
+                        onClick={onBack}
+                        className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors flex-shrink-0"
+                        aria-label="Retour aux références"
+                    >
+                        <ArrowLeft className="w-5 h-5" />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100">Implantations sélectionnées</h2>
+                        <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300 break-words">{selection.label}</p>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <ul className="flex flex-wrap gap-2" aria-label="Quantités de la sélection">
+                        {(selection.items.length > 0 || (cognitive.length === 0 && pmrFloor.length === 0)) && (
+                            <SelectionCount value={total} label={`implantation${total > 1 ? 's' : ''}`} />
+                        )}
                         {cognitive.length > 0 && (
-                            <>
-                                <span className="text-slate-300 dark:text-slate-600">·</span>
-                                <span className="text-slate-600 dark:text-slate-300">
-                                    {cognitiveItems.length} pictogramme{cognitiveItems.length > 1 ? 's' : ''} cognitif{cognitiveItems.length > 1 ? 's' : ''}
-                                </span>
-                            </>
+                            <SelectionCount value={cognitiveItems.length} label={`pictogramme${cognitiveItems.length > 1 ? 's' : ''} cognitif${cognitiveItems.length > 1 ? 's' : ''}`} />
                         )}
                         {pmrFloor.length > 0 && (
-                            <>
-                                <span className="text-slate-300 dark:text-slate-600">·</span>
-                                <span className="text-slate-600 dark:text-slate-300">
-                                    {pmrFloorItems.length} adhésif{pmrFloorItems.length > 1 ? 's' : ''} PMR au sol
-                                </span>
-                            </>
+                            <SelectionCount value={pmrFloorItems.length} label={`adhésif${pmrFloorItems.length > 1 ? 's' : ''} PMR au sol`} />
                         )}
-                    </p>
-                </div>
-                <div className="flex flex-wrap justify-end gap-2">
-                    <ImplantationsExportButton items={items} index={index} refById={refById} />
-                    <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} pmrFloor={pmrFloorItems} />
+                    </ul>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end *:w-full *:justify-center sm:*:w-auto">
+                        <ImplantationsExportButton items={items} index={index} refById={refById} />
+                        <PoseCsvExportButton items={items} refById={refById} cognitive={cognitiveItems} pmrFloor={pmrFloorItems} />
+                    </div>
                 </div>
             </div>
 
