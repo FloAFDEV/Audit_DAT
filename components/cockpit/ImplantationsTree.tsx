@@ -7,14 +7,14 @@
 // par le moteur d'index (aucun second calcul).
 // =================================================================
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, Download, FileText } from 'lucide-react';
+import { Building2, ChevronDown, Download, FileText } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { AdhesiveStatus, SignageReference } from '../../types';
 import { AUDIT_CATEGORIES } from '../../data/config';
 import { getPrZoneAddressByName } from '../../data/pr_structures';
 import { CategoryIcon } from '../CategoryIcon';
 import { ImplantationRef, PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
-import { groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
+import { GroupedContext, groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { downloadImplantationsWorkbook } from '../../utils/cockpit/implantationsExporter';
 import { buildImplantationLineSheets, buildImplantationSyntheseRows, buildPoseRows } from './implantationsExportRows';
@@ -64,6 +64,63 @@ const STATUS_BADGE: Record<string, string> = {
     [AdhesiveStatus.NotChecked]: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };
 
+/** Contenu d'une station : accès / liaison → équipement → repères (statut,
+ *  ouverture de la fiche). Partagé par l'arbre et le patrimoine d'une station. */
+export const ImplantationContexts: React.FC<{
+    contexts: GroupedContext[];
+    line: string;
+    stationName: string;
+    refById: Map<string, SignageReference>;
+    onOpenReference: (id: string) => void;
+}> = ({ contexts, line, stationName, refById, onOpenReference }) => (
+    <>
+        {contexts.map(ctx => {
+            const prAddress = line === 'P+R' ? getPrZoneAddressByName(stationName, ctx.context) : undefined;
+            return (
+            <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
+                <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
+                    <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        {ctx.context}
+                        {prAddress && <span className="block font-normal normal-case tracking-normal">{prAddress}</span>}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
+                </div>
+                <div className="space-y-2">
+                    {ctx.equipments.map(equip => (
+                        <div key={equip.equipmentLabel}>
+                            <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{implantationEquipmentLabel(equip.items[0])}</p>
+                            <ul className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-700">
+                                {equip.items.map((imp, i) => {
+                                    const ref = refById.get(imp.referenceId);
+                                    return (
+                                        <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-baseline justify-between gap-3">
+                                            <span className="min-w-0 overflow-hidden">
+                                                <button
+                                                    onClick={() => onOpenReference(imp.referenceId)}
+                                                    className="block text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline text-left truncate max-w-full"
+                                                >
+                                                    {ref ? displayReferenceName(ref) : imp.referenceId}
+                                                </button>
+                                                {imp.zone && (
+                                                    <span className="block text-xs text-slate-500 dark:text-slate-400" title={imp.zoneLabel}>{implantationZoneLabel(imp.zone)}</span>
+                                                )}
+                                            </span>
+                                            <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
+                                                {STATUS_LABELS[imp.status] ?? imp.status}
+                                            </span>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </div>
+                    ))}
+                </div>
+            </div>
+            );
+        })}
+    </>
+);
+
 /* ================= Arbre des implantations (rendu partagé) ================= */
 // Ligne → Station → Accès/liaison → Équipement → Référence → Zone.
 // LE rendu unique des implantations : fiche de référence, « Implantations
@@ -74,9 +131,12 @@ interface ImplantationsTreeProps {
     items: ImplantationRef[];
     refById: Map<string, SignageReference>;
     onOpenReference: (id: string) => void;
+    /** Onglet Implantations seulement : accès au patrimoine complet de la
+     *  station (lieu + ligne) depuis son nœud. */
+    onOpenStation?: (station: { lieuId: string; line: string }) => void;
 }
 
-export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, refById, onOpenReference }) => {
+export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, refById, onOpenReference, onOpenStation }) => {
     // Lignes dans l'ordre métier, stations dans l'ordre réseau (registre).
     const groupedLines = useMemo(
         () => groupImplantationsByLocation(items)
@@ -148,50 +208,17 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                                             </button>
                                             {isStationOpen && (
                                                 <div className="px-4 pb-3 space-y-2.5">
-                                                    {station.contexts.map(ctx => {
-                                                        const prAddress = line === 'P+R' ? getPrZoneAddressByName(station.stationName, ctx.context) : undefined;
-                                                        return (
-                                                        <div key={ctx.context} className="rounded-lg border border-slate-200 dark:border-slate-700 p-2.5 ml-3">
-                                                            <div className="flex items-baseline justify-between gap-3 pb-1.5 mb-1.5 border-b border-dashed border-slate-200 dark:border-slate-700">
-                                                                <span className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                                                    {ctx.context}
-                                                                    {prAddress && <span className="block font-normal normal-case tracking-normal">{prAddress}</span>}
-                                                                </span>
-                                                                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                {ctx.equipments.map(equip => (
-                                                                    <div key={equip.equipmentLabel}>
-                                                                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">{implantationEquipmentLabel(equip.items[0])}</p>
-                                                                        <ul className="space-y-1 pl-2 border-l border-slate-200 dark:border-slate-700">
-                                                                            {equip.items.map((imp, i) => {
-                                                                                const ref = refById.get(imp.referenceId);
-                                                                                return (
-                                                                                    <li key={`${imp.referenceId}-${imp.zone ?? ''}-${i}`} className="flex items-baseline justify-between gap-3">
-                                                                                        <span className="min-w-0 overflow-hidden">
-                                                                                            <button
-                                                                                                onClick={() => onOpenReference(imp.referenceId)}
-                                                                                                className="block text-sm font-medium text-teal-700 dark:text-teal-300 hover:underline text-left truncate max-w-full"
-                                                                                            >
-                                                                                                {ref ? displayReferenceName(ref) : imp.referenceId}
-                                                                                            </button>
-                                                                                            {imp.zone && (
-                                                                                                <span className="block text-xs text-slate-500 dark:text-slate-400" title={imp.zoneLabel}>{implantationZoneLabel(imp.zone)}</span>
-                                                                                            )}
-                                                                                        </span>
-                                                                                        <span className={`flex-shrink-0 inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_BADGE[imp.status] ?? STATUS_BADGE[AdhesiveStatus.NotChecked]}`}>
-                                                                                            {STATUS_LABELS[imp.status] ?? imp.status}
-                                                                                        </span>
-                                                                                    </li>
-                                                                                );
-                                                                            })}
-                                                                        </ul>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-                                                        );
-                                                    })}
+                                                    {onOpenStation && line !== 'P+R' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => onOpenStation({ lieuId: station.contexts[0].equipments[0].items[0].lieuId, line })}
+                                                            className="ml-3 inline-flex min-h-11 items-center gap-2 rounded-full border border-teal-600 px-4 text-sm font-semibold text-teal-700 hover:bg-teal-50 dark:border-teal-400 dark:text-teal-300 dark:hover:bg-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500"
+                                                        >
+                                                            <Building2 className="w-4 h-4" aria-hidden="true" />
+                                                            Patrimoine complet
+                                                        </button>
+                                                    )}
+                                                    <ImplantationContexts contexts={station.contexts} line={line} stationName={station.stationName} refById={refById} onOpenReference={onOpenReference} />
                                                 </div>
                                             )}
                                         </div>
