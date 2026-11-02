@@ -155,3 +155,35 @@ describe('Stations futures et en préparation', () => {
         expect(buildStationPatrimoine(sources, { lieuId: 'inconnu', line: 'A' })).toBeNull();
     });
 });
+
+describe('Unités et fonctionnement hors connexion', () => {
+    it('appareils, références et repères ne sont jamais confondus', () => {
+        for (const lieu of lieux) for (const line of linesOfLieu(lieu)) {
+            const p = buildStationPatrimoine(sources, { lieuId: lieu.id, line })!;
+            for (const s of summarizeStationPatrimoine(p)) {
+                const units = s.counts.map(c => c.unit);
+                expect(new Set(units).size, `${lieu.name} ${line} ${s.family}`).toBe(units.length);
+                if (s.family === 'DAT' || s.family === 'ECA') {
+                    const [devices, references, marks] = s.counts.map(c => c.value);
+                    expect(devices).toBeLessThanOrEqual(marks);
+                    expect(references).toBeLessThanOrEqual(marks);
+                }
+            }
+        }
+    });
+
+    it('calcul local pur : aucun accès réseau, tout le réseau en moins d\'une seconde', () => {
+        const originalFetch = globalThis.fetch;
+        globalThis.fetch = (() => { throw new Error('réseau interdit'); }) as typeof fetch;
+        try {
+            const t0 = performance.now();
+            let stations = 0;
+            for (const lieu of lieux) for (const line of linesOfLieu(lieu)) {
+                summarizeStationPatrimoine(buildStationPatrimoine(sources, { lieuId: lieu.id, line })!);
+                stations++;
+            }
+            expect(stations).toBeGreaterThan(80);
+            expect(performance.now() - t0).toBeLessThan(1000);
+        } finally { globalThis.fetch = originalFetch; }
+    });
+});
