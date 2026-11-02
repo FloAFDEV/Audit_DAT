@@ -70,9 +70,10 @@ const FAMILY_FILTERS: { key: FamilyFilter; label: string }[] = [
  *  retrouve la liste telle qu'on l'a quittée. */
 export interface ReferencesFilter { family: FamilyFilter; support: 'ALL' | SignageSupport; query: string }
 
-/** Sous-libellé d'une quantité : composante non confirmée comme posée. */
+/** Sous-libellé d'une quantité : composante non confirmée comme posée.
+ *  Retour à la ligne autorisé sous sm (petits écrans), insécable au-delà. */
 const QtyNote: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">{children}</span>
+    <span className="block text-[11px] leading-tight font-normal text-slate-500 dark:text-slate-400 sm:whitespace-nowrap">{children}</span>
 );
 
 interface ReferencesListProps {
@@ -246,7 +247,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                 <table className="min-w-full text-sm">
                     <thead className="sticky top-0 bg-slate-100 dark:bg-slate-700 text-left text-slate-700 dark:text-slate-200 shadow-sm">
                         <tr>
-                            <th className="p-3 w-8">
+                            <th className="p-2 sm:p-3 w-8">
                                 <input
                                     type="checkbox"
                                     checked={allVisibleSelected}
@@ -257,15 +258,15 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                     className="h-4 w-4 rounded border-slate-300 text-teal-700 focus:ring-teal-500 dark:text-teal-600"
                                 />
                             </th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Référence / élément</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider">Référence / élément</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider">Famille</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider hidden sm:table-cell">Support</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider hidden md:table-cell">Dimensions</th>
                             {/* Emplacements référencés (tous statuts d'audit confondus),
                                 jamais un nombre d'objets constatés posés. */}
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center" title="Emplacements référencés, contrôlés ou non — pas un nombre d'équipements constatés sur place">Qté référencée</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
-                            <th className="p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center" title="Emplacements référencés, contrôlés ou non — pas un nombre d'équipements constatés sur place"><span className="sm:hidden">Qté réf.</span><span className="hidden sm:inline">Qté référencée</span></th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Stations</th>
+                            <th className="p-2 sm:p-3 font-bold text-xs uppercase tracking-wider text-center hidden lg:table-cell">Lignes</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -274,7 +275,7 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                             return (
                                 <tr key={ref.id} onClick={() => onOpen(ref.id)} className={rowClass(selectedIds.has(ref.id), idx)}>
                                     {checkbox(ref.id, ref.name)}
-                                    <td className="p-3">
+                                    <td className="p-2 sm:p-3">
                                         <div className="flex items-center gap-2 flex-wrap">
                                             {/* Aperçu du visuel au survol : même composant et même
                                                 identifiant que l'Inventaire détaillé (Synthèse). */}
@@ -287,15 +288,15 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                             {ref.code ? `${ref.code} · ` : ''}{ref.id}
                                         </span>
                                     </td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
-                                    <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
-                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                    <td className="p-2 sm:p-3 sm:whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
+                                    <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
+                                    <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
+                                    <td className="p-2 sm:p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                         {usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
                                         {lineBExtensionCountOf(ref.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(ref.id)} ext. B 2027</QtyNote>}
                                     </td>
-                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
-                                    <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
+                                    <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
+                                    <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                 </tr>
                             );
                         })}
@@ -303,8 +304,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                             <tr key={element.id} onClick={() => onOpenElement(element.id)} className={rowClass(selectedIds.has(element.id), filtered.length + i)}>
                                 {isSelectableFamily(element.family)
                                     ? checkbox(element.id, `${element.name} ${element.material ?? element.dimensions}`)
-                                    : <td className="p-3" title="Consultation seule — hors exports" />}
-                                <td className="p-3">
+                                    : <td className="p-2 sm:p-3" title="Consultation seule — hors exports" />}
+                                <td className="p-2 sm:p-3">
                                     <ReferenceNamePreview referenceId={getInventoryVisualReferenceId(element.id)} label={element.name}>
                                         <span className="font-medium text-slate-800 dark:text-slate-100">{element.name}</span>
                                     </ReferenceNamePreview>
@@ -314,10 +315,10 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                             : `${element.material ?? formatDimensionText(element.dimensions)} · hors catalogue`}
                                     </span>
                                 </td>
-                                <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{ELEMENT_FAMILY_LABELS[element.family]}</td>
-                                <td className="p-3 whitespace-nowrap text-slate-500 dark:text-slate-400 hidden sm:table-cell">—</td>
-                                <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
-                                <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                <td className="p-2 sm:p-3 sm:whitespace-nowrap text-slate-600 dark:text-slate-300">{ELEMENT_FAMILY_LABELS[element.family]}</td>
+                                <td className="p-2 sm:p-3 whitespace-nowrap text-slate-500 dark:text-slate-400 hidden sm:table-cell">—</td>
+                                <td className="p-2 sm:p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
+                                <td className="p-2 sm:p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                     {element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
                                     {/* Équipements station : exploitation + préparation (comptées),
                                         stations futures à part (hors quantité) — jamais confondues. */}
@@ -330,8 +331,8 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                     {!!element.futureCount && <QtyNote>(+ {element.futureCount} futur{element.futureCount > 1 ? 's' : ''}, hors qté)</QtyNote>}
                                     {lineBExtensionCountOf(element.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(element.id)} ext. B 2027</QtyNote>}
                                 </td>
-                                <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
-                                <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
+                                <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
+                                <td className="p-2 sm:p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
                             </tr>
                         ))}
                         {filtered.length === 0 && filteredElements.length === 0 && (
