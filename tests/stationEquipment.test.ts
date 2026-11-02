@@ -104,6 +104,7 @@ describe('Équipements station — stations futures', () => {
         const totem = elements.find(e => e.id === 'sign-totem')!;
         expect(totem.quantity).toBe(inventoryQty(lieux, 'sign-totem'));
         expect(totem.futureCount).toBe(future.filter(i => i.kind === 'totem').length);
-        expect(totem.inPreparation).toBe(counted.filter(i => i.kind === 'totem' && !i.inService).length);
+        expect(totem.inPreparationByLine).toEqual({ AEROPORT: counted.filter(i => i.kind === 'totem' && !i.inService).length });
+        expect(totem.inService! + Object.values(totem.inPreparationByLine!).reduce((a, b) => a + b, 0)).toBe(totem.quantity);
     });
 });

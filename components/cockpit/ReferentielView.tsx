@@ -46,7 +46,8 @@ import {
 } from '../../utils/cockpit/familyElements';
 import { stationEquipmentItems, futureStationEquipmentItems, STATION_EQUIPMENT_ROW_IDS } from '../../utils/cockpit/stationEquipment';
 import FamilyElementSheet from './FamilyElementSheet';
-import StationEquipmentSheet from './StationEquipmentSheet';
+import StationEquipmentSheet, { preparationParts } from './StationEquipmentSheet';
+import { countLineBExtension, isLineBExtension } from '../../data/lineBExtension';
 import { PoseRowsTree } from './PoseRowsTree';
 
 /* ================= Références : liste filtrable ================= */
@@ -69,8 +70,15 @@ const FAMILY_FILTERS: { key: FamilyFilter; label: string }[] = [
  *  retrouve la liste telle qu'on l'a quittée. */
 export interface ReferencesFilter { family: FamilyFilter; support: 'ALL' | SignageSupport; query: string }
 
+/** Sous-libellé d'une quantité : composante non confirmée comme posée. */
+const QtyNote: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">{children}</span>
+);
+
 interface ReferencesListProps {
     filter: ReferencesFilter;
+    /** Emplacements situés sur l'extension B (comptés, pose non confirmée). */
+    lineBExtensionCountOf: (id: string) => number;
     onFilterChange: (filter: ReferencesFilter) => void;
     references: SignageReference[];
     elements: FamilyElement[];
@@ -84,7 +92,7 @@ interface ReferencesListProps {
 }
 
 const ReferencesList: React.FC<ReferencesListProps> = ({
-    filter, onFilterChange, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
+    filter, onFilterChange, lineBExtensionCountOf, references, elements, usageOf, onOpen, onOpenElement, selectedIds, onToggleSelect, onSetSelection, onViewSelectedImplantations,
 }) => {
     const { family, support, query } = filter;
     const setFamily = (value: FamilyFilter) => onFilterChange({ ...filter, family: value });
@@ -282,7 +290,10 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300">{AUDIT_TYPE_LABELS[ref.auditType]}</td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden sm:table-cell">{SUPPORT_LABELS[ref.support]}</td>
                                     <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensions(ref.dimensions)}</td>
-                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">{usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}</td>
+                                    <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
+                                        {usage?.installedCount ?? <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
+                                        {lineBExtensionCountOf(ref.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(ref.id)} ext. B 2027</QtyNote>}
+                                    </td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lieuCount ?? '—'}</td>
                                     <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{usage?.lines.length ?? '—'}</td>
                                 </tr>
@@ -308,10 +319,16 @@ const ReferencesList: React.FC<ReferencesListProps> = ({
                                 <td className="p-3 whitespace-nowrap text-slate-600 dark:text-slate-300 hidden md:table-cell">{formatDimensionText(element.dimensions)}</td>
                                 <td className="p-3 text-center font-bold text-teal-700 dark:text-teal-400">
                                     {element.quantity > 0 ? element.quantity : <span className="text-slate-500 font-normal dark:text-slate-400">—</span>}
-                                    {/* Équipements station : stations en préparation (comptées)
-                                        et stations futures (hors quantité), jamais confondues. */}
-                                    {!!element.inPreparation && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">dont {element.inPreparation} en préparation</span>}
-                                    {!!element.futureCount && <span className="block text-[11px] font-normal text-slate-500 dark:text-slate-400 whitespace-nowrap">+ {element.futureCount} futur{element.futureCount > 1 ? 's' : ''}, hors qté</span>}
+                                    {/* Équipements station : exploitation + préparation (comptées),
+                                        stations futures à part (hors quantité) — jamais confondues. */}
+                                    {preparationParts(element).length > 0 && (
+                                        <>
+                                            <QtyNote>{element.inService} en exploitation</QtyNote>
+                                            {preparationParts(element).map(p => <QtyNote key={p.line}>+ {p.count} {p.label} en prép.</QtyNote>)}
+                                        </>
+                                    )}
+                                    {!!element.futureCount && <QtyNote>(+ {element.futureCount} futur{element.futureCount > 1 ? 's' : ''}, hors qté)</QtyNote>}
+                                    {lineBExtensionCountOf(element.id) > 0 && <QtyNote>dont {lineBExtensionCountOf(element.id)} ext. B 2027</QtyNote>}
                                 </td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lieuCount || '—'}</td>
                                 <td className="p-3 text-center text-slate-600 dark:text-slate-300 hidden lg:table-cell">{element.lines.length || '—'}</td>
@@ -523,6 +540,7 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
     const stationCodeByName = useMemo(() => new Map(cognitive.map(c => [`${c.line}|${c.lieuName}`, c.stationCode])), [cognitive]);
 
     const total = items.length;
+    const lineBExtensionCount = countLineBExtension([...items, ...cognitiveItems, ...pmrFloorItems]);
 
     return (
         <div className="space-y-5">
@@ -552,6 +570,11 @@ const SelectedImplantationsView: React.FC<SelectedImplantationsViewProps> = ({
                         )}
                         {pmrFloor.length > 0 && (
                             <SelectionCount value={pmrFloorItems.length} label={`adhésif${pmrFloorItems.length > 1 ? 's' : ''} PMR au sol`} />
+                        )}
+                        {lineBExtensionCount > 0 && (
+                            <li className="inline-flex items-baseline gap-1.5 rounded-full bg-sky-50 dark:bg-sky-900/30 px-3 py-1 whitespace-nowrap" title="Extension B — mise en service prévue début 2027 : emplacements référencés, pose non confirmée">
+                                <span className="text-sm text-sky-800 dark:text-sky-300">dont <span className="font-bold tabular-nums">{lineBExtensionCount}</span> ext. B 2027</span>
+                            </li>
                         )}
                     </ul>
                     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end *:w-full *:justify-center sm:*:w-auto">
@@ -663,6 +686,17 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
         const inventory = computeAdhesiveInventory(lieux, references);
         return [...buildFamilyElements(inventory, pmrFloorAll, cognitiveAll), ...buildStationEquipmentElements(inventory, stationEquipmentAll, stationEquipmentFuture)];
     }, [isLoading, lieux, references, pmrFloorAll, cognitiveAll, stationEquipmentAll, stationEquipmentFuture]);
+    // Extension B : emplacements comptés (règles actuelles), signalés pour ne
+    // jamais être lus comme des poses confirmées.
+    const lineBExtensionCounts = useMemo(() => {
+        const counts = new Map<string, number>();
+        const add = (id: string) => counts.set(id, (counts.get(id) ?? 0) + 1);
+        for (const imp of index.implantations) if (isLineBExtension(imp.line, imp.lieuName)) add(imp.referenceId);
+        for (const i of pmrFloorAll) if (isLineBExtension(i.line, i.lieuName)) add(pmrElementIdOf(i));
+        for (const i of cognitiveAll) if (isLineBExtension(i.line, i.lieuName)) add(cognitiveElementIdOf(i));
+        return counts;
+    }, [index, pmrFloorAll, cognitiveAll]);
+
     const { pmrFloor: pmrFloorPose, cognitive: cognitivePose } = useMemo(
         () => selectFamilyPose(selectedIds, pmrFloorAll, cognitiveAll),
         [selectedIds, pmrFloorAll, cognitiveAll],
@@ -791,6 +825,7 @@ const ReferentielView: React.FC<ReferentielViewProps> = ({ lieux }) => {
 
             {subSection === 'references' && (
                 <ReferencesList
+                    lineBExtensionCountOf={(id) => lineBExtensionCounts.get(id) ?? 0}
                     filter={referencesFilter}
                     onFilterChange={setReferencesFilter}
                     references={references}

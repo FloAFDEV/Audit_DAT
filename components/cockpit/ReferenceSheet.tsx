@@ -17,6 +17,7 @@ import { PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
 import { ImplantationsTree, ImplantationsExportButton, PoseCsvExportButton } from './ImplantationsTree';
 import { SUPPORT_LABELS, ARBITRAGE_LABELS, formatDimensions, formatScope, displayReferenceName } from './labels';
 import { ReferenceVisual } from '../ReferenceVisual';
+import { countLineBExtension, LINE_B_EXTENSION } from '../../data/lineBExtension';
 
 // LineBadge vit avec l'arbre des implantations ; ré-exporté ici pour les
 // vues qui l'importaient déjà depuis la fiche.
@@ -118,6 +119,10 @@ interface ReferenceSheetProps {
 
 const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, index, onBack, onOpenReference }) => {
     const usage = index.byReference.get(reference.id);
+    const lineBExtensionCount = useMemo(
+        () => countLineBExtension(index.implantations.filter(i => i.referenceId === reference.id)),
+        [index, reference.id],
+    );
     const refName = (id: string) => references.find(r => r.id === id)?.name ?? id;
     const linked = (id: string) => (
         <button
@@ -155,6 +160,13 @@ const ReferenceSheet: React.FC<ReferenceSheetProps> = ({ reference, references, 
                             <span className="text-slate-300 dark:text-slate-600">·</span>
                             <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{usage.lieuCount}</span>
                             <span className="text-slate-600 dark:text-slate-300">lieu{usage.lieuCount > 1 ? 'x' : ''}</span>
+                        </p>
+                    )}
+                    {/* Extension B : comptée selon les règles actuelles, pose non
+                        confirmée avant la mise en service. */}
+                    {lineBExtensionCount > 0 && (
+                        <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+                            Dont {lineBExtensionCount} sur l'{LINE_B_EXTENSION.label.charAt(0).toLowerCase() + LINE_B_EXTENSION.label.slice(1)} ({LINE_B_EXTENSION.commissioning}) : référencé{lineBExtensionCount > 1 ? 's' : ''}, pose non confirmée.
                         </p>
                     )}
                     {/* L'identifiant technique reste consultable, mais il ne

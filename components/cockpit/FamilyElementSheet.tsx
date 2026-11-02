@@ -17,6 +17,7 @@ import { SheetSection, Field } from './ReferenceSheet';
 import { compareLines, formatDimensionText } from './labels';
 import { ReferenceVisual } from '../ReferenceVisual';
 import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { countLineBExtension, LINE_B_EXTENSION } from '../../data/lineBExtension';
 
 interface FamilyElementSheetProps {
     element: FamilyElement;
@@ -29,6 +30,7 @@ interface FamilyElementSheetProps {
 const FamilyElementSheet: React.FC<FamilyElementSheetProps> = ({ element, pmrFloor, cognitive, refById, onBack }) => {
     const rows = useMemo(() => buildPoseRows([], refById, cognitive, pmrFloor), [refById, cognitive, pmrFloor]);
     const stationCodeOf = useMemo(() => new Map(cognitive.map(c => [`${c.line}|${c.lieuName}`, c.stationCode])), [cognitive]);
+    const lineBExtensionCount = countLineBExtension([...pmrFloor, ...cognitive]);
     const lines = [...element.lines].sort(compareLines).map(l => (l === 'P+R' ? l : `Ligne ${l}`)).join(', ');
 
     return (
@@ -53,6 +55,13 @@ const FamilyElementSheet: React.FC<FamilyElementSheetProps> = ({ element, pmrFlo
                         <span className="text-lg font-bold text-teal-700 dark:text-teal-400 tabular-nums">{element.lieuCount}</span>
                         <span className="text-slate-600 dark:text-slate-300">lieu{element.lieuCount > 1 ? 'x' : ''}</span>
                     </p>
+                    {/* Extension B : comptée selon les règles actuelles, pose non
+                        confirmée avant la mise en service. */}
+                    {lineBExtensionCount > 0 && (
+                        <p className="mt-1 text-xs text-sky-800 dark:text-sky-300">
+                            Dont {lineBExtensionCount} sur l'{LINE_B_EXTENSION.label.charAt(0).toLowerCase() + LINE_B_EXTENSION.label.slice(1)} ({LINE_B_EXTENSION.commissioning}) : référencé{lineBExtensionCount > 1 ? 's' : ''}, pose non confirmée.
+                        </p>
+                    )}
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{ELEMENT_FAMILY_LABELS[element.family]} · hors catalogue</p>
                 </div>
             </div>

@@ -22,6 +22,7 @@ import { buildPoseCsv } from '../../utils/cockpit/poseExport';
 import { CognitivePictogramPoseItem } from '../../utils/cockpit/cognitivePictogramSummary';
 import { PmrFloorPoseItem } from '../../utils/cockpit/pmrFloorPose';
 import { downloadFile } from '../../utils/csvExporter';
+import { isLineBExtension, LINE_B_EXTENSION } from '../../data/lineBExtension';
 import {
     STATUS_LABELS, compareLines, displayReferenceName, implantationEquipmentLabel, implantationZoneLabel,
 } from './labels';
@@ -31,6 +32,10 @@ import {
 const LINE_CATEGORY_KEY: Record<string, string> = {
     A: 'METRO_A', B: 'METRO_B', C: 'METRO_C', TRAM: 'TRAM', TELEO: 'TELEO', AEROPORT: 'LAE', 'P+R': 'PR',
 };
+/** Libellé court d'une ligne (AEROPORT → « LAE »), même source que le badge. */
+export const lineShortLabel = (line: string): string =>
+    AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line])?.shortLabel ?? line;
+
 export const LineBadge: React.FC<{ line: string; size?: 'xs' | 'sm' }> = ({ line, size = 'sm' }) => {
     const config = AUDIT_CATEGORIES.find(c => c.key === LINE_CATEGORY_KEY[line]);
     return config ? <CategoryIcon categoryConfig={config} size={size} /> : <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{line}</span>;
@@ -112,6 +117,7 @@ export const ImplantationsTree: React.FC<ImplantationsTreeProps> = ({ items, ref
                                                     <ChevronDown className={`w-3.5 h-3.5 flex-shrink-0 text-slate-400 dark:text-slate-500 transition-transform ${isStationOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
                                                     <LineBadge line={line} size="xs" />
                                                     <span className="truncate">{station.stationName}</span>
+                                                    {isLineBExtension(line, station.stationName) && <ExtensionBTag />}
                                                 </span>
                                                 <span className="text-sm font-bold text-teal-700 dark:text-teal-300 tabular-nums flex-shrink-0">{station.total}</span>
                                             </button>
@@ -247,3 +253,14 @@ export const PoseCsvExportButton: React.FC<PoseCsvExportButtonProps> = ({ items,
         </button>
     );
 };
+
+/** Station de l'extension B : rattachée à la ligne B, emplacements comptés
+ *  mais pose non confirmée avant la mise en service. */
+export const ExtensionBTag: React.FC = () => (
+    <span
+        className="inline-flex flex-shrink-0 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300"
+        title={`${LINE_B_EXTENSION.label} — ${LINE_B_EXTENSION.commissioning} : emplacements référencés, pose non confirmée`}
+    >
+        {LINE_B_EXTENSION.label} · 2027
+    </span>
+);

@@ -47,8 +47,11 @@ export interface FamilyElement {
     lieuCount: number;
     lines: string[];
     /** Équipements station : emplacements comptés sur des stations en
-     *  préparation (ligne pas encore en service). */
-    inPreparation?: number;
+     *  préparation (ligne pas encore en service), par ligne (ex. AEROPORT). */
+    inPreparationByLine?: Record<string, number>;
+    /** Équipements station : emplacements comptés sur des stations en
+     *  exploitation. inService + Σ inPreparationByLine = quantity. */
+    inService?: number;
     /** Équipements station : emplacements de stations futures, consultables
      *  mais HORS quantité. */
     futureCount?: number;
@@ -130,7 +133,9 @@ export const buildStationEquipmentElements = (
         return [{
             id: row.id, family: 'SIG', name: row.name, dimensions: row.dimensions, material: row.material,
             quantity: row.quantity, ...spread(ofKind),
-            inPreparation: ofKind.filter(i => !i.inService).length,
+            inService: ofKind.filter(i => i.inService).length,
+            inPreparationByLine: ofKind.filter(i => !i.inService)
+                .reduce<Record<string, number>>((acc, i) => ({ ...acc, [i.line]: (acc[i.line] ?? 0) + 1 }), {}),
             futureCount: futureItems.filter(i => i.kind === kind).length,
         }];
     });

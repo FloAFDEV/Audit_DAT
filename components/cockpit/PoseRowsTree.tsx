@@ -7,7 +7,8 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { PoseRow } from '../../utils/cockpit/poseExport';
-import { LineBadge } from './ImplantationsTree';
+import { LineBadge, ExtensionBTag } from './ImplantationsTree';
+import { isLineBExtension } from '../../data/lineBExtension';
 import { formatDimensionText } from './labels';
 
 interface AccessGroup { key: string; location: string; designation: string; dimensions: string; count: number; first: PoseRow }
@@ -119,6 +120,7 @@ export const PoseRowsTree: React.FC<{ rows: PoseRow[]; renderVisual?: (row: Pose
         items={rows}
         lineOf={lineOfRow}
         stationOf={stationOfRow}
+        stationTag={stationRows => isLineBExtension(stationRows[0].line, stationRows[0].station) && <ExtensionBTag />}
         renderStation={stationRows => (
             <ul className="space-y-2">
                 {groupAccesses(stationRows).map(access => (

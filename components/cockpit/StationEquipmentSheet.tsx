@@ -13,6 +13,7 @@ import {
 } from '../../utils/cockpit/stationEquipment';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { LineStationTree } from './PoseRowsTree';
+import { lineShortLabel } from './ImplantationsTree';
 import { SheetSection, Field } from './ReferenceSheet';
 import { compareLines, formatDimensionText } from './labels';
 
@@ -40,6 +41,13 @@ const Count: React.FC<{ value: number; label: string; tone?: string }> = ({ valu
 
 const lineOf = (i: StationEquipmentItem) => i.line;
 const stationOf = (i: StationEquipmentItem) => i.stationName;
+
+/** Composantes « en préparation » d'une quantité, par ligne (AEROPORT →
+ *  « LAE »), dans l'ordre des lignes du cockpit. */
+export const preparationParts = (element: FamilyElement): { line: string; label: string; count: number }[] =>
+    Object.entries(element.inPreparationByLine ?? {})
+        .sort(([a], [b]) => compareLines(a, b))
+        .map(([line, count]) => ({ line, label: lineShortLabel(line), count }));
 
 /** Ordre des lignes du cockpit, puis ordre physique des stations. */
 const orderItems = (items: StationEquipmentItem[]) => [...new Set(items.map(i => i.line))].sort(compareLines)
@@ -96,6 +104,7 @@ interface StationEquipmentSheetProps {
 
 const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, items, futureItems, onBack }) => {
     const presence = useMemo(() => stationEquipmentPresence(items), [items]);
+    const preparation = preparationParts(element);
     const ordered = useMemo(() => orderItems(items), [items]);
     const orderedFuture = useMemo(() => orderItems(futureItems), [futureItems]);
     const lines = [...element.lines].sort(compareLines).map(l => `Ligne ${l}`).join(', ');
@@ -113,7 +122,16 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
                     </button>
                     <div className="min-w-0 flex-1">
                         <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100 break-words">{element.name}</h2>
+                        {/* Décomposition de la quantité référencée : exploitation +
+                            stations en préparation (ex. 50 + 6 LAE = 56). */}
                         <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
+                            {preparation.length > 0 && (
+                                <>
+                                    <span className="font-bold tabular-nums">{element.inService}</span> en exploitation
+                                    {preparation.map(p => <React.Fragment key={p.line}> + <span className="font-bold tabular-nums">{p.count}</span> {p.label} en préparation</React.Fragment>)}
+                                    {' = '}
+                                </>
+                            )}
                             <span className="font-bold text-teal-700 dark:text-teal-400 tabular-nums">{element.quantity}</span> emplacement{element.quantity > 1 ? 's' : ''} référencé{element.quantity > 1 ? 's' : ''} (inventaire) · {element.lieuCount} lieu{element.lieuCount > 1 ? 'x' : ''}
                         </p>
                         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Équipements station · consultation seule, hors exports</p>
@@ -127,9 +145,9 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
                     <Count value={presence.unchecked} label="non contrôlés" tone="text-slate-700 dark:text-slate-200" />
                     {presence.notInstalled > 0 && <Count value={presence.notInstalled} label="non installés" tone="text-slate-700 dark:text-slate-200" />}
                 </ul>
-                {presence.inPreparation > 0 && (
+                {preparation.length > 0 && (
                     <p className="rounded-lg bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
-                        Dont {presence.inPreparation} emplacement{presence.inPreparation > 1 ? 's' : ''} sur des stations en préparation (ligne pas encore en service) : comptés dans la quantité référencée, pas encore posés.
+                        {preparation.map(p => `${p.count} ${p.label}`).join(' + ')} en préparation (ligne pas encore en service) : emplacements référencés, comptés dans la quantité, jamais présentés comme posés sans constat terrain.
                     </p>
                 )}
             </div>
@@ -153,7 +171,7 @@ const StationEquipmentSheet: React.FC<StationEquipmentSheetProps> = ({ element, 
             {/* Stations futures (hors périmètre d'exploitation) : visibles pour
                 préparer, jamais comptées ni présentées comme installées. */}
             {orderedFuture.length > 0 && (
-                <SheetSection title="Stations futures — hors quantités" icon={<Radar className="w-4 h-4" />}>
+                <SheetSection title="Stations futures — hors périmètre d'exploitation" icon={<Radar className="w-4 h-4" />}>
                     <p className="mb-3 text-sm text-slate-600 dark:text-slate-300">
                         {orderedFuture.length} emplacement{orderedFuture.length > 1 ? 's' : ''} déjà décrit{orderedFuture.length > 1 ? 's' : ''} dans les données, non compté{orderedFuture.length > 1 ? 's' : ''} dans la quantité référencée.
                     </p>
