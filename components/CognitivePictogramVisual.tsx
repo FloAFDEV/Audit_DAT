@@ -15,7 +15,8 @@ const visualClassName = (size: 'sm' | 'md', field?: boolean) => field
  *  mode clair comme sombre). Rien n'est rendu si la station n'a pas de
  *  visuel connu. `field` : rendu fidèle au pictogramme réel (noir sur fond
  *  #FDBB31, liseré blanc), au format d'un badge ligne (32 px ; 28 px en `sm`).
- *  `zoomable` : clic ou toucher → agrandissement (zone tactile 44 × 44 px),
+ *  `zoomable` : clic ou toucher → agrandissement ; sur écran tactile,
+ *  emplacement réel d'au moins 44 × 44 px (sans débordement invisible),
  *  même rendu. Image chargée à l'affichage seulement (lazy). */
 export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationName?: string; size?: 'sm' | 'md'; field?: boolean; zoomable?: boolean }> = ({ stationCode, stationName, size = 'md', field, zoomable }) => {
     const [isZoomOpen, setIsZoomOpen] = useState(false);
@@ -39,7 +40,7 @@ export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationN
                 onClick={e => { e.stopPropagation(); setIsZoomOpen(true); }}
                 aria-label={`Agrandir — ${label}`}
                 title="Agrandir"
-                className="relative flex-shrink-0 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 after:absolute after:-inset-2"
+                className="flex-shrink-0 inline-flex items-center justify-center rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 pointer-coarse:min-w-11 pointer-coarse:min-h-11"
             >
                 {image}
             </button>

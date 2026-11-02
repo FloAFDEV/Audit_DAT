@@ -106,22 +106,31 @@ export const ReferenceNamePreview: React.FC<{ referenceId?: string; label: strin
     return (
         <span
             ref={anchorRef}
-            className="inline-flex max-w-full min-w-0 items-center gap-1.5"
+            className="inline-flex max-w-full min-w-0 items-center gap-1.5 pointer-coarse:gap-0"
             onMouseEnter={() => show()}
             onMouseLeave={hide}
         >
-            {children}
+            {/* Cible tactile propre au nom : sans elle, l'ajustement tactile du
+                navigateur rattache au bouton d'aperçu voisin un toucher posé
+                sur la fin du nom (le clic de la ligne n'est pas une cible
+                reconnue). Effet `active` sans rendu visuel. */}
+            <span className="min-w-0 active:[--tap:1]">{children}</span>
             <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); hide(); setIsZoomOpen(true); }}
                 onFocus={() => show(true)}
                 onBlur={hide}
-                // Zone tactile 46 × 46 px (pseudo-élément), icône inchangée.
-                className="relative flex-shrink-0 rounded p-0.5 text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500 after:absolute after:-inset-3.5"
+                // Écran tactile : emplacement réel de 24 × 44 px centré sur
+                // l'icône — même largeur que l'icône et son espacement
+                // (colonne non élargie), aucun débordement invisible sur le
+                // nom ou la ligne. Souris : bouton compact. Icône inchangée.
+                className="group flex-shrink-0 inline-flex items-center justify-center text-slate-500 hover:text-teal-700 dark:text-slate-400 dark:hover:text-teal-400 focus:outline-none pointer-coarse:w-6 pointer-coarse:h-11"
                 aria-label={`Voir le visuel — ${label}`}
                 title="Voir le visuel"
             >
-                <ImageIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                <span className="rounded p-0.5 group-focus-visible:ring-2 group-focus-visible:ring-teal-500">
+                    <ImageIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                </span>
             </button>
             {pos && createPortal(
                 <div
