@@ -20,6 +20,7 @@ import { parseAdhesiveName } from '../utils/adhesiveNames';
 import { formatDimensions, shortReferenceName } from '../components/cockpit/labels';
 import { collectSignaletiquePlansQuartier } from '../utils/cockpit/signaletiquePlansQuartier';
 import { collectCatalogueImplantations } from '../utils/cockpit/patrimoineIndex';
+import { isCountedPmrFloorAdhesive, readPmrFloorModule } from '../utils/cockpit/pmrFloorPose';
 
 
 export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) => {
@@ -102,11 +103,9 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
                         break;
                     }
                     case AuditModuleType.PMR_FLOOR_ADHESIVE: {
-                        // Occurrences applicables : un module « sans objet »
-                        // (Jean-Jaurès, Accès Historique) ne porte aucun adhésif.
-                        const pmrData = module.data as PMRFloorAdhesiveData;
-                        if (pmrData.isNotApplicable) break;
-                        const pmrCount = (pmrData.adhesives ?? []).length;
+                        // Parcours unique PMR (utils/cockpit/pmrFloorPose.ts) :
+                        // un module « sans objet » n'apporte aucun adhésif.
+                        const pmrCount = readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive).length;
                         pmrFloorAdhesiveCount += pmrCount;
                         if (module.line === 'A') pmrFloorAdhesiveCountA += pmrCount;
                         else if (module.line === 'B') pmrFloorAdhesiveCountB += pmrCount;
@@ -408,14 +407,11 @@ export const computeAdhesiveInventory = (
                 if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
                     // Les matières sont des variantes du même adhésif : chaque
                     // implantation compte UNE fois, sous la matière qui lui est
-                    // attribuée (même fonction que le formulaire terrain et
-                    // l'export CSV). Matière introuvable → ligne « matière non
-                    // renseignée », jamais une matière déduite. Module « sans
-                    // objet » : aucun adhésif, rien à compter.
-                    const pmrData = module.data as PMRFloorAdhesiveData;
-                    if (!pmrData.isNotApplicable) {
-                        const material = getPmrMaterial(pmrData.stationName, module.name);
-                        addQty(material ? pmrInventoryRowId(material) : PMR_UNKNOWN_MATERIAL_ROW_ID, (pmrData.adhesives ?? []).length);
+                    // attribuée (parcours unique PMR, utils/cockpit/pmrFloorPose.ts).
+                    // Matière introuvable → ligne « matière non renseignée »,
+                    // jamais une matière déduite. « Sans objet » : rien à compter.
+                    for (const adhesive of readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive)) {
+                        addQty(adhesive.material ? pmrInventoryRowId(adhesive.material) : PMR_UNKNOWN_MATERIAL_ROW_ID, 1);
                     }
                 }
 

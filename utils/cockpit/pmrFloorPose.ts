@@ -1,10 +1,19 @@
 // utils/cockpit/pmrFloorPose.ts
-// Lecture seule des adhésifs PMR au sol pour la sélection du Référentiel —
-// famille sans référence catalogue, servie par son propre module (comme les
-// pictogrammes cognitifs). Mêmes règles que l'inventaire (hooks/useStats.ts) :
-// périmètre d'exploitation, module « sans objet » exclu, un élément par
-// adhésif, matière attribuée par getPmrMaterial (jamais déduite).
-import { AuditModuleType, FloorAdhesiveStatus, Lieu, PMRFloorAdhesiveData } from '../../types';
+// =================================================================
+// PMR AU SOL — LE parcours unique des adhésifs (référentiel autonome,
+// règle 7 de patrimoineIndex.ts). Toute vue qui compte, liste ou
+// qualifie des adhésifs PMR au sol part d'ici :
+//  - readPmrFloorModule        : lecture d'UN module (aucun filtre) ;
+//  - isCountedPmrFloorAdhesive : règle de comptage (« sans objet » exclu) ;
+//  - collectPmrFloorAdhesives  : adhésifs comptés du périmètre
+//                                d'exploitation (isModuleInCurrentScope).
+// Consommateurs : useStats (Synthèse, inventaire détaillé), Référentiel
+// (éléments de pose, sélection, CSV de pose), Patrimoine d'une station,
+// maintenance (generateMaintenanceSummary).
+// Un élément par adhésif, matière attribuée par getPmrMaterial (jamais
+// déduite), statut lu sur l'adhésif lui-même.
+// =================================================================
+import { AuditModule, AuditModuleType, FloorAdhesiveStatus, Lieu, PMRFloorAdhesive, PMRFloorAdhesiveData } from '../../types';
 import { readFloorAdhesiveStatus } from './floorAdhesiveStatus';
 import { isModuleInCurrentScope } from '../moduleScope';
 import { getPmrMaterial } from '../../data/pmr_materials';
@@ -25,25 +34,41 @@ export interface PmrFloorPoseItem {
     status?: FloorAdhesiveStatus;
 }
 
-export const pmrFloorPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorPoseItem[] => {
-    const items: PmrFloorPoseItem[] = [];
-    for (const lieu of lieux) {
-        for (const module of lieu.modules) {
-            if (module.type !== AuditModuleType.PMR_FLOOR_ADHESIVE || !isModuleInCurrentScope(module)) continue;
-            const data = module.data as PMRFloorAdhesiveData;
-            if (data.isNotApplicable) continue;
-            const line = module.line ?? '';
-            if (lines && !lines.has(line)) continue;
-            const material = getPmrMaterial(data.stationName, module.name);
-            // Un élément par adhésif, lu sur l'adhésif lui-même : le statut
-            // correspond toujours au constat de cet exemplaire.
-            for (const adhesive of data.adhesives ?? []) {
-                items.push({
-                    line, lieuId: lieu.id, lieuName: lieu.name, accessLabel: pmrAccessLabel(module.name), material,
-                    status: readFloorAdhesiveStatus(adhesive?.status),
-                });
-            }
-        }
-    }
-    return items;
+/** Un adhésif PMR au sol tel que lu dans son module. */
+export interface PmrFloorAdhesiveRecord extends PmrFloorPoseItem {
+    moduleId: string;
+    moduleName: string;
+    adhesive: PMRFloorAdhesive;
+    /** Module déclaré « sans objet » : adhésif jamais compté. */
+    notApplicable: boolean;
+}
+
+/** Lecture d'UN module PMR au sol — aucun filtre de périmètre ni de
+ *  comptage (l'appelant décide). */
+export const readPmrFloorModule = (lieu: Pick<Lieu, 'id' | 'name'>, module: AuditModule): PmrFloorAdhesiveRecord[] => {
+    if (module.type !== AuditModuleType.PMR_FLOOR_ADHESIVE) return [];
+    const data = module.data as PMRFloorAdhesiveData;
+    const base = {
+        line: module.line ?? '', lieuId: lieu.id, lieuName: lieu.name,
+        moduleId: module.id, moduleName: module.name,
+        accessLabel: pmrAccessLabel(module.name),
+        material: getPmrMaterial(data.stationName, module.name),
+        notApplicable: !!data.isNotApplicable,
+    };
+    return (data.adhesives ?? []).map(adhesive => ({ ...base, adhesive, status: readFloorAdhesiveStatus(adhesive?.status) }));
 };
+
+/** Règle de comptage : un module « sans objet » n'apporte aucun adhésif. */
+export const isCountedPmrFloorAdhesive = (record: PmrFloorAdhesiveRecord): boolean => !record.notApplicable;
+
+/** Adhésifs comptés du périmètre d'exploitation, filtrés sur les lignes
+ *  demandées. Ordre : celui des lieux et des adhésifs du module. */
+export const collectPmrFloorAdhesives = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorAdhesiveRecord[] =>
+    lieux.flatMap(lieu => lieu.modules
+        .filter(module => module.type === AuditModuleType.PMR_FLOOR_ADHESIVE && isModuleInCurrentScope(module)
+            && (!lines || lines.has(module.line ?? '')))
+        .flatMap(module => readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive)));
+
+/** Éléments de pose (Référentiel, CSV de pose, patrimoine d'une station). */
+export const pmrFloorPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorPoseItem[] =>
+    collectPmrFloorAdhesives(lieux, lines);

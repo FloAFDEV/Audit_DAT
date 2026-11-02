@@ -2,6 +2,7 @@
 import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData, CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getEcaProgress } from './progressCalculators';
+import { readPmrFloorModule } from './cockpit/pmrFloorPose';
 
 /** Description courte des 4 modèles figés (data/signage_seed.ts) — même
  *  liste que csvExporter.ts, chacun avec sa propre présentation locale
@@ -123,7 +124,8 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                         pmrContext = contextMatch[1];
                     }
 
-                    ((module.data as PMRFloorAdhesiveData).adhesives || []).forEach(ad => {
+                    // Parcours unique PMR (utils/cockpit/pmrFloorPose.ts).
+                    readPmrFloorModule(lieu, module).forEach(({ adhesive: ad }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Adhésif au sol",
