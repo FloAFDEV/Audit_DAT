@@ -1,45 +1,23 @@
-import {
-    Lieu, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData,
-    CognitivePictogramData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus,
-} from '../types';
+import { Lieu, SignageReference } from '../types';
+import { buildPatrimoineIndex } from './cockpit/patrimoineIndex';
+import { buildSignaletiqueStationIndex } from './cockpit/signaletiqueStationIndex';
+import { currentExploitationLieux, floorFamilyDefects, generateMaintenanceSummary } from './maintenanceGenerator';
 
 /**
- * Compte léger des anomalies (à remplacer / absent) d'un lieu, sans dépendre des
- * référentiels d'adhésifs. Utilisé par le mode audit pour décider quelles cards
- * mettre en surbrillance. Volontairement O(n) sur les statuts uniquement.
+ * Anomalies OPÉRATIONNELLES d'un lieu — exactement celles du cockpit pour
+ * ce lieu et le même périmètre (exploitation actuelle), famille par
+ * famille, chacune depuis sa source unique :
+ *  - Signalétique IV (DAT, P+R, ECA, plans de quartier) : moteur d'index
+ *    (portée des références, R10) — absents + à remplacer ;
+ *  - équipements de station : leur index (absents, à remplacer, HS) ;
+ *  - PMR au sol et pictogrammes cognitifs : maintenance du périmètre
+ *    d'exploitation (« sans objet » et pictogrammes non comptés exclus).
+ * Les données de préparation (modules futurs) n'y sont jamais ajoutées.
+ * Utilisé par les cartes lieu (badge et mise en évidence).
  */
-export const getLieuDefectCount = (lieu: Lieu): number => {
-    let count = 0;
-    const isDefect = (s: string) => s === AdhesiveStatus.ToBeReplaced || s === AdhesiveStatus.Absent;
-    const isFloorDefect = (s: string) => s === FloorAdhesiveStatus.ToBeReplaced;
-
-    for (const module of lieu.modules) {
-        switch (module.type) {
-            case AuditModuleType.DAT:
-                (module.data as ModeData).stations?.forEach(s =>
-                    s.directions?.forEach(d =>
-                        d.dats?.forEach(dat =>
-                            Object.values(dat.adhesives || {}).forEach(st => { if (isDefect(st)) count++; }))));
-                break;
-            case AuditModuleType.PR:
-                (module.data as Pr).zones?.forEach(z =>
-                    z.equipments?.forEach(eq =>
-                        Object.values(eq.adhesives || {}).forEach(st => { if (isDefect(st)) count++; })));
-                break;
-            case AuditModuleType.ECA:
-                (module.data as EcaData).ecas?.forEach(eca =>
-                    Object.values(eca.adhesives || {}).forEach(st => { if (isDefect(st)) count++; }));
-                break;
-            case AuditModuleType.PMR_FLOOR_ADHESIVE:
-                (module.data as PMRFloorAdhesiveData).adhesives?.forEach(ad => { if (isFloorDefect(ad.status)) count++; });
-                break;
-            case AuditModuleType.COGNITIVE_PICTOGRAMS:
-                (module.data as CognitivePictogramData).pictograms?.forEach(p => { if (isFloorDefect(p.status)) count++; });
-                break;
-            case AuditModuleType.PLAN_QUARTIER:
-                (module.data as PlanQuartierData).occurrences?.forEach(occ => { if (isDefect(occ.status)) count++; });
-                break;
-        }
-    }
-    return count;
+export const getLieuDefectCount = (lieu: Lieu, references: SignageReference[]): number => {
+    const catalogue = buildPatrimoineIndex([lieu], references).totals.defectCount;
+    const stationEquipment = buildSignaletiqueStationIndex([lieu]).totals.defectCount;
+    const { pmrFloor, cognitive } = floorFamilyDefects(generateMaintenanceSummary(currentExploitationLieux([lieu])));
+    return catalogue + stationEquipment + pmrFloor.length + cognitive.length;
 };

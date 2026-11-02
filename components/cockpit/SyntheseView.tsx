@@ -10,6 +10,7 @@ import { Images, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as M
 import { AdhesiveInventoryItem, Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData, EquipmentType } from '../../types';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
 import { useStats } from '../../hooks/useStats';
+import { floorFamilyDefects } from '../../utils/maintenanceGenerator';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
 import { usePatrimoineIndex } from '../../hooks/usePatrimoineIndex';
 import { useSignaletiqueStationIndex } from '../../hooks/useSignaletiqueStationIndex';
@@ -722,12 +723,9 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     // patrimoineIndex (règle 7) — conservés temporairement via le moteur
     // legacy, jamais additionnés silencieusement au total Signalétique IV,
     // ni fusionnés entre eux : deux référentiels distincts, deux compteurs.
-    const pmrSolDefectItems = useMemo(() => (
-        maintenanceSummary.allDefects.items.filter(item => item.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE)
-    ), [maintenanceSummary]);
-    const pictogrammesDefectItems = useMemo(() => (
-        maintenanceSummary.allDefects.items.filter(item => item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS)
-    ), [maintenanceSummary]);
+    // Même source que l'Analyse des anomalies et les badges des cartes.
+    const { pmrFloor: pmrSolDefectItems, cognitive: pictogrammesDefectItems } = useMemo(
+        () => floorFamilyDefects(maintenanceSummary), [maintenanceSummary]);
 
     // Équipements Station : référentiel autonome, sa propre instance du
     // principe de calcul patrimonial (règle 7), jamais fusionné avec les

@@ -2,7 +2,8 @@
 import { Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PlanQuartierData, AdhesiveStatus, FloorAdhesiveStatus, MaintenanceItem, AuditCategory } from '../types';
 import { ADHESIVES, getEcaAdhesiveOccurrences, getPrAdhesives } from '../data/adhesives';
 import { getEcaProgress } from './progressCalculators';
-import { readPmrFloorModule } from './cockpit/pmrFloorPose';
+import { isModuleInCurrentScope } from './moduleScope';
+import { isCountedPmrFloorAdhesive, readPmrFloorModule } from './cockpit/pmrFloorPose';
 import { readCognitivePictogramModule } from './cockpit/cognitivePictogramSummary';
 
 /** Description courte des 4 modèles figés (data/signage_seed.ts) — même
@@ -126,7 +127,9 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     }
 
                     // Parcours unique PMR (utils/cockpit/pmrFloorPose.ts).
-                    readPmrFloorModule(lieu, module).forEach(({ adhesive: ad }) => {
+                    // Décision validée : un module « sans objet » ne génère
+                    // aucune anomalie (même règle que le comptage).
+                    readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive).forEach(({ adhesive: ad }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Adhésif au sol",
@@ -142,7 +145,10 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
                     break;
                 case AuditModuleType.COGNITIVE_PICTOGRAMS:
                         // Parcours unique (utils/cockpit/cognitivePictogramSummary.ts).
-                        readCognitivePictogramModule(lieu, module).forEach(({ pictogram: p, stationCode }) => {
+                        // Décision validée : un pictogramme non compté (« Accès à
+                        // définir », ligne non comptée) n'est pas un équipement
+                        // installé — aucune anomalie de maintenance.
+                        readCognitivePictogramModule(lieu, module).filter(p => p.counted).forEach(({ pictogram: p, stationCode }) => {
                         const item: MaintenanceItem = {
                             ...baseItem,
                             elementName: "Pictogramme cognitif",
@@ -190,3 +196,18 @@ export const generateMaintenanceSummary = (lieux: Lieu[]) => {
         okCount 
     };
 };
+
+/** Lieux réduits à l'exploitation actuelle : les modules futurs (données de
+ *  préparation) ne génèrent aucune anomalie opérationnelle. Même périmètre
+ *  pour la Synthèse, l'Analyse des anomalies et les badges des cartes. */
+export const currentExploitationLieux = (lieux: Lieu[]): Lieu[] =>
+    lieux.map(lieu => ({ ...lieu, modules: lieu.modules.filter(isModuleInCurrentScope) }));
+
+/** Anomalies opérationnelles PMR au sol et pictogrammes cognitifs — UNE
+ *  source pour la Synthèse, l'Analyse des anomalies et les badges : la
+ *  maintenance du périmètre d'exploitation, famille par famille (deux
+ *  référentiels autonomes, jamais fusionnés). */
+export const floorFamilyDefects = (summary: ReturnType<typeof generateMaintenanceSummary>) => ({
+    pmrFloor: summary.allDefects.items.filter(item => item.auditType === AuditModuleType.PMR_FLOOR_ADHESIVE),
+    cognitive: summary.allDefects.items.filter(item => item.auditType === AuditModuleType.COGNITIVE_PICTOGRAMS),
+});

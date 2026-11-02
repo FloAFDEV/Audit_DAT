@@ -13,7 +13,7 @@ import { REFERENCES_MIGRATED_TO_PLAN_QUARTIER } from '../data/signage_seed';
 import { LINE_A_STATIONS, LINE_B_STATIONS, LINE_C_STATIONS, TRAM_STATIONS, TELEO_STATIONS } from '../data/stations';
 import { PR_DATA } from '../data/pr_data';
 import { EquipmentType, EcaEquipmentType } from '../types';
-import { generateMaintenanceSummary } from '../utils/maintenanceGenerator';
+import { currentExploitationLieux, generateMaintenanceSummary } from '../utils/maintenanceGenerator';
 import { isModuleInCurrentScope } from '../utils/moduleScope';
 import { splitLegacyPrDescription } from '../utils/effectiveAdhesives';
 import { parseAdhesiveName } from '../utils/adhesiveNames';
@@ -207,11 +207,7 @@ export const useStats = (lieux: Lieu[], signageReferences: SignageReference[]) =
     const maintenanceSummary = useMemo(() => {
         // Exploitation actuelle uniquement : les données de préparation des
         // modules futurs (C, AEROPORT) ne génèrent pas de maintenance.
-        const activeLieux = lieux.map(lieu => ({
-            ...lieu,
-            modules: lieu.modules.filter(isModuleInCurrentScope)
-        }));
-        return generateMaintenanceSummary(activeLieux);
+        return generateMaintenanceSummary(currentExploitationLieux(lieux));
     }, [lieux]);
 
     const adhesiveInventory = useMemo(
