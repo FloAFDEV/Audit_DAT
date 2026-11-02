@@ -103,11 +103,12 @@ export const selectFamilyPose = (
     cognitive: cognitiveItems.filter(i => ids.has(cognitiveElementIdOf(i))),
 });
 
-/** Libellé d'une sélection : « 2 références + adhésifs PMR au sol + 1 dimension de pictogrammes cognitifs ». */
+/** Libellé d'un périmètre (sélection ou liste affichée) : « 2 références +
+ *  adhésifs PMR au sol + 1 dimension de pictogramme cognitif ». */
 export const selectionLabel = (ids: ReadonlySet<string>, elements: FamilyElement[]): string => {
     const { referenceIds } = splitSelection(ids);
     const parts: string[] = [];
-    if (referenceIds.length > 0) parts.push(`${referenceIds.length} référence${referenceIds.length > 1 ? 's' : ''} sélectionnée${referenceIds.length > 1 ? 's' : ''}`);
+    if (referenceIds.length > 0) parts.push(`${referenceIds.length} référence${referenceIds.length > 1 ? 's' : ''}`);
     const describe = (family: ElementFamily, whole: string, unit: (n: number) => string) => {
         const all = elements.filter(e => e.family === family && e.quantity > 0);
         const chosen = all.filter(e => ids.has(e.id));

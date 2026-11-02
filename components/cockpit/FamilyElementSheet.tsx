@@ -85,8 +85,9 @@ const FamilyElementSheet: React.FC<FamilyElementSheetProps> = ({ element, pmrFlo
                         <PoseRowsTree
                             rows={rows}
                             renderVisual={element.family === 'COG'
-                                ? row => <CognitivePictogramVisual stationCode={stationCodeOf.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field />
+                                ? row => <CognitivePictogramVisual stationCode={stationCodeOf.get(`${row.line}|${row.station}`)} stationName={row.station} size="sm" field zoomable />
                                 : undefined}
+                            visualKey={element.family === 'COG' ? row => stationCodeOf.get(`${row.line}|${row.station}`) : undefined}
                         />
                     </>
                 )}

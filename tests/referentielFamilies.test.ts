@@ -74,7 +74,7 @@ describe('Sélection', () => {
     it('familles mélangées et références catalogue dans une même sélection', () => {
         const ids = new Set(['ad1', 'adbe1', idsOf('PMR')[0], ...idsOf('COG')]);
         expect(splitSelection(ids)).toEqual({ referenceIds: ['ad1', 'adbe1'], elementIds: [idsOf('PMR')[0], ...idsOf('COG')] });
-        expect(selectionLabel(ids, elements)).toBe('2 références sélectionnées + 1 matière d\'adhésif PMR au sol + pictogrammes cognitifs');
+        expect(selectionLabel(ids, elements)).toBe('2 références + 1 matière d\'adhésif PMR au sol + pictogrammes cognitifs');
         const pose = selectFamilyPose(ids, pmrAll(), cogAll());
         expect(pose.pmrFloor.length).toBeGreaterThan(0);
         expect(pose.cognitive).toEqual(cogAll());
