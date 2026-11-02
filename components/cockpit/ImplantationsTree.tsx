@@ -14,7 +14,7 @@ import { AUDIT_CATEGORIES } from '../../data/config';
 import { getPrZoneAddressByName } from '../../data/pr_structures';
 import { CategoryIcon } from '../CategoryIcon';
 import { ImplantationRef, PatrimoineIndex } from '../../utils/cockpit/patrimoineIndex';
-import { GroupedContext, groupImplantationsByLocation } from '../../utils/cockpit/implantationsGrouping';
+import { GroupedContext, groupImplantationsByLocation, isDetailCountRedundant } from '../../utils/cockpit/implantationsGrouping';
 import { sortByPhysicalStationOrder } from '../../utils/cockpit/exportStationOrder';
 import { downloadImplantationsWorkbook } from '../../utils/cockpit/implantationsExporter';
 import { buildImplantationLineSheets, buildImplantationSyntheseRows, buildPoseRows } from './implantationsExportRows';
@@ -83,7 +83,10 @@ export const ImplantationContexts: React.FC<{
                         {ctx.context}
                         {prAddress && <span className="block font-normal normal-case tracking-normal">{prAddress}</span>}
                     </span>
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
+                    {/* Accès unique : son total est celui de la station, déjà affiché. */}
+                    {!isDetailCountRedundant(contexts.length) && (
+                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{ctx.total} implantation{ctx.total > 1 ? 's' : ''}</span>
+                    )}
                 </div>
                 <div className="space-y-2">
                     {ctx.equipments.map(equip => (
