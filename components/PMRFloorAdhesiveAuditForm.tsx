@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { AuditModule, FloorAdhesiveStatus, PMRFloorAdhesiveData } from '../types';
-import { CheckCircle2, XCircle, Clock, Camera, Trash2, Edit2, Edit, Ban } from 'lucide-react';
+import { CheckCircle2, XCircle, MinusCircle, Clock, Camera, Trash2, Edit2, Edit, Ban } from 'lucide-react';
 import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
@@ -136,7 +136,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         </p>
                     </div>
                     </div>
-                    <div className="flex items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:flex-wrap sm:gap-3">
+                    <div className="flex flex-wrap items-stretch gap-2 mt-4 sm:mt-0 sm:ml-6 sm:gap-3">
                         <button
                         onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.OK ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.OK)}
                         className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
@@ -160,18 +160,27 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                         À remplacer
                         </button>
                         <button
-                            onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.ToPlan ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.ToPlan)}
+                            onClick={() => onStatusChange(adhesive.id, currentStatus === FloorAdhesiveStatus.Absent ? FloorAdhesiveStatus.NotChecked : FloorAdhesiveStatus.Absent)}
                             className={`flex-1 sm:flex-initial flex items-center justify-center px-2.5 py-1.5 whitespace-nowrap text-sm font-medium rounded-md transition-all duration-75 active:scale-95 ${
-                            currentStatus === FloorAdhesiveStatus.ToPlan
-                                ? 'bg-sky-700 text-white shadow-sm dark:bg-sky-700'
-                                : 'bg-white text-sky-700 ring-1 ring-inset ring-sky-600 hover:bg-sky-50 dark:bg-slate-700/50 dark:text-sky-300 dark:ring-slate-600 dark:hover:bg-slate-700'
+                            currentStatus === FloorAdhesiveStatus.Absent
+                                ? 'bg-slate-700 text-white shadow-sm dark:bg-slate-600'
+                                : 'bg-white text-slate-700 ring-1 ring-inset ring-slate-500 hover:bg-slate-50 dark:bg-slate-700/50 dark:text-slate-200 dark:ring-slate-600 dark:hover:bg-slate-700'
                             }`}
                         >
-                            <Clock className="w-5 h-5 mr-2" />
-                            À planifier
+                            <MinusCircle className="w-5 h-5 mr-2" />
+                            Absent
                         </button>
                     </div>
                     </div>
+
+                    {/* Ancien statut « À planifier » : conservé tel quel (jamais
+                        converti), signalé pour requalification par l'agent. */}
+                    {currentStatus === FloorAdhesiveStatus.ToPlan && (
+                        <p className="mt-3 flex items-start gap-2 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">
+                            <Clock className="mt-0.5 h-4 w-4 flex-shrink-0" aria-hidden="true" />
+                            <span>Ancien statut : <strong>À planifier</strong> — à requalifier (OK, À remplacer ou Absent).</span>
+                        </p>
+                    )}
 
                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-start gap-4">
                         <div className="flex items-center gap-4">

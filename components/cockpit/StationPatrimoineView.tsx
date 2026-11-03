@@ -32,6 +32,7 @@ const EQUIPMENT_KINDS = Object.keys(STATION_EQUIPMENT_ROW_IDS) as StationEquipme
 const FLOOR_STATUS_TONE: Record<FloorAdhesiveStatus, string> = {
     [FloorAdhesiveStatus.OK]: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-300',
     [FloorAdhesiveStatus.ToBeReplaced]: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
+    [FloorAdhesiveStatus.Absent]: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300',
     [FloorAdhesiveStatus.ToPlan]: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-300',
     [FloorAdhesiveStatus.NotChecked]: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
 };

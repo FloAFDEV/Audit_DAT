@@ -150,7 +150,10 @@ export const generateMaintenanceSummary = (lieux: Lieu[], options: { operational
                             photo_base64: ad.photo_base64,
                             photo_rotation: ad.photo_rotation,
                         };
+                        // « Absent » : anomalie, comme « À remplacer ». Ancien
+                        // « À planifier » : contrôlé, jamais une anomalie.
                         if (ad.status === FloorAdhesiveStatus.ToBeReplaced) toBeReplaced.push(item);
+                        if (ad.status === FloorAdhesiveStatus.Absent) absent.push(item);
                         if (ad.status === FloorAdhesiveStatus.OK) okCount++;
                     });
                     break;

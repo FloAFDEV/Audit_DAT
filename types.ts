@@ -35,8 +35,23 @@ export enum FloorAdhesiveStatus {
     NotChecked = 'NotChecked',
     OK = 'OK',
     ToBeReplaced = 'ToBeReplaced',
+    /** PMR au sol uniquement : adhésif attendu mais manquant (anomalie). */
+    Absent = 'Absent',
+    /** ANCIEN statut PMR au sol (« À planifier »), plus proposé : conservé tel
+     *  quel pour la compatibilité des relevés, sauvegardes et échanges
+     *  existants — compté comme contrôlé, jamais comme anomalie, jamais
+     *  converti automatiquement. À requalifier par l'agent. */
     ToPlan = 'ToPlan',
 }
+
+/** Statuts PMR au sol proposés au terrain (Non contrôlé = état initial). */
+export const PMR_FLOOR_STATUSES: readonly FloorAdhesiveStatus[] = [
+    FloorAdhesiveStatus.NotChecked, FloorAdhesiveStatus.OK, FloorAdhesiveStatus.ToBeReplaced, FloorAdhesiveStatus.Absent,
+];
+/** Statuts des pictogrammes cognitifs (inchangés). */
+export const COGNITIVE_PICTOGRAM_STATUSES: readonly FloorAdhesiveStatus[] = [
+    FloorAdhesiveStatus.NotChecked, FloorAdhesiveStatus.OK, FloorAdhesiveStatus.ToBeReplaced, FloorAdhesiveStatus.ToPlan,
+];
 
 export enum EquipmentType {
     BE = 'BE', // Borne Entrée
