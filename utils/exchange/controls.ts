@@ -22,21 +22,23 @@
 import {
     Lieu, AuditModule, AuditModuleType, ModeData, Pr, EcaData, PMRFloorAdhesiveData,
     CognitivePictogramData, PlanQuartierData, PlanQuartierOccurrence, SignaletiqueData,
-    AdhesiveStatus, FloorAdhesiveStatus, EquipmentStatusType,
+    AdhesiveStatus, FloorAdhesiveStatus, EquipmentStatusType, PMR_FLOOR_STATUSES, COGNITIVE_PICTOGRAM_STATUSES,
 } from '../../types';
 import { ADHESIVES, PR_ADHESIVES_BE, PR_ADHESIVES_BS, PR_ADHESIVES_CA, getEcaAdhesiveOccurrences } from '../../data/adhesives';
 
 export const NOT_CHECKED = 'NotChecked';
 
 const ADHESIVE_STATUSES: readonly string[] = Object.values(AdhesiveStatus);
-const FLOOR_STATUSES: readonly string[] = Object.values(FloorAdhesiveStatus);
+// PMR au sol : statuts actuels + ancien « À planifier » (relevés existants).
+const PMR_FLOOR_EXCHANGE_STATUSES: readonly string[] = [...PMR_FLOOR_STATUSES, FloorAdhesiveStatus.ToPlan];
+const COGNITIVE_EXCHANGE_STATUSES: readonly string[] = COGNITIVE_PICTOGRAM_STATUSES;
 const EQUIPMENT_STATUSES: readonly string[] = [...Object.values(EquipmentStatusType), NOT_CHECKED];
 
 /** Constat nécessitant une intervention — même lecture que l'analyse des
  *  anomalies (utils/anomalyDetector.ts), étendue aux équipements de station. */
 const ANOMALY_STATUSES: ReadonlySet<string> = new Set([
     AdhesiveStatus.Absent, AdhesiveStatus.ToBeReplaced,
-    FloorAdhesiveStatus.ToBeReplaced,
+    FloorAdhesiveStatus.ToBeReplaced, FloorAdhesiveStatus.Absent,
     EquipmentStatusType.ABSENT, EquipmentStatusType.DEGRADED, EquipmentStatusType.TO_REPLACE, EquipmentStatusType.HS,
 ]);
 export const isAnomalyStatus = (status: string): boolean => ANOMALY_STATUSES.has(status);
@@ -218,7 +220,7 @@ export const walkControls = (lieux: Lieu[], visit: (control: ControlRef) => void
                             comment: data.comment || undefined,
                             media: photoOf(adhesive),
                             knownDate: validDate(adhesive.photo_taken_at, data.completionDate),
-                            allowedStatuses: FLOOR_STATUSES,
+                            allowedStatuses: PMR_FLOOR_EXCHANGE_STATUSES,
                             write: s => { adhesive.status = s as FloorAdhesiveStatus; },
                         });
                     }
@@ -233,7 +235,7 @@ export const walkControls = (lieux: Lieu[], visit: (control: ControlRef) => void
                             status: pictogram.status,
                             comment: data.comment || undefined,
                             knownDate: validDate(data.completionDate),
-                            allowedStatuses: FLOOR_STATUSES,
+                            allowedStatuses: COGNITIVE_EXCHANGE_STATUSES,
                             write: s => { pictogram.status = s as FloorAdhesiveStatus; },
                         });
                     }

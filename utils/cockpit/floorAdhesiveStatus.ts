@@ -13,7 +13,8 @@ export const FLOOR_ADHESIVE_STATUS_LABELS: Record<FloorAdhesiveStatus, string> =
     [FloorAdhesiveStatus.NotChecked]: 'Non contrôlé',
     [FloorAdhesiveStatus.OK]: 'OK',
     [FloorAdhesiveStatus.ToBeReplaced]: 'À remplacer',
-    [FloorAdhesiveStatus.ToPlan]: 'À planifier',
+    [FloorAdhesiveStatus.Absent]: 'Absent',
+    [FloorAdhesiveStatus.ToPlan]: 'À planifier (ancien statut)',
 };
 
 export const STATUS_UNAVAILABLE_LABEL = 'Statut indisponible';
