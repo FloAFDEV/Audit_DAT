@@ -21,25 +21,27 @@ describe('getStationPictograms', () => {
         expect(getStationPictograms(byName('Basso Cambo'))).toEqual([{ line: 'A', stationCode: 'MBC', url: '/pictos-cognitifs/MBC.png' }]);
     });
 
-    it('station multiligne : un pictogramme par ligne ; filtre par ligne', () => {
+    it('station commune A/B (Jean-Jaurès) : un seul pictogramme ; filtre par ligne', () => {
         const jj = byName('Jean-Jaurès');
-        expect(getStationPictograms(jj).map(p => `${p.line}:${p.stationCode}`)).toEqual(['A:JJA', 'B:JJB']);
+        expect(getStationPictograms(jj).map(p => `${p.line}:${p.stationCode}`)).toEqual(['A:JJA']);
+        expect(getStationPictograms(jj, 'A').map(p => p.stationCode)).toEqual(['JJA']);
         expect(getStationPictograms(jj, 'B').map(p => p.stationCode)).toEqual(['JJB']);
         expect(getStationPictograms(jj, 'TRAM')).toEqual([]);
     });
 
     it('le relevé : chaque pictogramme affiché provient d’un module en exploitation et d’un visuel officiel', () => {
-        let shown = 0;
+        const shown = new Set<string>();
         for (const lieu of lieux) {
             const modules = lieu.modules.filter(m => m.type === AuditModuleType.COGNITIVE_PICTOGRAMS && !m.isFuture);
-            for (const p of getStationPictograms(lieu)) {
-                shown++;
+            expect(getStationPictograms(lieu).length).toBeLessThanOrEqual(1);
+            for (const line of new Set(modules.map(m => m.line ?? ''))) for (const p of getStationPictograms(lieu, line)) {
+                shown.add(p.stationCode);
                 expect(modules.some(m => m.line === p.line && (m.data as CognitivePictogramData).stationCode === p.stationCode)).toBe(true);
                 expect(p.url).toBe(getCognitivePictogramVisualUrl(p.stationCode));
             }
         }
         // 38 visuels officiels (lignes A et B), tous rattachés à une station.
-        expect(shown).toBe(38);
+        expect(shown.size).toBe(38);
     });
 
     it('lignes sans visuel (Tram, Téléo…) : rien', () => {
