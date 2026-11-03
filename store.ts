@@ -199,6 +199,10 @@ interface AppState {
 
     // Import action
     handleImportJsonData: (jsonString: string) => Promise<void>;
+    /** Sauvegarde locale VÉRIFIÉE (écrite puis relue) avant d'appliquer une
+     *  mise à jour de l'application. Renvoie la clé, ou '' en cas d'échec
+     *  (jamais considérée réussie sans relecture). */
+    backupBeforeUpdate: () => Promise<string>;
     hardResetApplication: () => Promise<void>;
 
     // Échange multi-agents (utils/exchange/) — n'écrase jamais rien.
@@ -2722,6 +2726,21 @@ const useAuditStore = create<AppState>((set, get) => {
             metadata: { fichiers: files.length, nouvelles: outcome.plan.added.length, connues: outcome.plan.alreadyKnown, misesAJour: outcome.apply.updated },
         });
         return outcome;
+    },
+
+    backupBeforeUpdate: async () => {
+        const PREVIOUS = 'tisseo-audit-pre-update-backup-key';
+        let previous: string | null = null;
+        try { previous = localStorage.getItem(PREVIOUS); } catch { /* ignore */ }
+        const key = await _backupBeforeReset('pre-update', { requireLocalCopy: true });
+        if (!key) return '';
+        // La nouvelle copie est vérifiée : la précédente sauvegarde de mise à
+        // jour (plus ancienne) peut être libérée — jamais avant.
+        try {
+            if (previous && previous !== key) localStorage.removeItem(previous);
+            localStorage.setItem(PREVIOUS, key);
+        } catch { /* ignore */ }
+        return key;
     },
 
     handleImportJsonData: async (jsonString: string) => {

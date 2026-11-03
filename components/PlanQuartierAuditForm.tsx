@@ -304,7 +304,9 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
               <PlusCircle className="w-4 h-4" /> Élément trouvé qui ne correspond à aucun modèle ci-dessus
             </button>
           ) : (
-            <div className="p-4 rounded-lg bg-amber-50/60 dark:bg-amber-900/10 space-y-2">
+            // Brouillon local (ajouté seulement au clic « Ajouter ») : une
+            // mise à jour de l'application attend qu'il soit validé ou vidé.
+            <div data-unsaved={adHocLabel.trim() || adHocLocation.trim() ? 'true' : undefined} className="p-4 rounded-lg bg-amber-50/60 dark:bg-amber-900/10 space-y-2">
               <input
                 type="text"
                 value={adHocLabel}
