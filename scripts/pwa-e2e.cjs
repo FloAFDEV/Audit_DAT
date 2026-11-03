@@ -112,7 +112,9 @@ const scenarioOffline = async () => {
     for (let y = 0; y < 45; y++) { await page.mouse.wheel(0, 700); await page.waitForTimeout(80); }
     await page.waitForTimeout(800);
     const pictos = await page.locator('[data-testid="station-pictograms"] img').evaluateAll(is => is.filter(i => i.complete && i.naturalWidth > 0).length);
-    check('3. Pictogrammes hors connexion (38 attendus)', pictos === 38, `${pictos}`);
+    // 37 cartes avec pictogramme : Jean-Jaurès (A et B) n'en affiche qu'un.
+    const cachedPictos = await page.evaluate(async () => { const urls = new Set(); for (const k of await caches.keys()) for (const r of await (await caches.open(k)).keys()) if (r.url.includes('/pictos-cognitifs/')) urls.add(new URL(r.url).pathname); return urls.size; });
+    check('3. Pictogrammes hors connexion (37 cartes, 38 visuels en cache)', pictos === 37 && cachedPictos === 38, `${pictos} affichés, ${cachedPictos} en cache`);
 
     // 4. Navigation vers tous les écrans + enregistrement / modification.
     const visited = [];
