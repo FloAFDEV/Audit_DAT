@@ -1,6 +1,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AuditModule } from '../types';
+import { ModuleStationPictograms } from './CognitivePictogramVisual';
 import { ArrowLeft, DatabaseBackup } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
 import { LineIcon } from './LineIcon';
@@ -56,6 +57,8 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
     commentIsReadOnly,
 }) => {
     const [showResetConfirm, setShowResetConfirm] = useState(false);
+    // Pictogramme cognitif de la station (ligne du module), dans le flux du
+    // nom : il passe à la ligne plutôt que de réduire la place du nom.
     // Mobile uniquement (cf. garde CSS sm:!grid-rows-[1fr] sur la variante
     // complète, qui neutralise cet état à partir de sm: quoi qu'il arrive) :
     // le header sticky existant se compacte une fois que l'utilisateur a
@@ -164,7 +167,11 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                             <LineIcon module={module} size="md" />
                             {visual}
                             <div className="flex-1 min-w-0 leading-tight">
-                                <p className="text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-2">{station}</p>
+                                <div className="flex items-center gap-1.5 min-w-0">
+                                    <p className="min-w-0 text-base font-bold text-slate-900 dark:text-slate-100 line-clamp-2">{station}</p>
+                                    {/* Élément séparé : jamais masqué par la limite de deux lignes. */}
+                                    <ModuleStationPictograms module={module} />
+                                </div>
                                 <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{title}</p>
                             </div>
                             <span className="flex-shrink-0 text-xs font-normal text-slate-500 dark:text-slate-400">{progressLabel ?? `${Math.round(progress)}%`}</span>
@@ -201,7 +208,10 @@ const AuditFormLayout: React.FC<AuditFormLayoutProps> = ({
                                 </button>
                                 <div className="mt-0.5 flex-shrink-0"><LineIcon module={module} size="lg" /></div>
                                 <div className="flex-1 min-w-0">
-                                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-100 break-words">{station}</h2>
+                                    <h2 className="text-2xl sm:text-3xl font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-100 break-words">
+                                        {station}
+                                        <ModuleStationPictograms module={module} className="ml-2 align-middle" />
+                                    </h2>
                                     <div className="flex items-center gap-2 mt-1.5 sm:mt-2 min-w-0">
                                         {visual}
                                         <p className="min-w-0 text-sm sm:text-base font-medium leading-snug text-slate-600 dark:text-slate-300">

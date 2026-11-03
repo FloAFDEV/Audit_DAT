@@ -11,7 +11,8 @@ import React, { useMemo, useState } from 'react';
 import { ArrowLeft, ChevronDown } from 'lucide-react';
 import { FloorAdhesiveStatus, SignageReference } from '../../types';
 import { ReferenceNamePreview } from '../ReferenceVisual';
-import { CognitivePictogramVisual } from '../CognitivePictogramVisual';
+import { CognitivePictogramVisual, StationPictograms } from '../CognitivePictogramVisual';
+import useAuditStore from '../../store';
 import { ExpandAllButton, ExtensionBTag, ImplantationContexts, LineBadge, lineShortLabel } from './ImplantationsTree';
 import { EquipmentItemCard } from './StationEquipmentSheet';
 import { SUPPORT_LABELS, displayReferenceName, formatDimensionText, formatDimensions } from './labels';
@@ -122,6 +123,7 @@ interface StationPatrimoineViewProps {
 }
 
 const StationPatrimoineView: React.FC<StationPatrimoineViewProps> = ({ patrimoine: p, refById, equipmentLabel, onBack, onOpenReference }) => {
+    const lieu = useAuditStore(s => s.lieux.find(l => l.id === p.lieuId));
     const summary = useMemo(() => summarizeStationPatrimoine(p), [p]);
     const present = summary.map(s => s.family);
     const absent = STATION_FAMILIES.filter(f => !present.includes(f));
@@ -251,6 +253,7 @@ const StationPatrimoineView: React.FC<StationPatrimoineViewProps> = ({ patrimoin
                     <h2 className="flex flex-wrap items-center gap-2 text-xl md:text-2xl font-bold text-gray-900 dark:text-slate-100 break-words">
                         <LineBadge line={p.line} />
                         {p.lieuName}
+                        <StationPictograms lieu={lieu} line={p.line} size="md" />
                         {isLineBExtension(p.line, p.lieuName) && <ExtensionBTag />}
                     </h2>
                     <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">

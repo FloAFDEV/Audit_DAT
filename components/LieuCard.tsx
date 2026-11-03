@@ -9,6 +9,7 @@ import { getLieuDefectCount } from '../utils/anomalyDetector';
 import { ProgressBadge } from './ProgressBadge';
 import { cardVariants } from '../hooks/motion/transitions';
 import useAuditStore from '../store';
+import { StationPictograms } from './CognitivePictogramVisual';
 
 interface LieuCardProps {
     lieu: Lieu;
@@ -62,7 +63,10 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                  <div className="flex items-center gap-x-3 flex-wrap min-w-0">
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <div className="flex flex-col min-w-0">
-                        <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
+                        <div className="flex items-center gap-2 min-w-0">
+                            <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
+                            <StationPictograms lieu={lieu} />
+                        </div>
                         {(stationCodes?.length || 0) > 0 && (
                             <span className="text-[10px] font-mono font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
                                 {stationCodes.join(' / ')}

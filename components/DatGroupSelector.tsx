@@ -4,6 +4,7 @@ import React from 'react';
 import { AuditModule, ModeData, Station, Direction } from '../types';
 import { ArrowLeft, ChevronRight, MapPin, ArrowRightLeft, Layout } from 'lucide-react';
 import { LineIcon } from './LineIcon';
+import { ModuleStationPictograms } from './CognitivePictogramVisual';
 import { getDirectionProgress } from '../utils/progressCalculators';
 import { CategoryIcon } from './CategoryIcon';
 import { AUDIT_CATEGORIES } from '../data/config';
@@ -73,7 +74,10 @@ const DatGroupSelector: React.FC<DatGroupSelectorProps> = ({ module, station, on
                     <div className="flex items-center gap-3">
                         <LineIcon module={module} size="md" />
                         <div>
-                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{station.name}</h2>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">
+                                {station.name}
+                                <ModuleStationPictograms module={module} size="md" className="ml-2 align-middle" />
+                            </h2>
                             <p className="text-slate-500 dark:text-slate-400 font-light">Sélectionner une direction</p>
                         </div>
                     </div>
