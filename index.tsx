@@ -2,6 +2,14 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { db } from './db';
+import { PwaStatus } from './components/PwaStatus';
+import { initPwa, watchDatabaseVersions } from './utils/pwa/pwaState';
+
+// Hors connexion (service worker, mises à jour sur confirmation) et
+// connexions IndexedDB concurrentes lors d'une montée de version.
+watchDatabaseVersions(db);
+void initPwa();
 
 /*
  * =================================================================
@@ -21,5 +29,6 @@ const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
     <App />
+    <PwaStatus />
   </React.StrictMode>
 );
