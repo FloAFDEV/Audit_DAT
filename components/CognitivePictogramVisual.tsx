@@ -5,6 +5,7 @@ import { ReferenceZoom } from './ReferenceVisual';
 import { AuditModule, AuditModuleType, Lieu } from '../types';
 import useAuditStore from '../store';
 import { getStationPictograms } from '../utils/stationPictograms';
+import { displayPictogramUrl } from '../utils/cognitivePictogramPreload';
 
 /** Fond jaune du pictogramme physique posé en station (relevé sur le
  *  visuel terrain de référence). */
@@ -25,16 +26,17 @@ export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationN
     const [isZoomOpen, setIsZoomOpen] = useState(false);
     // Visuel indisponible (hors connexion avant tout chargement) : rien
     // plutôt qu'une image cassée.
-    const [failed, setFailed] = useState(false);
+    const [failedSrc, setFailedSrc] = useState<string | null>(null);
     const url = getCognitivePictogramVisualUrl(stationCode);
-    if (!url || failed) return null;
+    const src = url ? displayPictogramUrl(url) : undefined;
+    if (!url || !src || failedSrc === src) return null;
     const label = `Pictogramme cognitif${stationName ? ` — ${stationName}` : ''}`;
     const image = (
         <img
-            src={url}
+            src={src}
             alt={label}
             loading="lazy"
-            onError={() => setFailed(true)}
+            onError={() => setFailedSrc(src)}
             className={visualClassName(size, field)}
             style={field ? { backgroundColor: FIELD_PICTO_BG } : undefined}
         />

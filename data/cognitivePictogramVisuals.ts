@@ -18,6 +18,10 @@ const STATION_CODES_WITH_VISUAL: ReadonlySet<string> = new Set([
     'CAR', 'PDJ', 'SMI', 'EMP', 'SAG', 'SAO', 'RAN', 'PHA', 'UPS', 'RAM',
 ]);
 
+/** URLs des visuels connus (préchargement hors connexion). */
+export const ALL_COGNITIVE_PICTOGRAM_VISUAL_URLS: readonly string[] =
+    [...STATION_CODES_WITH_VISUAL].map(code => `/pictos-cognitifs/${code}.png`);
+
 /** URL du visuel du pictogramme cognitif d'une station, ou undefined. */
 export const getCognitivePictogramVisualUrl = (stationCode?: string): string | undefined =>
     stationCode && STATION_CODES_WITH_VISUAL.has(stationCode)

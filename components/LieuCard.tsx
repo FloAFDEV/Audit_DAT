@@ -64,7 +64,7 @@ export const LieuCard: React.FC<LieuCardProps> = ({ lieu, onSelect, activeFilter
                     <LieuBadges lieu={lieu} activeFilter={activeFilter} />
                     <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2 min-w-0">
-                            <h3 className="text-lg font-medium tracking-tight text-slate-900 dark:text-slate-100 truncate">{lieu.name}</h3>
+                            <h3 className="min-w-0 text-lg font-medium leading-snug tracking-tight text-slate-900 dark:text-slate-100 line-clamp-2 break-words">{lieu.name}</h3>
                             <StationPictograms lieu={lieu} />
                         </div>
                         {(stationCodes?.length || 0) > 0 && (
