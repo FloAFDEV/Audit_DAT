@@ -1769,7 +1769,8 @@ const useAuditStore = create<AppState>((set, get) => {
         const lieuBefore = lieux.find(l => l.id === selectedLieuId);
         if (!lieuBefore) return;
         const blocker = getPrCaisseRemovalBlocker(lieuBefore, selectedModuleId, selectedPrZoneId, equipmentId);
-        if (blocker) { toast.error(blocker); return; }
+        // Échec explicite : affiché dans la fenêtre de confirmation, qui reste ouverte.
+        if (blocker) throw new Error(blocker);
         const name = (lieuBefore.modules.find(m => m.id === selectedModuleId)?.data as Pr | undefined)
             ?.zones.find(z => z.id === selectedPrZoneId)?.equipments.find(e => e.id === equipmentId)?.name;
         let removed = false;

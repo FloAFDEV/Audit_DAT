@@ -1,5 +1,5 @@
 import React from 'react';
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 // Confirmation avant suppression d'une photo d'audit — même fenêtre pour
 // tous les formulaires avec photos (PMR au sol, Équipements Station, plans
@@ -9,17 +9,16 @@ interface ConfirmPhotoDeleteModalProps {
   /** Élément photographié, null quand la fenêtre est fermée. */
   label: string | null;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<unknown>;
 }
 
 const ConfirmPhotoDeleteModal: React.FC<ConfirmPhotoDeleteModalProps> = ({ label, onClose, onConfirm }) => (
-  <ConfirmationModal
-    isOpen={label !== null}
-    onClose={onClose}
-    onConfirm={() => { onConfirm(); onClose(); }}
-    title="Supprimer la photo ?"
-    message={`La photo de « ${label ?? ''} » sera retirée de l'audit.`}
-    confirmLabel="Supprimer"
+  <ConfirmDeleteModal
+    items={label !== null ? [`Photo — ${label}`] : null}
+    definitive={false}
+    detail="La photo sera retirée de l'audit ; l'original éventuel reste conservé sur l'appareil."
+    onCancel={onClose}
+    onConfirm={async () => { await onConfirm(); onClose(); }}
   />
 );
 

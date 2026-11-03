@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Direction, DAT, Station, AuditModule } from '../types';
 import { PlusCircle, Pencil, ChevronRight, Ticket, ArrowLeft, Trash2 } from 'lucide-react';
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { LineIcon } from './LineIcon';
 import { getDatProgress, ProgressStatus } from '../utils/progressCalculators';
 import { DatIcon } from './DatIcon';
@@ -19,7 +19,7 @@ interface DATListProps {
   direction: Direction;
   onSelectDat: (datId: string) => void;
   onAddDat: () => void;
-  onRemoveDat: (datId: string) => void;
+  onRemoveDat: (datId: string) => void | Promise<unknown>;
   onUpdateDatName: (datId: string, newName: string) => void;
   onBack: () => void;
 }
@@ -108,9 +108,10 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
         }
     };
   
-    const handleConfirmDelete = () => {
+    // Fermée seulement après l'enregistrement réussi (échec : affiché).
+    const handleConfirmDelete = async () => {
         if (datToDelete) {
-            onRemoveDat(datToDelete.id);
+            await onRemoveDat(datToDelete.id);
             setDatToDelete(null);
         }
     };
@@ -252,14 +253,12 @@ const DATList: React.FC<DATListProps> = ({ module, station, direction, onSelectD
             </div>
         )}
 
-        <ConfirmationModal
-            isOpen={!!datToDelete}
-            onClose={() => setDatToDelete(null)}
+        <ConfirmDeleteModal
+            items={datToDelete ? [`${datToDelete.name} — ${direction.name}`] : null}
+            onCancel={() => setDatToDelete(null)}
             onConfirm={handleConfirmDelete}
-            title={`Supprimer ${datToDelete?.name}`}
-            message="Êtes-vous sûr de vouloir supprimer ce DAT ? Cette action est définitive."
             icon={<LineIcon module={module} size="sm" />}
-            isDestructive
+            requireCode
         />
     </div>
   );

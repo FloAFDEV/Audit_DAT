@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lieu, Pr, Equipment, AdhesiveStatus, EquipmentType, PrZone, SignageReference } from '../types';
 import { ChevronRight, ArrowLeft, Ticket, Car, Euro, Plus, Trash2 } from 'lucide-react';
 import ConfirmationModal from './ConfirmationModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { LieuBadges } from './Icons';
 
 import { getEffectiveEquipmentAdhesives } from '../utils/effectiveAdhesives';
@@ -15,7 +16,7 @@ interface EquipmentSelectorProps {
   onBack: () => void;
   /** Caisses automatiques : nombre théorique modifiable (zone sélectionnée). */
   onAddCaisseAuto?: () => void;
-  onRemoveCaisseAuto?: (equipmentId: string) => void;
+  onRemoveCaisseAuto?: (equipmentId: string) => void | Promise<unknown>;
   /** Raison empêchant le retrait (caisse déjà auditée…), ou null. */
   getCaisseRemovalBlocker?: (equipmentId: string) => string | null;
 }
@@ -161,14 +162,12 @@ const EquipmentSelector: React.FC<EquipmentSelectorProps> = ({ lieu, prData, zon
                 confirmLabel="Ajouter"
                 confirmButtonClass="inline-flex w-full justify-center rounded-md bg-teal-700 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-teal-800 sm:ml-3 sm:w-auto"
             />
-            <ConfirmationModal
-                isOpen={!!toRemove}
-                onClose={() => setToRemove(null)}
-                onConfirm={() => { const id = toRemove?.id; setToRemove(null); if (id) onRemoveCaisseAuto?.(id); }}
-                title="Retirer une caisse automatique"
-                message={`Retirer ${toRemove?.name ?? ''} de ${prData.name} — ${zone?.name} ?\n\nCette caisse n'a jamais été auditée : elle et son plan de quartier (repère 12) seront retirés.`}
-                confirmLabel="Retirer"
-                isDestructive
+            <ConfirmDeleteModal
+                items={toRemove ? [`${toRemove.name} — ${prData.name} — ${zone?.name ?? ''}`] : null}
+                detail="Cette caisse n'a jamais été auditée : elle et son plan de quartier (repère 12) seront supprimés."
+                onCancel={() => setToRemove(null)}
+                onConfirm={async () => { if (toRemove) await onRemoveCaisseAuto?.(toRemove.id); setToRemove(null); }}
+                requireCode
             />
         </div>
     );

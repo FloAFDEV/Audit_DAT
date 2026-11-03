@@ -10,7 +10,7 @@ import {
 import { Lieu, AuditModule, HistoryEntry, MaintenanceItem, AppEvent, AppEventType } from '../../types';
 import { db } from '../../db';
 import { StatCard } from './primitives';
-import ConfirmationModal from '../ConfirmationModal';
+import ConfirmDeleteModal from '../ConfirmDeleteModal';
 import MaintenanceListModal from '../MaintenanceListModal';
 import { generateMaintenanceSummary } from '../../utils/maintenanceGenerator';
 import { HistoryChart } from '../HistoryChart';
@@ -32,17 +32,18 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
         loadHistory();
     }, []);
 
+    // Fermée seulement après la suppression réussie ; un échec reste
+    // affiché dans la fenêtre (rien n'est annoncé comme supprimé).
     const handleDelete = async () => {
         if (entryToDelete && entryToDelete.id) {
             try {
                 await db.history.delete(entryToDelete.id);
-                loadHistory();
             } catch (error) {
                 console.error("Échec de la suppression de l'archive :", error);
-                toast.error("Échec de la suppression — réessayez.");
-            } finally {
-                setEntryToDelete(null);
+                throw new Error("Échec de la suppression de l'archive — réessayez. L'archive est conservée.");
             }
+            setEntryToDelete(null);
+            loadHistory();
         }
     };
 
@@ -135,13 +136,11 @@ const HistoryList: React.FC<HistoryListProps> = ({ onViewSnapshot }) => {
                 })}
             </div>
 
-            <ConfirmationModal
-                isOpen={!!entryToDelete}
-                onClose={() => setEntryToDelete(null)}
+            <ConfirmDeleteModal
+                items={entryToDelete ? [`Archive — ${entryToDelete.title ?? ''}`] : null}
+                onCancel={() => setEntryToDelete(null)}
                 onConfirm={handleDelete}
-                title="Supprimer l'archive"
-                message="Êtes-vous sûr de vouloir supprimer cette entrée d'archive ? Cette action est irréversible."
-                isDestructive
+                requireCode
             />
         </>
     );

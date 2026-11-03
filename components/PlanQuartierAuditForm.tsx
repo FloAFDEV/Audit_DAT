@@ -5,12 +5,13 @@ import AuditFormLayout from './AuditFormLayout';
 import { ModuleIcon } from './ModuleIcon';
 import { ReferenceVisual } from './ReferenceVisual';
 import { formatDimensions, STATUS_LABELS } from './cockpit/labels';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 
 interface PlanQuartierAuditFormProps {
   module: AuditModule;
   signageReferences: SignageReference[];
   onAddOccurrence: (input: { modelId?: string; adHocLabel?: string; adHocSupport?: SignageSupport; location?: string }) => void;
-  onRemoveOccurrence: (occurrenceId: string) => void;
+  onRemoveOccurrence: (occurrenceId: string) => void | Promise<unknown>;
   onStatusChange: (occurrenceId: string, status: AdhesiveStatus) => void;
   onOccurrenceCommentChange: (occurrenceId: string, comment: string) => void;
   onLocationChange: (occurrenceId: string, location: string) => void;
@@ -93,6 +94,8 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
   const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
   const [showAdHocForm, setShowAdHocForm] = useState(false);
   const [adHocLabel, setAdHocLabel] = useState('');
+  // Exemplaire à retirer : confirmé par la fenêtre commune de suppression.
+  const [occToRemove, setOccToRemove] = useState<{ id: string; label: string } | null>(null);
   const [adHocSupport, setAdHocSupport] = useState<SignageSupport>('autre');
   const [adHocLocation, setAdHocLocation] = useState('');
 
@@ -125,7 +128,7 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
                 />
                 {isBlank && (
                   <button
-                    onClick={() => onRemoveOccurrence(occ.id)}
+                    onClick={() => setOccToRemove({ id: occ.id, label: [refLabel, occ.location?.trim()].filter(Boolean).join(' — ') })}
                     className="p-1 rounded text-slate-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 dark:text-slate-400"
                     title="Retirer (erreur de saisie — aucun constat encore saisi)"
                     aria-label="Retirer cet exemplaire"
@@ -333,6 +336,12 @@ const PlanQuartierAuditForm: React.FC<PlanQuartierAuditFormProps> = (props) => {
           )}
         </li>
       </ul>
+      <ConfirmDeleteModal
+        items={occToRemove ? [`Plan de quartier — ${occToRemove.label}`] : null}
+        detail="Exemplaire sans constat saisi (erreur de saisie)."
+        onCancel={() => setOccToRemove(null)}
+        onConfirm={async () => { if (occToRemove) await onRemoveOccurrence(occToRemove.id); setOccToRemove(null); }}
+      />
     </AuditFormLayout>
   );
 };
