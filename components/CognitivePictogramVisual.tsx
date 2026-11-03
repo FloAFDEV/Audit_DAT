@@ -79,7 +79,7 @@ export const StationPictograms: React.FC<{ lieu?: Pick<Lieu, 'name' | 'modules'>
                 <CognitivePictogramVisual
                     key={p.stationCode}
                     stationCode={p.stationCode}
-                    stationName={`${lieu.name} (ligne ${p.line})`}
+                    stationName={line ? `${lieu.name} (ligne ${p.line})` : lieu.name}
                     size={size}
                     field
                 />
