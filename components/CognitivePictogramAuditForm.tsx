@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { AuditModule, FloorAdhesiveStatus, CognitivePictogramData, CognitivePictogram } from '../types';
 import { CheckCircle2, XCircle, Trash2, Edit, PlusCircle, SearchCheck } from 'lucide-react';
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import { getCognitivePictogramDimension } from '../data/cognitive_pictograms';
 import AuditFormLayout from './AuditFormLayout';
 import { LineIcon } from './LineIcon';
@@ -13,7 +13,7 @@ interface CognitivePictogramAuditFormProps {
     onBack: () => void;
     onReset: () => void;
     onAddAccessPoint: () => void;
-    onRemoveAccessPoint: (pictogramId: string) => void;
+    onRemoveAccessPoint: (pictogramId: string) => void | Promise<unknown>;
     onUpdateAccessPointName: (pictogramId: string, newName: string) => void;
     onCommentChange: (comment: string) => void;
 }
@@ -135,9 +135,10 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
         return (checked / total) * 100;
     }, [cogData.pictograms]);
 
-    const handleConfirmDelete = () => {
+    // Fermée seulement après l'enregistrement réussi (échec : affiché).
+    const handleConfirmDelete = async () => {
         if (pictoToDelete) {
-            onRemoveAccessPoint(pictoToDelete.id);
+            await onRemoveAccessPoint(pictoToDelete.id);
             setPictoToDelete(null);
         }
     };
@@ -186,14 +187,12 @@ const CognitivePictogramAuditForm: React.FC<CognitivePictogramAuditFormProps> = 
                     ))
                 )}
             </ul>
-            <ConfirmationModal
-                isOpen={!!pictoToDelete}
-                onClose={() => setPictoToDelete(null)}
+            <ConfirmDeleteModal
+                items={pictoToDelete ? [`Pictogramme cognitif — ${pictoToDelete.accessPointName}`] : null}
+                onCancel={() => setPictoToDelete(null)}
                 onConfirm={handleConfirmDelete}
-                title="Supprimer l'accès"
-                message={`Êtes-vous sûr de vouloir supprimer l'accès "${pictoToDelete?.accessPointName}" ?`}
                 icon={<LineIcon module={module} size="sm" />}
-                isDestructive
+                requireCode
             />
         </AuditFormLayout>
     );

@@ -4,7 +4,7 @@ import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle, Fence
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
 import { FormattedCorrespondence } from './Icons';
-import ConfirmationModal from './ConfirmationModal';
+import ConfirmDeleteModal from './ConfirmDeleteModal';
 import EcaEditModal from './EcaEditModal';
 import { getEcaProgress } from '../utils/progressCalculators';
 import { getEcaTypeLabel, getEcaCardTitle, EcaDirectionIcon, getEcaDirection, ECA_DIRECTION_ORDER, summarizeEcaDirections } from './EcaUiHelpers';
@@ -27,7 +27,7 @@ interface EcaSelectorProps {
   onBack: () => void;
   onAddEca: (ecaData: Omit<ECA, 'id' | 'adhesives' | 'comment' | 'isNotApplicable'>) => void;
   onUpdateEca: (ecaData: Partial<Omit<ECA, 'adhesives' | 'comment'>> & { id: string }) => void;
-  onRemoveEca: (ecaId: string) => void;
+  onRemoveEca: (ecaId: string) => void | Promise<unknown>;
 }
 
 const getEcaIcon = (eca: ECA) => {
@@ -101,9 +101,10 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
         setIsEditModalOpen(false);
     };
 
-    const handleConfirmDelete = () => {
+    // Fermée seulement après l'enregistrement réussi (échec : affiché).
+    const handleConfirmDelete = async () => {
         if (ecaToDelete) {
-            onRemoveEca(ecaToDelete.id);
+            await onRemoveEca(ecaToDelete.id);
             setEcaToDelete(null);
         }
     };
@@ -287,14 +288,12 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                 />
             )}
            
-            <ConfirmationModal
-                isOpen={!!ecaToDelete}
-                onClose={() => setEcaToDelete(null)}
+            <ConfirmDeleteModal
+                items={ecaToDelete ? [`ECA ${ecaToDelete.name} — ${ecaToDelete.accessPoint}`] : null}
+                onCancel={() => setEcaToDelete(null)}
                 onConfirm={handleConfirmDelete}
-                title="Supprimer l'ECA"
-                message={`Êtes-vous sûr de vouloir supprimer l'équipement "${ecaToDelete?.name}" ?\n\nCette action est irréversible.`}
                 icon={<LineIcon module={module} size="sm" />}
-                isDestructive
+                requireCode
             />
         </div>
     );

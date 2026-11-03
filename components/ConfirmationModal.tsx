@@ -1,11 +1,15 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle } from 'lucide-react';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Action confirmée. Si elle renvoie une promesse, la fenêtre reste
+   *  ouverte et verrouillée pendant l'opération (pas de double clic) ;
+   *  en cas d'échec, l'erreur est affichée et rien n'est annoncé comme
+   *  réussi — l'appelant ne ferme la fenêtre qu'après succès. */
+  onConfirm: () => void | Promise<unknown>;
   title: string;
   message: string;
   icon?: React.ReactNode;
@@ -29,6 +33,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     confirmLabel = "Confirmer",
     cancelLabel = "Annuler",
 }) => {
+    const [busy, setBusy] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const cancelRef = useRef<HTMLButtonElement>(null);
+    const busyRef = useRef(false);
     const [confirmationCode, setConfirmationCode] = useState('');
     const [userInput, setUserInput] = useState('');
 
@@ -42,7 +51,38 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     }, [isOpen, isDestructive]);
 
 
+    // Ouverture : état neuf, focus sur « Annuler » (sauf si un code est à
+    // saisir), focus rendu à l'élément d'origine à la fermeture.
+    useEffect(() => {
+        if (!isOpen) return;
+        setError(null);
+        setBusy(false);
+        busyRef.current = false;
+        const previous = document.activeElement as HTMLElement | null;
+        if (!isDestructive) cancelRef.current?.focus();
+        return () => { previous?.focus?.(); };
+    }, [isOpen, isDestructive]);
+
     if (!isOpen) return null;
+
+    /** Fermer = Annuler, jamais pendant une opération en cours. */
+    const requestClose = () => { if (!busyRef.current) onClose(); };
+
+    const runConfirm = () => {
+        runGuardedConfirm(onConfirm, busyRef, { setBusy, setError });
+    };
+
+    // Échap ferme ; Tab reste dans la fenêtre.
+    const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+        if (e.key === 'Escape') { e.stopPropagation(); requestClose(); return; }
+        if (e.key !== 'Tab' || !panelRef.current) return;
+        const focusables = Array.from(panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled])'));
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
 
     const isConfirmationRequired = isDestructive && confirmationCode;
     const isConfirmationMatch = !isConfirmationRequired || userInput === confirmationCode;
@@ -50,7 +90,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter' && isConfirmationMatch) {
             e.preventDefault();
-            onConfirm();
+            runConfirm();
         }
     };
     
@@ -140,11 +180,13 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             aria-labelledby="modal-title" 
             role="dialog" 
             aria-modal="true"
-            onClick={onClose}
+            onClick={requestClose}
         >
         <div 
-            className="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg dark:ring-1 dark:ring-teal-400/70"
+            ref={panelRef}
+            className="relative transform overflow-hidden rounded-lg bg-white dark:bg-slate-800 text-left shadow-xl transition-all w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-y-auto sm:my-8 dark:ring-1 dark:ring-teal-400/70"
             onClick={(e) => e.stopPropagation()}
+            onKeyDown={handlePanelKeyDown}
         >
             <div className="bg-white dark:bg-slate-800 px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
             <div className="sm:flex sm:items-start">
@@ -164,6 +206,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <div className="text-sm text-gray-600 dark:text-slate-300 whitespace-pre-wrap">
                         {renderMessage()}
                     </div>
+                    {error && (
+                        <p role="alert" className="mt-3 rounded-md bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-900/30 dark:text-red-200 break-words">
+                            {error}
+                        </p>
+                    )}
                     {isConfirmationRequired && (
                         <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700/50 rounded-lg">
                             <p className="text-sm text-yellow-800 dark:text-yellow-300">
@@ -194,15 +241,18 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <div className="bg-gray-50 dark:bg-slate-800/50 dark:border-t dark:border-slate-700 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
             <button
                 type="button"
-                onClick={onConfirm}
-                disabled={!isConfirmationMatch}
+                onClick={runConfirm}
+                disabled={!isConfirmationMatch || busy}
+                aria-busy={busy}
                 className={confirmButtonClass || "inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 sm:ml-3 sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"}
             >
-                {confirmLabel}
+                {busy ? `${confirmLabel}…` : confirmLabel}
             </button>
             <button
+                ref={cancelRef}
                 type="button"
-                onClick={onClose}
+                onClick={requestClose}
+                disabled={busy}
                 className="mt-3 inline-flex w-full justify-center rounded-md bg-white dark:bg-slate-700 px-3 py-2 text-sm font-semibold text-gray-900 dark:text-slate-200 shadow-sm ring-1 ring-inset ring-gray-300 dark:ring-slate-600 hover:bg-gray-50 dark:hover:bg-slate-600 sm:mt-0 sm:w-auto"
             >
                 {cancelLabel}
@@ -211,6 +261,32 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </div>
         </div>
     );
+};
+
+/** Exécution protégée d'une confirmation : une seule à la fois (double clic
+ *  ignoré), état « en cours » pendant une opération asynchrone, erreur
+ *  affichée sans fermer la fenêtre. Exportée pour les tests. */
+export const runGuardedConfirm = (
+    onConfirm: () => void | Promise<unknown>,
+    busyRef: { current: boolean },
+    ui: { setBusy: (busy: boolean) => void; setError: (message: string | null) => void },
+): Promise<boolean> => {
+    if (busyRef.current) return Promise.resolve(false);
+    ui.setError(null);
+    let result: void | Promise<unknown>;
+    try {
+        result = onConfirm();
+    } catch (e) {
+        ui.setError(e instanceof Error ? e.message : 'L\'opération a échoué.');
+        return Promise.resolve(false);
+    }
+    if (!(result instanceof Promise)) return Promise.resolve(true);
+    busyRef.current = true;
+    ui.setBusy(true);
+    return result.then(
+        () => true,
+        (e: unknown) => { ui.setError(e instanceof Error && e.message ? e.message : 'L\'opération a échoué. Aucune donnée n\'a été supprimée.'); return false; },
+    ).finally(() => { busyRef.current = false; ui.setBusy(false); });
 };
 
 export default ConfirmationModal;
