@@ -43,6 +43,17 @@ export interface PmrFloorAdhesiveRecord extends PmrFloorPoseItem {
     notApplicable: boolean;
 }
 
+/** Matière d'un module PMR au sol (attribuée, jamais déduite). */
+export const pmrFloorModuleMaterial = (module: AuditModule): string | null =>
+    getPmrMaterial((module.data as PMRFloorAdhesiveData).stationName, module.name);
+
+/** Règle de périmètre et de comptage au niveau du MODULE : module PMR au
+ *  sol de l'exploitation actuelle, non déclaré « sans objet ». Même règle
+ *  que collectPmrFloorAdhesives (Synthèse : liste des matières). */
+export const isCountedPmrFloorModule = (module: AuditModule): boolean =>
+    module.type === AuditModuleType.PMR_FLOOR_ADHESIVE && isModuleInCurrentScope(module)
+    && !(module.data as PMRFloorAdhesiveData).isNotApplicable;
+
 /** Lecture d'UN module PMR au sol — aucun filtre de périmètre ni de
  *  comptage (l'appelant décide). */
 export const readPmrFloorModule = (lieu: Pick<Lieu, 'id' | 'name'>, module: AuditModule): PmrFloorAdhesiveRecord[] => {
@@ -52,7 +63,7 @@ export const readPmrFloorModule = (lieu: Pick<Lieu, 'id' | 'name'>, module: Audi
         line: module.line ?? '', lieuId: lieu.id, lieuName: lieu.name,
         moduleId: module.id, moduleName: module.name,
         accessLabel: pmrAccessLabel(module.name),
-        material: getPmrMaterial(data.stationName, module.name),
+        material: pmrFloorModuleMaterial(module),
         notApplicable: !!data.isNotApplicable,
     };
     return (data.adhesives ?? []).map(adhesive => ({ ...base, adhesive, status: readFloorAdhesiveStatus(adhesive?.status) }));
@@ -65,9 +76,8 @@ export const isCountedPmrFloorAdhesive = (record: PmrFloorAdhesiveRecord): boole
  *  demandées. Ordre : celui des lieux et des adhésifs du module. */
 export const collectPmrFloorAdhesives = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorAdhesiveRecord[] =>
     lieux.flatMap(lieu => lieu.modules
-        .filter(module => module.type === AuditModuleType.PMR_FLOOR_ADHESIVE && isModuleInCurrentScope(module)
-            && (!lines || lines.has(module.line ?? '')))
-        .flatMap(module => readPmrFloorModule(lieu, module).filter(isCountedPmrFloorAdhesive)));
+        .filter(module => isCountedPmrFloorModule(module) && (!lines || lines.has(module.line ?? '')))
+        .flatMap(module => readPmrFloorModule(lieu, module)));
 
 /** Éléments de pose (Référentiel, CSV de pose, patrimoine d'une station). */
 export const pmrFloorPoseItems = (lieux: Lieu[], lines?: ReadonlySet<string>): PmrFloorPoseItem[] =>
