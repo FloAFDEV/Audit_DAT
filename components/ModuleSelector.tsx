@@ -3,6 +3,7 @@ import { Lieu, AuditModule, AuditModuleType, ModeData } from '../types';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { LineIcon } from './LineIcon';
 import { LieuBadges, FormattedCorrespondence } from './Icons';
+import { StationPictograms } from './CognitivePictogramVisual';
 import { getModuleProgress } from '../utils/progressCalculators';
 import { ModuleIcon } from './ModuleIcon';
 import useAuditStore from '../store';
@@ -91,7 +92,10 @@ const ModuleSelector: React.FC<ModuleSelectorProps> = ({ lieu, onSelectModule, o
                     <div>
                         <div className="flex items-center gap-3">
                             <LieuBadges lieu={lieu} />
-                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">{lieu.name}</h2>
+                            <h2 className="text-3xl font-medium tracking-tight text-slate-900 dark:text-slate-100">
+                                {lieu.name}
+                                <StationPictograms lieu={lieu} size="md" className="ml-2 align-middle" />
+                            </h2>
                         </div>
                         <p className="text-slate-500 dark:text-slate-400 mt-1 font-light">Sélectionner un module à auditer</p>
                     </div>

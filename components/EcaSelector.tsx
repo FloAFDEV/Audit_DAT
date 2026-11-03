@@ -3,6 +3,7 @@ import { AuditModule, EcaData, ECA, EcaEquipmentType } from '../types';
 import { ChevronRight, ArrowLeft, Accessibility, Edit, Trash2, PlusCircle, Fence } from 'lucide-react';
 import { isPmrEcaType } from '../data/eca_data';
 import { LineIcon } from './LineIcon';
+import { ModuleStationPictograms } from './CognitivePictogramVisual';
 import { FormattedCorrespondence } from './Icons';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 import EcaEditModal from './EcaEditModal';
@@ -143,7 +144,10 @@ const EcaSelector: React.FC<EcaSelectorProps> = ({ module, onSelectEca, onBack, 
                     <div className="flex items-center gap-3">
                         <LineIcon module={module} size="md" />
                         <div>
-                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">{ecaData.stationName} - {module.name}</h2>
+                            <h2 className="text-3xl font-bold text-gray-800 dark:text-slate-100">
+                                {ecaData.stationName} - {module.name}
+                                <ModuleStationPictograms module={module} size="md" className="ml-2 align-middle" />
+                            </h2>
                             <p className="text-gray-500 dark:text-slate-400">Sélectionner un équipement de contrôle d'accès</p>
                         </div>
                     </div>

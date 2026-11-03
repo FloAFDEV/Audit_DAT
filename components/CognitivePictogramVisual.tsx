@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { getCognitivePictogramVisualUrl } from '../data/cognitivePictogramVisuals';
 import { ReferenceZoom } from './ReferenceVisual';
+import { AuditModule, AuditModuleType, Lieu } from '../types';
+import useAuditStore from '../store';
+import { getStationPictograms } from '../utils/stationPictograms';
+import { displayPictogramUrl } from '../utils/cognitivePictogramPreload';
 
 /** Fond jaune du pictogramme physique posé en station (relevé sur le
  *  visuel terrain de référence). */
@@ -20,14 +24,19 @@ const visualClassName = (size: 'sm' | 'md', field?: boolean) => field
  *  même rendu. Image chargée à l'affichage seulement (lazy). */
 export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationName?: string; size?: 'sm' | 'md'; field?: boolean; zoomable?: boolean }> = ({ stationCode, stationName, size = 'md', field, zoomable }) => {
     const [isZoomOpen, setIsZoomOpen] = useState(false);
+    // Visuel indisponible (hors connexion avant tout chargement) : rien
+    // plutôt qu'une image cassée.
+    const [failedSrc, setFailedSrc] = useState<string | null>(null);
     const url = getCognitivePictogramVisualUrl(stationCode);
-    if (!url) return null;
+    const src = url ? displayPictogramUrl(url) : undefined;
+    if (!url || !src || failedSrc === src) return null;
     const label = `Pictogramme cognitif${stationName ? ` — ${stationName}` : ''}`;
     const image = (
         <img
-            src={url}
+            src={src}
             alt={label}
             loading="lazy"
+            onError={() => setFailedSrc(src)}
             className={visualClassName(size, field)}
             style={field ? { backgroundColor: FIELD_PICTO_BG } : undefined}
         />
@@ -54,4 +63,36 @@ export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationN
             )}
         </>
     );
+};
+
+/** Pictogramme(s) cognitif(s) d'une station, à côté de son nom : repère
+ *  visuel patrimonial, jamais un statut. Données : module Pictogrammes
+ *  cognitifs de chaque ligne (getStationPictograms) — rien n'est affiché
+ *  sans code station ni visuel connu. `line` : la seule ligne de l'écran
+ *  (audit d'un module) ; absent : toutes les lignes en exploitation. */
+export const StationPictograms: React.FC<{ lieu?: Pick<Lieu, 'name' | 'modules'>; line?: string; size?: 'sm' | 'md'; className?: string }> = ({ lieu, line, size = 'sm', className = '' }) => {
+    const pictograms = useMemo(() => getStationPictograms(lieu, line), [lieu, line]);
+    if (!lieu || pictograms.length === 0) return null;
+    return (
+        <span className={`inline-flex flex-shrink-0 items-center gap-1 ${className}`} data-testid="station-pictograms">
+            {pictograms.map(p => (
+                <CognitivePictogramVisual
+                    key={p.stationCode}
+                    stationCode={p.stationCode}
+                    stationName={`${lieu.name} (ligne ${p.line})`}
+                    size={size}
+                    field
+                />
+            ))}
+        </span>
+    );
+};
+
+/** Pictogramme de la station en cours d'audit, pour la ligne du module
+ *  affiché (lieu sélectionné, et seulement s'il porte ce module). Rien pour
+ *  l'audit Pictogrammes cognitifs, dont c'est déjà le visuel. */
+export const ModuleStationPictograms: React.FC<{ module: Pick<AuditModule, 'id' | 'type' | 'line'>; size?: 'sm' | 'md'; className?: string }> = ({ module, size, className }) => {
+    const lieu = useAuditStore(s => s.lieux.find(l => l.id === s.selectedLieuId && l.modules.some(m => m.id === module.id)));
+    if (module.type === AuditModuleType.COGNITIVE_PICTOGRAMS) return null;
+    return <StationPictograms lieu={lieu} line={module.line} size={size} className={className} />;
 };

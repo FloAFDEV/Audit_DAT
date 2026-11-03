@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { LogOut } from 'lucide-react';
 import { pageVariants } from './hooks/motion/transitions';
 import useAuditStore from './store';
+import { preloadCognitivePictograms } from './utils/cognitivePictogramPreload';
 import Login from './components/Login';
 import AppRouter from './components/AppRouter';
 import { Breadcrumbs } from './components/Breadcrumbs';
@@ -109,6 +110,16 @@ const App: React.FC = () => {
         console.log("Contact: florent.perez@tisseo.fr ou 72 76");
         store.init();
     }, [store.init]);
+
+    // Pictogrammes cognitifs gardés en mémoire pour la session (affichage
+    // hors connexion des cartes et en-têtes) ; complété au retour du réseau.
+    useEffect(() => {
+        if (!store.isAuthenticated) return;
+        const preload = () => { void preloadCognitivePictograms(); };
+        preload();
+        window.addEventListener('online', preload);
+        return () => window.removeEventListener('online', preload);
+    }, [store.isAuthenticated]);
 
     // FIX: Correctly destructure the return value of useAppHandlers. The original error was caused by a type inference failure within the hook itself, which is now fixed.
     const {
