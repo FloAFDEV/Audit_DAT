@@ -8,7 +8,8 @@ import React, { useMemo, useState, useEffect, useRef } from 'react';
 // Map natif utilisé par les agrégations de ce fichier.
 import { Images, Car, Euro, Fence, ScanEye, Search, Footprints, MapPin, Map as MapIcon, Building, X, Filter, Layout, BookOpenCheck, AlertTriangle, ClipboardCheck, ChevronDown, Flag, ExternalLink } from 'lucide-react';
 import { AdhesiveInventoryItem, Lieu, MaintenanceItem, AuditModuleType, ModeData, EcaEquipmentType, AdhesiveStatus, PMRFloorAdhesiveData, EquipmentType } from '../../types';
-import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
+import { PMR_UNKNOWN_MATERIAL_LABEL } from '../../data/pmr_materials';
+import { isCountedPmrFloorModule, pmrFloorModuleMaterial } from '../../utils/cockpit/pmrFloorPose';
 import { useStats } from '../../hooks/useStats';
 import { floorFamilyDefects } from '../../utils/maintenanceGenerator';
 import { useSignageReferences } from '../../hooks/useSignageReferences';
@@ -652,12 +653,12 @@ const SyntheseView: React.FC<SyntheseViewProps> = ({ lieux }) => {
     const showCogPicto = lieuHas(AuditModuleType.COGNITIVE_PICTOGRAMS);
     const showSignaletique = lieuHas(AuditModuleType.SIGNALETIQUE);
     const selectedLieuPmrMaterials = useMemo(() => (selectedLieuObject?.modules ?? [])
-        .filter(m => m.type === AuditModuleType.PMR_FLOOR_ADHESIVE && isModuleInCurrentScope(m) && !(m.data as PMRFloorAdhesiveData).isNotApplicable)
+        .filter(isCountedPmrFloorModule)
         .map(m => ({
             key: m.id,
             // Libellé d'accès seulement quand la station porte plusieurs implantations.
             label: m.name.replace(/^Adhésifs PMR au Sol\s*/, '').replace(/^\((.*)\)$/, '$1'),
-            material: getPmrMaterial((m.data as PMRFloorAdhesiveData).stationName, m.name),
+            material: pmrFloorModuleMaterial(m),
         })), [selectedLieuObject]);
     const lieuBaches = useMemo(
         () => (selectedLieuObject ? getBachesForLieu(selectedLieuObject.name) : []),
