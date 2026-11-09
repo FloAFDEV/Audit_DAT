@@ -4,7 +4,7 @@ import { db } from '../db';
 import useAuditStore from '../store';
 import {
     BuiltPart, DEFAULT_PART_BYTES, PhotoExportError, PhotoExportScope, PhotoMeta,
-    buildPhotoZipPart, formatBytes, planPhotoExport, scanPhotoMetadata,
+    buildPhotoZipPart, formatBytes, planPhotoExport, scanAnnotatedCopies, scanPhotoMetadata,
 } from '../utils/photos/photoExport';
 import { deliverFile, deliveryMessage } from '../utils/photos/deliverFile';
 
@@ -45,7 +45,11 @@ const PhotoExportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
         setMetas(null); setScanError(null); setPhase({ kind: 'idle' });
         // Recensement à l'ouverture seulement (données lues à cet instant) :
         // une mise à jour des audits n'interrompt jamais un export en cours.
-        scanPhotoMetadata(db, useAuditStore.getState().lieux)
+        const lieux = useAuditStore.getState().lieux;
+        scanPhotoMetadata(db, lieux)
+            // Photos des audits sans original sur cet appareil (sauvegarde
+            // restaurée ailleurs) : copies annotées, exportées à part.
+            .then(originals => [...originals, ...scanAnnotatedCopies(lieux, new Set(originals.map(o => o.id)))])
             .then(result => { if (!cancelled) setMetas(result); })
             .catch(() => { if (!cancelled) setScanError("Lecture des photos impossible (stockage indisponible). Rien n'a été modifié."); });
         return () => { cancelled = true; abortRef.current?.abort(); };
@@ -129,6 +133,7 @@ const PhotoExportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                     <div className="flex-1 min-w-0">
                         <h3 id="photo-export-title" className="text-lg font-semibold text-gray-800 dark:text-slate-100">Exporter les photos originales</h3>
                         <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Archive ZIP des fichiers d'origine (sans bandeau), avec inventaire. Sauvegarde externe : rien n'est supprimé de l'appareil.</p>
+                        <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">Les originaux restent sur l'appareil qui a pris les photos. Ailleurs (sauvegarde restaurée), seules les copies annotées existent : elles sont exportées à part, dans « copies-annotees ».</p>
                     </div>
                     <button onClick={close} disabled={phase.kind === 'delivering'} className="rounded-md p-1 text-gray-400 hover:text-gray-600 dark:hover:text-slate-200 disabled:opacity-40" aria-label="Fermer"><X className="h-5 w-5" /></button>
                 </div>
@@ -170,6 +175,11 @@ const PhotoExportModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ 
                     {plan && (
                         <p className="text-sm text-gray-700 dark:text-slate-300" data-testid="photo-export-estimate" aria-live="polite">
                             <strong>{plan.photos.length}</strong> photo{plan.photos.length > 1 ? 's' : ''} · {formatBytes(plan.totalBytes)}
+                            {(() => {
+                                const copies = plan.photos.filter(p => p.source === 'copie').length;
+                                const originals = plan.photos.length - copies;
+                                return copies > 0 ? <> ({originals} original{originals > 1 ? 'aux' : ''}, {copies} copie{copies > 1 ? 's' : ''} annotée{copies > 1 ? 's' : ''})</> : null;
+                            })()}
                             {partCount > 1 && <> · {partCount} fichiers ZIP (≈ {formatBytes(DEFAULT_PART_BYTES)} max. chacun, pour la mémoire de l'appareil)</>}
                         </p>
                     )}

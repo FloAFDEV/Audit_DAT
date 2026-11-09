@@ -12,12 +12,20 @@
 //   module de la photo. Module ou lieu introuvable → « orpheline », jamais
 //   attribuée à une station. Par défaut : photos actives rattachées ; en
 //   option, photos historiques (remplacées, supprimées) et orphelines.
+// - Copies annotées : une photo rangée dans un audit SANS son original sur
+//   cet appareil (sauvegarde restaurée sur un autre poste, photo antérieure
+//   à la conservation des originaux) est exportée sous forme de copie
+//   annotée (bandeau, ≤ 1600 px, sans EXIF), dans un dossier séparé
+//   « copies-annotees/ », identifiée comme telle — jamais présentée comme
+//   un original.
 // - Aucune écriture, aucune suppression ; aucune requête réseau.
 // =================================================================
 import { Zip, ZipPassThrough, strToU8 } from 'fflate';
-import { AuditModuleType, FieldPhoto, FieldPhotoStatus, Lieu } from '../../types';
+import { AuditModuleType, FieldPhoto, FieldPhotoStatus, Lieu, PhotoTakenAtSource, PlanQuartierData, PMRFloorAdhesiveData } from '../../types';
 import { escapeCsv } from '../csvExporter';
 import { sha256Hex } from '../fieldPhotos';
+import { readPmrFloorModule } from '../cockpit/pmrFloorPose';
+import { readStationEquipmentModule } from '../cockpit/stationEquipmentReader';
 
 export type PhotoExportScope =
     | { kind: 'all' }
@@ -25,7 +33,15 @@ export type PhotoExportScope =
     | { kind: 'line'; line: string };
 
 /** Métadonnées d'une photo (sans l'original). */
-export interface PhotoMeta extends Omit<FieldPhoto, 'original'> {
+export interface PhotoMeta extends Omit<FieldPhoto, 'original' | 'takenAtSource'> {
+    takenAtSource: PhotoTakenAtSource | 'inconnue';
+    /** 'original' : table photos ; 'copie' : copie annotée de l'audit,
+     *  original absent de cet appareil. */
+    source: 'original' | 'copie';
+    /** Copie annotée (data URL), source 'copie' uniquement. */
+    copyDataUrl?: string;
+    /** Rotation d'affichage d'une copie (non appliquée aux pixels). */
+    displayRotation?: number;
     /** Ligne du module de rattachement (données actuelles). */
     line: string | null;
     /** Lieu ET module de la photo existent encore. */
@@ -95,8 +111,76 @@ export const scanPhotoMetadata = async (
         const { original: _original, ...meta } = photo;
         const module = modules.get(photo.moduleId);
         const attached = !!module && module.lieuId === photo.lieuId;
-        out.push({ ...meta, line: attached ? module!.line : null, attached, category: categoryOf(photo, attached ? module!.type : undefined) });
+        out.push({ ...meta, source: 'original', line: attached ? module!.line : null, attached, category: categoryOf(photo, attached ? module!.type : undefined) });
     });
+    return out;
+};
+
+// -----------------------------------------------------------------
+// Copies annotées sans original sur cet appareil
+// -----------------------------------------------------------------
+const KIND_KEYS: Record<string, string> = { totem: 'totem', bandeau: 'bandeauStation', biv: 'biv', planReseau: 'planReseau', planQuartier: 'planQuartier', hap: 'hap' };
+
+/** Taille (octets) des données d'une data URL base64. */
+export const dataUrlByteLength = (dataUrl: string): number => {
+    const b64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+    return Math.max(0, Math.floor((b64.length * 3) / 4) - (b64.endsWith('==') ? 2 : b64.endsWith('=') ? 1 : 0));
+};
+const dataUrlMime = (dataUrl: string): string => dataUrl.match(/^data:([^;,]+)/)?.[1] ?? 'image/jpeg';
+export const decodeDataUrl = (dataUrl: string): Uint8Array => {
+    const binary = atob(dataUrl.slice(dataUrl.indexOf(',') + 1));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+};
+
+type Holder = { photo_base64?: string | null; photo_id?: string; photo_taken_at?: string; photo_rotation?: number };
+
+/** Photos visibles dans les audits dont l'original n'est PAS dans la table
+ *  `photos` de cet appareil (`presentIds`) : copies annotées exportables.
+ *  Rattachement lu dans les données (jamais déduit). */
+export const scanAnnotatedCopies = (lieux: Lieu[], presentIds: ReadonlySet<string>): PhotoMeta[] => {
+    const out: PhotoMeta[] = [];
+    const push = (lieu: Lieu, module: Lieu['modules'][number], holder: Holder, item: { key: string; itemId: string; itemLabel: string; accessLabel: string; category: string; stationCode: string; stationName?: string }) => {
+        const dataUrl = holder.photo_base64;
+        if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return;
+        if (holder.photo_id && presentIds.has(holder.photo_id)) return; // l'original sera exporté
+        out.push({
+            id: `copie:${module.id}:${item.key}`, source: 'copie', copyDataUrl: dataUrl, displayRotation: holder.photo_rotation || 0,
+            lieuId: lieu.id, stationName: item.stationName ?? lieu.name, stationCode: item.stationCode, moduleId: module.id, moduleName: module.name,
+            accessLabel: item.accessLabel, itemId: item.itemId, itemLabel: item.itemLabel,
+            originalName: '', originalType: dataUrlMime(dataUrl), originalSize: dataUrlByteLength(dataUrl), originalSha256: '',
+            takenAt: holder.photo_taken_at ?? '', takenAtSource: holder.photo_taken_at ? 'exif' : 'inconnue', rotation: 0, createdAt: '',
+            status: 'current', line: module.line ?? null, attached: true, category: item.category,
+        });
+    };
+    for (const lieu of lieux) {
+        for (const module of lieu.modules) {
+            if (module.type === AuditModuleType.PMR_FLOOR_ADHESIVE) {
+                const stationCode = (module.data as PMRFloorAdhesiveData).stationCode ?? '';
+                for (const record of readPmrFloorModule(lieu, module)) {
+                    push(lieu, module, record.adhesive as Holder, { key: record.adhesive.id, itemId: record.adhesive.id, itemLabel: record.adhesive.name ?? '', accessLabel: record.accessLabel, category: 'Adhésif PMR au sol', stationCode });
+                }
+            } else if (module.type === AuditModuleType.SIGNALETIQUE) {
+                for (const eq of readStationEquipmentModule(lieu, module)) {
+                    const key = KIND_KEYS[eq.kind] ?? eq.kind;
+                    const itemId = `${eq.station.id}:${key}:${eq.position}:${eq.rank - 1}`;
+                    push(lieu, module, eq.holder as Holder, {
+                        key: itemId, itemId, itemLabel: `${CATEGORY_LABELS[key] ?? key}${eq.count > 1 ? ` ${eq.rank}/${eq.count}` : ''}`,
+                        accessLabel: eq.position, category: CATEGORY_LABELS[key] ?? '', stationCode: eq.station.code ?? '', stationName: eq.station.name || lieu.name,
+                    });
+                }
+            } else if (module.type === AuditModuleType.PLAN_QUARTIER) {
+                const data = module.data as PlanQuartierData;
+                for (const occ of data.occurrences ?? []) {
+                    (occ.photos ?? []).forEach((photo, i) => push(lieu, module, { photo_base64: photo.base64, photo_rotation: photo.rotation }, {
+                        key: `${occ.id}:${photo.id ?? i}`, itemId: occ.id, itemLabel: occ.location || 'Plan de quartier', accessLabel: occ.location ?? '',
+                        category: 'Plan de quartier', stationCode: data.stationCode ?? '',
+                    }));
+                }
+            }
+        }
+    }
     return out;
 };
 
@@ -118,7 +202,8 @@ export const planPhotoExport = (
         if (!options.includeHistory && (p.status !== 'current' || !p.attached)) return false;
         return inScope(p, scope);
     }).sort((a, b) =>
-        Number(b.attached) - Number(a.attached)
+        Number(a.source === 'copie') - Number(b.source === 'copie')
+        || Number(b.attached) - Number(a.attached)
         || (a.line ?? '').localeCompare(b.line ?? '', 'fr')
         || a.stationName.localeCompare(b.stationName, 'fr')
         || a.moduleName.localeCompare(b.moduleName, 'fr')
@@ -127,10 +212,12 @@ export const planPhotoExport = (
     const width = Math.max(3, String(selected.length).length);
     const photos: PlannedPhoto[] = selected.map((p, i) => {
         const seq = i + 1;
-        const file = `photo_${String(seq).padStart(width, '0')}_${pathSlug(p.itemLabel || p.itemId)}.${extensionOf(p)}`;
+        const isCopy = p.source === 'copie';
+        const file = `${isCopy ? 'copie' : 'photo'}_${String(seq).padStart(width, '0')}_${pathSlug(p.itemLabel || p.itemId)}.${extensionOf(p)}`;
+        const base = isCopy ? 'copies-annotees' : 'originaux';
         const folder = p.attached
-            ? `originaux/ligne-${pathSlug(p.line ?? 'inconnue')}/${pathSlug(p.stationName)}${p.status === 'current' ? '' : '/historique'}`
-            : 'originaux/orphelines';
+            ? `${base}/ligne-${pathSlug(p.line ?? 'inconnue')}/${pathSlug(p.stationName)}${p.status === 'current' ? '' : '/historique'}`
+            : `${base}/orphelines`;
         return { ...p, seq, zipPath: `${ZIP_ROOT}/${folder}/${file}` };
     });
     const maxPart = options.maxPartBytes ?? DEFAULT_PART_BYTES;
@@ -152,23 +239,25 @@ export const planPhotoExport = (
 export interface ExportedPhotoRow {
     photo: PlannedPhoto;
     exportedSha256: string;
-    integrity: 'conforme' | 'écart';
+    /** Copie annotée : aucune empreinte d'origine à comparer. */
+    integrity: 'conforme' | 'écart' | 'sans référence (copie)';
 }
 
 const CSV_COLUMNS = [
     'Identifiant', 'Ligne', 'Station', 'Code station', 'Accès / emplacement', 'Catégorie', 'Élément',
-    'Date de prise de vue', 'Source de la date', 'Date d’enregistrement', 'Statut', 'Rattachement',
+    'Date de prise de vue', 'Source de la date', 'Date d’enregistrement', 'Statut', 'Rattachement', 'Fichier',
     'Nom du fichier original', 'Chemin dans le ZIP', 'Type MIME', 'Taille (octets)',
     'SHA-256 enregistrée', 'SHA-256 exportée', 'Intégrité', 'Module (audit)', 'Lieu', 'Partie',
 ];
-const TAKEN_AT_SOURCE: Record<string, string> = { exif: 'EXIF', file: 'date du fichier', validation: 'heure d’enregistrement' };
+const TAKEN_AT_SOURCE: Record<string, string> = { exif: 'EXIF', file: 'date du fichier', validation: 'heure d’enregistrement', inconnue: '' };
+const SOURCE_LABEL = (p: PhotoMeta) => (p.source === 'copie' ? 'copie annotée (original absent de cet appareil)' : 'original');
 
 export const buildInventoryCsv = (rows: ExportedPhotoRow[], partLabel: string): string => [
     '﻿' + CSV_COLUMNS.join(','),
     ...rows.map(({ photo: p, exportedSha256, integrity }) => [
         p.id, p.line ?? '', p.stationName, p.stationCode, p.accessLabel, p.category, p.itemLabel,
         p.takenAt, TAKEN_AT_SOURCE[p.takenAtSource] ?? p.takenAtSource, p.createdAt, STATUS_LABELS[p.status] ?? p.status,
-        p.attached ? 'station' : 'orpheline (lieu ou module introuvable)',
+        p.attached ? 'station' : 'orpheline (lieu ou module introuvable)', SOURCE_LABEL(p),
         p.originalName, p.zipPath.slice(ZIP_ROOT.length + 1), p.originalType, p.originalSize,
         p.originalSha256, exportedSha256, integrity, p.moduleId, p.lieuId, partLabel,
     ].map(v => escapeCsv(v).replace(/\r?\n/g, ' ')).join(',')),
@@ -177,8 +266,9 @@ export const buildInventoryCsv = (rows: ExportedPhotoRow[], partLabel: string): 
 const manifestPhoto = ({ photo: p, exportedSha256, integrity }: ExportedPhotoRow) => ({
     id: p.id, line: p.line, stationName: p.stationName, stationCode: p.stationCode, accessLabel: p.accessLabel,
     category: p.category || null, itemId: p.itemId, itemLabel: p.itemLabel,
-    takenAt: p.takenAt, takenAtSource: p.takenAtSource, createdAt: p.createdAt,
+    takenAt: p.takenAt || null, takenAtSource: p.takenAtSource === 'inconnue' ? null : p.takenAtSource, createdAt: p.createdAt || null,
     status: p.status, statusChangedAt: p.statusChangedAt ?? null, attached: p.attached,
+    source: p.source === 'copie' ? 'annotated-copy' : 'original', displayRotation: p.source === 'copie' ? p.displayRotation ?? 0 : null,
     originalName: p.originalName, path: p.zipPath.slice(ZIP_ROOT.length + 1), mimeType: p.originalType,
     size: p.originalSize, sha256: p.originalSha256, exportedSha256, integrity,
     moduleId: p.moduleId, moduleName: p.moduleName, lieuId: p.lieuId,
@@ -238,6 +328,21 @@ export const buildPhotoZipPart = async (
         for (let i = 0; i < part.length; i++) {
             if (options.signal?.aborted) throw abortError();
             const planned = part[i];
+            if (planned.source === 'copie') {
+                // Copie annotée déjà présente dans les données de l'audit.
+                let data: Uint8Array;
+                try { data = decodeDataUrl(planned.copyDataUrl ?? ''); } catch (error) {
+                    throw new PhotoExportError('Copie annotée illisible dans les données de l’audit. Rien n’a été modifié.', error);
+                }
+                const exportedSha256 = await sha256Hex(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer);
+                addFile(planned.zipPath, data, planned.takenAt ? new Date(planned.takenAt) : undefined);
+                rows.push({ photo: planned, exportedSha256, integrity: 'sans référence (copie)' });
+                bytes += data.byteLength;
+                options.onProgress?.({ done: i + 1, total: part.length, bytes });
+                await new Promise(resolve => setTimeout(resolve, 0));
+                if (zipError) throw zipError;
+                continue;
+            }
             let record: FieldPhoto | undefined;
             try {
                 record = await database.photos.get(planned.id);
