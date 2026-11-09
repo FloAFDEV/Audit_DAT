@@ -15,8 +15,15 @@ import { ALL_COGNITIVE_PICTOGRAM_VISUAL_URLS } from '../data/cognitivePictogramV
 const objectUrls = new Map<string, string>();
 let inFlight: Promise<number> | null = null;
 
-/** URL à afficher : copie en mémoire si disponible, sinon l'URL publique. */
-export const displayPictogramUrl = (url: string): string => objectUrls.get(url) ?? url;
+/** URL à afficher. Page servie par le service worker : l'URL publique,
+ *  précachée (disponible hors connexion) et chargée comme tous les autres
+ *  visuels — l'adresse temporaire en mémoire (blob:) n'est plus utile et
+ *  reste le seul cas d'image propre au pictogramme. Sans service worker :
+ *  copie en mémoire si disponible. */
+export const displayPictogramUrl = (url: string): string => {
+    if (typeof navigator !== 'undefined' && navigator.serviceWorker?.controller) return url;
+    return objectUrls.get(url) ?? url;
+};
 
 export interface PreloadDeps {
     fetch: (url: string) => Promise<{ ok: boolean; blob: () => Promise<Blob> }>;
