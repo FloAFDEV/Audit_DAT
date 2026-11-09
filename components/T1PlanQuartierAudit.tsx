@@ -10,6 +10,7 @@ import { AuditModule, EquipmentStatusType, SignaletiqueData, Station } from '../
 import type { SignaletiquePhotoLabels, SignaletiqueTarget } from '../store';
 import AuditFormLayout from './AuditFormLayout';
 import PhotoViewerModal from './PhotoViewerModal';
+import { ChoosePhotoButton, PhotoFileInputs, PhotoSource, usePhotoPicker } from './PhotoSourceInputs';
 import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
 import { showPromiseToast } from './ToastManager';
 import { TERMINUS_BANDEAU_TEXT, TERMINUS_STATIONS } from '../utils/signaletiqueDirections';
@@ -84,7 +85,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
   const summary = summarizeT1PlanQuartier(occurrences);
   const isTerminus = TERMINUS_STATIONS.includes(station.name);
 
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const photoPicker = usePhotoPicker();
   const uploadDirRef = useRef<Dir | null>(null);
   const [viewingDir, setViewingDir] = useState<Dir | null>(null);
   const viewing = occurrences.find(o => o.dirKey === viewingDir)?.item;
@@ -110,9 +111,9 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
     return total ? (checked / total) * 100 : 0;
   }, [occurrences]);
 
-  const startUpload = (dir: Dir) => {
+  const startUpload = (dir: Dir, source: PhotoSource = 'camera') => {
     uploadDirRef.current = dir;
-    fileInputRef.current?.click();
+    photoPicker.open(source);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -211,6 +212,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
                   {item.photo_base64 ? <Edit className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
                   {item.photo_base64 ? 'Remplacer' : 'Prendre une photo'}
                 </button>
+                <ChoosePhotoButton onClick={() => startUpload(dirKey, 'library')} hasPhoto={!!item.photo_base64} />
                 {item.photo_base64 && (
                   <>
                     <button
@@ -262,7 +264,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
 
   return (
     <>
-      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
+      <PhotoFileInputs picker={photoPicker} onChange={handleFileChange} />
 
       <AuditFormLayout
         module={module}
@@ -309,6 +311,7 @@ const T1PlanQuartierAudit: React.FC<T1PlanQuartierAuditProps> = ({
           photo={{ photo_base64: viewing.photo_base64, photo_note: viewing.photo_note, photo_rotation: viewing.photo_rotation }}
           onRotate={rotation => onPhotoRotationChange('planQuartier', viewingDir, 0, rotation, target)}
           onNoteChange={note => onPhotoNoteChange('planQuartier', viewingDir, 0, note, target)}
+          photoId={viewing.photo_id}
         />
       )}
     </>
