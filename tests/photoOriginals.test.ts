@@ -20,19 +20,20 @@ vi.mock('../utils/resizeImage', async (importOriginal) => {
         resizeImage: vi.fn(async (file: Blob) => {
             if (resizeFailure.next) { resizeFailure.next = false; throw new Error('format illisible'); }
             resizeCalls.push({ type: file.type, size: file.size });
-            return 'data:image/jpeg;base64,copie-annotee';
+            return 'data:image/jpeg;base64,Q09QSUUtQU5OT1RFRQ=='; // « COPIE-ANNOTEE »
         }),
     };
 });
 
 import { db } from '../db';
 import useAuditStore from '../store';
-import { AuditModuleType, FieldPhoto, Lieu, PMRFloorAdhesiveData } from '../types';
+import { AuditModuleType, FieldPhoto, Lieu, ModeData, PMRFloorAdhesiveData } from '../types';
 import { deliverFile, deliveryMessage, DeliveryEnv } from '../utils/photos/deliverFile';
 import { originalFileName, originalFileOf } from '../utils/photos/originalFile';
 import {
-    PhotoExportError, buildPhotoZipPart, extensionOf, pathSlug, planPhotoExport, scanPhotoMetadata, ZIP_ROOT,
+    PhotoExportError, buildPhotoZipPart, extensionOf, pathSlug, planPhotoExport, scanAnnotatedCopies, scanPhotoMetadata, ZIP_ROOT,
 } from '../utils/photos/photoExport';
+import { applyImportPayload, buildFullExportPayload, parseImportPayload } from '../utils/signageSerializer';
 
 const fixture = (name: string): Buffer => readFileSync(join(__dirname, 'fixtures', name));
 const sha = (buf: Uint8Array) => createHash('sha256').update(buf).digest('hex');
@@ -88,7 +89,7 @@ describe('prise de vue et photothèque : un seul circuit', () => {
         expect(new Uint8Array(library!.original)).toEqual(PNG_BYTES);
         expect(library).toMatchObject({ originalType: 'image/png', originalName: 'capture-ecran.png', originalSha256: sha(PNG_BYTES), takenAtSource: 'file', moduleId: modules[1].id });
         // Copie annotée : même génération, depuis l'original et son type réel.
-        expect(adhesive(1).photo_base64).toBe('data:image/jpeg;base64,copie-annotee');
+        expect(adhesive(1).photo_base64).toBe('data:image/jpeg;base64,Q09QSUUtQU5OT1RFRQ==');
         expect(resizeCalls.map(c => c.type)).toEqual(['image/jpeg', 'image/png']);
     });
 
@@ -321,6 +322,68 @@ describe('export ZIP des originaux', () => {
         expect(extensionOf({ originalName: '', originalType: 'image/webp' })).toBe('webp');
         expect(extensionOf({ originalName: '', originalType: '' })).toBe('bin');
         expect(pathSlug('Jean-Jaurès « Accès » / Ligne A')).toBe('Jean-Jaures-Acces-Ligne-A');
+    });
+});
+
+// -----------------------------------------------------------------
+describe('sauvegarde restaurée sur un autre appareil : copies annotées', () => {
+    const scanAll = async () => {
+        const lieux = useAuditStore.getState().lieux;
+        const originals = await scanPhotoMetadata(db, lieux);
+        return [...originals, ...scanAnnotatedCopies(lieux, new Set(originals.map(o => o.id)))];
+    };
+
+    it('appareil de prise de vue : originaux seulement, jamais de copie en double', async () => {
+        const { capture } = await seededPmr();
+        await capture(0, new File([fixture('pmr-photo-exif.jpg')], 'IMG_0001.jpg', { type: 'image/jpeg' }));
+        const metas = await scanAll();
+        expect(metas.map(m => m.source)).toEqual(['original']);
+    });
+
+    it('desktop après restauration : copies annotées exportées à part, identifiées, rattachées à la bonne station', async () => {
+        // Appareil A : deux photos prises (Jean-Jaurès, lignes A et B), puis sauvegarde .json.
+        const { capture } = await seededPmr();
+        await capture(0, new File([fixture('pmr-photo-exif.jpg')], 'IMG_0001.jpg', { type: 'image/jpeg' }));
+        await capture(1, new File([PNG_BYTES], 'IMG_0002.png', { type: 'image/png' }));
+        const backup = JSON.stringify(await buildFullExportPayload());
+
+        // Appareil B (desktop) : base vide, sauvegarde restaurée — aucun original.
+        await db.lieux.clear(); await db.photos.clear();
+        await applyImportPayload(parseImportPayload(backup));
+        await useAuditStore.getState().init();
+        expect(await db.photos.count()).toBe(0);
+
+        const metas = await scanAll();
+        expect(metas.map(m => [m.source, m.stationName, m.line])).toEqual([['copie', 'Jean-Jaurès', 'A'], ['copie', 'Jean-Jaurès', 'B']]);
+        const plan = planPhotoExport(metas, { kind: 'all' });
+        expect(plan.photos.map(p => p.zipPath)).toEqual([
+            expect.stringMatching(/^photos-audit-dat\/copies-annotees\/ligne-A\/Jean-Jaures\/copie_001_.+\.jpg$/),
+            expect.stringMatching(/^photos-audit-dat\/copies-annotees\/ligne-B\/Jean-Jaures\/copie_002_.+\.jpg$/),
+        ]);
+        expect(planPhotoExport(metas, { kind: 'line', line: 'B' }).photos).toHaveLength(1);
+
+        const built = await buildPhotoZipPart(db, plan, 0, { scope: { kind: 'all' }, scopeLabel: 'tout', includeHistory: false });
+        const files = unzipSync(new Uint8Array(await built.blob.arrayBuffer()));
+        expect(strFromU8(files[plan.photos[0].zipPath])).toBe('COPIE-ANNOTEE'); // octets de la copie de l'audit
+        const csv = strFromU8(files[`${ZIP_ROOT}/inventaire.csv`]);
+        expect(csv).toContain('copie annotée (original absent de cet appareil)');
+        expect(csv).toContain('sans référence (copie)');
+        const manifest = JSON.parse(strFromU8(files[`${ZIP_ROOT}/manifest.json`]));
+        expect(manifest.photos.map((p: { source: string; sha256: string }) => [p.source, p.sha256])).toEqual([['annotated-copy', ''], ['annotated-copy', '']]);
+        expect(manifest.photos[0].takenAt).toBeTruthy(); // date de prise de vue conservée dans l'audit
+    });
+
+    it('équipement de station et photo historique sans original : copie, catégorie lue dans les données', async () => {
+        await useAuditStore.getState().init();
+        const lieux = useAuditStore.getState().lieux;
+        const lieu = lieux.find(l => l.modules.some(m => m.type === AuditModuleType.SIGNALETIQUE && (m.data as { stations?: { signaletique?: { planReseau?: { meett?: unknown[] } } }[] }).stations?.some(s => (s.signaletique?.planReseau?.meett?.length ?? 0) > 0)))!;
+        const module = lieu.modules.find(m => m.type === AuditModuleType.SIGNALETIQUE)!;
+        const station = (module.data as ModeData).stations.find(s => (s.signaletique?.planReseau?.meett?.length ?? 0) > 0)!;
+        station.signaletique!.planReseau.meett[0].photo_base64 = 'data:image/jpeg;base64,Q09QSUUtQU5OT1RFRQ=='; // photo historique, sans photo_id
+        const copies = scanAnnotatedCopies(lieux, new Set());
+        expect(copies).toHaveLength(1);
+        expect(copies[0]).toMatchObject({ source: 'copie', category: 'Plan réseau', accessLabel: 'meett', lieuId: lieu.id, moduleId: module.id, takenAtSource: 'inconnue' });
+        expect(copies[0].itemId).toBe(`${station.id}:planReseau:meett:0`);
     });
 });
 
