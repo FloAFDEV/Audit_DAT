@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, DatabaseBackup, Upload, Download, Users } from 'lucide-react';
+import { ChevronDown, DatabaseBackup, Upload, Download, Users, Camera } from 'lucide-react';
 import { AuditCategory, AuditModuleType } from '../types';
 import { AUDIT_CATEGORIES, AUDIT_MODULES_CONFIG } from '../data/config';
 import { CategoryIcon } from './CategoryIcon';
@@ -124,6 +124,7 @@ interface SyncMenuProps {
     onExportJson: () => void;
     onImportJson: () => void;
     onOpenMultiAgent: () => void;
+    onOpenPhotoExport: () => void;
     onResetRequest: (target: { type: 'ALL' | 'CATEGORY' | 'MODULE_TYPE', value: any }) => void;
     isModalOpen: boolean;
     lastBackupDate: string | null;
@@ -131,7 +132,7 @@ interface SyncMenuProps {
     onRestoreFromLastBackup: () => void;
 }
 
-export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, onOpenMultiAgent, onResetRequest, isModalOpen, lastBackupDate, onDownloadLastBackup, onRestoreFromLastBackup }) => {
+export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, onOpenMultiAgent, onOpenPhotoExport, onResetRequest, isModalOpen, lastBackupDate, onDownloadLastBackup, onRestoreFromLastBackup }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [isClosing, setIsClosing] = useState(false);
     const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
@@ -194,6 +195,9 @@ export const SyncMenu: React.FC<SyncMenuProps> = ({ onExportJson, onImportJson, 
                             </button>
                             <button onClick={() => { onOpenMultiAgent(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
                                 <Users className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Relevés multi-agents (export / consolidation)</span>
+                            </button>
+                            <button onClick={() => { onOpenPhotoExport(); handleClose(); }} className="w-full text-left flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-slate-100 menu-item-animate" role="menuitem" style={{ animationDelay: getDelay() }}>
+                                <Camera className="w-4 h-4 text-gray-500 dark:text-slate-400" /><span>Exporter les photos originales (.zip)</span>
                             </button>
                             {lastBackupDate && (
                                 <>

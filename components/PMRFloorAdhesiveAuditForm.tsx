@@ -5,6 +5,7 @@ import { FormattedCorrespondence } from './Icons';
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import { ChoosePhotoButton, PhotoFileInputs, PhotoSource, usePhotoPicker } from './PhotoSourceInputs';
 import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
 import { ReferenceVisual } from './ReferenceVisual';
 import { getPmrMaterial, PMR_UNKNOWN_MATERIAL_LABEL } from '../data/pmr_materials';
@@ -25,7 +26,7 @@ interface PMRFloorAdhesiveAuditFormProps {
 const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (props) => {
   const { module, onStatusChange, onPhotoChange, onPhotoCapture, onPhotoNoteChange, onPhotoRotationChange, onBack, onReset, onCommentChange } = props;
   const pmrData = module.data as PMRFloorAdhesiveData;
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const photoPicker = usePhotoPicker();
   const currentAdhesiveId = useRef<string | null>(null);
   // Visionneuse : lue dans le store (la rotation régénère la copie annotée).
   const [viewingPhotoId, setViewingPhotoId] = useState<string | null>(null);
@@ -44,9 +45,9 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
 
   const material = useMemo(() => getPmrMaterial(pmrData.stationName, module.name), [pmrData.stationName, module.name]);
 
-  const handlePhotoUploadClick = (adhesiveId: string) => {
+  const handlePhotoUploadClick = (adhesiveId: string, source: PhotoSource = 'camera') => {
     currentAdhesiveId.current = adhesiveId;
-    fileInputRef.current?.click();
+    photoPicker.open(source);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -85,14 +86,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
 
   return (
     <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-      />
+      <PhotoFileInputs picker={photoPicker} onChange={handleFileChange} />
       <AuditFormLayout
         module={module}
         title={<FormattedCorrespondence text={module.name} />}
@@ -183,7 +177,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                     )}
 
                     <div className="mt-4 pt-4 border-t border-dashed border-gray-200 dark:border-slate-700 flex flex-col items-start gap-4">
-                        <div className="flex items-center gap-4">
+                        <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                             <button
                                 onClick={() => handlePhotoUploadClick(adhesive.id)}
                                 className={`flex items-center justify-center text-sm font-medium transition-all duration-75 active:scale-95 ${
@@ -202,6 +196,11 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
                                     </>
                                 )}
                             </button>
+                            <ChoosePhotoButton
+                                onClick={() => handlePhotoUploadClick(adhesive.id, 'library')}
+                                hasPhoto={!!adhesive.photo_base64}
+                                compact={!!adhesive.photo_base64}
+                            />
                             {adhesive.photo_base64 && (
                                 <button
                                     onClick={() => setDeletingPhotoId(adhesive.id)}
@@ -254,6 +253,7 @@ const PMRFloorAdhesiveAuditForm: React.FC<PMRFloorAdhesiveAuditFormProps> = (pro
             photo={viewingPhoto}
             onRotate={(newRotation) => onPhotoRotationChange(viewingPhoto.id, newRotation)}
             onNoteChange={(newNote) => onPhotoNoteChange(viewingPhoto.id, newNote)}
+            photoId={viewingPhoto.photo_id}
         />
       )}
     </>

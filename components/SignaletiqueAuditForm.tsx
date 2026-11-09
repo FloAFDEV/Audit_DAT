@@ -30,6 +30,7 @@ import { dirKeyOf, TERMINUS_STATIONS, TERMINUS_BANDEAU_TEXT } from '../utils/sig
 import AuditFormLayout from './AuditFormLayout';
 import { showPromiseToast } from './ToastManager';
 import PhotoViewerModal from './PhotoViewerModal';
+import { ChoosePhotoButton, PhotoFileInputs, PhotoSource, usePhotoPicker } from './PhotoSourceInputs';
 import ConfirmPhotoDeleteModal from './ConfirmPhotoDeleteModal';
 import type { SignaletiquePhotoLabels } from '../store';
 import { STATION_EQUIPMENT_DIMENSIONS } from '../data/signaletique_config';
@@ -116,7 +117,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
   onOpenT1PlanQuartierAudit
 }) => {
   const signaletique = station.signaletique;
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const photoPicker = usePhotoPicker();
   const currentUploadRef = useRef<{ category: keyof SignaletiqueData; direction: SignDir; index: number } | null>(null);
   // Visionneuse et suppression : l'élément est relu dans les données à
   // chaque rendu (la rotation régénère la photo annotée).
@@ -237,9 +238,9 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
     return total === 0 ? 100 : (checked / total) * 100;
   }, [signaletique, station, primaryDirKey]);
 
-  const handlePhotoUploadClick = (category: keyof SignaletiqueData, dir: SignDir, index: number) => {
+  const handlePhotoUploadClick = (category: keyof SignaletiqueData, dir: SignDir, index: number, source: PhotoSource = 'camera') => {
     currentUploadRef.current = { category, direction: dir, index };
-    fileInputRef.current?.click();
+    photoPicker.open(source);
   };
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -347,6 +348,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
         >
           {item.photo_base64 ? <Edit className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
         </button>
+        <ChoosePhotoButton onClick={() => handlePhotoUploadClick(category, dir, index, 'library')} hasPhoto={!!item.photo_base64} compact />
         {item.photo_base64 && (
           <button
             onClick={() => setDeletingSlot({ category, direction: dir, index })}
@@ -573,14 +575,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
 
   return (
     <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-      />
+      <PhotoFileInputs picker={photoPicker} onChange={handleFileChange} />
 
       <AuditFormLayout
         module={module}
@@ -636,6 +631,7 @@ const SignaletiqueAuditForm: React.FC<SignaletiqueAuditFormProps> = ({
             photo_rotation: viewingItem.photo_rotation
           }}
           onRotate={(rotation) => onPhotoRotationChange(viewingSlot.category, viewingSlot.direction, viewingSlot.index, rotation)}
+          photoId={viewingItem.photo_id}
           onNoteChange={(note) => onPhotoNoteChange(viewingSlot.category, viewingSlot.direction, viewingSlot.index, note)}
         />
       )}

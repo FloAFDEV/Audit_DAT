@@ -215,7 +215,7 @@ export const generateAndDownloadIcsFile = (options: IcsOptions) => {
 // =================================================================
 
 // Helper to escape CSV values
-const escapeCsv = (value: any): string => {
+export const escapeCsv = (value: any): string => {
     if (value === null || value === undefined) {
         return '';
     }
