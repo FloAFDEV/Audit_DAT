@@ -7,7 +7,19 @@
     <title>AuditRef - Tisséo</title>
     <!-- PWA / iOS : application installable sur l'écran d'accueil. Le
          manifeste (manifest.webmanifest) est injecté au build. -->
-    <meta name="theme-color" content="#0f766e" />
+    <!-- Couleur de la barre d'état (Safari, app installée iOS / Android) :
+         le FOND de l'application selon son thème (slate-50 / slate-900),
+         jamais une couleur d'accent — sinon une bande colorée apparaît
+         au-dessus de l'interface. Mise à jour au changement de thème
+         (index.tsx). -->
+    <meta name="theme-color" content="#f8fafc" />
+    <script>
+      try {
+        if (localStorage.getItem('tisseo-audit-theme') === 'dark') {
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', '#0f172a');
+        }
+      } catch (e) { /* stockage indisponible : thème clair */ }
+    </script>
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="AuditRef" />

@@ -1,7 +1,7 @@
 // tests/cognitivePictogramPreload.test.ts
 // Préchargement en mémoire des 38 pictogrammes cognitifs (hors connexion
 // pendant la session, sans service worker).
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ALL_COGNITIVE_PICTOGRAM_VISUAL_URLS, getCognitivePictogramVisualUrl } from '../data/cognitivePictogramVisuals';
 import { displayPictogramUrl, preloadCognitivePictograms, resetCognitivePictogramPreload, PreloadDeps } from '../utils/cognitivePictogramPreload';
 import fs from 'node:fs';
@@ -44,5 +44,15 @@ describe('preloadCognitivePictograms', () => {
         const { d, calls } = deps();
         await Promise.all([preloadCognitivePictograms(d), preloadCognitivePictograms(d)]);
         expect(calls).toHaveLength(38);
+    });
+
+    it('page servie par le service worker : URL publique (précachée), jamais blob:', async () => {
+        const url = getCognitivePictogramVisualUrl('BOR')!;
+        await preloadCognitivePictograms(deps().d);
+        expect(displayPictogramUrl(url)).toMatch(/^blob:/);
+        vi.stubGlobal('navigator', { serviceWorker: { controller: {} } });
+        try {
+            expect(displayPictogramUrl(url)).toBe('/pictos-cognitifs/BOR.png');
+        } finally { vi.unstubAllGlobals(); }
     });
 });

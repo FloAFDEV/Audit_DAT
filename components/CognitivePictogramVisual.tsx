@@ -10,6 +10,11 @@ import { displayPictogramUrl } from '../utils/cognitivePictogramPreload';
 /** Fond jaune du pictogramme physique posé en station (relevé sur le
  *  visuel terrain de référence). */
 const FIELD_PICTO_BG = '#FDBB31';
+/** Couleurs officielles (noir sur #FDBB31) protégées de l'assombrissement
+ *  automatique du navigateur (thème sombre forcé de Chrome / Android,
+ *  extensions de type Dark Reader), qui inverse sinon la silhouette en
+ *  blanc. Sans effet sur le mode sombre propre à l'application. */
+const FIELD_PICTO_STYLE: React.CSSProperties = { backgroundColor: FIELD_PICTO_BG, colorScheme: 'only light' };
 
 const visualClassName = (size: 'sm' | 'md', field?: boolean) => field
     ? `${size === 'sm' ? 'w-7 h-7' : 'w-8 h-8'} flex-shrink-0 object-contain rounded-[8px] p-[3px] border border-white ring-1 ring-black/10`
@@ -38,7 +43,7 @@ export const CognitivePictogramVisual: React.FC<{ stationCode?: string; stationN
             loading="lazy"
             onError={() => setFailedSrc(src)}
             className={visualClassName(size, field)}
-            style={field ? { backgroundColor: FIELD_PICTO_BG } : undefined}
+            style={field ? FIELD_PICTO_STYLE : undefined}
         />
     );
     if (!zoomable) return image;

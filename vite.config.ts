@@ -44,8 +44,10 @@ export default defineConfig(({ mode }) => {
             scope: '/',
             display: 'standalone',
             orientation: 'any',
-            background_color: '#ffffff',
-            theme_color: '#0f766e',
+            // Fond de l'application (thème clair) : écran de lancement et
+            // barre d'état sans bande colorée.
+            background_color: '#f8fafc',
+            theme_color: '#f8fafc',
             icons: [
               { src: '/icons/pwa-192x192.png', sizes: '192x192', type: 'image/png' },
               { src: '/icons/pwa-512x512.png', sizes: '512x512', type: 'image/png' },
